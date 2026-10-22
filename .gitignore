@@ -14,3 +14,6 @@ CREDENCIALES-*.txt
 **/*Auditoria*Seguridad*
 *.jks
 *.keystore
+
+# Token personal de GitHub (nunca subir)
+tokensito

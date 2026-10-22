@@ -306,8 +306,11 @@
       h += envolver(txt, S().attrs(it));
       i = j;
     }
+    // El <br> final solo da altura (no es contenido). También va tras una imagen al final del
+    // renglón: sin él, el navegador no tiene dónde poner el cursor después de la imagen.
+    const ult = p.fin > p.ini ? vis[p.fin - 1] : null;
     if (!h) h = "<br>";
-    else if (p.fin > p.ini && vis[p.fin - 1].c === SALTO) h += "<br>";
+    else if (ult && (ult.c === SALTO || (ult.e && !BLOQUE_OBJ.has(ult.e.tipo)))) h += "<br>";
     return `<${tag}${at}>${h}</${tag}>`;
   }
 
@@ -466,6 +469,13 @@
             const src = (bl && bl.src) || e.src || "";
             const w = (bl && bl.w) || e.w || 320;
             o.innerHTML = `<img src="${esc(src)}" alt="${esc((bl && bl.alt) || "")}" draggable="false" style="width:${+w}px">${ed.soloLectura ? "" : '<span class="wd-tirador" data-tirador title="Arrastra para cambiar el tamaño"></span>'}`;
+            // Imagen libre ("delante del texto"): se dibuja encima, desplazada (x, y) desde su párrafo.
+            const libre = !!(bl && bl.libre);
+            o.classList.toggle("libre", libre);
+            o.classList.toggle("sel", o.dataset.id === imgSel);
+            o.style.left = libre ? (+bl.x || 0) + "px" : "";
+            o.style.top = libre ? (+bl.y || 0) + "px" : "";
+            o.title = ed.soloLectura ? "" : libre ? "Arrastra para moverla a cualquier lugar" : "Arrastra para moverla a otro lugar del texto";
           } else if (e.tipo === "tabla") pintarTabla(o, bl, e.ref);
           else if (e.tipo === "salto") o.innerHTML = `<span>Salto de página</span>`;
           else if (e.tipo === "linea") o.innerHTML = `<hr>`;
@@ -699,6 +709,7 @@
         if (!hecho) sincronizarTodo(compo);
         programarPaginar();
         programarReflejo();
+        if (e) seguirAlCursor();
       }
       function sincronizarParrafo(el, compo) {
         const pi = indiceHijo(el), p = psPintado[pi];
@@ -820,6 +831,15 @@
         if (ed.soloLectura) return;
         sincronizar();
         const s = leerSel();
+        const w = s.col ? palabraEn(s.ini) : null;
+        if (w) {
+          // Cursor dentro de una palabra: el formato va a toda la palabra (como en Word).
+          comando(() => {
+            doc().seq(B, { k: "f", a: cambios, r: S().rangos(visPintado.slice(w[0], w[1])) }, { origen: "comando" });
+            return { sel: [s.a, s.f] };
+          });
+          return;
+        }
         if (s.col) {
           pendiente = { pos: s.ini, a: Object.assign({}, pendiente && pendiente.pos === s.ini ? pendiente.a : {}, cambios) };
           cuerpo.focus({ preventScroll: true });
@@ -832,6 +852,17 @@
           if (its.length) doc().seq(B, { k: "f", a: cambios, r: S().rangos(its) }, { origen: "comando" });
           return { sel: [s.a, s.f] };
         });
+      }
+      /** [ini, fin] de la palabra que rodea a la posición i, si el cursor está DENTRO de ella. */
+      const LETRA = /[\p{L}\p{N}_'’-]/u;
+      function palabraEn(i) {
+        const p = psPintado[parrafoEn(i)];
+        const es = (k) => k >= p.ini && k < p.fin && !visPintado[k].e && LETRA.test(visPintado[k].c);
+        if (!p || !es(i - 1) || !es(i)) return null;
+        let a = i, b = i;
+        while (es(a - 1)) a--;
+        while (es(b)) b++;
+        return [a, b];
       }
       function alternar(k) {
         const { a } = attrsEnCursor();
@@ -901,7 +932,7 @@
           if (pendiente && pendiente.pos === s.ini) pendiente.pos = s.ini + 1;
           return { sel: [s.ini + 1, s.ini + 1] };
         });
-        desplazarAlCursor();
+        seguirAlCursor();
       }
       function insertarTexto(t, a) {
         sincronizar();
@@ -912,6 +943,7 @@
           finEdicion = fin;
           return { sel: [fin, fin] };
         });
+        seguirAlCursor();
       }
       /** Objeto de bloque (tabla, salto, línea, índice) en su propio párrafo. */
       function insertarBloque(e) {
@@ -1044,17 +1076,121 @@
         o.innerHTML = `<div class="wd-indice-t">Contenido</div>` + (tit.map((p) => `<a href="#" data-ir="${esc(p.k)}" class="n${S().attrs(p.mark).estilo.slice(1)}">${esc(vis.slice(p.ini, p.fin).map((x) => (x.e ? "" : x.c)).join("") || "(sin texto)")}</a>`).join("") || `<span class="suave">Usa estilos “Título 1/2/3” para que aparezcan aquí.</span>`);
       }
 
-      // ------------------------------------------------------------ imágenes: seleccionar y cambiar tamaño
-      let imgSel = null;
+      // ------------------------------------------------------------ imágenes: seleccionar, mover y cambiar tamaño
+      let imgSel = null;   // id del objeto imagen seleccionado (el elemento cambia al repintar)
+      const elImagen = (id) => (id ? cuerpo.querySelector(`.wd-imagen[data-id="${CSS.escape(id)}"]`) : null);
       function seleccionarImagen(o) {
-        if (imgSel) imgSel.classList.remove("sel");
-        imgSel = o;
+        const antes = elImagen(imgSel);
+        if (antes) antes.classList.remove("sel");
+        imgSel = o ? o.dataset.id : null;
         if (o) {
           o.classList.add("sel");
           const r = document.createRange();
           r.selectNode(o);
           const s = getSelection(); s.removeAllRanges(); s.addRange(r);
         }
+      }
+      /** La imagen seleccionada, solo si la selección sigue siendo esa imagen (el cursor pudo irse). */
+      function imgActiva() {
+        const o = elImagen(imgSel), s = getSelection();
+        if (o && s.rangeCount && !s.isCollapsed && s.getRangeAt(0).intersectsNode(o) && !s.toString()) return imgSel;
+        if (imgSel) seleccionarImagen(null);
+        return null;
+      }
+      /** Con una imagen seleccionada, Enter o escribir siguen DESPUÉS de ella (no la reemplazan). */
+      function salirDeImagen() {
+        const id = imgSel;
+        seleccionarImagen(null);
+        const i = sec().posicion(id);
+        if (i >= 0) ponerSel(i + 1);
+      }
+      /** Posición del texto bajo un punto de la pantalla. */
+      function posEnPunto(x, y) {
+        let n, off;
+        if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(x, y); if (!c) return null; n = c.offsetNode; off = c.offset; }
+        else if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (!r) return null; n = r.startContainer; off = r.startOffset; }
+        else return null;
+        return n && cuerpo.contains(n) ? posDe(n, off) : null;
+      }
+      function rectEn(i) {
+        const pt = puntoDom(i), r = document.createRange();
+        try { r.setStart(pt.node, pt.off); r.collapse(true); } catch (e) { return null; }
+        const c = r.getClientRects()[0];
+        if (c && (c.height || c.top)) return c;
+        const top = superior(pt.node);
+        return top ? top.getBoundingClientRect() : null;
+      }
+      /** Arrastrar una imagen: en línea se lleva a otro lugar del texto; libre se mueve a cualquier punto de la hoja. */
+      function arrastrarImagen(e, o) {
+        const id = o.dataset.id, it = sec().item(id), ref = it && it.e && it.e.ref;
+        if (!ref) return;
+        const bl = doc().bloque(ref) || {}, libre = !!bl.libre;
+        const x0 = e.clientX, y0 = e.clientY, bx = +bl.x || 0, by = +bl.y || 0, r0 = o.getBoundingClientRect();
+        let activo = false, fantasma = null, marca = null, destino = null;
+        const mover = (ev) => {
+          if (ev.pointerId !== e.pointerId) return;
+          const dx = ev.clientX - x0, dy = ev.clientY - y0;
+          if (!activo) {
+            if (Math.hypot(dx, dy) < 5) return;
+            activo = true;
+            o.classList.add("moviendo");
+            if (!libre) {
+              fantasma = html(`<img class="wd-fantasma" alt="" src="${esc($("img", o).src)}" style="left:${r0.left}px;top:${r0.top}px;width:${r0.width}px">`);
+              marca = html(`<div class="wd-marca-soltar" hidden></div>`);
+              document.body.append(fantasma); zona.append(marca);
+            }
+          }
+          ev.preventDefault();
+          if (libre) {
+            const p = o.parentElement;
+            const x = Math.max(-p.offsetLeft, Math.min(cuerpo.clientWidth - p.offsetLeft - o.offsetWidth, bx + dx / zoom));
+            const y = Math.max(-p.offsetTop, Math.min(cuerpo.offsetHeight - p.offsetTop - o.offsetHeight, by + dy / zoom));
+            o.style.left = Math.round(x) + "px"; o.style.top = Math.round(y) + "px";
+            return;
+          }
+          fantasma.style.transform = `translate(${dx}px, ${dy}px)`;
+          destino = posEnPunto(ev.clientX, ev.clientY);
+          const c = destino == null ? null : rectEn(destino), z = zona.getBoundingClientRect();
+          marca.hidden = !c;
+          if (c) Object.assign(marca.style, { left: c.left - z.left - 1 + "px", top: c.top - z.top + "px", height: Math.max(16, c.height) + "px" });
+        };
+        const soltar = (ev) => {
+          if (ev.pointerId !== e.pointerId) return;
+          removeEventListener("pointermove", mover); removeEventListener("pointerup", soltar); removeEventListener("pointercancel", soltar);
+          o.classList.remove("moviendo");
+          if (fantasma) fantasma.remove();
+          if (marca) marca.remove();
+          if (!activo) return;
+          if (ev.type === "pointercancel") { if (libre) { o.style.left = bx + "px"; o.style.top = by + "px"; } return; }
+          if (libre) { doc().cambiar(ref, { x: parseInt(o.style.left, 10), y: parseInt(o.style.top, 10) }, { origen: "comando" }); programarPaginar(); return; }
+          if (destino != null) moverImagen(id, destino);
+        };
+        addEventListener("pointermove", mover); addEventListener("pointerup", soltar); addEventListener("pointercancel", soltar);
+      }
+      /** Lleva una imagen en línea a la posición i del texto (un solo paso de deshacer). */
+      function moverImagen(id, i) {
+        const it = sec().item(id);
+        if (!it || !it.v) return;
+        const pos = sec().posicion(id);
+        if (i === pos || i === pos + 1) return;
+        const grupo = "mover-" + id;
+        const r = comando(() => {
+          doc().seq(B, { k: "v", v: false, r: S().rangos([it]) }, { origen: "comando", grupo });
+          actualizarPintado();
+          const j = i > pos ? i - 1 : i;
+          insertarEn(j, [{ c: OBJ, id, a: S().attrs(it) }], grupo);
+          return { sel: [j, j + 1], j };
+        });
+        const nuevo = r && visPintado[r.j];
+        if (nuevo) seleccionarImagen(elImagen(nuevo.id));
+      }
+      /** En línea con el texto ↔ libre (delante del texto, en cualquier lugar de la hoja). */
+      function ajusteImagen(id, libre) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref, o = elImagen(id);
+        if (!ref) return;
+        if (libre) doc().cambiar(ref, { libre: true, x: o ? o.offsetLeft : 0, y: o ? o.offsetTop : 0 }, { origen: "comando" });
+        else doc().cambiar(ref, { libre: null, x: null, y: null }, { origen: "comando" });
+        programarPaginar();
       }
       cuerpo.addEventListener("pointerdown", (e) => {
         const tir = e.target.closest("[data-tirador]");
@@ -1064,14 +1200,20 @@
           const img = $("img", o), w0 = img.offsetWidth, x0 = e.clientX, it = sec().item(o.dataset.id);
           const mover = (ev) => { img.style.width = Math.max(24, Math.min(anchoUtil(), Math.round(w0 + (ev.clientX - x0) / zoom))) + "px"; };
           const soltar = () => {
-            removeEventListener("pointermove", mover); removeEventListener("pointerup", soltar);
+            removeEventListener("pointermove", mover); removeEventListener("pointerup", soltar); removeEventListener("pointercancel", soltar);
             if (it && it.e && it.e.ref) doc().cambiar(it.e.ref, { w: parseInt(img.style.width, 10) });
             programarPaginar();
           };
-          addEventListener("pointermove", mover); addEventListener("pointerup", soltar);
+          addEventListener("pointermove", mover); addEventListener("pointerup", soltar); addEventListener("pointercancel", soltar);
           return;
         }
-        if (o) { e.preventDefault(); seleccionarImagen(o); return; }
+        if (o) {
+          e.preventDefault();
+          if (!ed.soloLectura) cuerpo.focus({ preventScroll: true });
+          seleccionarImagen(o);
+          if (e.button === 0 && !ed.soloLectura) arrastrarImagen(e, o);
+          return;
+        }
         if (imgSel) seleccionarImagen(null);
         // Casilla de tarea: clic a la izquierda del texto.
         const p = e.target.closest("[data-lista='tareas']");
@@ -1088,7 +1230,19 @@
         const a = e.target.closest("a[href]");
         if (a && cuerpo.contains(a) && (e.ctrlKey || e.metaKey || ed.soloLectura)) { e.preventDefault(); window.open(a.href, "_blank", "noopener"); return; }
         const ir = e.target.closest("[data-ir]");
-        if (ir) { e.preventDefault(); const el = elems.get(ir.dataset.ir); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+        if (ir) { e.preventDefault(); const el = elems.get(ir.dataset.ir); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+        // Clic a la derecha de una imagen: algunos navegadores dejan el cursor ANTES de ella.
+        const s = getSelection();
+        if (ed.soloLectura || !s.isCollapsed || !cuerpo.contains(s.anchorNode) || e.target.closest("[data-obj]")) return;
+        const i = leerSel().ini;
+        let k = i;
+        while (k < visPintado.length && visPintado[k].e && visPintado[k].e.tipo === "imagen") {
+          const o = elImagen(visPintado[k].id);
+          if (!o || o.classList.contains("libre")) break;
+          const r = o.getBoundingClientRect();
+          if (e.clientX >= r.right - 2 && e.clientY >= r.top && e.clientY <= r.bottom + 4) k++; else break;
+        }
+        if (k > i) ponerSel(k);
       });
 
       // ------------------------------------------------------------ teclado
@@ -1096,7 +1250,7 @@
         if (ed.soloLectura) return;
         if (e.target.closest && e.target.closest("[data-celda]")) return;
         switch (e.inputType) {
-          case "insertParagraph": e.preventDefault(); enter(); break;
+          case "insertParagraph": e.preventDefault(); if (imgActiva()) salirDeImagen(); enter(); break;
           case "insertLineBreak": e.preventDefault(); insertarTexto(SALTO); break;
           case "historyUndo": e.preventDefault(); ed.deshacer(); break;
           case "historyRedo": e.preventDefault(); ed.rehacer(); break;
@@ -1105,7 +1259,9 @@
           case "formatUnderline": e.preventDefault(); alternar("u"); break;
           case "formatStrikeThrough": e.preventDefault(); alternar("s"); break;
           case "insertFromPaste": case "insertFromPasteAsQuotation": if (pegadoManejado) e.preventDefault(); break;
-          default: if (imgSel && /^delete/.test(e.inputType)) { e.preventDefault(); const id = imgSel.dataset.id; seleccionarImagen(null); quitarObjeto(id); }
+          default:
+            if (/^delete/.test(e.inputType) && imgActiva()) { e.preventDefault(); const id = imgSel; seleccionarImagen(null); quitarObjeto(id); }
+            else if (e.inputType === "insertText" && e.data && imgActiva()) { e.preventDefault(); salirDeImagen(); insertarTexto(e.data); }
         }
       });
       cuerpo.addEventListener("input", (e) => sincronizar(e));
@@ -1238,7 +1394,7 @@
           const fin = insertarEn(s.ini, toks, "pegar");
           return { sel: [fin, fin] };
         });
-        desplazarAlCursor();
+        seguirAlCursor();
       });
       cuerpo.addEventListener("drop", async (e) => {
         const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find((x) => /^image\//.test(x.type));
@@ -1314,6 +1470,7 @@
           capaPaginas.innerHTML = "";
           numPaginas = Math.max(1, Math.ceil(cuerpo.offsetHeight / pg.h));
           pintarEstado(); pintarCursores();
+          if (seguirCursor) { seguirCursor = false; desplazarAlCursor(); }
           return;
         }
         const H = pg.h, paso = H + GAP, util = H - pg.m.s - pg.m.i;
@@ -1350,6 +1507,7 @@
         if (capaPaginas.innerHTML !== h) capaPaginas.innerHTML = h;
         pintarEstado();
         pintarCursores();
+        if (seguirCursor) { seguirCursor = false; desplazarAlCursor(); }
       }
       function fijarZoom(z) {
         zoom = Math.max(0.5, Math.min(2, z));
@@ -1579,14 +1737,31 @@
       this.pintarCursores = () => pintarCursores();
 
       // ------------------------------------------------------------ desplazamiento
-      function desplazarAlCursor() {
+      /** Rectángulo del cursor. Un renglón vacío (<p><br></p>) no tiene rectángulo de texto:
+          se usa el del párrafo. */
+      function rectCursor() {
         const s = getSelection();
-        if (!s.rangeCount) return;
-        const r = s.getRangeAt(0).getBoundingClientRect(), v = ed.lienzo.getBoundingClientRect();
-        if (!r.height && !r.top) return;
-        if (r.bottom > v.bottom - 60) ed.lienzo.scrollTop += r.bottom - v.bottom + 120;
-        else if (r.top < v.top + 20) ed.lienzo.scrollTop -= v.top + 80 - r.top;
+        if (!s.rangeCount || !cuerpo.contains(s.focusNode)) return null;
+        const r = document.createRange();
+        try { r.setStart(s.focusNode, s.focusOffset); r.collapse(true); } catch (e) { return null; }
+        const c = r.getClientRects()[0];
+        if (c && (c.height || c.top)) return c;
+        const top = superior(s.focusNode);
+        return top ? top.getBoundingClientRect() : null;
       }
+      /** Mantiene el cursor a la vista (también sobre la barra de estado, que tapa el borde de abajo). */
+      function desplazarAlCursor() {
+        const c = rectCursor();
+        if (!c) return;
+        const v = ed.lienzo.getBoundingClientRect();
+        const abajo = Math.min(v.bottom, innerHeight) - (barraEstado.offsetHeight || 0) - 24;
+        if (c.bottom > abajo) ed.lienzo.scrollTop += c.bottom - abajo + 40;
+        else if (c.top < v.top + 16) ed.lienzo.scrollTop -= v.top + 56 - c.top;
+      }
+      // Tras escribir o dar Enter, la paginación puede empujar el párrafo a la página siguiente
+      // unos milisegundos después: entonces se vuelve a seguir al cursor.
+      let seguirCursor = false;
+      function seguirAlCursor() { seguirCursor = true; desplazarAlCursor(); }
       ed.lienzo.addEventListener("scroll", NOM.throttle(pintarEstado, 200), { passive: true });
       const ro = new ResizeObserver(() => programarPaginar());
       ro.observe(cuerpo);
@@ -1747,7 +1922,7 @@
         const l = [["Negrita / cursiva / subrayado", "Ctrl+B / I / U"], ["Tachado", "Ctrl+Mayús+X"], ["Título 1, 2, 3 / Normal", "Ctrl+Alt+1, 2, 3 / 0"], ["Alinear izq., centro, der., justificar", "Ctrl+Mayús+L, E, R, J"],
           ["Numeración / viñetas / tareas", "Ctrl+Mayús+7 / 8 / 9"], ["Más o menos sangría", "Tab / Mayús+Tab"], ["Enlace", "Ctrl+K"], ["Salto de página", "Ctrl+Enter"], ["Salto de línea", "Mayús+Enter"],
           ["Agrandar / achicar letra", "Ctrl+] / Ctrl+["], ["Borrar formato", "Ctrl+\\"], ["Copiar / pegar formato", "Ctrl+Alt+C / V"], ["Buscar / reemplazar", "Ctrl+F / Ctrl+H"], ["MAYÚSCULAS ↔ minúsculas", "Mayús+F3"],
-          ["Pegar sin formato", "Ctrl+Mayús+V"], ["Ruedita de acciones", "Mantener clic derecho (o izquierdo quieto)"], ["Menú normal del navegador", "Mayús+clic derecho"], ["Atajos al escribir", "# , ## , - , 1. , [] , > al inicio"]];
+          ["Pegar sin formato", "Ctrl+Mayús+V"], ["Ruedita de acciones", "Clic derecho (o mantenerlo)"], ["Menú normal del navegador", "Mayús+clic derecho"], ["Atajos al escribir", "# , ## , - , 1. , [] , > al inicio"]];
         NOM.hoja({ titulo: "Atajos de teclado", icono: "keyboard", cuerpo: `<table class="wd-conteo">${l.map(([a, b]) => `<tr><td>${esc(a)}</td><td><kbd>${esc(b)}</kbd></td></tr>`).join("")}</table>` });
       }
       async function insertarWord() {
@@ -1827,6 +2002,9 @@
             { texto: "Eliminar", icono: "trash-2", fn: () => quitarObjeto(o.dataset.id) },
             { texto: "Un cuarto", icono: "image", fn: ancho(0.25) },
             { texto: "Izquierda", icono: "align-left", fn: () => formatoParrafo({ alin: null }, [psPintado[parrafoEn(sec().posicion(o.dataset.id))]]) },
+            ref && doc().valor(ref, "libre")
+              ? { texto: "En línea con el texto", icono: "text-cursor-input", fn: () => ajusteImagen(o.dataset.id, false) }
+              : { texto: "Mover libremente", icono: "move", fn: () => ajusteImagen(o.dataset.id, true) },
           ];
         }
         return [
@@ -1852,7 +2030,9 @@
             { texto: "Salto de página", icono: "file-plus", fn: con(() => insertarBloque({ tipo: "salto" })) }] },
         ];
       }, {
-        izquierdo: true, tactil: false, titulo: "Texto",
+        // Mantener el clic izquierdo es como se empieza a seleccionar texto: aquí la rueda solo va
+        // con el clic derecho (o la tecla Menú).
+        izquierdo: false, tactil: false, titulo: "Texto",
         alPreparar: () => { selRueda = leerSel(); setTimeout(() => (selRueda = null), 0); },
         ignorar: (e) => !!(e.target.closest && (e.target.closest("[data-celda]") || e.target.closest("[data-tirador]"))),
         puntoTeclado: () => { const s = getSelection(); return s.rangeCount ? s.getRangeAt(0).getBoundingClientRect() : cuerpo.getBoundingClientRect(); },

@@ -413,7 +413,14 @@
 .wd-obj.bloque { display: block; white-space: normal; }
 .wd-imagen { display: inline-block; position: relative; vertical-align: bottom; line-height: 0; max-width: 100%; }
 .wd-imagen img { max-width: 100%; height: auto; display: block; }
-.wd-imagen.sel { outline: 2px solid #4472C4; outline-offset: 1px; }
+.wd-imagen.sel { outline: 2px solid #4472C4; outline-offset: 1px; touch-action: none; }
+.wd-imagen:not(.lectura *) { cursor: grab; }
+.wd-imagen.moviendo { opacity: .4; cursor: grabbing; }
+/* Imagen libre: delante del texto, desplazada desde su párrafo (que es position: relative). */
+.wd-imagen.libre { position: absolute; z-index: 2; touch-action: none; }
+.wd-imagen.libre.moviendo { opacity: .85; }
+.wd-fantasma { position: fixed; z-index: 60; pointer-events: none; opacity: .7; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.wd-marca-soltar { position: absolute; z-index: 4; width: 2px; background: #4472C4; pointer-events: none; }
 .wd-tirador { position: absolute; right: -7px; bottom: -7px; width: 13px; height: 13px; background: #fff; border: 2px solid #4472C4; border-radius: 3px; cursor: nwse-resize; display: none; }
 .wd-imagen.sel .wd-tirador, .wd-imagen:hover .wd-tirador { display: block; }
 .wd-tab { border-collapse: collapse; width: 100%; table-layout: fixed; font: inherit; }
@@ -531,7 +538,7 @@
 
 @media print {
   .ed-lienzo.con-wd { background: #fff; overflow: visible; }
-  .wd-esquema, .wd-estado, .wd-paginas, .wd-cursores, .wd-buscar, .wd-mini, .wd-tab-ctl, .wd-tirador { display: none !important; }
+  .wd-esquema, .wd-estado, .wd-paginas, .wd-cursores, .wd-buscar, .wd-mini, .wd-tab-ctl, .wd-tirador, .wd-fantasma, .wd-marca-soltar { display: none !important; }
   .wd-zona { padding: 0; }
   .wd-hoja { width: auto !important; zoom: 1 !important; }
   .wd-cuerpo { padding: 0 !important; min-height: 0 !important; display: block; box-shadow: none !important; }
