@@ -449,3 +449,5 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   dos renglones). La línea de cuenta regresiva de los avisos también salía en el cuadro de
   advertencia (comparte la clase `aviso`): los estilos de aviso emergente ahora son solo de
   `.avisos > .aviso`. App 0.4.1.
+- En el teléfono, el consejo de la ruedita tapaba la barra de estado: ahora va encima. El contador
+  dice "1 palabra" en singular. App 0.4.2.

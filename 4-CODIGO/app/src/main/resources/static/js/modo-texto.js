@@ -1541,7 +1541,7 @@
         let sel = "";
         if (!s.col) { const t = visPintado.slice(s.ini, s.fin).map((x) => x.c).join(""); sel = `${(t.match(/[\p{L}\p{N}][\p{L}\p{N}'’_-]*/gu) || []).length} de `; }
         const pg = Math.min(numPaginas, Math.max(1, Math.floor((zona.scrollTop || ed.lienzo.scrollTop) / ((pagina().h + GAP) * zoom)) + 1));
-        barraEstado.innerHTML = `<button class="wd-e" data-contar>${vista === "paginas" ? `Página ${pg} de ${numPaginas} · ` : ""}${sel}${c.palabras.toLocaleString("es-MX")} palabras</button>
+        barraEstado.innerHTML = `<button class="wd-e" data-contar>${vista === "paginas" ? `Página ${pg} de ${numPaginas} · ` : ""}${sel}${c.palabras.toLocaleString("es-MX")} ${c.palabras === 1 ? "palabra" : "palabras"}</button>
           <span class="crece"></span>
           <div class="segmentado wd-vistas" role="group" aria-label="Vista"><button data-vista="paginas" aria-pressed="${vista === "paginas"}" data-micro="Diseño de impresión|Páginas como se imprimen.">${ico("file-text", "ico-s")}</button><button data-vista="continua" aria-pressed="${vista === "continua"}" data-micro="Sin páginas|Texto continuo, cómodo en celular.">${ico("scroll-text", "ico-s")}</button></div>
           <button class="icono-btn chico" data-zoom="-" aria-label="Alejar">${ico("minus", "ico-s")}</button><button class="wd-e" data-zoom="1">${Math.round(zoom * 100)}%</button><button class="icono-btn chico" data-zoom="+" aria-label="Acercar">${ico("plus", "ico-s")}</button>`;

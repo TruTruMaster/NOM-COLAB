@@ -934,7 +934,8 @@ kbd { font-family: var(--fuente); font-weight: 800; }
   .paleta-velo { padding: 10px; }
   .paleta { max-height: 82vh; border-radius: 20px; }
   .paleta-pie { display: none; }
-  .consejo { bottom: calc(80px + env(safe-area-inset-bottom)); font-size: 13px; }
+  /* encima de la barra de herramientas y de la de estado (palabras, zoom) */
+  .consejo { bottom: calc(118px + env(safe-area-inset-bottom)); font-size: 13px; }
   .pasos { padding: 16px; }
   /* en el celular los pasos se deslizan de lado en vez de ocupar media pantalla */
   .pasos-lista { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 14px -16px 0; padding: 0 16px 4px; }
