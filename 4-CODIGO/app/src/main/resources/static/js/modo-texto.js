@@ -661,7 +661,9 @@
         const idN = (t) => (t.c === OBJ ? OBJ + (t.id || "?") : t.c);
         const lv = viejos.length, ln = nuevos.length;
         let p = 0, s = 0;
-        while (p < lv && p < ln && idV(viejos[p]) === idN(nuevos[p])) p++;
+        // Lo escrito suelto tras el último párrafo va antes de la marca final, nunca después.
+        const tope = lv && viejos[lv - 1].id === FIN ? lv - 1 : lv;
+        while (p < tope && p < ln && idV(viejos[p]) === idN(nuevos[p])) p++;
         while (s < lv - p && s < ln - p && idV(viejos[lv - 1 - s]) === idN(nuevos[ln - 1 - s])) s++;
         const formatos = [];
         const comparar = (it, tk) => {
@@ -1337,7 +1339,8 @@
       function alCambiarSeleccion() {
         if (!cuerpo.contains(getSelection().anchorNode)) return;
         // Párrafo donde está el cursor (el modo enfoque atenúa los demás).
-        const top = superior(getSelection().focusNode);
+        let top = superior(getSelection().focusNode);
+        if (top && top.nodeType !== 1) top = null;   // texto suelto en la hoja, todavía sin párrafo
         if (top !== parrafoActual) { if (parrafoActual) parrafoActual.classList.remove("wd-actual"); parrafoActual = top; if (top) top.classList.add("wd-actual"); }
         const s = leerSel();
         if (pendiente && (s.ini !== pendiente.pos || !s.col)) pendiente = null;
@@ -2085,7 +2088,10 @@
         });
         zona.append(mini);
       }, 350);
-      document.addEventListener("selectionchange", alSeleccionarMini);
+      // La barra de la selección anterior se quita en cuanto cambia, para que no tape el texto
+      // recién seleccionado mientras pasa la espera.
+      const alCambiarSelMini = () => { quitarMini(); alSeleccionarMini(); };
+      document.addEventListener("selectionchange", alCambiarSelMini);
 
       // ------------------------------------------------------------ arranque
       ed.seleccionar(B);
@@ -2106,7 +2112,7 @@
         ro.disconnect();
         clearTimeout(tPag);
         document.removeEventListener("selectionchange", selDeb);
-        document.removeEventListener("selectionchange", alSeleccionarMini);
+        document.removeEventListener("selectionchange", alCambiarSelMini);
         quitarMini();
         cerrarBuscar();
         ed.lienzo.classList.remove("con-wd");

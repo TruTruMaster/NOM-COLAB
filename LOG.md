@@ -335,3 +335,17 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Dos navegadores con cuenta en el mismo documento + una tercera ventana nueva: idénticos.
 - Diagrama y presentación: escribir al crear, Enter, Ctrl+B/I/U, panel Texto; exportar SVG, PPTX,
   DOCX, HTML y Markdown con el formato. JUnit 7/7 y `cripto.test.js` OK.
+
+## 30. Revisión del arreglo y dos correcciones más
+- Verificado con LibreWolf (Firefox) contra el servidor local: escribir, Ctrl+B sobre una palabra,
+  Enter y recargar conserva todo; la ruedita aplica Negrita, Estilo → Título 1 y Color; dos
+  navegadores escribiendo a la vez quedan idénticos; en el diagrama, "Texto libre" guarda el texto,
+  el salto de línea, negrita y cursiva después de Esc y de recargar.
+- Texto suelto después del último párrafo (el cursor queda fuera de todo bloque): se perdía lo
+  escrito y salía `visPintado[base + p - 1] is undefined`. Al comparar, la marca final del documento
+  ya no puede quedar en la parte común; lo nuevo se inserta antes de ella como un párrafo más.
+  También se evita `parrafoActual.classList` cuando el cursor está en ese texto suelto.
+- Minibarra: al cambiar la selección, la barra anterior seguía 350 ms en su lugar y podía tapar el
+  texto recién seleccionado (el clic derecho caía en ella y no abría la ruedita). Ahora se quita en
+  cuanto cambia la selección y vuelve a salir sobre la nueva.
+- JUnit 7/7 y `cripto.test.js` OK.
