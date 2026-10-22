@@ -9,4 +9,6 @@ public class Version {
     public String etiqueta;
     public long bytes;
     public int bloques;
+    /** Letras visibles del texto (documentos de texto). */
+    public int letras;
 }

@@ -242,3 +242,59 @@ WACK (de `PE_WACK.docx`) en la portada y el cierre de la presentación.
 1. `1 - Presentacion NOM-COLAB.pdf` — 20 diapositivas.
 2. `2 - Modulo web con BD, Azure y roles - NOM-COLAB.pdf` — 7 páginas para Programación Web.
 Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
+
+---
+
+# LOG — 22 de octubre de 2026: texto letra por letra, editor tipo Word, ruedita y figuras tipo Canva
+
+## 22. Sincronización letra por letra (como Google Docs)
+- Los documentos de texto ahora son una **secuencia CRDT tipo RGA**: cada letra, salto de párrafo u
+  objeto tiene id propio. Operaciones: insertar tramo, mostrar/ocultar y dar formato (registros LWW
+  por letra). Dos personas pueden escribir en la misma palabra a la vez y todos terminan igual.
+- Cliente: `js/secuencia.js` + `js/crdt.js` (envío en lotes de ~16 ms, cola sin conexión, deshacer por
+  palabra que solo deshace lo propio). Servidor: `core/crdt/Secuencia.java` (guarda sin repetir, junta
+  tramos, restaura versiones ocultando/revelando letras por id).
+- El servidor escribe a disco cada ~0.8 s (no en cada tecla) y la bitácora junta la escritura seguida de
+  una persona en una línea: "escribió 240 letras, borró 12".
+- Los documentos de texto anteriores se convierten solos al abrirlos (ids deterministas).
+- Cursores de los demás con nombre y color; mientras el teclado del celular compone una palabra, lo
+  que llega de otros espera a que termine (para no romper el autocorrector).
+- Se corrigió una carrera del enrutador: al cambiar de pantalla mientras un documento cargaba quedaba un
+  editor "huérfano" conectado.
+
+## 23. Editor de texto tipo Word
+- Una sola hoja con páginas (Carta, A4, Oficio, vertical u horizontal, márgenes de Word), encabezado y
+  pie con número de página, vista sin páginas para celular y zoom.
+- Estilos de Word (Normal, Título, Subtítulo, Título 1-3, Cita, Código), fuentes, tamaños, negrita,
+  cursiva, subrayado, tachado, superíndice, subíndice, color, resaltado, enlaces, alineación,
+  interlineado, espacio antes/después, sangrías, viñetas, numeración y tareas con niveles.
+- Insertar imagen (con tamaño ajustable), tabla (selector de tamaño), salto de página, línea, índice,
+  fecha y símbolos. Pegar desde Word/Google Docs/la web conservando el formato.
+- Buscar y reemplazar, contar palabras, esquema de títulos, copiar formato (brocha), MAYÚSCULAS,
+  minibarra al seleccionar, atajos de Word y de Markdown, modo enfoque.
+- Word: exporta .docx con estilos reales de Word (títulos, listas, tablas, imágenes, enlaces, página,
+  encabezado/pie) e **importa .docx** (como documento nuevo o dentro del actual). Validado con
+  LibreOffice en ambos sentidos.
+
+## 24. Ruedita de acciones
+- Mantener clic derecho (o el izquierdo quieto ~0.45 s, o el dedo en el lienzo) abre un anillo de 8
+  acciones; se elige moviendo hacia la acción y soltando (como las ruedas de ping de los juegos).
+  Submenús en la misma rueda, teclado completo, Mayús+clic derecho deja el menú normal. `js/rueda.js`.
+
+## 25. Figuras y funciones tipo Canva (presentación y diagrama)
+- 23 figuras en SVG; relleno o sin relleno, borde (color, grosor, guiones/puntos), transparencia,
+  esquinas, sombra, giro con tirador, voltear, bloquear, agrupar, alinear, distribuir, orden de capas,
+  selección con recuadro, guías inteligentes al mover, copiar/pegar y barra contextual.
+- PowerPoint (.pptx) y SVG/PNG exportan las figuras con su giro, borde, transparencia y sombra.
+
+## 26. Pruebas
+- JUnit 7/7 (incluye convergencia de la secuencia en cualquier orden y con duplicados, y restaurar).
+- Prueba aleatoria de la secuencia en Node: 4 × 60 rondas con 3-5 réplicas, entregas desordenadas y
+  repetidas, deshacer y rehacer: todas convergen, también al recargar desde lo guardado.
+- Navegador real (Firefox, dos ventanas en el mismo documento): 3 pruebas de estrés de 40 ediciones
+  simultáneas al azar (escribir, Enter, borrar, formato, deshacer): las dos ventanas y una tercera
+  recién abierta desde el servidor quedan idénticas, y la pantalla coincide con el modelo.
+- Latencia tecla → pantalla del otro equipo en red local: mediana 20 ms. El cursor propio no salta
+  cuando otra persona escribe antes en el mismo párrafo.
+- Restaurar versión, modo sin cuenta (sobrevive a recargar), vista de celular, presentaciones,
+  hoja de cálculo, vista previa de versiones: sin errores de JavaScript.

@@ -71,17 +71,33 @@ cd app && mvn test               # convergencia del CRDT: 5 usuarios, 200 órden
 | **Gestión de cuentas** | Base de datos (H2 / Azure SQL) · roles ADMINISTRADOR y USUARIO con pantalla Administrar usuarios (403 para los demás) · Crear usuario (nombre, contraseña, empresa opcional) · iniciar y cerrar sesión · contraseñas con PBKDF2 + sal · bloqueo al 6.º intento fallido (15 min) · preferencias (tema, autoguardado, versiones, calidad, movimiento) |
 | **Espacios de trabajo** | Crear espacio · conexión del proyecto (anuncio UDP en la LAN) · descubrir y unirse · solicitudes de acceso · máximo 5 personas simultáneas |
 | **Gestión de accesos** | Invitar, cambiar Lectura/Edición, quitar acceso (desconecta al usuario), aprobar o rechazar solicitudes |
-| **Editor** | 4 tipos de documento (fijo al crear) · descarga en .docx/.xlsx/.pptx · bitácora de actividad · CRDT en tiempo real (< 1.5 s; medido 42 ms en LAN) · presencia de quién edita qué · deshacer/rehacer · sin conexión con cola persistente · micro-textos · plantillas · importar (.nom .md .txt .csv .html) · exportar (.nom .html .md .csv .svg PDF) · modo enfoque |
+| **Editor** | 4 tipos de documento (fijo al crear) · **texto tipo Word sincronizado letra por letra** (~20 ms en LAN) con páginas, estilos, fuentes, colores, listas, tablas, imágenes, encabezado/pie, índice, buscar y reemplazar, copiar formato · cursores de los demás con su nombre · **ruedita de acciones** (clic derecho o mantener) · **figuras tipo Canva** (20+ figuras, girar, borde, transparencia, agrupar, alinear, guías) · descarga en .docx/.xlsx/.pptx · importar Word (.docx) · bitácora de actividad · deshacer/rehacer · sin conexión con cola persistente · micro-textos · plantillas · importar (.docx .nom .md .txt .csv .html) · exportar (.nom .html .md .csv .svg PDF) · modo enfoque |
 | **Almacenamiento** | Consumo por documento · historial de versiones · vista previa y restauración como versión nueva · depurar versiones (pospone los abiertos por otros) · autoguardado |
 
 ## Cómo se sincroniza
 
 Cada documento es un mapa de **bloques**; cada campo de un bloque es un registro
 *last-writer-wins* marcado con (reloj de Lamport, id de nodo). Dos personas que
-editan párrafos o celdas distintas nunca se pisan; si editan el **mismo** campo a la
+editan figuras o celdas distintas nunca se pisan; si editan el **mismo** campo a la
 vez, gana la misma escritura en todos los equipos, sin preguntar a nadie. El mismo
 algoritmo está en `core/crdt/MotorCRDT.java` y en `static/js/crdt.js`.
 
-**Límite conocido:** el texto de un mismo párrafo se resuelve por párrafo completo.
-Si dos personas escriben exactamente en el mismo párrafo al mismo tiempo, se conserva
-la última versión. El siguiente paso es un CRDT de secuencia (tipo RGA) por carácter.
+**El texto va letra por letra** (`core/crdt/Secuencia.java` y `static/js/secuencia.js`).
+Los documentos de texto guardan su contenido como una secuencia CRDT tipo RGA: cada
+letra, salto de párrafo u objeto (imagen, tabla, salto de página) tiene un id propio
+(`t@nodo`) y recuerda a su vecino izquierdo al nacer. Hay tres operaciones, todas
+idempotentes y conmutativas:
+
+| Operación | Qué hace |
+|---|---|
+| `i` insertar | Un tramo de texto escrito seguido (el servidor junta los tramos para ahorrar espacio). |
+| `v` mostrar/ocultar | Borrar oculta letras; deshacer las vuelve a mostrar con el mismo id. |
+| `f` formato | Negrita, color, fuente… por letra; el formato de párrafo vive en su salto de párrafo. |
+
+Por eso dos personas pueden escribir **en la misma palabra al mismo tiempo** y todos
+los equipos terminan con el mismo texto. Cada tecla se envía casi de inmediato (lotes
+de ~16 ms, un envío a la vez); en la red local llega a los demás en unos 20 ms. El
+servidor no necesita conocer el orden de las letras: guarda las operaciones sin repetir
+y, para restaurar una versión, oculta, revela y reformatea letras por su id.
+Los documentos de antes (un bloque por párrafo) se convierten solos la primera vez que
+se abren, con ids deterministas para que dos equipos que los abren a la vez coincidan.

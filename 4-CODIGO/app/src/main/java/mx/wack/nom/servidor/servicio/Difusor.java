@@ -35,6 +35,7 @@ public class Difusor {
         final String usuarioId, nombre, color, espacioId, docId, cliente;
         volatile String bloque;
         volatile String modo;
+        volatile Map<String, Object> cursor;
 
         Suscriptor(SseEmitter e, Usuario u, String espacioId, String docId, String cliente) {
             this.emisor = e;
@@ -106,11 +107,12 @@ public class Difusor {
         for (Suscriptor s : subs) if (docId.equals(s.docId)) enviar(s, "ops", datos);
     }
 
-    public void actualizarPresencia(String docId, String cliente, String bloque, String modo) {
+    public void actualizarPresencia(String docId, String cliente, String bloque, String modo, Map<String, Object> cursor) {
         for (Suscriptor s : subs) {
             if (docId.equals(s.docId) && s.cliente.equals(cliente)) {
                 s.bloque = bloque;
                 s.modo = modo;
+                s.cursor = cursor != null && cursor.size() <= 4 ? cursor : null;
             }
         }
         presencia(docId);
@@ -127,6 +129,7 @@ public class Difusor {
             m.put("color", s.color);
             m.put("bloque", s.bloque);
             m.put("modo", s.modo);
+            m.put("cursor", s.cursor);
             lista.add(m);
         }
         for (Suscriptor s : subs) if (docId.equals(s.docId)) enviar(s, "presencia", Map.of("usuarios", lista));

@@ -27,6 +27,8 @@
       }
     }
 
+    // Mientras cargaba, la persona ya se fue a otra pantalla: no se pinta ni se conecta nada.
+    if (opcAbrir && opcAbrir.vigente && !opcAbrir.vigente()) return () => {};
     const meta = { documento: datos.documento, permiso: datos.permiso, espacio: datos.espacio };
     const ed = {
       id: docId, meta, espacio: datos.espacio || {}, permiso: datos.permiso || "LECTURA",
@@ -180,9 +182,15 @@
     ed.seleccion = null;
     const enviarPresencia = NOM.throttle(() => {
       if (!canal) return;
-      api.post(`/api/documentos/${docId}/presencia`, { cliente: doc.nodo, bloque: ed.seleccion, modo: ed.modo }).catch(() => {});
-    }, 300);
+      api.post(`/api/documentos/${docId}/presencia`, { cliente: doc.nodo, bloque: ed.seleccion, modo: ed.modo, cursor: ed.cursor || null }).catch(() => {});
+    }, 150);
     ed.seleccionar = (id) => { if (ed.seleccion === id) return; ed.seleccion = id; enviarPresencia(); };
+    /** Cursor de texto ({ a, f }: ids de letras) para que los demás lo vean donde estás escribiendo. */
+    ed.moverCursor = (c) => {
+      if (ed.cursor && c && ed.cursor.a === c.a && ed.cursor.f === c.f) return;
+      ed.cursor = c;
+      enviarPresencia();
+    };
     ed.pintarPresencia = () => {
       const otros = ed.presencia.filter((p) => p.cliente !== doc.nodo && p.bloque);
       const porBloque = {};
@@ -194,6 +202,7 @@
       });
       const unicos = {};
       ed.presencia.forEach((p) => (unicos[p.id] = p));
+      if (ed.modoApi && ed.modoApi.pintarCursores) ed.modoApi.pintarCursores();
       $("[data-presencia]", vista).innerHTML = Object.values(unicos).map((p) => `<span data-micro="${esc(p.nombre)}|${p.cliente === doc.nodo ? "Tú" : p.modo ? "Viendo en modo " + esc(MODOS[p.modo] ? MODOS[p.modo].nombre : p.modo) : "Conectado"}">${avatar(p)}</span>`).join("");
     };
 
@@ -210,7 +219,7 @@
         enviarPresencia();
       },
       caido: () => { caido = true; doc.marcarSinRed(); pintarEstado("sin-red", doc.pendientes.length); },
-      ops: (x) => doc.fusionarRemotas(x.ops),
+      ops: (x) => ed.recibir(x.ops),
       presencia: (x) => { ed.presencia = x.usuarios; ed.pintarPresencia(); },
       version: (x) => aviso(`${x.autor} restauró la versión ${x.desde}. Ya estás viendo el documento restaurado.`, { tipo: "info", ms: 6000 }),
       guardado: (x) => { ultimoGuardado = x.numero; pintarEstado(doc.estadoSync, doc.pendientes.length); },
@@ -223,6 +232,12 @@
         }
       },
     });
+
+    // Mientras el teclado del celular compone una palabra no se toca la hoja: lo que llega espera
+    // un instante y se aplica al terminar la palabra (si no, el teclado pierde lo que escribía).
+    const retenidas = [];
+    ed.recibir = (ops) => { if (ed.retener) retenidas.push(...ops); else doc.fusionarRemotas(ops); };
+    ed.soltar = () => { if (retenidas.length) doc.fusionarRemotas(retenidas.splice(0)); };
 
     function cambiarPermiso(p) {
       if (p === "NINGUNO") { location.hash = "#/"; return; }
@@ -296,7 +311,7 @@
         const cont = $("[data-versiones]", lateral);
         try {
           const vs = await api.get(`/api/documentos/${docId}/versiones`);
-          cont.innerHTML = vs.map((v) => `<button class="version" data-v="${v.numero}"><span class="numero">v${v.numero}</span><span class="crece"><b>${esc(v.etiqueta || "Versión")}</b><small>${esc(v.autorNombre || "")} · ${esc(haceCuanto(v.fecha))} · ${v.bloques} bloques</small></span></button>`).join("")
+          cont.innerHTML = vs.map((v) => `<button class="version" data-v="${v.numero}"><span class="numero">v${v.numero}</span><span class="crece"><b>${esc(v.etiqueta || "Versión")}</b><small>${esc(v.autorNombre || "")} · ${esc(haceCuanto(v.fecha))} · ${tipo === "TEXTO" && v.letras != null ? v.letras.toLocaleString("es-MX") + " letras" : v.bloques + " bloques"}</small></span></button>`).join("")
             || `<p class="suave">Aún no hay versiones.</p>`;
           $$("[data-v]", cont).forEach((b) => (b.onclick = () => { $$("[data-v]", cont).forEach((x) => x.setAttribute("aria-pressed", x === b)); previsualizar(+b.dataset.v); }));
         } catch (e) { cont.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.message)}</span></div>`; }
@@ -315,6 +330,14 @@
     /** "Editó 2 celdas", "Editó el texto de 1 bloque"... a partir de una línea de la bitácora. */
     function describirCambio(a) {
       const campos = a.campos || [], n = (a.bloques || []).filter((b) => b !== "_doc").length;
+      if (a.escritas || a.borradas) {
+        const p = [];
+        if (a.escritas) p.push(`escribió ${a.escritas} ${a.escritas === 1 ? "letra" : "letras"}`);
+        if (a.borradas) p.push(`borró ${a.borradas}`);
+        if (campos.includes("formato")) p.push("cambió formato");
+        return p.join(", ").replace(/^./, (c) => c.toUpperCase());
+      }
+      if (campos.includes("formato") && !campos.some((c) => c !== "texto" && c !== "formato")) return "Cambió el formato del texto";
       if (campos.some((c) => c.startsWith("c:"))) return `Editó ${campos.filter((c) => c.startsWith("c:")).length} celda(s)`;
       if (campos.includes("nombre") && n === 0) return "Cambió el nombre";
       if (campos.includes("eliminado")) return `Borró ${n} bloque(s)`;
@@ -327,8 +350,11 @@
     async function previsualizar(n) {
       let foto;
       try { foto = await api.get(`/api/documentos/${docId}/versiones/${n}`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
-      const estado = { bloques: {}, reloj: 0 };
-      for (const b in foto) { estado.bloques[b] = {}; for (const c in foto[b]) estado.bloques[b][c] = { v: foto[b][c], t: 0, n: "" }; }
+      const estado = { bloques: {}, reloj: 0, seq: {} };
+      for (const b in foto) {
+        if (b.startsWith("_seq:")) { estado.seq[b.slice(5)] = foto[b]; continue; }
+        estado.bloques[b] = {}; for (const c in foto[b]) estado.bloques[b][c] = { v: foto[b][c], t: 0, n: "" };
+      }
       const docPrevio = new NOM.DocCRDT("previa-" + docId + "-" + n, estado, { soloLectura: true });
       docPrevio._guardarCache = () => {};
       if (ed.modoApi.desmontar) ed.modoApi.desmontar();

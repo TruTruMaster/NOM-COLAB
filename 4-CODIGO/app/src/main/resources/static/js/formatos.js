@@ -5,7 +5,7 @@
   const NOM = window.NOM;
   const F = () => NOM.formulas;
 
-  const IMPORTABLES = [".nom", ".json", ".md", ".txt", ".csv", ".tsv", ".html", ".htm"];
+  const IMPORTABLES = [".docx", ".nom", ".json", ".md", ".txt", ".csv", ".tsv", ".html", ".htm"];
   const MAX_BYTES = 10 * 1024 * 1024;
 
   // ------------------------------------------------------------ utilidades
@@ -64,7 +64,94 @@
   }
 
   // ------------------------------------------------------------ exportar
+  const esTexto = (doc) => (doc.valor("_doc", "modo") || "TEXTO") === "TEXTO" && NOM.textoRico;
+  const textoDe = (p) => p.tramos.map((t) => t.x || "").join("");
+
+  /** HTML de un objeto del texto (imagen, tabla, salto, línea, índice). */
+  function objetoHtml(e, ps) {
+    if (e.tipo === "imagen") return e.src ? `<img src="${NOM.esc(e.src)}" alt="${NOM.esc(e.alt || "")}" style="max-width:100%;width:${+e.w || 320}px">` : "";
+    if (e.tipo === "tabla") {
+      let h = "<table>";
+      for (let f = 0; f < (e.filasTexto || 3); f++) { h += "<tr>"; for (let c = 0; c < (e.colsTexto || 3); c++) h += `<td>${NOM.esc(e["c:" + F().ref(c, f)] || "")}</td>`; h += "</tr>"; }
+      return h + "</table>";
+    }
+    if (e.tipo === "salto") return `<div style="break-after:page"></div>`;
+    if (e.tipo === "linea") return "<hr>";
+    if (e.tipo === "indice") return `<nav><b>Contenido</b>${ps.filter((p) => /^h[1-3]$/.test(p.pa.estilo || "")).map((p) => `<div style="padding-left:${(+p.pa.estilo.slice(1) - 1) * 16}px">${NOM.esc(textoDe(p))}</div>`).join("")}</nav>`;
+    return "";
+  }
+  function aHtmlTexto(doc, nombre) {
+    const ps = NOM.textoRico.parrafosDe(doc);
+    let h = "", lista = null;
+    const cerrar = () => { if (lista) { h += `</${lista}>`; lista = null; } };
+    ps.forEach((p) => {
+      const pa = p.pa;
+      const cont = p.tramos.map((t) => (t.e ? objetoHtml(t.e, ps) : NOM.textoRico.envolver(t.x, t.a || {}))).join("") || "<br>";
+      const st = [pa.alin ? `text-align:${{ centro: "center", der: "right", just: "justify" }[pa.alin]}` : "", pa.sangria && !pa.lista ? `margin-left:${pa.sangria * 36}pt` : "", pa.interlineado ? `line-height:${pa.interlineado}` : ""].filter(Boolean).join(";");
+      const sa = st ? ` style="${st}"` : "";
+      if (pa.lista) {
+        const tag = pa.lista === "numeros" ? "ol" : "ul";
+        if (lista !== tag) { cerrar(); h += `<${tag}>`; lista = tag; }
+        h += `<li${pa.nivel ? ` style="margin-left:${pa.nivel * 18}pt"` : ""}>${pa.lista === "tareas" ? (pa.hecho ? "☑ " : "☐ ") : ""}${cont}</li>\n`;
+        return;
+      }
+      cerrar();
+      const tag = { h1: "h1", h2: "h2", h3: "h3", titulo: "h1", cita: "blockquote", codigo: "pre" }[pa.estilo] || "p";
+      h += `<${tag}${pa.estilo === "titulo" ? ' class="titulo"' : pa.estilo === "subtitulo" ? ' class="subtitulo"' : ""}${sa}>${cont}</${tag}>\n`;
+    });
+    cerrar();
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${NOM.esc(nombre)}</title>
+<style>body{font:11pt/1.15 Calibri,Carlito,"Segoe UI",Arial,sans-serif;max-width:6.5in;margin:1in auto;padding:0 1rem;color:#000}p{margin:0 0 8pt}h1,h2,h3{font-family:"Calibri Light",Carlito,Calibri,sans-serif;font-weight:normal;color:#2F5496;margin:12pt 0 0}h1{font-size:16pt}h2{font-size:13pt}h3{font-size:12pt;color:#1F3763}h1.titulo{font-size:28pt;color:#000}.subtitulo{color:#5A5A5A}blockquote{font-style:italic;color:#404040;text-align:center}pre{font:10pt "Courier New",monospace;background:#F3F3F3;padding:2pt 6pt;white-space:pre-wrap}table{border-collapse:collapse;width:100%}td{border:1px solid #8E8E8E;padding:2pt 5pt;vertical-align:top}a{color:#0563C1}</style>
+</head><body>
+${h}</body></html>`;
+  }
+  function aMarkdownTexto(doc) {
+    const ps = NOM.textoRico.parrafosDe(doc);
+    const md = (t) => {
+      let s = (t.x || "").replace(/([*_`\\[\]#])/g, "\\$1").replace(/\u2028/g, "  \n");
+      const a = t.a || {};
+      if (!s.trim()) return s;
+      if (a.b && a.i) s = `***${s}***`; else if (a.b) s = `**${s}**`; else if (a.i) s = `*${s}*`;
+      if (a.s) s = `~~${s}~~`;
+      if (a.enlace) s = `[${s}](${a.enlace})`;
+      return s;
+    };
+    const out = [];
+    let prevLista = false;
+    ps.forEach((p) => {
+      const pa = p.pa;
+      if (p.tramos.length === 1 && p.tramos[0].e) {
+        const e = p.tramos[0].e;
+        if (e.tipo === "tabla") {
+          const filas = [];
+          for (let f = 0; f < (e.filasTexto || 3); f++) { const r = []; for (let c = 0; c < (e.colsTexto || 3); c++) r.push(String(e["c:" + F().ref(c, f)] || "").replace(/\|/g, "\\|").replace(/\n/g, " ")); filas.push("| " + r.join(" | ") + " |"); }
+          if (filas.length) filas.splice(1, 0, "|" + " --- |".repeat(e.colsTexto || 3));
+          out.push(filas.join("\n"));
+        } else if (e.tipo === "linea" || e.tipo === "salto") out.push("---");
+        else if (e.tipo === "imagen") out.push("![imagen](imagen-incrustada)");
+        prevLista = false;
+        return;
+      }
+      const cuerpo = p.tramos.map((t) => (t.e ? (t.e.tipo === "imagen" ? "![imagen](imagen-incrustada)" : "") : md(t))).join("");
+      const sang = "  ".repeat(pa.nivel || 0);
+      let linea;
+      if (pa.lista === "vinetas") linea = sang + "- " + cuerpo;
+      else if (pa.lista === "numeros") linea = sang + "1. " + cuerpo;
+      else if (pa.lista === "tareas") linea = sang + (pa.hecho ? "- [x] " : "- [ ] ") + cuerpo;
+      else if (pa.estilo === "h1" || pa.estilo === "titulo") linea = "# " + cuerpo;
+      else if (pa.estilo === "h2") linea = "## " + cuerpo;
+      else if (pa.estilo === "h3") linea = "### " + cuerpo;
+      else if (pa.estilo === "cita") linea = "> " + cuerpo;
+      else if (pa.estilo === "codigo") linea = "    " + textoDe(p);
+      else linea = cuerpo;
+      if (pa.lista && prevLista) out[out.length - 1] += "\n" + linea; else out.push(linea);
+      prevLista = !!pa.lista;
+    });
+    return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  }
+
   function aHtml(doc, nombre) {
+    if (esTexto(doc)) return aHtmlTexto(doc, nombre);
     const partes = ordenados(doc).map((b) => {
       if (b.tipo === "texto") {
         const tag = { h1: "h1", h2: "h2", cita: "blockquote" }[b.estilo] || "p";
@@ -85,6 +172,7 @@ ${partes}
   }
 
   function aMarkdown(doc) {
+    if (esTexto(doc)) return aMarkdownTexto(doc);
     return ordenados(doc).map((b) => {
       const t = textoPlano((b.html || "").replace(/<b>|<\/b>|<strong>|<\/strong>/g, "**").replace(/<i>|<\/i>|<em>|<\/em>/g, "_"));
       if (b.tipo === "texto") {
@@ -118,16 +206,23 @@ ${partes}
       const p = NOM.geometria.conector(porId[c.desde], porId[c.hasta]);
       return `<path d="M${p.x1},${p.y1} L${p.x2},${p.y2}" stroke="#4A4854" stroke-width="2" fill="none" marker-end="url(#f)"/>`;
     });
-    const formas = bs.map((b) => {
-      const col = b.color || "#E7E5EE";
-      let fig;
-      if (b.tipo === "forma" && b.figura === "elipse") fig = `<ellipse cx="${b.x + b.w / 2}" cy="${b.y + b.h / 2}" rx="${b.w / 2}" ry="${b.h / 2}" fill="${col}"/>`;
-      else if (b.tipo === "forma" && b.figura === "rombo") fig = `<polygon points="${b.x + b.w / 2},${b.y} ${b.x + b.w},${b.y + b.h / 2} ${b.x + b.w / 2},${b.y + b.h} ${b.x},${b.y + b.h / 2}" fill="${col}"/>`;
-      else if (b.tipo === "forma") fig = `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.figura === "nota" ? 4 : 14}" fill="${col}"/>`;
-      else if (b.tipo === "imagen") fig = `<image href="${NOM.esc(b.src)}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/>`;
-      else fig = "";
+    const formas = bs.sort((a, b) => (a.z || 0) - (b.z || 0)).map((b) => {
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+      const giro = b.rot ? ` transform="rotate(${+b.rot} ${cx} ${cy})"` : "";
+      const op = b.opacidad != null && b.opacidad < 1 ? ` opacity="${+b.opacidad}"` : "";
+      const voltear = b.volteoH || b.volteoV ? ` translate(${b.volteoH ? b.w : 0} ${b.volteoV ? b.h : 0}) scale(${b.volteoH ? -1 : 1} ${b.volteoV ? -1 : 1})` : "";
+      let fig = "", fondo = null;
+      if (b.tipo === "forma" && NOM.figuras) {
+        const e = NOM.figuras.estiloFigura(b);
+        fondo = e.relleno;
+        const dash = e.estilo === "guiones" ? ` stroke-dasharray="${e.ancho * 3} ${e.ancho * 2}"` : e.estilo === "puntos" ? ` stroke-dasharray="0 ${e.ancho * 2}" stroke-linecap="round"` : "";
+        fig = `<g transform="translate(${b.x} ${b.y})${voltear}"><path d="${NOM.figuras.ruta(e.f, b.w, b.h, e.radio)}" fill="${e.relleno || "none"}" stroke="${e.trazo || "none"}" stroke-width="${e.ancho}"${dash} stroke-linejoin="round"/></g>`;
+      } else if (b.tipo === "imagen") fig = `<image href="${NOM.esc(b.src)}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"${voltear ? ` transform="translate(${b.x} ${b.y})${voltear} translate(${-b.x} ${-b.y})"` : ""}/>`;
       const txt = b.tipo === "forma" ? b.texto : b.tipo === "texto" ? textoPlano(b.html) : "";
-      return fig + (txt ? `<text x="${b.x + b.w / 2}" y="${b.y + b.h / 2}" text-anchor="middle" dominant-baseline="middle" font-family="Nunito, sans-serif" font-size="${b.tipo === "texto" ? 22 : 16}" font-weight="700" fill="#1f1e26">${NOM.esc(txt)}</text>` : "");
+      const luz = (c) => { const n = parseInt(String(c || "#ffffff").slice(1), 16) || 0; return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+      const colorT = b.tColor || (fondo && luz(fondo) < 0.5 ? "#FFFFFF" : "#1F1E26");
+      const anchor = b.tAlin === "izq" ? ["start", b.x + 10] : b.tAlin === "der" ? ["end", b.x + b.w - 10] : ["middle", cx];
+      return `<g${giro}${op}>${fig}${txt ? `<text x="${anchor[1]}" y="${cy}" text-anchor="${anchor[0]}" dominant-baseline="middle" font-family="Nunito, sans-serif" font-size="${b.tTam || (b.tipo === "texto" ? 22 : 16)}" font-weight="${b.tNegrita === false ? 500 : 700}" fill="${NOM.esc(colorT)}">${NOM.esc(txt)}</text>` : ""}</g>`;
     });
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" width="${maxX - minX}" height="${maxY - minY}">
 <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4A4854"/></marker></defs>
@@ -140,7 +235,8 @@ ${formas.join("\n")}
   function aNom(doc) {
     const bloques = {};
     for (const id in doc.estado.bloques) if (id === "_doc" || doc.vivo(id)) bloques[id] = doc.bloque(id);
-    return JSON.stringify({ formato: "nom-colab", version: 1, exportado: new Date().toISOString(), bloques }, null, 1);
+    // El texto letra por letra va completo (con su historia de formato), así se reimporta igual.
+    return JSON.stringify({ formato: "nom-colab", version: 2, exportado: new Date().toISOString(), bloques, seq: doc.estado.seq || {} });
   }
 
   const EXPORTABLES = [
@@ -262,6 +358,7 @@ ${formas.join("\n")}
     const nombre = archivo.name.replace(/\.[^.]+$/, "");
     const ext = (archivo.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
     if (!IMPORTABLES.includes(ext)) throw new Error(`Formato no soportado. Puedes importar: ${IMPORTABLES.join(", ")}`);
+    if (ext === ".docx") return importarDocx(archivo, nombre);
     if (archivo.size > MAX_BYTES) throw new Error("El archivo pesa más de 10 MB");
     const texto = await archivo.text();
     if (/�/.test(texto.slice(0, 2000)) && ext !== ".txt") throw new Error("El archivo parece dañado o no es texto");
@@ -277,6 +374,17 @@ ${formas.join("\n")}
         return { id: "imp:" + i, bloque: k, campos: c, t: 2, n: "importar" };
       });
       if (d.paginas) ops.unshift({ id: "imp:p", bloque: "_doc", campos: { paginas: d.paginas }, t: 2, n: "importar" });
+      ["pagina", "encabezado", "pie", "numeros"].forEach((k) => { if (d[k] != null) ops.push({ id: "imp:d" + k, bloque: "_doc", campos: { [k]: d[k] }, t: 2, n: "importar" }); });
+      // Texto letra por letra: se recrean sus operaciones con los mismos ids.
+      let i = 0;
+      for (const b in datos.seq || {}) {
+        const r = datos.seq[b];
+        ["ins", "vis", "fmt"].forEach((k) => (r[k] || []).forEach((e) => {
+          const { t, n, ...s } = e;
+          if (!s.k) s.k = k === "ins" ? "i" : k === "vis" ? "v" : "f";
+          ops.push({ id: "imp:s" + i++, bloque: b, campos: {}, t, n, s });
+        }));
+      }
       return { nombre: d.nombre || nombre, modo: d.modo || "TEXTO", ops, aviso };
     }
     if (ext === ".csv" || ext === ".tsv") {
@@ -303,6 +411,27 @@ ${formas.join("\n")}
     const r = bloquesTexto(lineas.length ? lineas : [""]);
     if (r.aproximado) aviso = "Algunas tablas o imágenes de Markdown quedaron como texto";
     return { nombre, modo: "TEXTO", ops: comoOps(r.bs), aviso };
+  }
+
+  /** Word (.docx) → documento de texto: estilos, listas, formato de letra, tablas, imágenes y página. */
+  async function importarDocx(archivo, nombre) {
+    const r = await NOM.ooxml.leerDocx(archivo);
+    const ops = [], ps = [];
+    let i = 0;
+    const limpio = (a) => { const o = {}; for (const k in a || {}) if (a[k] != null && a[k] !== false && a[k] !== "") o[k] = a[k]; return Object.keys(o).length ? o : undefined; };
+    r.parrafos.forEach((p) => {
+      const tramos = p.tramos.map((t) => {
+        if (!t.e) return { x: t.x, a: limpio(t.a) };
+        const ref = "imp" + (i++).toString(36) + Math.random().toString(36).slice(2, 7);
+        if (t.e.tipo === "imagen") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: { tipo: "imagen", enTexto: true, src: t.e.src, w: Math.min(t.e.w || 320, 624), h: t.e.h || 0 }, t: 1, n: "importar" }); return { e: { tipo: "imagen", ref } }; }
+        if (t.e.tipo === "tabla") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: Object.assign({ tipo: "tabla", enTexto: true, filasTexto: t.e.filas, colsTexto: t.e.cols }, t.e.celdas), t: 1, n: "importar" }); return { e: { tipo: "tabla", ref } }; }
+        return { e: { tipo: t.e.tipo } };
+      });
+      ps.push({ tramos, a: limpio(p.pa) });
+    });
+    ops.push(...NOM.Secuencia.crearOps("cuerpo", ps, "importar", 2, "imp"));
+    if (r.pagina) ops.push({ id: "imp:pag", bloque: "_doc", campos: { pagina: r.pagina }, t: 1, n: "importar" });
+    return { nombre, modo: "TEXTO", ops, aviso: r.aviso };
   }
 
   /** Imagen local -> data URL comprimida (máx. 1600 px, JPEG 0.85) para no inflar el documento. */

@@ -16,6 +16,7 @@ import mx.wack.nom.core.almacen.RepositorioDocumentos;
 import mx.wack.nom.core.crdt.EstadoDocumento;
 import mx.wack.nom.core.crdt.MotorCRDT;
 import mx.wack.nom.core.crdt.Operacion;
+import mx.wack.nom.core.crdt.Secuencia;
 import mx.wack.nom.core.modelo.Documento;
 import mx.wack.nom.core.modelo.Espacio;
 import mx.wack.nom.core.modelo.ModoEditor;
@@ -41,6 +42,11 @@ public class ServicioDocumentos {
     private final NodoLocal nodo;
     private final Map<String, MotorCRDT> motores = new ConcurrentHashMap<>();
     private final Map<String, Object> candados = new ConcurrentHashMap<>();
+    /** Documentos con cambios aun no escritos a disco (se escriben cada ~0.8 s, no en cada tecla). */
+    private final java.util.Set<String> sucios = ConcurrentHashMap.newKeySet();
+    /** Bitacora: los cambios seguidos de una misma persona se juntan en una sola linea. */
+    private final Map<String, Map<String, Object>> rachas = new ConcurrentHashMap<>();
+    private static final long RACHA_MS = 60_000;
 
     public ServicioDocumentos(RepositorioDocumentos repo, ServicioEspacios espacios, ServicioCuentas cuentas,
                               Difusor difusor, Cifrado cifrado, NodoLocal nodo) {
@@ -121,7 +127,7 @@ public class ServicioDocumentos {
         r.put("permiso", p);
         r.put("espacio", Map.of("id", e.id, "nombre", e.nombre, "color", e.color));
         synchronized (candado(docId)) {
-            r.put("estado", repo.estado(docId));
+            r.put("estado", repo.estado(docId).copia());
         }
         return r;
     }
@@ -157,9 +163,9 @@ public class ServicioDocumentos {
                 d.pendienteVersion = true;
                 d.ultimoEditorId = u.id;
                 boolean cambioMeta = sincronizarMeta(d, est);
-                repo.guardarEstado(docId, est);
-                repo.guardar(d);
-                repo.anotarActividad(docId, actividad(u, cliente, dispositivo, aplicadas));
+                sucios.add(docId);
+                if (cambioMeta) repo.guardar(d);
+                anotar(docId, u, cliente, dispositivo, aplicadas);
                 if (cambioMeta) {
                     difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
                 }
@@ -180,29 +186,93 @@ public class ServicioDocumentos {
         return campos.isEmpty() ? null : new Operacion(op.id(), op.bloque(), campos, op.t(), op.n());
     }
 
-    /** Una linea de la bitacora: quien, desde que dispositivo, cuando y que bloques/campos toco. */
-    private static Map<String, Object> actividad(Usuario u, String cliente, String dispositivo, List<Operacion> ops) {
-        java.util.Set<String> bloques = new java.util.LinkedHashSet<>(), campos = new java.util.LinkedHashSet<>();
+    /**
+     * Una linea de la bitacora: quien, desde que dispositivo, cuando y que bloques/campos toco.
+     * Como el texto viaja letra por letra, los lotes seguidos de la misma persona (menos de
+     * 60 s entre uno y otro) se suman en la misma linea: "escribio 240 letras, borro 12".
+     */
+    @SuppressWarnings("unchecked")
+    private void anotar(String docId, Usuario u, String cliente, String dispositivo, List<Operacion> ops) {
+        String clave = docId + "|" + u.id + "|" + (cliente == null ? "" : cliente);
+        long ahora = System.currentTimeMillis();
+        Map<String, Object> m = rachas.get(clave);
+        if (m != null && ahora - ((Number) m.get("t")).longValue() > RACHA_MS) {
+            rachas.remove(clave);
+            repo.anotarActividad(docId, m);
+            m = null;
+        }
+        if (m == null) {
+            m = new LinkedHashMap<>();
+            m.put("t", ahora);
+            m.put("usuarioId", u.id);
+            m.put("usuario", u.nombre);
+            m.put("color", u.color);
+            m.put("cliente", cliente == null ? "" : cliente);
+            m.put("dispositivo", dispositivo == null || dispositivo.isBlank() ? "Navegador" : dispositivo.length() > 40 ? dispositivo.substring(0, 40) : dispositivo);
+            m.put("operaciones", 0);
+            m.put("bloques", new java.util.LinkedHashSet<String>());
+            m.put("campos", new java.util.LinkedHashSet<String>());
+            m.put("escritas", 0);
+            m.put("borradas", 0);
+            rachas.put(clave, m);
+        }
+        java.util.Set<String> bloques = (java.util.Set<String>) m.get("bloques"), campos = (java.util.Set<String>) m.get("campos");
+        int escritas = ((Number) m.get("escritas")).intValue(), borradas = ((Number) m.get("borradas")).intValue();
         for (Operacion op : ops) {
             if (bloques.size() < 12) bloques.add(op.bloque());
+            if (op.esSecuencia()) {
+                campos.add("texto");
+                Object k = op.s().get("k");
+                if ("i".equals(k) && op.s().get("x") instanceof String x) escritas += x.codePointCount(0, x.length());
+                else if ("v".equals(k) && Boolean.FALSE.equals(op.s().get("v")) && op.s().get("r") instanceof List<?> r) {
+                    for (Object o : r) if (o instanceof List<?> rango && rango.size() == 3 && rango.get(1) instanceof Number a && rango.get(2) instanceof Number b) borradas += (int) (b.longValue() - a.longValue() + 1);
+                } else if ("f".equals(k)) campos.add("formato");
+                continue;
+            }
             for (String c : op.campos().keySet()) if (campos.size() < 12) campos.add(c);
         }
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("t", System.currentTimeMillis());
-        m.put("usuarioId", u.id);
-        m.put("usuario", u.nombre);
-        m.put("color", u.color);
-        m.put("cliente", cliente == null ? "" : cliente);
-        m.put("dispositivo", dispositivo == null || dispositivo.isBlank() ? "Navegador" : dispositivo.length() > 40 ? dispositivo.substring(0, 40) : dispositivo);
-        m.put("operaciones", ops.size());
-        m.put("bloques", bloques);
-        m.put("campos", campos);
-        return m;
+        m.put("t", ahora);
+        m.put("operaciones", ((Number) m.get("operaciones")).intValue() + ops.size());
+        m.put("escritas", escritas);
+        m.put("borradas", borradas);
+    }
+
+    /** Escribe a disco las rachas de la bitacora que ya terminaron (o todas). */
+    private void cerrarRachas(String soloDoc, boolean todas) {
+        long ahora = System.currentTimeMillis();
+        for (var e : new ArrayList<>(rachas.entrySet())) {
+            if (soloDoc != null && !e.getKey().startsWith(soloDoc + "|")) continue;
+            if (!todas && ahora - ((Number) e.getValue().get("t")).longValue() < 20_000) continue;
+            if (rachas.remove(e.getKey(), e.getValue())) repo.anotarActividad(e.getKey().substring(0, e.getKey().indexOf('|')), e.getValue());
+        }
+    }
+
+    /** Persistencia diferida: el estado vive en memoria y se escribe a disco como mucho cada 0.8 s. */
+    @Scheduled(fixedDelay = 800)
+    public void persistir() {
+        for (String id : new ArrayList<>(sucios)) {
+            sucios.remove(id);
+            if (repo.porId(id).isEmpty()) continue;
+            synchronized (candado(id)) {
+                repo.guardarEstado(id, repo.estado(id));
+                repo.porId(id).ifPresent(repo::guardar);
+            }
+        }
+    }
+
+    @Scheduled(fixedDelay = 10_000)
+    public void escribirBitacora() { cerrarRachas(null, false); }
+
+    @jakarta.annotation.PreDestroy
+    public void alApagar() {
+        persistir();
+        cerrarRachas(null, true);
     }
 
     public List<Map<String, Object>> actividad(Usuario u, String docId) {
         Documento d = requerir(docId);
         permiso(u, d, Permiso.LECTURA);
+        cerrarRachas(docId, true);
         return repo.actividad(docId, 300);
     }
 
@@ -296,7 +366,8 @@ public class ServicioDocumentos {
         v.autorNombre = autor == null ? "Autoguardado" : autor.nombre;
         v.etiqueta = etiqueta;
         Map<String, Map<String, Object>> foto = est.foto();
-        v.bloques = Math.max(0, foto.size() - 1);
+        v.bloques = (int) Math.max(0, foto.keySet().stream().filter(k -> !k.startsWith(EstadoDocumento.SEQ)).count() - 1);
+        v.letras = est.seq.values().stream().mapToInt(Secuencia::visibles).sum();
         repo.guardarVersion(d.id, v, foto);
         d.version = v.numero;
         d.pendienteVersion = false;

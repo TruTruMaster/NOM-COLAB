@@ -32,6 +32,13 @@ public class MotorCRDT {
             var it = vistas.iterator();
             for (int i = 0; i < MAX_VISTAS / 4 && it.hasNext(); i++) { it.next(); it.remove(); }
         }
+        if (op.esSecuencia()) {
+            long fin = op.t();
+            if ("i".equals(op.s().get("k")) && op.s().get("e") == null && op.s().get("x") instanceof String x) fin += x.codePointCount(0, x.length()) - 1;
+            estado.reloj = Math.max(estado.reloj, fin);
+            if (estado.seq.computeIfAbsent(op.bloque(), k -> new Secuencia()).aplicar(op.s(), op.t(), op.n())) cambios.put("_seq", op.s().get("k"));
+            return cambios;
+        }
         estado.reloj = Math.max(estado.reloj, op.t());
         Map<String, Registro> bloque = estado.bloques.computeIfAbsent(op.bloque(), k -> new LinkedHashMap<>());
         op.campos().forEach((campo, valor) -> {
@@ -59,11 +66,23 @@ public class MotorCRDT {
             }
         }
         for (var e : foto.entrySet()) {
+            if (e.getKey().startsWith(EstadoDocumento.SEQ)) continue;
             Map<String, Object> campos = new LinkedHashMap<>(e.getValue());
             if (!Operacion.DOC.equals(e.getKey())) campos.put("eliminado", false);
             campos.values().removeIf(v -> v == null);
             if (campos.isEmpty()) continue;
             ops.add(new Operacion(nodo + ":r" + t + "-" + (i++), e.getKey(), campos, t, nodo));
+        }
+        // Texto letra por letra: se ocultan, revelan y reformatean caracteres; el orden no cambia.
+        java.util.Set<String> conTexto = new java.util.LinkedHashSet<>(actual.seq.keySet());
+        foto.keySet().stream().filter(k -> k.startsWith(EstadoDocumento.SEQ)).forEach(k -> conTexto.add(k.substring(EstadoDocumento.SEQ.length())));
+        for (String b : conTexto) {
+            Secuencia ahora = actual.seq.getOrDefault(b, new Secuencia());
+            Secuencia antes = Secuencia.desde(foto.get(EstadoDocumento.SEQ + b));
+            for (Map<String, Object> s : ahora.restaurar(antes)) {
+                t++;
+                ops.add(new Operacion(nodo + ":r" + t + "-" + (i++), b, Map.of(), t, nodo, s));
+            }
         }
         return ops;
     }

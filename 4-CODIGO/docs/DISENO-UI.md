@@ -130,6 +130,58 @@ selector de archivos.
 - Tema claro, oscuro o automático (sigue al sistema).
 - Campos de 16 px para que iOS no haga zoom al escribir.
 
+## 10. Texto como en Word (y en tiempo real como Google Docs)
+
+| Decisión | Por qué | Dónde |
+|---|---|---|
+| **Una sola hoja editable** con páginas reales (Carta, A4, Oficio; vertical u horizontal; márgenes de Word), en vez de un cuadro por párrafo. | Es el modelo mental de Word: seleccionar varios párrafos, arrastrar, pegar o borrar a través de párrafos funciona como siempre. | `modo-texto.js` |
+| Estilos con los nombres y medidas de Word: Normal (Calibri 11, interlineado 1.15, 8 pt después), Título, Subtítulo, Título 1-3, Cita, Código. | Familiaridad (ley de Jakob) y exportar a .docx con estilos **reales** de Word: el panel de navegación y el índice de Word los reconocen. | `modo-texto.js`, `ooxml.js` |
+| Barra de herramientas en el orden de Google Docs: estilo · fuente · tamaño · B I U S · color · resaltado · enlace · alinear · interlineado · listas · sangría · insertar · copiar formato. | Lo que más se usa, a un clic; lo demás en "Más" e "Insertar" (ley de Hick). | `modo-texto.js` |
+| **Minibarra al seleccionar** (como la de Word) y atajos de Word/Docs: Ctrl+B/I/U, Ctrl+Mayús+L/E/R/J, Ctrl+Alt+1/2/3, Ctrl+Mayús+7/8/9, Ctrl+K, Ctrl+Enter, Mayús+F3… | Las manos no dejan el teclado; quien viene de Word no aprende nada nuevo. | `modo-texto.js · dialogoAtajos` |
+| Atajos al escribir: `# `, `## `, `- `, `1. `, `[] `, `> ` al inicio del párrafo. | Autoformato como el de Word y Notion. | `atajosMarkdown` |
+| **Cursores de los demás** con su nombre y color, y su selección sombreada. | Se ve dónde escribe cada quien antes de chocar (Google Docs). | `pintarCursores` |
+| Deshacer por palabra; Enter, pegar o mover el cursor empiezan un paso nuevo. Solo deshace **tus** cambios. | Como Word; deshacer nunca borra lo que escribió otra persona. | `crdt.js · _inversoSeq` |
+| Barra de estado con página actual, conteo de palabras (también de la selección), vista con o sin páginas y zoom. | Información siempre a la vista, sin abrir diálogos. | `pintarEstado` |
+
+## 11. Ruedita de acciones (menú radial)
+
+Inspirada en las ruedas de "ping" de los juegos (Apex Legends, League of Legends,
+la rueda de comunicación de Overwatch): **se mantiene presionado** (clic derecho, o clic
+izquierdo / dedo quieto ~0.45 s) y aparece un anillo de 8 acciones alrededor del puntero.
+Se elige **por dirección**: basta mover hacia la acción y soltar.
+
+| Principio | Qué dice la investigación | Cómo se aplica |
+|---|---|---|
+| Menús circulares (pie menus) | Callahan, Hopkins, Weiser y Shneiderman (CHI 1988): elegir en un menú circular es más rápido y con menos errores que en uno en lista, porque todas las opciones quedan a la misma distancia del puntero. | 8 sectores iguales; el puntero empieza en el centro. |
+| Ley de Fitts | El tiempo para alcanzar un objetivo depende de la distancia y el tamaño. | Cada sector es una cuña que crece hacia afuera: el objetivo es "infinito" en su dirección. |
+| Menús de marcas (marking menus) | Kurtenbach y Buxton (CHI 1993/1994): con práctica la gente elige por el gesto, sin mirar el menú. | Las acciones están siempre en la misma posición (Negrita arriba, Cursiva arriba-derecha…). |
+| Zona muerta y cancelar | Soltar sin moverse no debe ejecutar nada. | Soltar en el centro cancela; un clic derecho rápido deja la rueda abierta para elegir con clic. |
+| Submenús | Mantener la rueda corta (8 máximo). | "Color", "Resaltar", "Estilo" y "Más" abren una segunda rueda en el mismo lugar. |
+| Accesibilidad | Debe poder usarse sin ratón. | Tecla Menú o Mayús+F10 la abre en el cursor; flechas, 1-8 y Enter para elegir; Esc cierra. Mayús+clic derecho deja el menú normal del navegador (corrector ortográfico). |
+
+En el texto ofrece: negrita, cursiva, subrayado, color, resaltar, estilo, enlace y más
+(copiar, cortar, pegar, copiar formato…); sobre una imagen: tamaño, centrar y eliminar.
+En presentaciones y diagramas: duplicar, bloquear, color, al frente, eliminar, al fondo,
+girar y agrupar; en el fondo vacío: crear figuras, texto, imagen o pegar. `rueda.js`.
+
+## 12. Figuras como en Canva
+
+| Función | Cómo se usa |
+|---|---|
+| Más de 20 figuras (galería con vista previa real) | Botón "Figuras": rectángulo, elipse, rombo, triángulos, pentágono, hexágono, octágono, estrella, corazón, nube, globo de diálogo, flechas, chevrón, cruz, paralelogramo, trapecio, cilindro, documento, nota, líneas. |
+| **Barra contextual** sobre la selección | Relleno (o sin relleno), borde (color, grosor, sólido/guiones/puntos), texto (tamaño, color, negrita, alineación, fuente), transparencia, esquinas redondeadas, sombra, posición, girar, voltear, agrupar, bloquear, duplicar, eliminar. |
+| Girar | Tirador redondo debajo de la figura; Mayús gira de 15° en 15° y se "pega" a 0°, 90°, 180° y 270°. |
+| Cambiar tamaño | 8 tiradores; funcionan aunque la figura esté girada (la esquina opuesta se queda fija). Mayús conserva la proporción. |
+| **Guías inteligentes** | Al mover, la selección se alinea sola con los bordes y centros de las demás figuras (y con el centro de la diapositiva); se ven líneas rosas. Alt para mover libre. |
+| Selección múltiple | Recuadro arrastrando en el fondo, Mayús+clic, Ctrl+A. |
+| Agrupar, alinear y distribuir | Ctrl+G / Ctrl+Mayús+G; alinear a la izquierda/centro/derecha/arriba/medio/abajo; distribuir con espacios iguales. |
+| Orden y bloqueo | Ctrl+] / Ctrl+[ (Mayús: al frente / al fondo); bloquear evita moverlo por accidente. |
+| Copiar y pegar | Ctrl+C / Ctrl+V entre diapositivas y entre pestañas; Ctrl+D duplica. |
+
+Todo se exporta a PowerPoint con geometrías **nativas** (`star5`, `heart`, `cloud`,
+`rightArrow`, `can`…), giro, volteo, borde, transparencia y sombra: se ve igual en
+PowerPoint, Google Slides o LibreOffice.
+
 ## Fuentes
 
 - Laws of UX (Jakob, Hick, Fitts, Doherty, Von Restorff, estético-usabilidad): https://lawsofux.com/
@@ -139,3 +191,7 @@ selector de archivos.
 - Pixso — Glassmorphism vs neumorphism vs claymorphism: https://pixso.net/articles/glassmorphism-vs-neumorphism-vs-claymorphism/
 - LogRocket — What is claymorphism: https://blog.logrocket.com/ux-design/what-is-claymorphism-web-design/
 - Costo del cambio de tarea y residuo atencional (Leroy 2009; Mark, Gudith y Klocke 2008): https://blog.saner.ai/context-switching-statistics/ · https://concepts.dsebastien.net/concept/task-switching-cost/
+- Callahan, Hopkins, Weiser y Shneiderman — *An empirical comparison of pie vs. linear menus* (CHI 1988).
+- Kurtenbach y Buxton — *The limits of expert performance using hierarchic marking menus* (CHI 1993) y *User learning and performance with marking menus* (CHI 1994).
+- Roh, Jeon, Kim y Lee — *Replicated abstract data types: Building blocks for collaborative applications* (JPDC, 2011): el algoritmo RGA.
+- Ink & Switch — *Peritext: A CRDT for rich-text collaboration*: https://www.inkandswitch.com/peritext/

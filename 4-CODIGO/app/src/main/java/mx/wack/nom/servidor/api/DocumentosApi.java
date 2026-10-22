@@ -28,7 +28,8 @@ import mx.wack.nom.servidor.servicio.ServicioDocumentos;
 public class DocumentosApi {
 
     public record Lote(String cliente, List<Operacion> ops, String dispositivo) { }
-    public record Presencia(String cliente, String bloque, String modo) { }
+    /** cursor: dónde está el cursor de texto ({ a, f }: ids de caracteres), para pintarlo en los demás equipos. */
+    public record Presencia(String cliente, String bloque, String modo, Map<String, Object> cursor) { }
     public record Etiqueta(String etiqueta) { }
 
     private final ServicioDocumentos documentos;
@@ -73,7 +74,7 @@ public class DocumentosApi {
     @PostMapping("/{id}/presencia")
     public Map<String, Object> presencia(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
                                          @RequestBody Presencia p) {
-        difusor.actualizarPresencia(id, p.cliente(), p.bloque(), p.modo());
+        difusor.actualizarPresencia(id, p.cliente(), p.bloque(), p.modo(), p.cursor());
         return Map.of("ok", true);
     }
 

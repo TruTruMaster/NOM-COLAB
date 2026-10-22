@@ -127,7 +127,17 @@
   }
 
   // ------------------------------------------------------------ rutas
+  // Turno de navegación: si se cambia de pantalla mientras otra aún carga, la vieja se descarta
+  // (si no, quedaba un editor "huérfano" conectado y escuchando en segundo plano).
+  let turno = 0;
   async function ruta() {
+    const mio = ++turno;
+    const vigente = () => mio === turno;
+    const montar = async (promesa) => {
+      const d = await promesa;
+      if (vigente()) desmontar = d;
+      else if (typeof d === "function") { try { d(); } catch (e) { console.error(e); } }
+    };
     // Al cambiar de pantalla (incluido el botón Atrás) no se queda ninguna ventana encima.
     NOM.cerrarHoja();
     NOM.cerrarMenu();
@@ -138,7 +148,7 @@
     let m;
     // Documentos de este equipo: se abren con o sin cuenta.
     if ((m = h.match(/^#\/local\/([^/?]+)/))) {
-      desmontar = await NOM.editor.abrir(raiz, decodeURIComponent(m[1]), { local: true });
+      await montar(NOM.editor.abrir(raiz, decodeURIComponent(m[1]), { local: true, vigente }));
       return;
     }
     if (!api.token() && !NOM.local.activo()) { NOM.vistaCuentas.pintar(raiz, cuentasModo ? { modo: cuentasModo } : undefined); cuentasModo = null; return; }
@@ -157,14 +167,14 @@
       return;
     }
     if ((m = h.match(/^#\/doc\/([^/?]+)/))) {
-      desmontar = await NOM.editor.abrir(raiz, decodeURIComponent(m[1]));
+      await montar(NOM.editor.abrir(raiz, decodeURIComponent(m[1]), { vigente }));
       return;
     }
     if ((m = h.match(/^#\/espacio\/([^/?]+)/))) {
       const v = cascaron("espacio", (app.espacios.find((e) => e.id === m[1]) || {}).nombre);
       app.fijarFab(null);
       api.get("/api/espacios").then((l) => { NOM.guardar(api.clave("cache.espacios"), l); app.fijarEspacios(l); }).catch(() => {});
-      desmontar = await NOM.vistaEspacios.espacio(v, decodeURIComponent(m[1]));
+      await montar(NOM.vistaEspacios.espacio(v, decodeURIComponent(m[1])));
       return;
     }
     if (h.startsWith("#/admin")) {
