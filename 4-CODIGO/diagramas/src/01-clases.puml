@@ -1,0 +1,320 @@
+@startuml 01-clases
+title NOM-COLAB - Diagrama de clases (nucleo)
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide empty members
+
+' ===== CUENTAS =====
+class Usuario {
+  - id : UUID
+  - nombre : String
+  - hashContrasena : String
+  - empresa : String
+  - intentosFallidos : int
+  + verificarContrasena(texto : String) : boolean
+  + bloquear() : void
+  + estaBloqueado() : boolean
+}
+
+class Sesion {
+  - token : String
+  - inicio : Instant
+  - expira : Instant
+  + estaVigente() : boolean
+}
+
+class ServicioCuentas {
+  + registrar(nombre, contrasena, empresa) : Usuario
+  + iniciarSesion(nombre, contrasena) : Sesion
+  + cerrarSesion(token : String) : void
+}
+
+' ===== ESPACIOS Y ACCESOS =====
+class Espacio {
+  - id : UUID
+  - nombre : String
+  - creado : Instant
+  + agregarDocumento(d : Documento) : void
+}
+
+class Acceso {
+  - permiso : Permiso
+  + puedeEditar() : boolean
+}
+
+enum Permiso {
+  LECTURA
+  EDICION
+  PROPIETARIO
+}
+
+class ServicioEspacios {
+  + crearEspacio(nombre : String, dueno : Usuario) : Espacio
+  + invitar(e : Espacio, u : Usuario, p : Permiso) : Acceso
+  + listarPorUsuario(u : Usuario) : List<Espacio>
+}
+
+' ===== DOCUMENTO (lienzo unico) =====
+class Documento {
+  - id : UUID
+  - nombre : String
+  - modo : ModoEditor
+  - version : int
+  + agregarPagina() : Pagina
+}
+
+enum ModoEditor {
+  TEXTO
+  HOJA
+  PRESENTACION
+  DIAGRAMA
+}
+
+class Pagina {
+  - indice : int
+  + agregarBloque(b : Bloque) : void
+}
+
+abstract class Bloque {
+  - id : UUID
+  - x : double
+  - y : double
+  - ancho : double
+  - alto : double
+  - z : int
+  + {abstract} tipo() : String
+}
+
+class BloqueTexto {
+  - contenido : String
+  - estilo : Estilo
+}
+
+class BloqueTabla {
+  - filas : int
+  - columnas : int
+  + celda(f : int, c : int) : Celda
+}
+
+class Celda {
+  - formula : String
+  - valor : String
+}
+
+class BloqueImagen {
+  - rutaRecurso : String
+}
+
+class BloqueForma {
+  - figura : String
+  - estilo : Estilo
+}
+
+class Estilo {
+  - fuente : String
+  - tamano : int
+  - colorTexto : String
+  - colorFondo : String
+}
+
+class Version {
+  - numero : int
+  - autor : UUID
+  - fecha : Instant
+}
+
+interface RepositorioUsuarios {
+  + guardar(u : Usuario) : void
+  + buscarPorNombre(nombre : String) : Usuario
+  + actualizar(u : Usuario) : void
+}
+
+interface RepositorioEspacios {
+  + guardar(e : Espacio) : void
+  + listarPorUsuario(u : Usuario) : List<Espacio>
+  + accesoDe(e : Espacio, u : Usuario) : Acceso
+}
+
+interface RepositorioDocumentos {
+  + guardar(d : Documento) : void
+  + buscar(id : UUID) : Documento
+  + historial(id : UUID) : List<Version>
+}
+
+
+class Plantilla {
+  - id : UUID
+  - nombre : String
+  - modo : ModoEditor
+  + aplicarA(d : Documento) : void
+}
+
+class Animacion {
+  - efecto : String
+  - duracionMs : int
+  - orden : int
+}
+
+class Preferencias {
+  - idioma : String
+  - autoguardadoSeg : int
+  - limiteVersiones : int
+  - calidadRender : String
+}
+
+' ===== FORMATOS =====
+enum FormatoArchivo {
+  NOM
+  ODT
+  ODS
+  ODP
+  DOCX
+  XLSX
+  PPTX
+  PDF
+  CSV
+  SVG
+  PNG
+}
+
+interface ConversorFormato {
+  + importar(ruta : String, f : FormatoArchivo) : Documento
+  + exportar(d : Documento, f : FormatoArchivo) : String
+  + formatosSoportados() : List<FormatoArchivo>
+}
+
+' ===== CRDT / SINCRONIZACION =====
+class Operacion {
+  - idOperacion : String
+  - idBloque : UUID
+  - tipo : TipoOperacion
+  - carga : String
+  - reloj : RelojVectorial
+}
+
+enum TipoOperacion {
+  INSERTAR
+  ACTUALIZAR
+  ELIMINAR
+  MOVER
+}
+
+class RelojVectorial {
+  - marcas : Map<UUID, Long>
+  + incrementar(nodo : UUID) : void
+  + precedeA(otro : RelojVectorial) : boolean
+}
+
+class MotorCRDT {
+  + aplicarLocal(op : Operacion) : void
+  + fusionarRemota(op : Operacion) : void
+  + estado() : Documento
+}
+
+' ===== RED / SERVIDOR LOCAL =====
+class NodoLocal {
+  - puerto : int
+  - idNodo : UUID
+  + iniciar() : void
+  + detener() : void
+  + handshake(idUsuario : UUID, token : String) : boolean
+  + usuariosConectados() : int
+}
+
+class ServicioDescubrimiento {
+  + anunciar(e : Espacio) : void
+  + buscarEnLan() : List<EspacioRemoto>
+}
+
+class EspacioRemoto {
+  - nombre : String
+  - host : String
+  - puerto : int
+}
+
+class ColaPendiente {
+  + encolar(op : Operacion) : void
+  + eliminar(op : Operacion) : void
+  + pendientes() : List<Operacion>
+}
+
+class CanalSync {
+  + conectar(r : EspacioRemoto) : void
+  + enviar(op : Operacion) : void
+  + alRecibir(op : Operacion) : void
+}
+
+class ClienteAndroid {
+  - idDispositivo : String
+  + emparejar(r : EspacioRemoto) : void
+  + sincronizarSinConexion() : void
+}
+
+' ===== RELACIONES =====
+ServicioCuentas ..> RepositorioUsuarios
+ServicioEspacios ..> RepositorioEspacios
+RepositorioUsuarios ..> Usuario
+RepositorioEspacios ..> Espacio
+RepositorioEspacios ..> Acceso
+ServicioCuentas ..> Usuario
+ServicioCuentas ..> Sesion
+Usuario "1" -- "0..*" Sesion
+Usuario "1" -- "0..*" Acceso
+Espacio "1" -- "0..*" Acceso
+Acceso --> Permiso
+ServicioEspacios ..> Espacio
+ServicioEspacios ..> Acceso
+
+Espacio "1" *-- "0..*" Documento
+Documento --> ModoEditor
+Documento "1" *-- "1..*" Pagina
+Pagina "1" *-- "0..*" Bloque
+Bloque <|-- BloqueTexto
+Bloque <|-- BloqueTabla
+Bloque <|-- BloqueImagen
+Bloque <|-- BloqueForma
+BloqueTabla "1" *-- "0..*" Celda
+BloqueTexto --> Estilo
+BloqueForma --> Estilo
+Documento "1" -- "0..*" Version
+RepositorioDocumentos ..> Documento
+RepositorioDocumentos ..> Version
+
+MotorCRDT "1" o-- "0..*" Operacion
+Operacion --> TipoOperacion
+Operacion --> RelojVectorial
+MotorCRDT --> Documento
+
+NodoLocal --> CanalSync
+NodoLocal ..> ServicioDescubrimiento
+ServicioDescubrimiento ..> EspacioRemoto
+CanalSync ..> Operacion
+CanalSync --> MotorCRDT
+CanalSync --> ColaPendiente
+ColaPendiente o-- Operacion
+
+note right of NodoLocal
+  usuariosConectados() aplica el
+  limite de 5 usuarios simultaneos.
+end note
+
+note right of ColaPendiente
+  Persistente (tabla cola_pendiente):
+  sobrevive al cierre de la app sin red.
+end note
+ClienteAndroid ..> EspacioRemoto
+ClienteAndroid --> CanalSync
+
+Plantilla --> ModoEditor
+Documento ..> Plantilla : se crea desde
+Bloque "1" -- "0..1" Animacion
+Usuario "1" -- "1" Preferencias
+ConversorFormato ..> Documento
+ConversorFormato ..> FormatoArchivo
+
+note bottom of Animacion
+  Solo se reproduce en modo PRESENTACION;
+  se conserva en los demas modos.
+end note
+@enduml

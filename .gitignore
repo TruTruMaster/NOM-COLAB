@@ -1,0 +1,16 @@
+CREDENCIALES-AZURE.txt
+**/target/
+**/build/
+2-PAGINA-Servidor/datos/
+# No subir: credenciales, binarios y documentos internos
+CREDENCIALES-*.txt
+*.env
+2-PAGINA-Servidor/
+3-APP-Android/
+**/*.apk
+4-CODIGO/android/build/
+4-CODIGO/android/.gradle/
+4-CODIGO/android/local.properties
+**/*Auditoria*Seguridad*
+*.jks
+*.keystore

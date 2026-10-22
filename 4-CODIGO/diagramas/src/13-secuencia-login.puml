@@ -1,0 +1,75 @@
+@startuml 13-secuencia-login
+title Secuencia 1 - Inicio de sesión (CU-02)
+skinparam shadowing false
+autonumber
+
+actor "Usuario" as A
+participant "VistaLogin" as V <<web>>
+participant "ControladorCuentas" as C <<api>>
+participant "ServicioCuentas" as S
+participant "RepositorioUsuarios" as R
+database "Azure SQL\n(usuario, rol, sesion)" as BD
+participant "u : Usuario" as U
+participant "ServicioEspacios" as SE
+
+A -> V : captura nombre y contraseña
+V -> C : POST /api/cuentas/sesion
+activate C
+C -> S : iniciarSesion(nombre, contrasena)
+activate S
+S -> R : porNombre(nombre)
+R -> BD : SELECT u.*, r.nombre AS rol\nFROM usuario u JOIN rol r ON r.id = u.id_rol
+BD --> R : fila (con su rol)
+R --> S : u (u.rol)
+
+alt no existe o está bloqueado
+  S --> C : error "credenciales inválidas"
+  C --> V : 401
+  V --> A : mensaje genérico
+else existe y activo
+  S -> U : verificarContrasena(texto)
+  U --> S : resultado
+
+  alt resultado = false
+    S -> U : intentosFallidos + 1
+    S -> R : actualizar(u)
+    alt intentosFallidos > 5  (CU-04)
+      S -> U : bloquear()
+      S -> R : actualizar(u)
+      S --> C : error "cuenta bloqueada"
+    else aún con intentos
+      S --> C : error "credenciales inválidas"
+    end
+    C --> V : 401
+    V --> A : mensaje genérico
+
+  else resultado = true
+    S -> U : intentosFallidos = 0
+    S -> R : actualizar(u)
+    S -> S : crear Sesion(token, expira)
+    S -> R : guardarSesion(s)
+    R -> BD : INSERT INTO sesion
+    S --> C : sesion
+    deactivate S
+    C -> SE : listarPorUsuario(u)
+    SE --> C : List<Espacio>
+    C --> V : token + usuario (rol) + espacios
+    deactivate C
+    alt rol = ADMINISTRADOR
+      V --> A : Inicio + "Administrar usuarios"
+    else rol = USUARIO
+      V --> A : Inicio (sin administración)
+    end
+  end
+end
+
+note over C, S
+  RNF: todo el proceso
+  debe cerrar en menos de 2 s.
+end note
+note over C, BD
+  Seguridad por roles: cada petición a /api/admin/**
+  vuelve a leer el rol de la BD (FiltroRol);
+  si no es ADMINISTRADOR responde 403.
+end note
+@enduml

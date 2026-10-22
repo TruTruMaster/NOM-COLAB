@@ -1,0 +1,45 @@
+@startuml 11-cu-general
+title NOM-COLAB - Casos de uso (vista general)
+skinparam shadowing false
+left to right direction
+
+actor "Visitante" as V
+actor "Usuario" as U
+actor "Propietario" as P
+actor "Nodo remoto\n(LAN)" as N <<sistema>>
+actor "Dispositivo\nAndroid" as A <<sistema>>
+U -up-|> V
+P -up-|> U
+
+rectangle "NOM-COLAB" {
+  rectangle "Gestión de cuentas" {
+    usecase "Crear usuario\nCU-01" as G1
+    usecase "Iniciar / cerrar sesión\nCU-02, CU-03" as G2
+    usecase "Configurar preferencias\nCU-27" as C2
+  }
+  rectangle "Espacios de trabajo" {
+    usecase "Crear espacio y\nactivar conexión\nCU-13, CU-14" as E1
+    usecase "Descubrir y unirse\nCU-15, CU-16" as E2
+    usecase "Gestionar accesos\nCU-17" as E3
+    usecase "Editar en el lienzo\nCU-18 a CU-22" as E4
+    usecase "Sincronizar y versionar\nCU-21, CU-23, CU-24" as E5
+    usecase "Cliente Android\nCU-25, CU-26" as E6
+    usecase "Importar y exportar\nformatos\nCU-28, CU-29" as E7
+  }
+}
+
+V --> G1
+V --> G2
+U --> C2
+P --> E1
+U --> E2
+P --> E3
+U --> E4
+U --> E5
+U --> E6
+U --> E7
+E1 -- N
+E2 -- N
+E5 -- N
+E6 -- A
+@enduml

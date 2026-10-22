@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1071" viewBox="0 0 900 1071" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11">
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6E6E6E"/></marker></defs>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="10" y="20" fill="#B5397A" font-size="14">Módulo Espacios de trabajo (Gestión de accesos)</text>
+<rect x="10" y="30" width="250" height="1033.4" fill="#FFFFFF" stroke="#B85450" stroke-width="1.2"/>
+<rect x="10" y="30" width="250" height="22" fill="#F8CECC" stroke="#B85450" stroke-width="1.2"/>
+<text x="135.0" y="45" text-anchor="middle" font-weight="bold">Usuario</text>
+<rect x="260" y="30" width="300" height="1033.4" fill="#FFFFFF" stroke="#6C8EBF" stroke-width="1.2"/>
+<rect x="260" y="30" width="300" height="22" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.2"/>
+<text x="410.0" y="45" text-anchor="middle" font-weight="bold">Sistema</text>
+<rect x="560" y="30" width="330" height="1033.4" fill="#FFFFFF" stroke="#82B366" stroke-width="1.2"/>
+<rect x="560" y="30" width="330" height="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.2"/>
+<text x="725.0" y="45" text-anchor="middle" font-weight="bold">Base de datos</text>
+<polyline points="135.0,75.0 135.0,109.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="191.0,128.0 669.0,128.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="135.0,279.4 135.0,294.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="135.0,358.4 135.0,386.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="191.0,403.2 410.0,403.2 410.0,457.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="87.0,646.2 87.0,680.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="725.0,497.0 725.0,533.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="573.0,633.6 410.0,633.6 410.0,691.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="354.0,710.4 183.0,710.4 183.0,755.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="183.0,793.4 183.0,827.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="410.0,851.1 410.0,876.9" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="354.0,902.4 111.0,902.4 111.0,947.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="111.0,985.4 111.0,1019.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="354.0,563.2 87.0,563.2 87.0,608.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="725.0,153.5 725.0,198.4 466.0,198.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="410.0,223.9 410.0,262.4 191.0,262.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="410.0,503.0 410.0,537.7" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="415.0" y="516.0" font-size="9.5" fill="#333">[Deja el espacio sin dueño]</text>
+<polyline points="462.0,480.0 669.0,480.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="466.0" y="476.0" text-anchor="start" font-size="9.5" fill="#333">[Datos correctos]</text>
+<polyline points="673.0,556.8 629.0,556.8 629.0,616.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="669.0" y="552.8" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="777.0,556.8 821.0,556.8 821.0,614.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="781.0" y="552.8" text-anchor="start" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="821.0,652.6 821.0,782.1 410.0,782.1 410.0,800.1" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<circle cx="135.0" cy="64" r="11" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<rect x="79.0" y="109.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="125.5" text-anchor="middle">Selecciona opción</text>
+<text x="135.0" y="138.5" text-anchor="middle">&quot;Compartir&quot;</text>
+<rect x="669.0" y="102.5" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="725.0" y="119.0" text-anchor="middle">Consulta accesos y</text>
+<text x="725.0" y="132.0" text-anchor="middle">solicitudes del</text>
+<text x="725.0" y="145.0" text-anchor="middle">espacio</text>
+<rect x="354.0" y="172.9" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="189.4" text-anchor="middle">Despliega miembros,</text>
+<text x="410.0" y="202.4" text-anchor="middle">permisos y</text>
+<text x="410.0" y="215.4" text-anchor="middle">solicitudes</text>
+<rect x="79.0" y="245.4" width="112" height="34" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="266.4" text-anchor="middle">Visualiza la lista</text>
+<rect x="79.0" y="294.4" width="112" height="64" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="310.9" text-anchor="middle">Ingresa usuario y</text>
+<text x="135.0" y="323.9" text-anchor="middle">elige permiso</text>
+<text x="135.0" y="336.9" text-anchor="middle">(Lectura, Edición o</text>
+<text x="135.0" y="349.9" text-anchor="middle">Quitar)</text>
+<rect x="79.0" y="386.2" width="112" height="34" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="407.2" text-anchor="middle">Envía el cambio</text>
+<polygon points="410.0,457.0 462.0,480.0 410.0,503.0 358.0,480.0" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="484.0" text-anchor="middle">Valida datos</text>
+<rect x="354.0" y="537.7" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="554.2" text-anchor="middle">Manda mensaje &quot;El</text>
+<text x="410.0" y="567.2" text-anchor="middle">espacio no puede</text>
+<text x="410.0" y="580.2" text-anchor="middle">quedar sin dueño&quot;</text>
+<rect x="31.0" y="608.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="87.0" y="624.7" text-anchor="middle">Recibe mensaje de</text>
+<text x="87.0" y="637.7" text-anchor="middle">error</text>
+<circle cx="87.0" cy="691.2" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="87.0" cy="691.2" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="669.0" y="463.0" width="112" height="34" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="725.0" y="484.0" text-anchor="middle">Busca al usuario</text>
+<polygon points="725.0,533.8 777.0,556.8 725.0,579.8 673.0,556.8" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="725.0" y="560.8" text-anchor="middle">¿Encuentra?</text>
+<rect x="573.0" y="616.6" width="112" height="34" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="629.0" y="637.6" text-anchor="middle">Cancela cambio</text>
+<rect x="765.0" y="614.6" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="821.0" y="631.1" text-anchor="middle">Crea, actualiza o</text>
+<text x="821.0" y="644.1" text-anchor="middle">elimina el acceso</text>
+<rect x="354.0" y="691.4" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="707.9" text-anchor="middle">Manda mensaje &quot;El</text>
+<text x="410.0" y="720.9" text-anchor="middle">usuario no existe&quot;</text>
+<rect x="127.0" y="755.4" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="183.0" y="771.9" text-anchor="middle">Recibe mensaje de</text>
+<text x="183.0" y="784.9" text-anchor="middle">error</text>
+<circle cx="183.0" cy="838.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="183.0" cy="838.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="354.0" y="800.1" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="816.6" text-anchor="middle">Notifica el cambio</text>
+<text x="410.0" y="829.6" text-anchor="middle">a los usuarios</text>
+<text x="410.0" y="842.6" text-anchor="middle">conectados</text>
+<rect x="354.0" y="876.9" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="893.4" text-anchor="middle">Manda mensaje</text>
+<text x="410.0" y="906.4" text-anchor="middle">&quot;Acceso</text>
+<text x="410.0" y="919.4" text-anchor="middle">actualizado&quot;</text>
+<rect x="55.0" y="947.4" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="111.0" y="963.9" text-anchor="middle">Visualiza la lista</text>
+<text x="111.0" y="976.9" text-anchor="middle">actualizada</text>
+<circle cx="111.0" cy="1030.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="111.0" cy="1030.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+</svg>

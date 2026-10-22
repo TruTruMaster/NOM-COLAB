@@ -1,0 +1,94 @@
+@startuml 02-paquetes
+title NOM-COLAB - Diagrama de paquetes
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+package "mx.wack.nom.core" as core {
+  package "modelo" as modelo
+  package "crdt" as crdt
+  package "almacen" as almacen
+  package "formatos" as fmt
+}
+
+package "mx.wack.nom.editor" as editor {
+  package "lienzo" as lienzo
+  package "modos" as modos
+  package "herramientas" as herr
+}
+
+package "mx.wack.nom.red" as red {
+  package "nodo" as nodo
+  package "descubrimiento" as desc
+  package "sync" as sync
+}
+
+package "mx.wack.nom.servidor" as servidor {
+  package "api" as api
+  package "servicio" as servicio
+  package "repositorio" as repo
+  package "seguridad" as seg
+}
+
+package "mx.wack.nom.web" as web {
+  package "paginas" as paginas
+  package "componentes" as comp
+}
+
+package "mx.wack.nom.escritorio" as esc {
+  package "ventana" as vent
+}
+
+package "mx.wack.nom.android" as android {
+  package "ui" as aui
+  package "puente" as apuente
+}
+
+' dependencias (siempre hacia el nucleo)
+modelo <.. crdt
+modelo <.. almacen
+modelo <.. fmt
+
+lienzo ..> modelo
+modos ..> lienzo
+herr ..> lienzo
+editor ..> crdt
+
+sync ..> crdt
+nodo ..> sync
+nodo ..> desc
+
+servicio ..> modelo
+servicio ..> almacen
+repo ..> modelo
+api ..> servicio
+seg ..> servicio
+servidor ..> nodo
+
+comp ..> editor
+paginas ..> comp
+web ..> api
+
+vent ..> lienzo
+vent ..> modos
+esc ..> nodo
+
+aui ..> apuente
+apuente ..> sync
+android ..> api
+
+note bottom of core
+  Nucleo sin dependencias externas.
+  Compartido por web, escritorio y Android.
+end note
+
+note bottom of esc
+  Aplicacion nativa: Windows 10+, macOS 11, Linux.
+  Reusa el editor; no necesita el servidor web.
+end note
+
+note bottom of servidor
+  Spring Boot 3.5 / JDK 17.
+  Servidor LOCAL: solo LAN, solo para la parte web.
+end note
+@enduml

@@ -1,0 +1,56 @@
+@startuml 14-secuencia-unirse
+title Secuencia 2 - Unirse a un espacio en la LAN (CU-15, CU-16)
+skinparam shadowing false
+autonumber
+
+actor "Usuario" as A
+participant "VistaEspacios" as V
+participant "ServicioDescubrimiento" as D
+participant "RepositorioEspacios" as RE
+participant "CanalSync" as CS
+participant "NodoLocal\n(equipo remoto)" as N
+participant "MotorCRDT" as M
+
+A -> V : "unirse a un espacio"
+V -> D : buscarEnLan()
+activate D
+D ->> N : consulta de descubrimiento (broadcast)
+N -->> D : EspacioRemoto(nombre, host, puerto)
+D --> V : List<EspacioRemoto>
+deactivate D
+V --> A : lista de espacios visibles
+
+A -> V : elige un espacio
+V -> RE : accesoDe(espacio, usuario)
+RE --> V : Acceso
+
+alt sin Acceso
+  V --> A : "solicita invitación al propietario" (CU-17)
+else con Acceso
+  V -> CS : conectar(EspacioRemoto)
+  activate CS
+  CS -> N : handshake(idUsuario, token)
+
+  alt ya hay 5 usuarios conectados
+    N --> CS : rechazo "límite alcanzado"
+    CS --> A : aviso (RNF: máx. 5 simultáneos)
+  else hay lugar
+    N --> CS : aceptado
+    CS -> N : solicitar estado del Documento
+    N --> CS : lista de Operacion
+
+    loop por cada Operacion recibida
+      CS -> M : fusionarRemota(op)
+    end
+    M --> CS : estado()
+    CS --> V : Documento sincronizado
+    deactivate CS
+
+    alt permiso = LECTURA
+      V --> A : Editor en modo solo lectura
+    else permiso = EDICION
+      V --> A : Editor editable
+    end
+  end
+end
+@enduml

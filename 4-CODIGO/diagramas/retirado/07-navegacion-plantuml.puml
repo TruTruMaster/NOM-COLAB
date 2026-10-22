@@ -1,0 +1,98 @@
+@startuml 07-navegacion
+title NOM-COLAB - Mapa de navegación (flujo ideal del usuario)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName Nunito
+skinparam state {
+  BackgroundColor #FBFAF7
+  BorderColor #5B5BD6
+  ArrowColor #3A3752
+}
+
+[*] --> Bienvenida
+
+state "Bienvenida" as Bienvenida
+state "Gestión de cuentas" as Cuentas {
+  state "Iniciar sesión" as Login
+  state "Crear cuenta" as Crear
+  [*] --> Login
+  Login --> Crear : "Crear cuenta"
+  Crear --> Login : registro exitoso\n(usuario ya escrito)
+}
+Bienvenida --> Cuentas
+Bienvenida --> SinCuenta : "Usar sin cuenta"
+
+state "Sin cuenta (solo este equipo)" as SinCuenta {
+  state "Mis documentos locales" as Locales
+  state "Editor local" as EditorLocal
+  [*] --> Locales
+  Locales --> EditorLocal : abrir / nuevo
+  EditorLocal --> Locales : volver
+}
+SinCuenta --> Cuentas : crear cuenta o\niniciar sesión\n(sus documentos se pueden subir)
+
+state "Inicio" as Inicio
+Cuentas --> Inicio : sesión válida\n(el rol viene de la BD)
+
+state "Espacio de trabajo" as Espacio {
+  state "Documentos del espacio\n(filtrar por tipo, buscar)" as Docs
+  state "Nuevo documento:\nnombre + TIPO + plantilla" as Nuevo
+  state "Compartir y accesos\n(Lectura / Edición / Quitar)" as Accesos
+  state "Conexión del proyecto\n(solo en red local)" as Conexion
+  state "Almacenamiento\n(consumo y depurar versiones)" as Almacen
+  [*] --> Docs
+  Docs --> Nuevo
+  Docs --> Accesos
+  Docs --> Conexion
+  Docs --> Almacen
+  Accesos --> Docs
+  Conexion --> Docs
+  Almacen --> Docs
+}
+
+state "Editor (el tipo NO cambia)" as Editor {
+  state "Texto" as ETexto
+  state "Hoja de cálculo" as EHoja
+  state "Presentación" as EPres
+  state "Diagrama" as EDiag
+  state "Historial y actividad\n(versiones, quién cambió qué)" as Historial
+  state "Descargar\n.docx · .xlsx · .pptx · PDF" as Descargar
+}
+Nuevo --> ETexto : Texto
+Nuevo --> EHoja : Hoja
+Nuevo --> EPres : Presentación
+Nuevo --> EDiag : Diagrama
+Docs --> Editor : abrir documento\n(se abre en su tipo)
+Editor --> Historial
+Historial --> Editor : restaurar versión
+Editor --> Descargar
+Editor --> Docs : volver al espacio\n(autoguardado continuo)
+
+Inicio --> Espacio : abrir espacio
+Inicio --> Editor : "Continúa donde lo dejaste"
+Inicio --> Unirse : unirse a un espacio
+state "Unirse a un espacio\n(red local: buscar · en línea: te lo comparten)" as Unirse
+Unirse --> Espacio : acceso concedido
+Espacio --> Inicio : volver
+
+state "Este dispositivo\n(copias locales, espacio usado,\ncambios sin enviar)" as Dispositivo
+state "Administrar usuarios\n(solo ADMINISTRADOR)" as Admin
+state "Ajustes y preferencias\n(hoja sobre cualquier pantalla)" as Ajustes
+Inicio --> Dispositivo
+Dispositivo --> Editor : abrir copia
+Inicio --> Admin : rol = ADMINISTRADOR
+Inicio --> Ajustes : menú de la cuenta
+Inicio --> [*] : cerrar sesión
+
+note right of Editor
+  El tipo se elige al crear el documento y queda fijo:
+  pasar de texto a hoja (o al revés) rompería su formato.
+  Cada cambio se guarda solo (~250 ms), se envía al
+  servidor y queda en la bitácora de actividad.
+end note
+note bottom of Admin
+  Un USUARIO no ve la opción;
+  si escribe la ruta, el servidor
+  responde 403 (CU-30).
+end note
+@enduml

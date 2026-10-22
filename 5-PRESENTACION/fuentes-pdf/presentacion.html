@@ -1,0 +1,447 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>NOM-COLAB · Avance del proyecto</title><style>
+@font-face { font-family: 'Nunito'; src: url(file:///home/user/NOM/4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-wght-normal.woff2) format('woff2'); font-weight: 200 1000; }
+@font-face { font-family: 'Nunito'; src: url(file:///home/user/NOM/4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-ext-wght-normal.woff2) format('woff2'); font-weight: 200 1000; unicode-range: U+0100-024F, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@page { size: 1920px 1080px; margin: 0; }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: #fff; }
+section { position: relative; width: 1920px; height: 1080px; overflow: hidden; page-break-after: always; break-after: page; }
+h1, h2, h3 { font-weight: 600; }
+ol, ul { padding-left: 1.4em; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 0.35em 0.6em; border-bottom: 1px solid #D9D4CA; text-align: left; vertical-align: top; }
+th { font-weight: 800; }
+</style></head><body>
+<section id="cover" data-transition="fade" style="background:linear-gradient(135deg, #EEEAFB 0%, #F6F3EE 55%, #FBEFE6 100%);color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:space-between">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/logo-wack.png" alt="Logotipo de WACK: una figura que levanta una flama" style="position:absolute;left:1340px;top:150px;width:452px;height:560px;object-fit:contain">
+<div style="display:flex;align-items:center;gap:28px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/logo-nom.png" alt="Logotipo de NOM-COLAB: un documento cuadrado con cuatro cuadros de colores, uno por tipo de documento" style="width:120px;height:120px;object-fit:contain">
+<p style="font-size:32px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Equipo 6 · WACK · “We carry the flame”</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:28px">
+<h1 style="font-size:160px;font-weight:900;line-height:1;letter-spacing:-3px;color:#1E1B2E">NOM-COLAB</h1>
+<p style="font-size:48px;font-weight:700;line-height:1.25;color:#3A3752;width:1120px">Suite colaborativa en tiempo real: texto, hojas de cálculo, presentaciones y diagramas en una sola app.</p>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:48px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<p style="font-size:28px;font-weight:600;color:#55526A">González Azuara Arturo Leonardo · Martínez Ortega Uriel Alejandro</p>
+<p style="font-size:28px;font-weight:600;color:#55526A">Rodríguez Esparza Diego Alejandro · Soria Flores Josep Aarón</p>
+</div>
+<p style="font-size:28px;font-weight:800;color:#3A3752;text-align:right">CECyT 9 “Juan de Dios Bátiz” · 5IM7<br>Programación Web · Octubre 2026</p>
+</div>
+
+</section>
+<section id="problematica" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Problemática</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">El trabajo en equipo se rompe entre programas, archivos y la falta de Internet</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:40px">
+<h3 style="font-size:32px;font-weight:800;line-height:1.2;color:#4B4BC4">Herramientas separadas</h3>
+<p style="font-size:28px;line-height:1.4;color:#55526A">Texto, hojas, presentaciones y diseño en programas distintos y solo en local.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:40px">
+<h3 style="font-size:32px;font-weight:800;line-height:1.2;color:#4B4BC4">Archivos que van y vienen</h3>
+<p style="font-size:28px;line-height:1.4;color:#55526A">Para trabajar sobre la misma base hay que mandarse copias y juntarlas a mano.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:40px">
+<h3 style="font-size:32px;font-weight:800;line-height:1.2;color:#4B4BC4">Dependencia de Internet</h3>
+<p style="font-size:28px;line-height:1.4;color:#55526A">Las suites colaborativas exigen conexión constante y tienen formatos limitados.</p>
+</div>
+</div>
+<div style="display:flex;gap:32px;align-items:center;background:#1E1B2E;border-radius:24px;padding:36px 44px">
+<svg viewBox="0 0 24 24" fill="none" stroke="#F2B48A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#F2B48A;width:64px;height:64px;flex:none"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
+<p style="flex:1;font-size:28px;line-height:1.4;color:#E9E6F5"><b style="color:#FFFFFF">Cliente:</b> docentes del CECyT 11 “Wilfredo Massieu” que trabajan en paralelo sobre archivos de oficina, batallan para sincronizar y llevar versiones, y no siempre tienen Internet confiable. <b style="color:#F2B48A">Propuesta:</b> una sola app colaborativa, en la red local o en línea.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="mapa" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:40px">
+<div style="width:440px;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Mapa de navegación</p>
+<h2 style="font-size:56px;font-weight:900;line-height:1.15">De la bienvenida al documento</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>1. Cuentas:</b> entrar o crear cuenta; el rol viene de la BD.</p>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>2. Inicio:</b> recientes, espacios, este dispositivo y, solo para administradores, usuarios.</p>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>3. Espacio → documento:</b> el tipo se elige al crear y queda fijo.</p>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>4. Editor:</b> historial, descargas y “Volver” siempre al espacio.</p>
+</div>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:16px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/07-navegacion.png" alt="Mapa de navegación: Bienvenida, Iniciar sesión y Crear cuenta, Inicio, Espacio de trabajo con documentos, nuevo documento y abrir documento, cuatro editores por tipo, historial, descargar y volver; además Este dispositivo, Administrar usuarios, Menú de la cuenta y el camino sin cuenta" style="width:1152px;height:760px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="cu-cuentas" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 1 · Casos de uso</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Gestión de cuentas</h2>
+</div>
+<div style="display:flex;gap:40px;flex:1">
+<div style="width:500px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:32px;font-weight:800">Actores</h3>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>Visitante:</b> se registra e inicia sesión.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>Usuario:</b> cierra sesión y configura preferencias.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b style="color:#4B4BC4">Administrador:</b> además administra usuarios y roles (CU-30).</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>Módulo de seguridad:</b> cifra contraseñas y bloquea tras 5 intentos.</p>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/08-cu-cuentas.png" alt="Diagrama de casos de uso de Gestión de cuentas: CU-01 Crear usuario, CU-02 Iniciar sesión, CU-03 Cerrar sesión, CU-04 Bloquear acceso, CU-05 Cifrar credenciales, CU-27 Preferencias, CU-30 Administrar usuarios y roles" style="width:1070px;height:530px;object-fit:contain">
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="esp-cuentas" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 1 · Especificación de casos de uso</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Iniciar sesión y administrar roles</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:32px 36px">
+<h3 style="font-size:32px;font-weight:800;color:#4B4BC4">CU-02 · Iniciar sesión</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>Actor:</b> Visitante · <b>Pre:</b> la cuenta existe y no está bloqueada · <b>Post:</b> sesión vigente con token</p>
+<ol style="font-size:24px;line-height:1.4;color:#3A3752">
+<li>Captura nombre y contraseña.</li>
+<li>El sistema busca la cuenta en la BD, con su rol.</li>
+<li>Compara el hash PBKDF2 de la contraseña.</li>
+<li>Reinicia los intentos fallidos a cero.</li>
+<li>Crea la sesión (token, expira) en la BD.</li>
+<li>Muestra Inicio según el rol.</li>
+</ol>
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Excepciones:</b> no existe o contraseña incorrecta → “Usuario o contraseña incorrectos”; al 6.º intento → bloqueo de 15 min (CU-04).</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:32px 36px">
+<h3 style="font-size:32px;font-weight:800;color:#4B4BC4">CU-30 · Administrar usuarios y roles</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>Actor:</b> Administrador · <b>Pre:</b> sesión con rol ADMINISTRADOR · <b>Post:</b> rol o bloqueo actualizado en la BD</p>
+<ol style="font-size:24px;line-height:1.4;color:#3A3752">
+<li>Abre “Administrar usuarios”.</li>
+<li>El servidor relee el rol en la BD.</li>
+<li>Lista cuentas: empresa, rol, bloqueo.</li>
+<li>Hace o quita administrador.</li>
+<li>Desbloquea una cuenta bloqueada.</li>
+</ol>
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Excepciones:</b> rol USUARIO → 403 “solo para administradores”; nadie puede quitarse su propio rol, siempre queda un administrador.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="cu-espacios" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:56px">
+<div style="width:900px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 2 · Casos de uso</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Espacios de trabajo</h2>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#3A3752">El <b>Propietario</b> crea el espacio y decide quién entra; el <b>Usuario</b> se une y edita; el nodo remoto y Android sincronizan.</p>
+<table style="font-size:24px;color:#3A3752">
+<tr><th style="width:30%;text-align:left">Grupo</th><th style="width:70%;text-align:left">Casos de uso</th></tr>
+<tr><td>Espacio</td><td>CU-13 Crear · CU-14 Conexión · CU-15 Descubrir · CU-16 Unirse</td></tr>
+<tr><td>Accesos</td><td>CU-17 Lectura / Edición / Quitar</td></tr>
+<tr><td>Editor</td><td>CU-18 a CU-22: crear, elegir tipo (fijo), editar, CRDT, micro-textos</td></tr>
+<tr><td>Almacenamiento</td><td>CU-23 Versiones · CU-24 Depurar</td></tr>
+<tr><td>Móvil y archivos</td><td>CU-25, CU-26 Android sin red · CU-28, CU-29 Importar / Exportar</td></tr>
+</table>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/10-cu-espacios.png" alt="Diagrama de casos de uso del módulo Espacios de trabajo con los actores Usuario, Propietario, Nodo remoto y Dispositivo Android" style="width:640px;height:744px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="esp-espacios" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 2 · Especificación de casos de uso</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Crear un espacio y unirse a él</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:32px 36px">
+<h3 style="font-size:32px;font-weight:800;color:#4B4BC4">CU-13 · Crear espacio de trabajo</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>Actor:</b> Usuario · <b>Pre:</b> sesión vigente · <b>Post:</b> espacio y acceso PROPIETARIO</p>
+<ol style="font-size:24px;line-height:1.4;color:#3A3752">
+<li>Elige “Nuevo espacio”.</li>
+<li>Captura el nombre.</li>
+<li>El sistema crea el espacio.</li>
+<li>Le da al creador el permiso PROPIETARIO.</li>
+<li>Ofrece activar la conexión (CU-14).</li>
+<li>Muestra el espacio abierto.</li>
+</ol>
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Excepciones:</b> nombre vacío o repetido → se pide corregirlo; falla al guardar → no se crea.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FBFAF7;border:1px solid #E2DED6;border-radius:24px;padding:32px 36px">
+<h3 style="font-size:32px;font-weight:800;color:#4B4BC4">CU-16 · Unirse a un espacio</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A3752"><b>Actor:</b> Usuario · <b>Pre:</b> espacio visible y acceso válido · <b>Post:</b> documento sincronizado</p>
+<ol style="font-size:24px;line-height:1.4;color:#3A3752">
+<li>Elige un espacio de la red (CU-15).</li>
+<li>El sistema verifica su acceso.</li>
+<li>Abre el canal de sincronización.</li>
+<li>Descarga el estado del documento.</li>
+<li>Abre el editor con su permiso.</li>
+</ol>
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Alternos y excepciones:</b> sin acceso → solicita invitación; LECTURA → solo lectura; 6.º usuario → “El espacio está lleno”.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="seq-cuentas" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:56px">
+<div style="width:800px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 1 · Diagrama de secuencia</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Inicio de sesión con rol</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>1.</b> VistaLogin envía <b>POST /api/cuentas/sesion</b>.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>2.</b> RepositorioUsuarios consulta <b>Azure SQL</b> con un JOIN a la tabla <b>rol</b>.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>3.</b> Contraseña incorrecta: suma el intento; al 6.º bloquea.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>4.</b> Correcta: guarda la sesión con <b>INSERT INTO sesion</b>.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>5.</b> Con el rol, la vista muestra o no “Administrar usuarios”.</p>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#4B4BC4;font-weight:700">Cada petición a /api/admin vuelve a leer el rol: si no es ADMINISTRADOR, 403.</p>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/13-secuencia-login.png" alt="Diagrama de secuencia del inicio de sesión: Usuario, VistaLogin, ControladorCuentas, ServicioCuentas, RepositorioUsuarios, Azure SQL, Usuario y ServicioEspacios" style="width:760px;height:744px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="seq-espacios" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:56px">
+<div style="width:740px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 2 · Diagrama de secuencia</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Unirse a un espacio en la red</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>1.</b> El servicio de descubrimiento escucha los anuncios UDP de la LAN.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>2.</b> El usuario elige un espacio y se verifica su acceso.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>3.</b> Se abre el canal de sincronización y se descarga el documento.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>4.</b> Si ya hay 5 personas, se rechaza con el motivo.</p>
+</div>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/14-secuencia-unirse.png" alt="Diagrama de secuencia para unirse a un espacio en la red local" style="width:820px;height:744px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="act-cuentas" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:40px">
+<div style="width:600px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 1 · Diagramas de actividades</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Crear usuario e iniciar sesión</h2>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#3A3752">Tres carriles: <b style="color:#B4366B">Usuario</b>, <b style="color:#2F6FB0">Sistema</b> y <b style="color:#2F8A4A">Base de datos</b>.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>A1:</b> valida campos, revisa que el nombre esté libre, cifra y guarda.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>A2:</b> verifica credenciales y aplica el bloqueo tras 5 intentos.</p>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:20px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/A1-crear-usuario.png" alt="Diagrama de actividades A1 Crear usuario con carriles Usuario, Sistema y Base de datos" style="width:452px;height:752px;object-fit:contain">
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:20px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/A2-iniciar-sesion.png" alt="Diagrama de actividades A2 Iniciar sesión con bloqueo tras 5 intentos" style="width:452px;height:752px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="act-espacios" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:40px">
+<div style="width:600px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Módulo 2 · Diagramas de actividades</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Crear un espacio y unirse a él</h2>
+</div>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>A3:</b> crea el espacio, asigna PROPIETARIO y activa la conexión en la LAN.</p>
+<p style="font-size:28px;line-height:1.4;color:#3A3752"><b>A4:</b> descubre el espacio, pide o valida el acceso y respeta el máximo de 5 personas.</p>
+<p style="font-size:24px;line-height:1.4;color:#77738C">También están A5 Accesos, A6 Editor, A7 Almacenamiento y A8 Usar sin cuenta.</p>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:20px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/A3-crear-espacio.png" alt="Diagrama de actividades A3 Crear espacio y activar conexión" style="width:452px;height:752px;object-fit:contain">
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:20px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/A4-unirse-espacio.png" alt="Diagrama de actividades A4 Unirse a un espacio" style="width:452px;height:752px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="lf-cuentas" data-transition="fade" style="background:#EDEAF8;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;justify-content:space-between;align-items:end;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Look &amp; Feel · Módulo 1</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Gestión de cuentas</h2>
+</div>
+<p style="width:760px;font-size:24px;line-height:1.4;color:#55526A;text-align:right">Estilo “arcilla suave”, fuente Nunito, un solo color de acento y contraste WCAG AA.</p>
+</div>
+<div style="display:flex;gap:40px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:12px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-2-crear-cuenta.png" alt="Pantalla Crear cuenta en escritorio: nombre de usuario, contraseña con medidor de fuerza y empresa opcional" style="width:1000px;height:565px;object-fit:cover;border-radius:20px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;color:#55526A"><b>Crear cuenta:</b> medidor de fuerza, aviso de Bloq Mayús y empresa opcional.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-movil-login.png" alt="Pantalla Iniciar sesión en un celular" style="width:365px;height:565px;object-fit:cover;border-radius:28px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;color:#55526A"><b>Celular:</b> misma interfaz.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="lf-roles" data-transition="fade" style="background:#EDEAF8;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Look &amp; Feel · Módulo 1 · Seguridad por roles</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">La misma pantalla, dos roles</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:800;color:#FBFAF7;background:#4B4BC4;border-radius:999px;padding:6px 20px;align-self:start">ADMINISTRADOR: administra cuentas</p>
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-6-administrar-usuarios.png" alt="Pantalla Administrar usuarios: lista de cuentas con su rol, una cuenta bloqueada y botones Hacer administrador y Desbloquear" style="width:816px;height:461px;object-fit:cover;border-radius:20px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A">Cambia roles y desbloquea cuentas.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:800;color:#1E1B2E;background:#F2D9C7;border-radius:999px;padding:6px 20px;align-self:start">USUARIO: acceso denegado (403)</p>
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-4-usuario-sin-permiso.png" alt="La misma dirección abierta por una cuenta con rol Usuario: candado y el mensaje Esta sección es solo para administradores" style="width:816px;height:461px;object-fit:cover;border-radius:20px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A">No ve la opción en el menú; si escribe la dirección, el servidor la niega.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="lf-espacios" data-transition="fade" style="background:#EDEAF8;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Look &amp; Feel · Módulo 2</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Espacios de trabajo y el editor</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-espacios-2-espacio.png" alt="Espacio Academia de Informática con Compartir, Almacenamiento y Nuevo documento, y documentos de los cuatro tipos" style="width:816px;height:461px;object-fit:cover;border-radius:20px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Espacio:</b> compartir, almacenamiento y documentos de los 4 tipos, filtrados y con buscador.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-espacios-3-editor-texto.png" alt="Editor de un documento de Texto: plan de clase con una tabla editable y la etiqueta Texto junto al nombre" style="width:816px;height:461px;object-fit:cover;border-radius:20px;border:1px solid #CFCAE6;box-shadow:0 16px 40px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Editor:</b> cada documento abre en su tipo (aquí, Texto con una tabla); se guarda solo.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="lf-extras" data-transition="fade" style="background:#EDEAF8;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Look &amp; Feel · Módulo 2</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Crear, descargar y saber quién cambió qué</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-espacios-5-nuevo-documento.png" alt="Ventana Nuevo documento: nombre, cuatro tipos (Texto, Hoja, Presentación, Diagrama) con la nota no cambia después, y plantillas" style="width:533px;height:301px;object-fit:cover;border-radius:18px;border:1px solid #CFCAE6;box-shadow:0 12px 32px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Nuevo documento:</b> se elige el tipo y una plantilla; el tipo no cambia después.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-espacios-6-descargar.png" data-crop="1 100% 0%" alt="Menú Más opciones del editor con Descargar Word (.docx), Exportar en otro formato, Historial y actividad" style="object-position:100% 0%;width:533px;height:301px;object-fit:cover;border-radius:18px;border:1px solid #CFCAE6;box-shadow:0 12px 32px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Descargar:</b> Word, Excel con fórmulas o PowerPoint, según el tipo.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-espacios-7-actividad.png" data-crop="1 100% 0%" alt="Panel Historial en la pestaña Actividad: uriel.mo, Navegador del celular, hace un momento, editó 3 celdas" style="object-position:100% 0%;width:533px;height:301px;object-fit:cover;border-radius:18px;border:1px solid #CFCAE6;box-shadow:0 12px 32px rgba(30,27,46,0.16)">
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Actividad:</b> cada cambio guardado, con quién, desde qué dispositivo y cuándo.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="er-cuentas" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;justify-content:space-between;align-items:end;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Diagrama entidad-relación</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Cuentas y roles en Azure SQL</h2>
+</div>
+<p style="width:620px;font-size:24px;line-height:1.4;color:#55526A;text-align:right">Cada usuario tiene un rol (id_rol → rol.id); el login lo trae con un JOIN.</p>
+</div>
+<div style="display:flex;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/17-er-cuentas.png" alt="Diagrama entidad-relación: rol tiene muchos usuario; usuario abre muchas sesion y configura una preferencias" style="width:1380px;height:584px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="er-completo" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:row;gap:56px">
+<div style="width:740px;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Diseño de la base de datos</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">El modelo completo</h2>
+</div>
+<table style="font-size:24px;color:#3A3752">
+<tr><th style="width:34%;text-align:left">Grupo</th><th style="width:66%;text-align:left">Tablas</th></tr>
+<tr><td>Cuentas</td><td>rol, usuario, preferencias, sesion</td></tr>
+<tr><td>Espacios</td><td>espacio, acceso, nodo</td></tr>
+<tr><td>Documentos</td><td>documento, pagina, bloque y sus 4 subtipos, celda, estilo, animacion, plantilla</td></tr>
+<tr><td>Historial y CRDT</td><td>version, operacion, reloj_marca, cola_pendiente</td></tr>
+</table>
+<p style="font-size:24px;line-height:1.4;color:#55526A"><b>Borrado lógico</b> en bloque: un CRDT debe recordar lo que se borró. <b>id_operacion</b> = nodo + contador: la misma operación no se aplica dos veces.</p>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#FFFFFF;border:1px solid #E2DED6;border-radius:24px;padding:24px">
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/12-modelo-datos.png" alt="Modelo entidad-relación completo de NOM-COLAB con las tablas de cuentas, espacios, documentos, bloques, versiones y operaciones CRDT" style="width:820px;height:744px;object-fit:contain">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="arquitectura" data-transition="fade" style="background:#1E1B2E;color:#F3F1FA;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#F2B48A;letter-spacing:2px;text-transform:uppercase">Avance · Módulo web en la nube</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15;color:#FFFFFF">Login y registro conectados a la base de datos, en Azure</h2>
+</div>
+<div style="display:flex;align-items:center;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#2C2842;border:1px solid #4A4566;border-radius:24px;padding:36px">
+<svg viewBox="0 0 24 24" fill="none" stroke="#B9B6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#B9B6FF;width:56px;height:56px;flex:none"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+<h3 style="font-size:36px;font-weight:800;color:#FFFFFF">Navegador o celular</h3>
+<p style="font-size:26px;line-height:1.4;color:#CFCBE6">HTML, CSS y JS. Guarda solo el token de sesión.</p>
+</div>
+<svg viewBox="0 0 72 40" style="width:72px;height:40px;flex:none"><path d="M0 12h44V0l28 20-28 20V28H0z" fill="#F2B48A"/></svg>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#2C2842;border:1px solid #4A4566;border-radius:24px;padding:36px">
+<svg viewBox="0 0 24 24" fill="none" stroke="#B9B6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#B9B6FF;width:56px;height:56px;flex:none"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+<h3 style="font-size:36px;font-weight:800;color:#FFFFFF">Azure App Service</h3>
+<p style="font-size:26px;line-height:1.4;color:#CFCBE6">Java 21 + Spring Boot, plan F1 gratuito, solo HTTPS. Revisa el rol en cada petición.</p>
+</div>
+<svg viewBox="0 0 72 40" style="width:72px;height:40px;flex:none"><path d="M0 12h44V0l28 20-28 20V28H0z" fill="#F2B48A"/></svg>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#2C2842;border:1px solid #4A4566;border-radius:24px;padding:36px">
+<svg viewBox="0 0 24 24" fill="none" stroke="#B9B6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#B9B6FF;width:56px;height:56px;flex:none"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+<h3 style="font-size:36px;font-weight:800;color:#FFFFFF">Azure SQL Database</h3>
+<p style="font-size:26px;line-height:1.4;color:#CFCBE6">Tablas rol, usuario, sesion y preferencias. Conexión JDBC cifrada.</p>
+</div>
+</div>
+<div style="display:flex;gap:24px">
+<p style="flex:1;font-size:26px;line-height:1.4;color:#CFCBE6;border-left:4px solid #F2B48A;padding:4px 20px"><b style="color:#FFFFFF">Contraseñas:</b> PBKDF2-SHA256 con sal; nunca en texto.</p>
+<p style="flex:1;font-size:26px;line-height:1.4;color:#CFCBE6;border-left:4px solid #F2B48A;padding:4px 20px"><b style="color:#FFFFFF">Secretos:</b> en la configuración de Azure, no en el código.</p>
+<p style="flex:1;font-size:26px;line-height:1.4;color:#CFCBE6;border-left:4px solid #F2B48A;padding:4px 20px"><b style="color:#FFFFFF">Bloqueo:</b> 15 min tras 5 intentos fallidos.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#9C98B8">nomcolab-wack.azurewebsites.net</p>
+
+</section>
+<section id="avance" data-transition="fade" style="background:#F6F3EE;color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Avance del proyecto web y móvil</p>
+<h2 style="font-size:64px;font-weight:900;line-height:1.15">Lo que ya funciona</h2>
+</div>
+<table style="font-size:26px;color:#3A3752">
+<tr><th style="width:24%;text-align:left">Parte</th><th style="width:56%;text-align:left">Qué hace hoy</th><th style="width:20%;text-align:left">Estado</th></tr>
+<tr><td>Web en Azure</td><td>Registro, login, sesiones, preferencias y roles en Azure SQL</td><td>Publicado</td></tr>
+<tr><td>Espacios y editor</td><td>4 tipos fijos, tiempo real (~0.5 s por Internet), versiones y bitácora</td><td>Funcionando</td></tr>
+<tr><td>Descargas</td><td>Word, Excel con fórmulas y PowerPoint, sin Internet</td><td>Funcionando</td></tr>
+<tr><td>Servidor de la red local</td><td>Doble clic, Java incluido; base H2 en el mismo equipo</td><td>Funcionando</td></tr>
+<tr><td>App Android</td><td>APK Android 7+: encuentra el servidor en el Wi-Fi y edita sin red</td><td>Funcionando</td></tr>
+<tr><td>Pruebas</td><td>35/35: seguridad, roles, sincronización y descargas; PC, celular y app</td><td>Aprobadas</td></tr>
+<tr><td>Siguiente paso</td><td>CRDT por carácter; espacios y documentos también en la BD</td><td>En diseño</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#77738C">NOM-COLAB · Equipo 6 WACK · 5IM7</p>
+
+</section>
+<section id="cierre" data-transition="fade" style="background:linear-gradient(135deg, #EEEAFB 0%, #F6F3EE 55%, #FBEFE6 100%);color:#1E1B2E;font-family:'Nunito', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:48px">
+<p style="font-size:32px;font-weight:800;color:#4B4BC4;letter-spacing:2px;text-transform:uppercase">Demostración en vivo</p>
+<h1 style="font-size:84px;font-weight:900;line-height:1.1;color:#1E1B2E">nomcolab-wack.azurewebsites.net</h1>
+<div style="display:flex;gap:24px">
+<p style="flex:1;font-size:28px;line-height:1.4;color:#3A3752;background:#FBFAF7;border:1px solid #E2DED6;border-radius:20px;padding:24px 28px"><b>1.</b> Crear una cuenta nueva: queda en la BD con rol USUARIO.</p>
+<p style="flex:1;font-size:28px;line-height:1.4;color:#3A3752;background:#FBFAF7;border:1px solid #E2DED6;border-radius:20px;padding:24px 28px"><b>2.</b> Entrar con ella: no hay administración, y la dirección da 403.</p>
+<p style="flex:1;font-size:28px;line-height:1.4;color:#3A3752;background:#FBFAF7;border:1px solid #E2DED6;border-radius:20px;padding:24px 28px"><b>3.</b> Entrar como administrador: ver la cuenta nueva y cambiar su rol.</p>
+</div>
+<p style="font-size:32px;font-weight:700;color:#55526A">Gracias · Equipo 6 WACK · “We carry the flame”</p>
+<img src="file:///home/user/NOM/5-PRESENTACION/imagenes/logo-wack.png" alt="Logotipo de WACK" style="position:absolute;right:128px;bottom:96px;width:220px;height:250px;object-fit:contain">
+
+</section>
+
+</body></html>

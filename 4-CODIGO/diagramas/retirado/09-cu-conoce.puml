@@ -1,0 +1,34 @@
+@startuml 09-cu-conoce
+title Casos de uso - Módulo Conoce NOM
+skinparam shadowing false
+left to right direction
+
+actor "Usuario" as U
+
+rectangle "Conoce NOM" {
+  usecase "CU-06\nConsultar misión y visión" as CU06
+  usecase "CU-07\nConsultar descripción\nde la suite" as CU07
+  usecase "CU-08\nConsultar catálogo\nde productos" as CU08
+  usecase "CU-09\nConsultar guía de uso\n(manual integrado)" as CU09
+  usecase "CU-10\nConsultar preguntas\nfrecuentes" as CU10
+  usecase "CU-11\nConsultar\nsobre nosotros" as CU11
+  usecase "CU-12\nBuscar en la\ndocumentación" as CU12
+  usecase "CU-27\nConfigurar preferencias\ndel sistema" as CU27
+}
+
+U --> CU06
+U --> CU07
+U --> CU08
+U --> CU09
+U --> CU10
+U --> CU11
+U --> CU27
+CU09 ..> CU12 : <<include>>
+CU10 ..> CU12 : <<include>>
+
+note bottom
+  Fase 5 del proceso de negocio:
+  soporte, parametrización y ajustes,
+  sin salir del entorno de trabajo.
+end note
+@enduml

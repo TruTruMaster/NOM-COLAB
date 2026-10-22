@@ -1,0 +1,59 @@
+@startuml 16-secuencia-android
+title Secuencia 4 - Android sin conexión y resincronización (CU-25, CU-26)
+skinparam shadowing false
+autonumber
+
+actor "Usuario" as A
+participant "app : ClienteAndroid" as CL
+participant "MotorCRDT" as M
+participant "cola_pendiente" as Q <<tabla>>
+participant "CanalSync" as CS
+participant "NodoLocal" as N
+
+== Sin red ==
+A -> CL : abre la copia local del Documento
+CL --> A : estado "sin conexión"
+
+loop cada edición
+  A -> CL : modifica un Bloque
+  CL -> M : aplicarLocal(op)
+  M --> CL : estado()
+  CL -> Q : encolar(op)
+  CL --> A : cambio visible en el dispositivo
+end
+
+note right of Q
+  La cola vive en disco: si se cierra
+  la app, se reenvía al siguiente arranque.
+end note
+
+== Vuelve la red ==
+CL -> CL : detecta la LAN
+CL -> CS : conectar(EspacioRemoto)
+activate CS
+CS -> N : handshake(idDispositivo, token)
+
+alt el permiso cambió a LECTURA mientras no había conexión
+  N --> CS : rechazo "sin permiso de edición"
+  CS --> CL : operaciones rechazadas
+  CL --> A : ofrecer exportar como copia propia (CU-29)
+else sigue con permiso EDICION
+  N --> CS : aceptado
+
+  loop por cada op en la cola
+    CL -> CS : enviar(op)
+    CS -> N : op
+    N --> CS : ack
+    CL -> Q : eliminar(op)
+  end
+
+  CS -> N : solicitar lo ocurrido mientras estaba offline
+  N --> CS : operaciones remotas
+  loop por cada operación remota
+    CS -> M : fusionarRemota(op)
+  end
+  M --> CL : estado() convergente
+  deactivate CS
+  CL --> A : "sincronización terminada"
+end
+@enduml

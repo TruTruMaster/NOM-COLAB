@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="970" height="1404" viewBox="0 0 970 1404" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11">
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6E6E6E"/></marker></defs>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="10" y="20" fill="#B5397A" font-size="14">Módulo Gestión de cuentas (Iniciar sesión)</text>
+<rect x="10" y="30" width="250" height="1366.2" fill="#FFFFFF" stroke="#B85450" stroke-width="1.2"/>
+<rect x="10" y="30" width="250" height="22" fill="#F8CECC" stroke="#B85450" stroke-width="1.2"/>
+<text x="135.0" y="45" text-anchor="middle" font-weight="bold">Usuario</text>
+<rect x="260" y="30" width="300" height="1366.2" fill="#FFFFFF" stroke="#6C8EBF" stroke-width="1.2"/>
+<rect x="260" y="30" width="300" height="22" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.2"/>
+<text x="410.0" y="45" text-anchor="middle" font-weight="bold">Sistema</text>
+<rect x="560" y="30" width="400" height="1366.2" fill="#FFFFFF" stroke="#82B366" stroke-width="1.2"/>
+<rect x="560" y="30" width="400" height="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.2"/>
+<text x="760.0" y="45" text-anchor="middle" font-weight="bold">Base de datos</text>
+<polyline points="135.0,75.0 135.0,109.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="191.0,128.0 354.0,128.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="135.0,211.0 135.0,237.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="135.0,275.0 135.0,301.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="191.0,320.0 410.0,320.0 410.0,373.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="87.0,486.2 87.0,520.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="760.0,413.8 760.0,444.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="584.0,537.6 346.0,537.6 346.0,588.9" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="290.0,614.4 87.0,614.4 87.0,659.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="87.0,697.4 87.0,731.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="704.0,614.4 474.0,614.4 474.0,665.7" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="418.0,691.2 183.0,691.2 183.0,749.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="183.0,787.0 183.0,821.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="880.0,639.8 880.0,674.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="760.0,793.4 760.0,823.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="418.0,921.6 183.0,921.6 183.0,973.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="183.0,1011.0 183.0,1038.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="290.0,1081.6 87.0,1081.6 87.0,1126.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="87.0,1164.6 87.0,1198.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="386.0,1235.2 135.0,1235.2 135.0,1280.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="135.0,1318.2 135.0,1352.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="410.0,153.5 410.0,192.0 191.0,192.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="358.0,396.8 87.0,396.8 87.0,448.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="354.0" y="392.8" text-anchor="end" font-size="9.5" fill="#333">[Datos incorrectos]</text>
+<polyline points="462.0,396.8 704.0,396.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="466.0" y="392.8" text-anchor="start" font-size="9.5" fill="#333">[Datos correctos]</text>
+<polyline points="708.0,467.2 640.0,467.2 640.0,520.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="704.0" y="463.2" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="812.0,467.2 880.0,467.2 880.0,509.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="816.0" y="463.2" text-anchor="start" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="828.0,537.6 760.0,537.6 760.0,597.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="824.0" y="533.6" text-anchor="end" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="880.0,565.6 880.0,601.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="885.0" y="578.6" font-size="9.5" fill="#333">[No]</text>
+<polyline points="828.0,697.6 760.0,697.6 760.0,755.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="824.0" y="693.6" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="880.0,720.6 880.0,755.3" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="885.0" y="733.6" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="708.0,851.2 474.0,851.2 474.0,889.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="704.0" y="847.2" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="760.0,879.2 760.0,909.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="765.0" y="892.2" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="760.0,947.0 760.0,1044.6 346.0,1044.6 346.0,1062.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="880.0,806.3 880.0,1191.7 442.0,1191.7 442.0,1209.7" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<circle cx="135.0" cy="64" r="11" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<rect x="79.0" y="109.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="125.5" text-anchor="middle">Ingresa a la</text>
+<text x="135.0" y="138.5" text-anchor="middle">aplicación</text>
+<rect x="354.0" y="102.5" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="119.0" text-anchor="middle">Despliega</text>
+<text x="410.0" y="132.0" text-anchor="middle">formulario de</text>
+<text x="410.0" y="145.0" text-anchor="middle">inicio de sesión</text>
+<rect x="79.0" y="173.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="189.5" text-anchor="middle">Visualiza</text>
+<text x="135.0" y="202.5" text-anchor="middle">formulario</text>
+<rect x="79.0" y="237.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="253.5" text-anchor="middle">Ingresa nombre y</text>
+<text x="135.0" y="266.5" text-anchor="middle">contraseña</text>
+<rect x="79.0" y="301.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="317.5" text-anchor="middle">Realiza petición de</text>
+<text x="135.0" y="330.5" text-anchor="middle">ingreso</text>
+<polygon points="410.0,373.8 462.0,396.8 410.0,419.8 358.0,396.8" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="410.0" y="400.8" text-anchor="middle">Valida datos</text>
+<rect x="31.0" y="448.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="87.0" y="464.7" text-anchor="middle">Recibe mensaje de</text>
+<text x="87.0" y="477.7" text-anchor="middle">error</text>
+<circle cx="87.0" cy="531.2" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="87.0" cy="531.2" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="704.0" y="379.8" width="112" height="34" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="400.8" text-anchor="middle">Busca usuario</text>
+<polygon points="760.0,444.2 812.0,467.2 760.0,490.2 708.0,467.2" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="471.2" text-anchor="middle">¿Encuentra?</text>
+<rect x="584.0" y="520.6" width="112" height="34" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="640.0" y="541.6" text-anchor="middle">Niega acceso</text>
+<polygon points="880.0,509.6 932.0,537.6 880.0,565.6 828.0,537.6" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="880.0" y="535.1" text-anchor="middle">¿Cuenta</text>
+<text x="880.0" y="548.1" text-anchor="middle">bloqueada?</text>
+<rect x="704.0" y="597.4" width="112" height="34" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="618.4" text-anchor="middle">Niega acceso</text>
+<rect x="290.0" y="588.9" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="346.0" y="605.4" text-anchor="middle">Manda mensaje</text>
+<text x="346.0" y="618.4" text-anchor="middle">&quot;Credenciales</text>
+<text x="346.0" y="631.4" text-anchor="middle">inválidas&quot;</text>
+<rect x="31.0" y="659.4" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="87.0" y="675.9" text-anchor="middle">Recibe mensaje de</text>
+<text x="87.0" y="688.9" text-anchor="middle">error</text>
+<circle cx="87.0" cy="742.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="87.0" cy="742.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="824.0" y="601.8" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="880.0" y="618.3" text-anchor="middle">Compara el hash de</text>
+<text x="880.0" y="631.3" text-anchor="middle">la contraseña</text>
+<rect x="418.0" y="665.7" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="474.0" y="682.2" text-anchor="middle">Manda mensaje</text>
+<text x="474.0" y="695.2" text-anchor="middle">&quot;Cuenta bloqueada&quot;</text>
+<text x="474.0" y="708.2" text-anchor="middle">con tiempo restante</text>
+<rect x="127.0" y="749.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="183.0" y="765.5" text-anchor="middle">Recibe mensaje de</text>
+<text x="183.0" y="778.5" text-anchor="middle">error</text>
+<circle cx="183.0" cy="832.0" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="183.0" cy="832.0" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<polygon points="880.0,674.6 932.0,697.6 880.0,720.6 828.0,697.6" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="880.0" y="701.6" text-anchor="middle">¿Son iguales?</text>
+<rect x="704.0" y="755.4" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="771.9" text-anchor="middle">Incrementa intentos</text>
+<text x="760.0" y="784.9" text-anchor="middle">fallidos</text>
+<rect x="824.0" y="755.3" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="880.0" y="771.8" text-anchor="middle">Reinicia intentos y</text>
+<text x="880.0" y="784.8" text-anchor="middle">cede acceso (crea</text>
+<text x="880.0" y="797.8" text-anchor="middle">sesión)</text>
+<polygon points="760.0,823.2 812.0,851.2 760.0,879.2 708.0,851.2" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="848.7" text-anchor="middle">¿Más de 5</text>
+<text x="760.0" y="861.7" text-anchor="middle">intentos?</text>
+<rect x="418.0" y="889.6" width="112" height="64" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="474.0" y="906.1" text-anchor="middle">Manda mensaje</text>
+<text x="474.0" y="919.1" text-anchor="middle">&quot;Credenciales</text>
+<text x="474.0" y="932.1" text-anchor="middle">inválidas&quot; e</text>
+<text x="474.0" y="945.1" text-anchor="middle">intentos restantes</text>
+<rect x="704.0" y="909.0" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="760.0" y="925.5" text-anchor="middle">Bloquea la cuenta y</text>
+<text x="760.0" y="938.5" text-anchor="middle">registra el evento</text>
+<rect x="127.0" y="973.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="183.0" y="989.5" text-anchor="middle">Recibe mensaje de</text>
+<text x="183.0" y="1002.5" text-anchor="middle">error</text>
+<circle cx="183.0" cy="1049.6" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="183.0" cy="1049.6" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="290.0" y="1062.6" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="346.0" y="1079.1" text-anchor="middle">Manda mensaje</text>
+<text x="346.0" y="1092.1" text-anchor="middle">&quot;Acceso bloqueado&quot;</text>
+<rect x="31.0" y="1126.6" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="87.0" y="1143.1" text-anchor="middle">Recibe mensaje de</text>
+<text x="87.0" y="1156.1" text-anchor="middle">error</text>
+<circle cx="87.0" cy="1209.6" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="87.0" cy="1209.6" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="386.0" y="1209.7" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="442.0" y="1226.2" text-anchor="middle">Carga sus espacios</text>
+<text x="442.0" y="1239.2" text-anchor="middle">y lo direcciona a</text>
+<text x="442.0" y="1252.2" text-anchor="middle">Inicio</text>
+<rect x="79.0" y="1280.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="135.0" y="1296.7" text-anchor="middle">Visualiza pantalla</text>
+<text x="135.0" y="1309.7" text-anchor="middle">de inicio</text>
+<circle cx="135.0" cy="1363.2" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="135.0" cy="1363.2" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+</svg>

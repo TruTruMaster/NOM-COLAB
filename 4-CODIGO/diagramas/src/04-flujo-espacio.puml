@@ -1,0 +1,30 @@
+@startuml 04-flujo-espacio
+title Flujo 2 - Crear o unirse a un espacio y activar el servidor local
+skinparam shadowing false
+start
+:Pantalla Espacios de trabajo;
+if (Que quiere hacer?) then (Crear)
+  :Nombrar el espacio;
+  :ServicioEspacios.crearEspacio();
+  :Asignar permiso PROPIETARIO;
+  if (Activar "Conexion del proyecto"?) then (si)
+    :NodoLocal.iniciar(puerto);
+    :ServicioDescubrimiento.anunciar() en la LAN;
+  else (no)
+    :Trabajar solo en local;
+  endif
+else (Unirse)
+  :ServicioDescubrimiento.buscarEnLan();
+  :Listar espacios visibles;
+  :Elegir espacio;
+  if (Tiene acceso?) then (no)
+    :Solicitar invitacion al propietario;
+    stop
+  else (si)
+  endif
+  :CanalSync.conectar();
+  :Descargar estado del Documento;
+endif
+:Abrir Editor;
+stop
+@enduml

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="910" height="1103" viewBox="0 0 910 1103" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11">
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6E6E6E"/></marker></defs>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="10" y="20" fill="#B5397A" font-size="14">Módulo Gestión de cuentas (Usar sin cuenta)</text>
+<rect x="10" y="30" width="260" height="1065.4" fill="#FFFFFF" stroke="#B85450" stroke-width="1.2"/>
+<rect x="10" y="30" width="260" height="22" fill="#F8CECC" stroke="#B85450" stroke-width="1.2"/>
+<text x="140.0" y="45" text-anchor="middle" font-weight="bold">Usuario</text>
+<rect x="270" y="30" width="300" height="1065.4" fill="#FFFFFF" stroke="#6C8EBF" stroke-width="1.2"/>
+<rect x="270" y="30" width="300" height="22" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.2"/>
+<text x="420.0" y="45" text-anchor="middle" font-weight="bold">Sistema</text>
+<rect x="570" y="30" width="330" height="1065.4" fill="#FFFFFF" stroke="#82B366" stroke-width="1.2"/>
+<rect x="570" y="30" width="330" height="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.2"/>
+<text x="735.0" y="45" text-anchor="middle" font-weight="bold">Base de datos</text>
+<polyline points="140.0,75.0 140.0,109.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="196.0,128.0 364.0,128.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="140.0,358.2 140.0,384.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="196.0,403.2 364.0,403.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="196.0,473.6 679.0,473.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="192.0,780.6 192.0,795.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="140.0,1030.3 140.0,1051.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="476.0,128.0 735.0,128.0 735.0,172.9" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="735.0,223.9 735.0,268.8 476.0,268.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="420.0,300.8 420.0,339.2 196.0,339.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="420.0,422.2 420.0,438.6 140.0,438.6 140.0,456.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="735.0,492.6 735.0,510.8 140.0,510.8 140.0,528.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="192.0,556.8 356.0,556.8 356.0,614.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="196.0" y="552.8" text-anchor="start" font-size="9.5" fill="#333">[Descargar]</text>
+<polyline points="140.0,584.8 140.0,677.2 484.0,677.2 484.0,695.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="145.0" y="597.8" font-size="9.5" fill="#333">[Subir a un espacio]</text>
+<polyline points="356.0,652.6 356.0,761.6 248.0,761.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="432.0,723.2 72.0,723.2 72.0,774.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="428.0" y="719.2" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="536.0,723.2 735.0,723.2 735.0,838.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="540.0" y="719.2" text-anchor="start" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="72.0,812.6 72.0,820.4 735.0,820.4 735.0,838.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="735.0,902.4 735.0,940.8 476.0,940.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="364.0,940.8 140.0,940.8 140.0,979.3" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<circle cx="140.0" cy="64" r="11" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<rect x="84.0" y="109.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="125.5" text-anchor="middle">Selecciona opción</text>
+<text x="140.0" y="138.5" text-anchor="middle">&quot;Usar sin cuenta&quot;</text>
+<rect x="364.0" y="109.0" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="125.5" text-anchor="middle">Activa el modo sin</text>
+<text x="420.0" y="138.5" text-anchor="middle">cuenta</text>
+<rect x="679.0" y="172.9" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="735.0" y="189.4" text-anchor="middle">Busca documentos</text>
+<text x="735.0" y="202.4" text-anchor="middle">guardados en el</text>
+<text x="735.0" y="215.4" text-anchor="middle">navegador</text>
+<rect x="364.0" y="236.8" width="112" height="64" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="253.3" text-anchor="middle">Despliega</text>
+<text x="420.0" y="266.3" text-anchor="middle">documentos y aviso</text>
+<text x="420.0" y="279.3" text-anchor="middle">&quot;solo en este</text>
+<text x="420.0" y="292.3" text-anchor="middle">equipo&quot;</text>
+<rect x="84.0" y="320.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="336.7" text-anchor="middle">Visualiza sus</text>
+<text x="140.0" y="349.7" text-anchor="middle">documentos</text>
+<rect x="84.0" y="384.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="400.7" text-anchor="middle">Crea o abre un</text>
+<text x="140.0" y="413.7" text-anchor="middle">documento</text>
+<rect x="364.0" y="384.2" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="400.7" text-anchor="middle">Abre el editor sin</text>
+<text x="420.0" y="413.7" text-anchor="middle">servidor</text>
+<rect x="84.0" y="456.6" width="112" height="34" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="477.6" text-anchor="middle">Edita el documento</text>
+<rect x="679.0" y="454.6" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="735.0" y="471.1" text-anchor="middle">Guarda cada cambio</text>
+<text x="735.0" y="484.1" text-anchor="middle">en el navegador</text>
+<polygon points="140.0,528.8 192.0,556.8 140.0,584.8 88.0,556.8" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="554.3" text-anchor="middle">¿Descargar o</text>
+<text x="140.0" y="567.3" text-anchor="middle">subir?</text>
+<rect x="300.0" y="614.6" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="356.0" y="631.1" text-anchor="middle">Genera el archivo</text>
+<text x="356.0" y="644.1" text-anchor="middle">.nom</text>
+<polygon points="484.0,695.2 536.0,723.2 484.0,751.2 432.0,723.2" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="484.0" y="720.7" text-anchor="middle">¿Sesión</text>
+<text x="484.0" y="733.7" text-anchor="middle">iniciada?</text>
+<rect x="136.0" y="742.6" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="192.0" y="759.1" text-anchor="middle">Recibe el archivo</text>
+<text x="192.0" y="772.1" text-anchor="middle">descargado</text>
+<circle cx="192.0" cy="806.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="192.0" cy="806.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="16.0" y="774.6" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="72.0" y="791.1" text-anchor="middle">Inicia sesión o</text>
+<text x="72.0" y="804.1" text-anchor="middle">crea cuenta</text>
+<rect x="679.0" y="838.4" width="112" height="64" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="735.0" y="854.9" text-anchor="middle">Crea el documento</text>
+<text x="735.0" y="867.9" text-anchor="middle">en el espacio y</text>
+<text x="735.0" y="880.9" text-anchor="middle">borra la copia</text>
+<text x="735.0" y="893.9" text-anchor="middle">local</text>
+<rect x="364.0" y="915.3" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="931.8" text-anchor="middle">Manda mensaje</text>
+<text x="420.0" y="944.8" text-anchor="middle">&quot;Guardado en el</text>
+<text x="420.0" y="957.8" text-anchor="middle">espacio&quot;</text>
+<rect x="84.0" y="979.3" width="112" height="51" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="995.8" text-anchor="middle">Visualiza el</text>
+<text x="140.0" y="1008.8" text-anchor="middle">documento en el</text>
+<text x="140.0" y="1021.8" text-anchor="middle">espacio</text>
+<circle cx="140.0" cy="1062.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="140.0" cy="1062.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+</svg>

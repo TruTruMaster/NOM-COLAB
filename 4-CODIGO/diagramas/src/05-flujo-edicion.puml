@@ -1,0 +1,38 @@
+@startuml 05-flujo-edicion
+title Flujo 3 - Edicion colaborativa y sincronizacion CRDT
+skinparam shadowing false
+|Usuario A|
+start
+:Abrir Documento;
+if (Permiso = EDICION?) then (no)
+  :Abrir en modo solo lectura;
+  stop
+else (si)
+endif
+:Seleccionar modo del lienzo\n(TEXTO / HOJA / PRESENTACION / DIAGRAMA);
+:Editar un Bloque;
+:Generar Operacion (tipo, bloque, carga);
+:RelojVectorial.incrementar();
+:MotorCRDT.aplicarLocal() -> se ve al instante;
+|Nodo local|
+:CanalSync.enviar(Operacion);
+if (Hay red?) then (no)
+  :Encolar operacion pendiente;
+  :Reintentar al reconectar;
+else (si)
+endif
+:Difundir a los nodos conectados;
+|Usuario B / Android|
+:CanalSync.alRecibir(Operacion);
+:MotorCRDT.fusionarRemota();
+note right
+  CRDT: sin conflictos.
+  El orden no importa,
+  el resultado converge.
+end note
+:Repintar lienzo (< 1500 ms);
+|Nodo local|
+:RepositorioDocumentos.guardar();
+:Crear nueva Version;
+stop
+@enduml

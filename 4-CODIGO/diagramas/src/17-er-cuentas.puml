@@ -1,0 +1,72 @@
+@startuml 17-er-cuentas
+title NOM-COLAB - Base de datos del módulo Gestión de cuentas (Azure SQL Database)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName Nunito
+skinparam roundCorner 10
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #5B5BD6
+  HeaderBackgroundColor #EEEEFF
+}
+hide circle
+left to right direction
+
+entity "rol" as rol {
+  * id : int <<PK>>
+  --
+  * nombre : varchar(20) <<UNIQUE>>
+  * descripcion : nvarchar(160)
+}
+
+entity "usuario" as usuario {
+  * id : varchar(16) <<PK>>
+  --
+  * nombre : nvarchar(24)
+  * nombre_clave : nvarchar(24) <<UNIQUE>>
+  empresa : nvarchar(120)
+  * hash_contrasena : varchar(64)
+  * sal : varchar(32)
+  * intentos_fallidos : int
+  * bloqueado_hasta : bigint
+  * creado : bigint
+  * color : varchar(9)
+  * id_rol : int <<FK>>
+}
+
+entity "sesion" as sesion {
+  * token : varchar(64) <<PK>>
+  --
+  * id_usuario : varchar(16) <<FK>>
+  * creada : bigint
+  * expira : bigint
+}
+
+entity "preferencias" as pref {
+  * id_usuario : varchar(16) <<PK>> <<FK>>
+  --
+  * tema : varchar(6)
+  * autoguardado_min : int
+  * versiones_conservar : int
+  * calidad : varchar(4)
+  * movimiento_reducido : bit
+  * enfoque_atenuar : bit
+  * idioma : varchar(5)
+}
+
+rol ||--o{ usuario : "tiene"
+usuario ||--o{ sesion : "abre"
+usuario ||--o| pref : "configura"
+
+note bottom of rol
+  1 ADMINISTRADOR: ve todas las cuentas,
+    cambia roles y desbloquea cuentas
+  2 USUARIO: trabaja en sus espacios
+end note
+note bottom of usuario
+  La contraseña nunca se guarda:
+  solo hash PBKDF2-SHA256 + sal.
+  bloqueado_hasta > ahora = cuenta
+  bloqueada (6.º intento fallido, 15 min)
+end note
+@enduml

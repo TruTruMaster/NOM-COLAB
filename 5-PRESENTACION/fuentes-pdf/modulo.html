@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>NOM-COLAB · Módulo web con base de datos y roles en Azure</title>
+<style>
+@font-face { font-family: 'Nunito'; src: url(file:///home/user/NOM/4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-wght-normal.woff2) format('woff2'); font-weight: 200 1000; }
+@font-face { font-family: 'Nunito'; src: url(file:///home/user/NOM/4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-ext-wght-normal.woff2) format('woff2'); font-weight: 200 1000; unicode-range: U+0100-024F, U+1E00-1EFF, U+2020, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@page { size: 21.59cm 27.94cm; margin: 1.5cm 1.8cm 1.6cm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: #1E1B2E; font-family: 'Nunito', Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; }
+.pagina { }
+.portada { page-break-after: always; break-after: page; }
+h2 { margin-top: 16pt; }
+.pagina:last-child { page-break-after: auto; }
+h1 { font-size: 22pt; font-weight: 900; line-height: 1.15; margin: 0 0 6pt; }
+h2 { break-after: avoid; page-break-after: avoid; font-size: 15pt; font-weight: 900; margin: 18pt 0 6pt; color: #1E1B2E; border-bottom: 2px solid #5B5BD6; padding-bottom: 3pt; }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 11.5pt; font-weight: 800; margin: 12pt 0 4pt; color: #3A3752; }
+p { margin: 0 0 6pt; }
+ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+li { margin-bottom: 2pt; }
+.eyebrow { font-size: 8.5pt; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #4B4BC4; }
+table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 9.5pt; }
+th, td { text-align: left; vertical-align: top; padding: 4pt 6pt; border-bottom: 1px solid #DDD8CF; }
+th { background: #EEEEFF; font-weight: 800; }
+code, pre { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 8.3pt; }
+pre { background: #F5F3EF; border: 1px solid #E2DED6; border-radius: 6pt; padding: 7pt 9pt; white-space: pre-wrap; margin: 4pt 0 10pt; line-height: 1.4; }
+code { background: #F0EEF8; padding: 0 3pt; border-radius: 3pt; }
+.fig { margin: 6pt 0 10pt; text-align: center; break-inside: avoid; }
+tr, pre, .flujo, .caja { break-inside: avoid; }
+.fig img { max-width: 100%; border: 1px solid #DDD8CF; border-radius: 6pt; }
+.fig p { font-size: 8.5pt; color: #55526A; margin-top: 3pt; }
+.dos { display: flex; gap: 10pt; }
+.dos > div { flex: 1; }
+.caja { background: #F6F3EE; border: 1px solid #E2DED6; border-radius: 8pt; padding: 8pt 10pt; margin: 6pt 0 10pt; }
+.ok { color: #1D7A4C; font-weight: 800; }
+.flujo { display: flex; align-items: stretch; gap: 6pt; margin: 6pt 0 10pt; }
+.flujo .n { flex: 1; border: 1.5px solid #5B5BD6; border-radius: 8pt; padding: 7pt 8pt; background: #F7F7FF; font-size: 9pt; }
+.flujo .n b { display: block; font-size: 10pt; }
+.flujo .f { align-self: center; font-weight: 900; color: #E8590C; font-size: 14pt; }
+.pie { display: none; position: absolute; left: 2cm; right: 2cm; bottom: 0.9cm; font-size: 8pt; color: #77738C; display: flex; justify-content: space-between; }
+/* portada */
+.portada { height: 24.7cm; padding: 1cm 1.1cm; border-radius: 10pt; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(160deg, #EEEAFB 0%, #F6F3EE 55%, #FBEFE6 100%); }
+.logos { display: flex; justify-content: space-between; align-items: center; }
+.logos img { height: 2.3cm; object-fit: contain; }
+.portada h1 { font-size: 30pt; }
+.portada .sub { font-size: 14pt; font-weight: 700; color: #3A3752; }
+.datos { font-size: 11pt; line-height: 1.6; }
+.marcas { display: flex; align-items: center; gap: 14pt; }
+</style></head><body>
+
+<!-- ============================== PORTADA ============================== -->
+<section class="pagina portada">
+  <div class="logos"><img src="logo-ipn.jpg" alt="IPN"><div style="text-align:center"><div style="font-size:12pt;font-weight:800">Instituto Politécnico Nacional</div><div style="font-size:11pt;font-weight:700">CECyT 9 “Juan de Dios Bátiz”</div></div><img src="logo-cecyt9.png" alt="CECyT 9"></div>
+  <div>
+    <p class="eyebrow">Programación Web · Entrega del módulo</p>
+    <h1>NOM-COLAB: módulo web conectado a la base de datos, publicado en Azure y protegido con roles</h1>
+    <p class="sub">Gestión de cuentas: registro, inicio de sesión y administración de usuarios</p>
+  </div>
+  <div class="marcas">
+    <img src="file:///home/user/NOM/5-PRESENTACION/imagenes/logo-nom.png" alt="Logotipo de NOM-COLAB" style="height:2.4cm">
+    <img src="file:///home/user/NOM/5-PRESENTACION/imagenes/logo-wack.png" alt="Logotipo de WACK" style="height:3.2cm">
+    <div class="datos"><b>Equipo 6 “WACK”</b> · 5IM7<br>We carry the flame</div>
+  </div>
+  <div class="datos">
+    <b>Integrantes</b><br>
+    González Azuara Arturo Leonardo<br>Martínez Ortega Uriel Alejandro<br>Rodríguez Esparza Diego Alejandro<br>Soria Flores Josep Aarón<br><br>
+    <b>Profesor:</b> Juan Ángel Calvillo Pérez<br>
+    <b>Página:</b> https://nomcolab-wack.azurewebsites.net<br>
+    <b>Fecha:</b> 22 de octubre de 2026
+  </div>
+</section>
+
+<!-- ============================== 1 ============================== -->
+<section class="pagina">
+  <h2>1. Lo que se pidió y lo que se entrega</h2>
+  <table>
+    <tr><th style="width:38%">Requisito</th><th>Cómo se cumple</th></tr>
+    <tr><td>Un módulo de la página web</td><td><b>Gestión de cuentas</b> de NOM-COLAB: registro, inicio de sesión, cierre de sesión, preferencias y la pantalla <b>Administrar usuarios</b>.</td></tr>
+    <tr><td>Conectado a la base de datos</td><td>Usuarios, roles, sesiones y preferencias viven en <b>Azure SQL Database</b> (4 tablas). Cada consulta va a la base; nada de esto se guarda en archivos.</td></tr>
+    <tr><td>Subido a Azure</td><td><b>Azure App Service</b> (Linux, Java 21, plan F1 gratuito) en <code>nomcolab-wack.azurewebsites.net</code>, solo por HTTPS.</td></tr>
+    <tr><td>Seguridad aplicada con roles</td><td>Tabla <code>rol</code> (ADMINISTRADOR y USUARIO). La base de datos “jala” el rol en cada petición; la API de administración responde <b>403</b> a quien no sea administrador y la interfaz ni siquiera le muestra la opción.</td></tr>
+  </table>
+
+  <h2>2. El módulo: Gestión de cuentas</h2>
+  <p>NOM-COLAB es una suite colaborativa (texto, hojas de cálculo, presentaciones y diagramas) para docentes del CECyT 11. El módulo de cuentas es la puerta de entrada: sin una sesión válida no se puede ver ningún espacio ni documento.</p>
+  <div class="dos">
+    <div class="fig"><img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-2-crear-cuenta.png" alt="Crear cuenta"><p>Crear cuenta: nombre, contraseña (con medidor de fuerza) y empresa opcional.</p></div>
+    <div class="fig"><img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-1-iniciar-sesion.png" alt="Iniciar sesión"><p>Iniciar sesión. El mensaje de error es genérico para no revelar qué usuarios existen.</p></div>
+  </div>
+  <h3>Casos de uso del módulo</h3>
+  <table>
+    <tr><th style="width:14%">CU</th><th style="width:30%">Caso</th><th>Qué hace</th></tr>
+    <tr><td>CU-01</td><td>Crear usuario</td><td>Valida nombre (3–24 caracteres) y contraseña (mín. 8), revisa que el nombre esté libre, guarda el hash y asigna el rol USUARIO.</td></tr>
+    <tr><td>CU-02</td><td>Iniciar sesión</td><td>Busca la cuenta con su rol (JOIN), compara el hash y crea una sesión con token y fecha de expiración.</td></tr>
+    <tr><td>CU-03</td><td>Cerrar sesión</td><td>Borra la sesión de la base de datos; el token deja de servir.</td></tr>
+    <tr><td>CU-04</td><td>Bloquear acceso</td><td>Al 6.º intento fallido bloquea la cuenta 15 minutos.</td></tr>
+    <tr><td>CU-05</td><td>Cifrar credenciales</td><td>PBKDF2-HMAC-SHA256, 120 000 iteraciones, sal aleatoria de 16 bytes por cuenta.</td></tr>
+    <tr><td>CU-30</td><td>Administrar usuarios y roles</td><td>Solo ADMINISTRADOR: lista las cuentas, cambia el rol y desbloquea cuentas.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="pagina">
+  <h2>3. Arquitectura</h2>
+  <div class="flujo">
+    <div class="n"><b>Navegador · celular · app Android</b>HTML, CSS y JavaScript. Solo guarda el token de sesión.</div>
+    <div class="f">→</div>
+    <div class="n"><b>Azure App Service</b>Java 21 + Spring Boot 4. API REST <code>/api/cuentas</code> y <code>/api/admin</code>. Filtros de sesión y de rol.</div>
+    <div class="f">→</div>
+    <div class="n"><b>Azure SQL Database</b>Tablas <code>rol</code>, <code>usuario</code>, <code>sesion</code>, <code>preferencias</code>. Conexión JDBC cifrada.</div>
+  </div>
+  <p>El mismo programa funciona también en una red local sin Internet: ahí usa una base de datos <b>H2</b> embebida con las mismas tablas. En Azure se cambia a SQL Server solo con variables de configuración; el código es el mismo.</p>
+
+  <h2>4. Diseño de la base de datos</h2>
+  <div class="fig"><img src="file:///home/user/NOM/4-CODIGO/diagramas/png/17-er-cuentas.png" alt="Diagrama entidad-relación del módulo"><p>Diagrama entidad-relación del módulo de cuentas en Azure SQL.</p></div>
+  <table>
+    <tr><th style="width:18%">Tabla</th><th>Para qué sirve</th><th style="width:30%">Llaves</th></tr>
+    <tr><td><code>rol</code></td><td>Catálogo de roles: 1 ADMINISTRADOR, 2 USUARIO, con su descripción.</td><td>PK <code>id</code>; <code>nombre</code> único</td></tr>
+    <tr><td><code>usuario</code></td><td>Cuenta: nombre, empresa, hash y sal de la contraseña, intentos fallidos, bloqueo y rol.</td><td>PK <code>id</code>; FK <code>id_rol → rol.id</code>; <code>nombre_clave</code> único</td></tr>
+    <tr><td><code>sesion</code></td><td>Sesiones abiertas: token aleatorio de 256 bits, inicio y expiración (72 h).</td><td>PK <code>token</code>; FK <code>id_usuario</code> (borrado en cascada)</td></tr>
+    <tr><td><code>preferencias</code></td><td>Tema, autoguardado, versiones a conservar, calidad, movimiento.</td><td>PK/FK <code>id_usuario</code></td></tr>
+  </table>
+  <h3>Cómo se “jala” el rol (consulta real del repositorio)</h3>
+<pre>SELECT u.id, u.nombre, u.hash_contrasena, u.sal, u.intentos_fallidos, u.bloqueado_hasta,
+       r.nombre AS rol, p.tema, p.autoguardado_min, ...
+  FROM usuario u
+  JOIN rol r ON r.id = u.id_rol
+  LEFT JOIN preferencias p ON p.id_usuario = u.id
+ WHERE u.nombre_clave = ?          -- parámetro: nunca se concatena texto del usuario</pre>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="pagina">
+  <h2>5. Seguridad por roles</h2>
+  <table>
+    <tr><th style="width:26%">Acción</th><th style="width:18%">Visitante</th><th style="width:18%">USUARIO</th><th>ADMINISTRADOR</th></tr>
+    <tr><td>Registrarse e iniciar sesión</td><td class="ok">Sí</td><td class="ok">Sí</td><td class="ok">Sí</td></tr>
+    <tr><td>Espacios y documentos propios o compartidos</td><td>No (401)</td><td class="ok">Sí</td><td class="ok">Sí</td></tr>
+    <tr><td>Ver todas las cuentas</td><td>No (401)</td><td>No (403)</td><td class="ok">Sí</td></tr>
+    <tr><td>Cambiar roles y desbloquear cuentas</td><td>No (401)</td><td>No (403)</td><td class="ok">Sí (no puede quitarse su propio rol)</td></tr>
+  </table>
+  <h3>Cómo funciona, paso a paso</h3>
+  <ol>
+    <li><b>FiltroSesion</b> revisa el token de cada petición a <code>/api/**</code> (salvo registro e inicio de sesión). Sin token o con uno vencido o inventado: <b>401</b>.</li>
+    <li>Con el token busca la sesión en la base y carga al usuario <b>con su rol</b> (el JOIN de arriba).</li>
+    <li><b>FiltroRol</b> protege <code>/api/admin/**</code>: si el rol no es ADMINISTRADOR responde <b>403 “Esta sección es solo para administradores”</b>.</li>
+    <li>Como el rol se relee en cada petición, un cambio de rol aplica de inmediato, sin cerrar la sesión.</li>
+    <li>La interfaz no muestra “Administrar usuarios” a un USUARIO; aunque escriba la dirección a mano, el servidor la niega.</li>
+  </ol>
+<pre>@Component
+public class FiltroRol implements HandlerInterceptor {
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {
+        Usuario u = (Usuario) req.getAttribute(FiltroSesion.ATRIBUTO);   // lo dejó FiltroSesion
+        if (u == null || !u.esAdministrador())
+            throw ErrorNom.prohibido("Esta sección es solo para administradores");   // → 403
+        return true;
+    }
+}</pre>
+  <div class="dos">
+    <div class="fig"><img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-6-administrar-usuarios.png" alt="Administrar usuarios"><p>ADMINISTRADOR: cuentas de la BD con su rol; “Hacer administrador” y “Desbloquear”.</p></div>
+    <div class="fig"><img src="file:///home/user/NOM/5-PRESENTACION/imagenes/lf-cuentas-4-usuario-sin-permiso.png" alt="Acceso denegado"><p>USUARIO que escribe la dirección a mano: el servidor responde 403.</p></div>
+  </div>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="pagina">
+  <h2>6. Otras medidas de seguridad de la base de datos y la aplicación</h2>
+  <table>
+    <tr><th style="width:30%">Medida</th><th>Detalle</th></tr>
+    <tr><td>Contraseñas</td><td>Nunca se guardan: solo el hash PBKDF2-HMAC-SHA256 (120 000 iteraciones) con sal propia de cada cuenta. Comparación en tiempo constante.</td></tr>
+    <tr><td>Inyección SQL</td><td>Todas las consultas usan parámetros (<code>?</code>) con <code>JdbcClient</code>; el texto del usuario nunca se concatena al SQL.</td></tr>
+    <tr><td>Validación de datos</td><td>Nombre de 3–24 letras, números, punto o guion (rechaza HTML/scripts); contraseña de 8 caracteres mínimo.</td></tr>
+    <tr><td>Fuerza bruta</td><td>Bloqueo de 15 minutos al 6.º intento; el mensaje de error no revela si el usuario existe.</td></tr>
+    <tr><td>Sesiones</td><td>Token aleatorio de 256 bits, guardado en la BD, con expiración de 72 h; al cerrar sesión se borra.</td></tr>
+    <tr><td>Secretos fuera del código</td><td>URL, usuario y contraseña de la BD y la cuenta de administrador inicial son <i>App settings</i> de Azure (variables de entorno).</td></tr>
+    <tr><td>Transporte cifrado</td><td>La página solo acepta HTTPS (HTTP redirige con 301) y la conexión a la BD usa <code>encrypt=true</code>.</td></tr>
+    <tr><td>Firewall de Azure SQL</td><td>Solo acepta conexiones de servicios de Azure (la Web App) y de la IP del equipo de desarrollo.</td></tr>
+    <tr><td>Datos locales por cuenta</td><td>Las copias que el navegador guarda para trabajar sin red se separan por cuenta: otra persona en el mismo equipo no las ve.</td></tr>
+  </table>
+
+  <h2>7. Despliegue en Azure</h2>
+  <p>Se siguió el mismo camino de la práctica 4 (Git y Azure con la CLI <code>az</code>), pero ahora con un servidor Java y una base de datos. La suscripción <i>Azure for Students</i> del IPN solo permite ciertas regiones; se usó <b>westus</b>.</p>
+  <table>
+    <tr><th style="width:30%">Recurso</th><th style="width:34%">Nombre</th><th>Plan y costo</th></tr>
+    <tr><td>Grupo de recursos</td><td><code>rg-nomcolab</code></td><td>—</td></tr>
+    <tr><td>Servidor y BD</td><td><code>nomcolab-sql-6a073f</code> / <code>nomcolab</code></td><td>Serverless, oferta gratuita: $0. Si se agota el mes, se pausa (no cobra).</td></tr>
+    <tr><td>Plan de App Service</td><td><code>plan-nomcolab</code></td><td>Linux F1 Free: $0</td></tr>
+    <tr><td>Web App</td><td><code>nomcolab-wack</code></td><td>Java 21, solo HTTPS</td></tr>
+  </table>
+<pre>az login --use-device-code                         # cuenta @alumno.ipn.mx con MFA
+az provider register -n Microsoft.Sql --wait
+az group create -n rg-nomcolab -l westus
+az sql server create -g rg-nomcolab -n nomcolab-sql-6a073f -l westus -u nomadmin -p ********
+az sql db create -g rg-nomcolab -s nomcolab-sql-6a073f -n nomcolab --compute-model Serverless \
+   -e GeneralPurpose -f Gen5 -c 1 --use-free-limit --free-limit-exhaustion-behavior AutoPause
+az sql server firewall-rule create ... --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+az appservice plan create -g rg-nomcolab -n plan-nomcolab --is-linux --sku F1
+az webapp create -g rg-nomcolab -p plan-nomcolab -n nomcolab-wack --runtime "JAVA:21-java21"
+az webapp config appsettings set ... SPRING_DATASOURCE_URL=... SPRING_DATASOURCE_PASSWORD=*** NOM_DB_PLATAFORMA=sqlserver
+az webapp deploy -g rg-nomcolab -n nomcolab-wack --src-path nom-colab.jar --type jar</pre>
+  <p>Al arrancar, la aplicación crea las tablas si no existen (<code>schema-sqlserver.sql</code>, idempotente) y la cuenta de administrador inicial desde las variables de configuración.</p>
+</section>
+
+<!-- ============================== 8 ============================== -->
+<section class="pagina">
+  <h2>8. Pruebas de seguridad y funcionamiento</h2>
+  <p>Se automatizaron con un navegador real (Selenium) y peticiones directas a la API: <b>35 de 35 aprobadas</b> en la prueba integral. Las de roles, sesión y HTTPS se verificaron también contra Azure.</p>
+  <table>
+    <tr><th>Prueba</th><th style="width:22%">Esperado</th><th style="width:14%">Resultado</th></tr>
+    <tr><td>Pedir datos sin token</td><td>401</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Token inventado</td><td>401</td><td class="ok">Aprobada</td></tr>
+    <tr><td>USUARIO entra a <code>/api/admin/usuarios</code></td><td>403</td><td class="ok">Aprobada</td></tr>
+    <tr><td>ADMINISTRADOR entra a <code>/api/admin/usuarios</code></td><td>200</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Inyección SQL en el login (<code>' OR 1=1 --</code>)</td><td>401</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Registro con nombre que contiene HTML</td><td>400</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Contraseña de menos de 8 caracteres</td><td>400</td><td class="ok">Aprobada</td></tr>
+    <tr><td>6 intentos fallidos → bloqueo; el administrador desbloquea</td><td>423 → 200</td><td class="ok">Aprobada</td></tr>
+    <tr><td>El administrador intenta quitarse su propio rol</td><td>403</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Cambio de rol aplica con la misma sesión</td><td>Acceso inmediato</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Cuenta sin acceso pide un espacio ajeno</td><td>403</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Permiso de solo lectura intenta editar</td><td>403</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Otra cuenta en el mismo navegador no ve las copias locales de la anterior</td><td>No las ve</td><td class="ok">Aprobada</td></tr>
+    <tr><td>HTTP redirige a HTTPS</td><td>301</td><td class="ok">Aprobada</td></tr>
+    <tr><td>Primer arranque contra Azure SQL: tablas y administrador creados</td><td>Tablas creadas</td><td class="ok">Aprobada</td></tr>
+  </table>
+
+  <h2>9. Cómo probarlo</h2>
+  <ol>
+    <li>Abrir <b>https://nomcolab-wack.azurewebsites.net</b> unos minutos antes (el plan gratuito se duerme; la primera entrada tarda hasta un minuto y el botón dice “Conectando con la base de datos…”).</li>
+    <li><b>Crear cuenta</b> nueva: queda en la base con rol USUARIO. Al entrar no aparece “Administrar usuarios”; si se escribe <code>…/#/admin</code>, el servidor responde 403.</li>
+    <li>Entrar con la cuenta de <b>administrador</b> (se entrega en persona; no va en este documento): en “Administrar usuarios” aparece la cuenta recién creada, leída de Azure SQL, y se le puede cambiar el rol.</li>
+  </ol>
+
+  <h2>10. Conclusión</h2>
+  <p>El módulo de Gestión de cuentas de NOM-COLAB está publicado en Azure, conectado a una base de datos Azure SQL y protegido con roles que se leen de la base en cada petición: un usuario normal no puede ver ni usar la administración aunque conozca la dirección. Todo corre en servicios gratuitos de la suscripción de estudiante, sin costo.</p>
+</section>
+</body></html>

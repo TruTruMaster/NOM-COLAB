@@ -1,0 +1,251 @@
+@startuml 12-modelo-datos
+title NOM-COLAB - Modelo de base de datos (entidad-relación)
+skinparam shadowing false
+skinparam linetype ortho
+hide circle
+
+' ===================== CUENTAS =====================
+entity "rol" as rol {
+  * id : int <<PK>>
+  --
+  * nombre : varchar(20) <<UNIQUE>>
+  ' ADMINISTRADOR | USUARIO
+  * descripcion : nvarchar(160)
+}
+
+entity "usuario" as usuario {
+  * id : varchar(16) <<PK>>
+  --
+  * nombre : nvarchar(24)
+  * nombre_clave : nvarchar(24) <<UNIQUE>>
+  empresa : nvarchar(120)
+  * hash_contrasena : varchar(64)
+  ' PBKDF2-SHA256
+  * sal : varchar(32)
+  * intentos_fallidos : int = 0
+  * bloqueado_hasta : bigint = 0
+  * creado : bigint
+  * color : varchar(9)
+  * id_rol : int <<FK>> = 2
+}
+
+entity "preferencias" as pref {
+  * id_usuario : varchar(16) <<PK>> <<FK>>
+  --
+  * tema : varchar(6) = 'auto'
+  * autoguardado_min : int = 5
+  * versiones_conservar : int = 30
+  * calidad : varchar(4) = 'alta'
+  * movimiento_reducido : bit = 0
+  * enfoque_atenuar : bit = 1
+  * idioma : varchar(5) = 'es'
+}
+
+entity "sesion" as sesion {
+  * token : varchar(64) <<PK>>
+  --
+  * id_usuario : varchar(16) <<FK>>
+  * creada : bigint
+  * expira : bigint
+}
+
+' ===================== ESPACIOS =====================
+entity "espacio" as espacio {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar(120)
+  * id_propietario : UUID <<FK>>
+  * creado : timestamp
+}
+
+entity "acceso" as acceso {
+  * id_espacio : UUID <<PK>> <<FK>>
+  * id_usuario : UUID <<PK>> <<FK>>
+  --
+  * permiso : enum(LECTURA, EDICION, PROPIETARIO)
+  * otorgado : timestamp
+}
+
+entity "nodo" as nodo {
+  * id : UUID <<PK>>
+  --
+  * id_espacio : UUID <<FK>>
+  * tipo : enum(WEB, ESCRITORIO, ANDROID)
+  * host : varchar(80)
+  * puerto : int
+  * ultima_vez : timestamp
+}
+
+' ===================== DOCUMENTOS =====================
+entity "plantilla" as plantilla {
+  * id : UUID <<PK>>
+  --
+  * nombre : varchar(120)
+  * modo : enum(TEXTO, HOJA, PRESENTACION, DIAGRAMA)
+}
+
+entity "documento" as doc {
+  * id : UUID <<PK>>
+  --
+  * id_espacio : UUID <<FK>>
+  * nombre : varchar(160)
+  * modo : enum(TEXTO, HOJA, PRESENTACION, DIAGRAMA)
+  * version_actual : int = 1
+  id_plantilla : UUID <<FK>>
+}
+
+entity "pagina" as pagina {
+  * id : UUID <<PK>>
+  --
+  * id_documento : UUID <<FK>>
+  * indice : int
+  .. UNIQUE (id_documento, indice) ..
+}
+
+entity "estilo" as estilo {
+  * id : UUID <<PK>>
+  --
+  * fuente : varchar(60)
+  * tamano : smallint
+  * color_texto : char(7)
+  * color_fondo : char(7)
+}
+
+entity "animacion" as anim {
+  * id : UUID <<PK>>
+  --
+  * efecto : varchar(40)
+  * duracion_ms : int
+  * orden : smallint
+}
+
+entity "bloque" as bloque {
+  * id : UUID <<PK>>
+  --
+  * id_pagina : UUID <<FK>>
+  * tipo : enum(TEXTO, TABLA, IMAGEN, FORMA)
+  * x : numeric(10,2)
+  * y : numeric(10,2)
+  * ancho : numeric(10,2)
+  * alto : numeric(10,2)
+  * z : int
+  id_estilo : UUID <<FK>>
+  id_animacion : UUID <<FK>>
+  * eliminado : boolean = false
+}
+
+entity "bloque_texto" as btxt {
+  * id_bloque : UUID <<PK>> <<FK>>
+  --
+  * contenido : text
+}
+
+entity "bloque_tabla" as btab {
+  * id_bloque : UUID <<PK>> <<FK>>
+  --
+  * filas : int
+  * columnas : int
+}
+
+entity "celda" as celda {
+  * id_bloque : UUID <<PK>> <<FK>>
+  * fila : int <<PK>>
+  * columna : int <<PK>>
+  --
+  formula : text
+  valor : text
+}
+
+entity "bloque_imagen" as bimg {
+  * id_bloque : UUID <<PK>> <<FK>>
+  --
+  * ruta_recurso : varchar(255)
+}
+
+entity "bloque_forma" as bfor {
+  * id_bloque : UUID <<PK>> <<FK>>
+  --
+  * figura : varchar(40)
+}
+
+' ===================== VERSIONES Y CRDT =====================
+entity "version" as version {
+  * id : UUID <<PK>>
+  --
+  * id_documento : UUID <<FK>>
+  * numero : int
+  * id_autor : UUID <<FK>>
+  * fecha : timestamp
+  .. UNIQUE (id_documento, numero) ..
+}
+
+entity "operacion" as op {
+  * id_operacion : varchar(80) <<PK>>
+  --
+  * id_documento : UUID <<FK>>
+  id_bloque : UUID <<FK>>
+  * tipo : enum(INSERTAR, ACTUALIZAR, ELIMINAR, MOVER)
+  carga : text
+  * id_nodo_origen : UUID <<FK>>
+  * recibida : timestamp
+  * aplicada : boolean = false
+}
+
+entity "reloj_marca" as reloj {
+  * id_operacion : varchar(80) <<PK>> <<FK>>
+  * id_nodo : UUID <<PK>>
+  --
+  * contador : bigint
+}
+
+entity "cola_pendiente" as cola {
+  * id : UUID <<PK>>
+  --
+  * id_operacion : varchar(80) <<FK>>
+  * id_nodo_destino : UUID <<FK>>
+  * intentos : smallint = 0
+  * creada : timestamp
+}
+
+' ===================== RELACIONES =====================
+rol ||--o{ usuario
+usuario ||--o| pref
+usuario ||--o{ sesion
+usuario ||--o{ espacio
+usuario ||--o{ acceso
+espacio ||--o{ acceso
+espacio ||--o{ nodo
+espacio ||--o{ doc
+plantilla |o--o{ doc
+doc ||--|{ pagina
+pagina ||--o{ bloque
+estilo |o--o{ bloque
+anim |o--o{ bloque
+bloque ||--o| btxt
+bloque ||--o| btab
+bloque ||--o| bimg
+bloque ||--o| bfor
+btab ||--o{ celda
+doc ||--o{ version
+usuario ||--o{ version
+doc ||--o{ op
+bloque |o--o{ op
+nodo ||--o{ op
+op ||--|{ reloj
+op ||--o{ cola
+nodo ||--o{ cola
+
+note bottom of bloque
+  Herencia por tabla-por-subclase:
+  "tipo" dice en cual de las 4 tablas
+  hijas esta el resto de los datos.
+  "eliminado" es borrado logico: el CRDT
+  necesita recordar lo que se borro.
+end note
+
+note bottom of reloj
+  El reloj vectorial se guarda como filas
+  (una por nodo), no como blob: asi se puede
+  comparar en SQL cual operacion precede.
+end note
+@enduml

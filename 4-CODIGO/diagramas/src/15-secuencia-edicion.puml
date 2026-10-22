@@ -1,0 +1,68 @@
+@startuml 15-secuencia-edicion
+title Secuencia 3 - Edición concurrente y convergencia CRDT (CU-19, CU-21)
+skinparam shadowing false
+autonumber
+
+actor "Usuario A" as A
+participant "Editor A" as EA
+participant "MotorCRDT A" as MA
+participant "CanalSync A" as CA
+participant "NodoLocal" as N
+participant "RepositorioDocumentos" as RD
+participant "CanalSync B" as CB
+participant "MotorCRDT B" as MB
+participant "Editor B" as EB
+actor "Usuario B" as B
+
+== Edición local: se ve al instante ==
+A -> EA : modifica un Bloque
+EA -> EA : generar Operacion(tipo, idBloque, carga)
+EA -> MA : RelojVectorial.incrementar(idNodo)
+EA -> MA : aplicarLocal(op)
+MA --> EA : estado()
+EA --> A : cambio visible (sin esperar la red)
+
+== Difusión ==
+EA -> CA : enviar(op)
+CA -> N : op
+N -> CB : op
+CB -> MB : fusionarRemota(op)
+MB --> CB : estado()
+CB -> EB : repintar lienzo
+EB --> B : ve el cambio (< 1500 ms)
+
+== Los dos editan el MISMO bloque a la vez ==
+par
+  A -> EA : edita el bloque X
+  EA -> MA : aplicarLocal(opA)
+  EA -> CA : enviar(opA)
+also
+  B -> EB : edita el bloque X
+  EB -> MB : aplicarLocal(opB)
+  EB -> CB : enviar(opB)
+end
+
+CA -> N : opA
+CB -> N : opB
+N -> CB : opA
+N -> CA : opB
+CB -> MB : fusionarRemota(opA)
+CA -> MA : fusionarRemota(opB)
+
+note over MA, MB
+  Ambos motores comparan RelojVectorial
+  y aplican la misma regla determinista.
+  Resultado: estado IDENTICO en los dos,
+  sin preguntar nada al usuario y sin
+  perder el trabajo de ninguno.
+end note
+
+== Persistencia ==
+N -> RD : guardar(documento)
+RD --> N : Version(numero, autor, fecha)
+
+alt no hay red al enviar
+  CA -> CA : encolar en cola_pendiente
+  CA -> CA : reintentar al reconectar (CU-26)
+end
+@enduml

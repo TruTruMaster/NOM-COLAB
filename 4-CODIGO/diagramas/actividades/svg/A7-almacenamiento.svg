@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="910" height="1065" viewBox="0 0 910 1065" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11">
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6E6E6E"/></marker></defs>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="10" y="20" fill="#B5397A" font-size="14">Módulo Espacios de trabajo (Almacenamiento y versiones)</text>
+<rect x="10" y="30" width="260" height="1027.0" fill="#FFFFFF" stroke="#B85450" stroke-width="1.2"/>
+<rect x="10" y="30" width="260" height="22" fill="#F8CECC" stroke="#B85450" stroke-width="1.2"/>
+<text x="140.0" y="45" text-anchor="middle" font-weight="bold">Usuario</text>
+<rect x="270" y="30" width="300" height="1027.0" fill="#FFFFFF" stroke="#6C8EBF" stroke-width="1.2"/>
+<rect x="270" y="30" width="300" height="22" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.2"/>
+<text x="420.0" y="45" text-anchor="middle" font-weight="bold">Sistema</text>
+<rect x="570" y="30" width="330" height="1027.0" fill="#FFFFFF" stroke="#82B366" stroke-width="1.2"/>
+<rect x="570" y="30" width="330" height="22" fill="#D5E8D4" stroke="#82B366" stroke-width="1.2"/>
+<text x="735.0" y="45" text-anchor="middle" font-weight="bold">Base de datos</text>
+<polyline points="140.0,75.0 140.0,109.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="196.0,128.0 679.0,128.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="188.0,287.8 188.0,317.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="188.0,831.8 188.0,859.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="92.0,979.0 92.0,1013.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="735.0,153.5 735.0,204.8 476.0,204.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="420.0,230.3 420.0,268.8 244.0,268.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="136.0,345.6 68.0,345.6 68.0,405.4" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="132.0" y="341.6" text-anchor="end" font-size="9.5" fill="#333">[Restaurar]</text>
+<polyline points="188.0,373.6 188.0,409.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="193.0" y="386.6" font-size="9.5" fill="#333">[Depurar]</text>
+<polyline points="244.0,428.8 683.0,428.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="68.0,439.4 68.0,475.0 348.0,475.0 348.0,493.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="348.0,531.0 348.0,595.2 124.0,595.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="124.0,595.2 420.0,595.2 420.0,644.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="368.0,672.0 344.0,672.0 344.0,723.3" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="364.0" y="668.0" text-anchor="end" font-size="9.5" fill="#333">[No]</text>
+<polyline points="472.0,672.0 655.0,672.0 655.0,723.3" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="476.0" y="668.0" text-anchor="start" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="288.0,748.8 188.0,748.8 188.0,793.8" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="683.0,428.8 643.0,428.8 643.0,486.5" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="679.0" y="424.8" text-anchor="end" font-size="9.5" fill="#333">[Sí]</text>
+<polyline points="787.0,428.8 827.0,428.8 827.0,493.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<text x="791.0" y="424.8" text-anchor="start" font-size="9.5" fill="#333">[No]</text>
+<polyline points="643.0,537.5 643.0,595.2 552.0,595.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="827.0,531.0 827.0,595.2 552.0,595.2" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="655.0,774.3 655.0,825.6 468.0,825.6" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="496.0,614.2 496.0,901.0 92.0,901.0 92.0,941.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<polyline points="412.0,851.1 412.0,923.0 92.0,923.0 92.0,941.0" fill="none" stroke="#6E6E6E" stroke-width="1.1" marker-end="url(#f)"/>
+<circle cx="140.0" cy="64" r="11" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<rect x="84.0" y="109.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="140.0" y="125.5" text-anchor="middle">Selecciona opción</text>
+<text x="140.0" y="138.5" text-anchor="middle">&quot;Almacenamiento&quot;</text>
+<rect x="679.0" y="102.5" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="735.0" y="119.0" text-anchor="middle">Calcula consumo por</text>
+<text x="735.0" y="132.0" text-anchor="middle">documento y</text>
+<text x="735.0" y="145.0" text-anchor="middle">versiones</text>
+<rect x="364.0" y="179.3" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="195.8" text-anchor="middle">Despliega el uso</text>
+<text x="420.0" y="208.8" text-anchor="middle">del espacio y el</text>
+<text x="420.0" y="221.8" text-anchor="middle">historial</text>
+<rect x="132.0" y="249.8" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="188.0" y="266.3" text-anchor="middle">Visualiza</text>
+<text x="188.0" y="279.3" text-anchor="middle">almacenamiento</text>
+<polygon points="188.0,317.6 240.0,345.6 188.0,373.6 136.0,345.6" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="188.0" y="343.1" text-anchor="middle">¿Qué acción</text>
+<text x="188.0" y="356.1" text-anchor="middle">elige?</text>
+<rect x="12.0" y="405.4" width="112" height="34" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="68.0" y="426.4" text-anchor="middle">Elige una versión</text>
+<rect x="132.0" y="409.8" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="188.0" y="426.3" text-anchor="middle">Indica cuántas</text>
+<text x="188.0" y="439.3" text-anchor="middle">versiones conservar</text>
+<polygon points="735.0,395.8 787.0,428.8 735.0,461.8 683.0,428.8" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="735.0" y="419.8" text-anchor="middle">¿Documento</text>
+<text x="735.0" y="432.8" text-anchor="middle">abierto por otro</text>
+<text x="735.0" y="445.8" text-anchor="middle">usuario?</text>
+<rect x="587.0" y="486.5" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="643.0" y="503.0" text-anchor="middle">Posterga la</text>
+<text x="643.0" y="516.0" text-anchor="middle">depuración de ese</text>
+<text x="643.0" y="529.0" text-anchor="middle">documento</text>
+<rect x="771.0" y="493.0" width="112" height="38" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="827.0" y="509.5" text-anchor="middle">Elimina las</text>
+<text x="827.0" y="522.5" text-anchor="middle">versiones antiguas</text>
+<rect x="292.0" y="493.0" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="348.0" y="509.5" text-anchor="middle">Muestra la</text>
+<text x="348.0" y="522.5" text-anchor="middle">previsualización</text>
+<rect x="440.0" y="576.2" width="112" height="38" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="496.0" y="592.7" text-anchor="middle">Manda mensaje con</text>
+<text x="496.0" y="605.7" text-anchor="middle">el espacio liberado</text>
+<rect x="12.0" y="576.2" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="68.0" y="592.7" text-anchor="middle">Confirma la</text>
+<text x="68.0" y="605.7" text-anchor="middle">restauración</text>
+<polygon points="420.0,644.0 472.0,672.0 420.0,700.0 368.0,672.0" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="420.0" y="669.5" text-anchor="middle">¿Permiso de</text>
+<text x="420.0" y="682.5" text-anchor="middle">edición?</text>
+<rect x="288.0" y="723.3" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="344.0" y="739.8" text-anchor="middle">Manda mensaje &quot;Solo</text>
+<text x="344.0" y="752.8" text-anchor="middle">puedes consultar</text>
+<text x="344.0" y="765.8" text-anchor="middle">versiones&quot;</text>
+<rect x="599.0" y="723.3" width="112" height="51" fill="#D5E8D4" stroke="#82B366" stroke-width="1.1"/>
+<text x="655.0" y="739.8" text-anchor="middle">Guarda ese estado</text>
+<text x="655.0" y="752.8" text-anchor="middle">como una versión</text>
+<text x="655.0" y="765.8" text-anchor="middle">nueva</text>
+<rect x="132.0" y="793.8" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="188.0" y="810.3" text-anchor="middle">Recibe mensaje de</text>
+<text x="188.0" y="823.3" text-anchor="middle">error</text>
+<circle cx="188.0" cy="870.4" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="188.0" cy="870.4" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+<rect x="356.0" y="800.1" width="112" height="51" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1.1"/>
+<text x="412.0" y="816.6" text-anchor="middle">Avisa el salto de</text>
+<text x="412.0" y="829.6" text-anchor="middle">versión a los</text>
+<text x="412.0" y="842.6" text-anchor="middle">usuarios conectados</text>
+<rect x="36.0" y="941.0" width="112" height="38" fill="#F8CECC" stroke="#B85450" stroke-width="1.1"/>
+<text x="92.0" y="957.5" text-anchor="middle">Visualiza el</text>
+<text x="92.0" y="970.5" text-anchor="middle">resultado</text>
+<circle cx="92.0" cy="1024.0" r="11" fill="#FFFFFF" stroke="#B85450" stroke-width="1.1"/>
+<circle cx="92.0" cy="1024.0" r="7" fill="#F8CECC" stroke="#B85450" stroke-width="1"/>
+</svg>

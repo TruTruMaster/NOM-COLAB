@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="398px" preserveAspectRatio="none" style="width:940px;height:398px;" version="1.1" viewBox="0 0 940 398" width="940px" zoomAndPan="magnify"><defs/><g><text fill="#000000" font-family="Nunito" font-size="18" lengthAdjust="spacingAndGlyphs" textLength="701" x="123" y="19.2419">NOM-COLAB - Base de datos del módulo Gestión de cuentas (Azure SQL Database)</text><!--MD5=[ba1b98a9cc47ccecf59edf9fc7eb22a0]
+class rol--><rect fill="#FFFFFF" height="87.2898" id="rol" rx="5" ry="5" style="stroke: #5B5BD6; stroke-width: 1.5;" width="193" x="41.5" y="123.5158"/><text fill="#000000" font-family="Nunito" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="15" x="130.5" y="141.3439">rol</text><line style="stroke: #5B5BD6; stroke-width: 1.5;" x1="42.5" x2="233.5" y1="149.86" y2="149.86"/><ellipse cx="52.5" cy="160.86" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="62" x="61.5" y="165.6189">id : int «PK»</text><line style="stroke: #5B5BD6; stroke-width: 1.0;" x1="42.5" x2="233.5" y1="172.8418" y2="172.8418"/><ellipse cx="52.5" cy="183.8418" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="167" x="61.5" y="188.6008">nombre : varchar(20) «UNIQUE»</text><ellipse cx="52.5" cy="198.8237" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="140" x="61.5" y="203.5826">descripcion : nvarchar(160)</text><!--MD5=[0e9ce6df5b8205fa3c94ed60aa73539a]
+class usuario--><rect fill="#FFFFFF" height="207.1449" id="usuario" rx="5" ry="5" style="stroke: #5B5BD6; stroke-width: 1.5;" width="231" x="368" y="63.5158"/><text fill="#000000" font-family="Nunito" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="42" x="462.5" y="81.3439">usuario</text><line style="stroke: #5B5BD6; stroke-width: 1.5;" x1="369" x2="598" y1="89.86" y2="89.86"/><ellipse cx="379" cy="100.86" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="106" x="388" y="105.6189">id : varchar(16) «PK»</text><line style="stroke: #5B5BD6; stroke-width: 1.0;" x1="369" x2="598" y1="112.8418" y2="112.8418"/><ellipse cx="379" cy="123.8418" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="116" x="388" y="128.6008">nombre : nvarchar(24)</text><ellipse cx="379" cy="138.8237" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="205" x="388" y="143.5826">nombre_clave : nvarchar(24) «UNIQUE»</text><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="125" x="388" y="158.5645">empresa : nvarchar(120)</text><ellipse cx="379" cy="168.7875" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="155" x="388" y="173.5464">hash_contrasena : varchar(64)</text><ellipse cx="379" cy="183.7694" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="81" x="388" y="188.5283">sal : varchar(32)</text><ellipse cx="379" cy="198.7513" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="109" x="388" y="203.5102">intentos_fallidos : int</text><ellipse cx="379" cy="213.7332" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="388" y="218.4921">bloqueado_hasta : bigint</text><ellipse cx="379" cy="228.7151" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="76" x="388" y="233.474">creado : bigint</text><ellipse cx="379" cy="243.697" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="88" x="388" y="248.4559">color : varchar(9)</text><ellipse cx="379" cy="258.6788" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="81" x="388" y="263.4378">id_rol : int «FK»</text><!--MD5=[6e91fa3ff459f9d9661a3dbb538d8c87]
+class sesion--><rect fill="#FFFFFF" height="102.2717" id="sesion" rx="5" ry="5" style="stroke: #5B5BD6; stroke-width: 1.5;" width="176" x="738.5" y="33.0158"/><text fill="#000000" font-family="Nunito" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="36" x="808.5" y="50.8439">sesion</text><line style="stroke: #5B5BD6; stroke-width: 1.5;" x1="739.5" x2="913.5" y1="59.36" y2="59.36"/><ellipse cx="749.5" cy="70.36" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="126" x="758.5" y="75.1189">token : varchar(64) «PK»</text><line style="stroke: #5B5BD6; stroke-width: 1.0;" x1="739.5" x2="913.5" y1="82.3418" y2="82.3418"/><ellipse cx="749.5" cy="93.3418" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="150" x="758.5" y="98.1008">id_usuario : varchar(16) «FK»</text><ellipse cx="749.5" cy="108.3237" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="75" x="758.5" y="113.0826">creada : bigint</text><ellipse cx="749.5" cy="123.3056" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="73" x="758.5" y="128.0645">expira : bigint</text><!--MD5=[96c5ef73408c6cdebe064e7521613a95]
+class pref--><rect fill="#FFFFFF" height="162.1992" id="pref" rx="5" ry="5" style="stroke: #5B5BD6; stroke-width: 1.5;" width="205" x="724" y="170.0158"/><text fill="#000000" font-family="Nunito" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="71" x="791" y="187.8439">preferencias</text><line style="stroke: #5B5BD6; stroke-width: 1.5;" x1="725" x2="928" y1="196.36" y2="196.36"/><ellipse cx="735" cy="207.36" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="179" x="744" y="212.1189">id_usuario : varchar(16) «PK» «FK»</text><line style="stroke: #5B5BD6; stroke-width: 1.0;" x1="725" x2="928" y1="219.3418" y2="219.3418"/><ellipse cx="735" cy="230.3418" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="87" x="744" y="235.1008">tema : varchar(6)</text><ellipse cx="735" cy="245.3237" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="124" x="744" y="250.0826">autoguardado_min : int</text><ellipse cx="735" cy="260.3056" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="130" x="744" y="265.0645">versiones_conservar : int</text><ellipse cx="735" cy="275.2875" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="98" x="744" y="280.0464">calidad : varchar(4)</text><ellipse cx="735" cy="290.2694" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="138" x="744" y="295.0283">movimiento_reducido : bit</text><ellipse cx="735" cy="305.2513" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="113" x="744" y="310.0102">enfoque_atenuar : bit</text><ellipse cx="735" cy="320.2332" fill="#000000" rx="3" ry="3" style="stroke: #000000; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="97" x="744" y="324.9921">idioma : varchar(5)</text><path d="M6,250.5158 L6,303.6339 A5,5 0 0 0 11,308.6339 L265,308.6339 A5,5 0 0 0 270,303.6339 L270,255.5158 L260,245.5158 L142,245.5158 L138,210.8058 L134,245.5158 L11,245.5158 A5,5 0 0 0 6,250.5158 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M260,245.5158 L260,253.0158 A2.5,2.5 0 0 0 262.5,255.5158 L270,255.5158 L260,245.5158 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="243" x="12" y="264.4129">1 ADMINISTRADOR: ve todas las cuentas,</text><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="208" x="18" y="282.1189">cambia roles y desbloquea cuentas</text><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="210" x="12" y="299.8249">2 USUARIO: trabaja en sus espacios</text><path d="M362,310.5158 L362,381.3399 A5,5 0 0 0 367,386.3399 L600,386.3399 A5,5 0 0 0 605,381.3399 L605,315.5158 L595,305.5158 L488,305.5158 L484,270.6258 L480,305.5158 L367,305.5158 A5,5 0 0 0 362,310.5158 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M595,305.5158 L595,313.0158 A2.5,2.5 0 0 0 597.5,315.5158 L605,315.5158 L595,305.5158 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="189" x="368" y="324.4129">La contraseña nunca se guarda:</text><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="189" x="368" y="342.1189">solo hash PBKDF2-SHA256 + sal.</text><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="206" x="368" y="359.8249">bloqueado_hasta &gt; ahora = cuenta</text><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="222" x="368" y="377.5309">bloqueada (6.º intento fallido, 15 min)</text><!--MD5=[3d1ca1e8f3d4713a9883391c211e530e]
+link rol to usuario--><path d="M242.7,167.0158 C242.7,167.0158 359.81,167.0158 359.81,167.0158 " fill="none" id="rol-usuario" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="359.81" x2="367.81" y1="167.0158" y2="161.0158"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="359.81" x2="367.81" y1="167.0158" y2="173.0158"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="359.81" x2="367.81" y1="167.0158" y2="167.0158"/><ellipse cx="353.81" cy="167.0158" fill="none" rx="4" ry="4" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="238.7" x2="238.7" y1="171.0158" y2="163.0158"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="241.7" x2="241.7" y1="171.0158" y2="163.0158"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="242.7" x2="234.7" y1="167.0158" y2="167.0158"/><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="30" x="301" y="162.9129">tiene</text><!--MD5=[2ffc35f6cb808e85f706bb05a7148b70]
+link usuario to sesion--><path d="M607.15,99.2658 C607.15,99.2658 730.46,99.2658 730.46,99.2658 " fill="none" id="usuario-sesion" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="730.46" x2="738.46" y1="99.2658" y2="93.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="730.46" x2="738.46" y1="99.2658" y2="105.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="730.46" x2="738.46" y1="99.2658" y2="99.2658"/><ellipse cx="724.46" cy="99.2658" fill="none" rx="4" ry="4" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="603.15" x2="603.15" y1="103.2658" y2="95.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="606.15" x2="606.15" y1="103.2658" y2="95.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="607.15" x2="599.15" y1="99.2658" y2="99.2658"/><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="27" x="651" y="79.9129">abre</text><!--MD5=[f68d34a81907d03501a01943156c7916]
+link usuario to pref--><path d="M607.15,220.2658 C607.15,220.2658 715.73,220.2658 715.73,220.2658 " fill="none" id="usuario-pref" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="712.73" x2="723.73" y1="220.2658" y2="220.2658"/><ellipse cx="712.73" cy="220.2658" fill="none" rx="4" ry="4" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="719.73" x2="719.73" y1="216.2658" y2="224.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="603.15" x2="603.15" y1="224.2658" y2="216.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="606.15" x2="606.15" y1="224.2658" y2="216.2658"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="607.15" x2="599.15" y1="220.2658" y2="220.2658"/><text fill="#000000" font-family="Nunito" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="57" x="636" y="246.9129">configura</text><!--MD5=[7fc71fb9febf3bf55d8a85534405d7c6]
+@startuml 17-er-cuentas
+title NOM-COLAB - Base de datos del módulo Gestión de cuentas (Azure SQL Database)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName Nunito
+skinparam roundCorner 10
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #5B5BD6
+  HeaderBackgroundColor #EEEEFF
+}
+hide circle
+left to right direction
+
+entity "rol" as rol {
+  * id : int <<PK>>
+  - -
+  * nombre : varchar(20) <<UNIQUE>>
+  * descripcion : nvarchar(160)
+}
+
+entity "usuario" as usuario {
+  * id : varchar(16) <<PK>>
+  - -
+  * nombre : nvarchar(24)
+  * nombre_clave : nvarchar(24) <<UNIQUE>>
+  empresa : nvarchar(120)
+  * hash_contrasena : varchar(64)
+  * sal : varchar(32)
+  * intentos_fallidos : int
+  * bloqueado_hasta : bigint
+  * creado : bigint
+  * color : varchar(9)
+  * id_rol : int <<FK>>
+}
+
+entity "sesion" as sesion {
+  * token : varchar(64) <<PK>>
+  - -
+  * id_usuario : varchar(16) <<FK>>
+  * creada : bigint
+  * expira : bigint
+}
+
+entity "preferencias" as pref {
+  * id_usuario : varchar(16) <<PK>> <<FK>>
+  - -
+  * tema : varchar(6)
+  * autoguardado_min : int
+  * versiones_conservar : int
+  * calidad : varchar(4)
+  * movimiento_reducido : bit
+  * enfoque_atenuar : bit
+  * idioma : varchar(5)
+}
+
+rol ||- -o{ usuario : "tiene"
+usuario ||- -o{ sesion : "abre"
+usuario ||- -o| pref : "configura"
+
+note bottom of rol
+  1 ADMINISTRADOR: ve todas las cuentas,
+    cambia roles y desbloquea cuentas
+  2 USUARIO: trabaja en sus espacios
+end note
+note bottom of usuario
+  La contraseña nunca se guarda:
+  solo hash PBKDF2-SHA256 + sal.
+  bloqueado_hasta > ahora = cuenta
+  bloqueada (6.º intento fallido, 15 min)
+end note
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 04:22:07 CST 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 17.0.20+8
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

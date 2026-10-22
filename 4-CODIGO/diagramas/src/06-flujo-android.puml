@@ -1,0 +1,22 @@
+@startuml 06-flujo-android
+title Flujo 4 - Conexion del dispositivo Android
+skinparam shadowing false
+start
+:Abrir app Android NOM;
+:Iniciar sesion;
+if (Modo de conexion?) then (LAN)
+  :Buscar nodos en la red local (descubrimiento);
+  :Elegir espacio;
+  :Emparejar (codigo del espacio);
+else (Sin conexion)
+  :Abrir copia local del Documento;
+  :Editar; las operaciones se encolan;
+  :Esperar a volver a la LAN;
+endif
+:CanalSync abierto;
+:Enviar operaciones pendientes;
+:Recibir operaciones remotas;
+:MotorCRDT.fusionarRemota();
+:Lienzo sincronizado con escritorio y web;
+stop
+@enduml

@@ -1,0 +1,58 @@
+@startuml 10-cu-espacios
+title Casos de uso - Módulo Espacios de trabajo
+skinparam shadowing false
+left to right direction
+
+actor "Usuario" as U
+actor "Propietario" as P
+actor "Nodo remoto\n(LAN)" as N <<sistema>>
+actor "Dispositivo\nAndroid" as A <<sistema>>
+P -up-|> U
+
+rectangle "Espacios de trabajo" {
+  usecase "CU-13\nCrear espacio\nde trabajo" as CU13
+  usecase "CU-14\nActivar conexión\ndel proyecto" as CU14
+  usecase "CU-15\nDescubrir espacios\nen la LAN" as CU15
+  usecase "CU-16\nUnirse a\nun espacio" as CU16
+  usecase "CU-17\nGestionar accesos\ny permisos" as CU17
+  usecase "CU-18\nCrear documento" as CU18
+  usecase "CU-19\nEditar documento\nen el lienzo" as CU19
+  usecase "CU-20\nElegir el tipo\ndel documento" as CU20
+  usecase "CU-21\nSincronizar edición\nconcurrente (CRDT)" as CU21
+  usecase "CU-22\nConsultar micro-textos\nde ayuda" as CU22
+  usecase "CU-23\nGestionar versiones" as CU23
+  usecase "CU-24\nAdministrar\nalmacenamiento" as CU24
+  usecase "CU-25\nConectar\ndispositivo Android" as CU25
+  usecase "CU-26\nTrabajar sin conexión\ny resincronizar" as CU26
+  usecase "CU-28\nImportar archivo" as CU28
+  usecase "CU-29\nExportar documento" as CU29
+}
+
+P --> CU13
+P --> CU14
+P --> CU17
+U --> CU15
+U --> CU16
+U --> CU18
+U --> CU19
+U --> CU23
+P --> CU24
+U --> CU25
+U --> CU28
+U --> CU29
+
+CU16 ..> CU15 : <<include>>
+CU19 ..> CU21 : <<include>>
+CU18 ..> CU20 : <<include>>
+CU22 ..> CU19 : <<extend>>
+CU26 ..> CU21 : <<extend>>
+CU23 ..> CU19 : <<extend>>
+CU28 ..> CU18 : <<extend>>
+CU29 ..> CU19 : <<extend>>
+
+CU14 -- N
+CU15 -- N
+CU21 -- N
+CU25 -- A
+CU26 -- A
+@enduml
