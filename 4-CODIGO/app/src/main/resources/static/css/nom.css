@@ -348,7 +348,7 @@ kbd {
   background: var(--fondo-2);
 }
 .marca { display: flex; align-items: center; gap: 10px; padding: var(--e2) var(--e2) var(--e4); font-weight: 900; font-size: 19px; letter-spacing: -.02em; }
-.marca .logo { width: 34px; height: 34px; }
+.marca .logo { width: 34px; height: 34px;}
 .marca small { display: block; font-size: 11px; font-weight: 700; color: var(--tinta-suave); letter-spacing: .02em; }
 .riel-item {
   display: flex; align-items: center; gap: var(--e3);
