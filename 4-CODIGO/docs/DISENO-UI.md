@@ -31,6 +31,19 @@ las sombras no deben cargar significado por sí solas
 | Contraste de texto medido contra WCAG 2.x AA: tinta 12.8:1, texto secundario 4.9:1, botón principal 5.4:1 (blanco sobre índigo). | tokens `--tinta`, `--tinta-suave`, `--acento` |
 | Modo **calidad baja** que apaga las sombras compuestas (hardware mínimo de los requerimientos). | `:root[data-calidad="baja"]`, CU-27 |
 
+**Arcilla + vidrio (glassmorphism).** Lo que **flota encima** del trabajo deja ver lo de
+atrás, desenfocado, para que nunca se pierda de vista lo que se está editando: la ruedita,
+los menús y paletas, las ventanas (hojas), los avisos, los micro-textos, la barra de
+selección del lienzo, el control de zoom, buscar y reemplazar, el cajón de versiones y las
+barras fijas del celular. Conserva la arcilla: la misma luz interior arriba y la sombra
+teñida abajo, más un borde claro de 1 px.
+
+| Regla | Dónde |
+|---|---|
+| La opacidad sube con la cantidad de texto: 66 % en anillos y barras de íconos, 86 % en menús y ventanas, 82–86 % de tinta en avisos y micro-textos; el desenfoque (20 px) borra lo de atrás para que no compita con las letras. | tokens `--vidrio`, `--vidrio-fuerte`, `--vidrio-tinta`, `--vidrio-desenfoque` |
+| Si el navegador no sabe desenfocar, o con **calidad baja**, las mismas superficies se vuelven opacas: nada se lee peor. | `@supports not (backdrop-filter…)`, `:root[data-calidad="baja"]` |
+| El lienzo de trabajo sigue plano y opaco: el vidrio es solo para lo que flota. | `css/editor.css` |
+
 ## 2. Captar la atención rápido (sin robarla)
 
 | Principio | Qué dice | Cómo se aplica |
@@ -77,6 +90,8 @@ Supr (borra).
 | **Duración del movimiento** | Microinteracciones ≤ 150 ms; movimientos pequeños 150–250 ms; grandes 250–500 ms ([SAP Fiori](https://www.sap.com/design-system/fiori-design-web/v1-120/foundations/visual/motion-design), [Val Head](https://valhead.com/?p=2978)). | Tokens `--t-micro` 120 ms, `--t-corto` 200 ms, `--t-largo` 280 ms. Curva de salida suave `cubic-bezier(.2,.8,.2,1)`; rebote solo en el interruptor y en los avisos de éxito. |
 | **Respeto al movimiento reducido** | Las animaciones pueden marear a algunas personas. | `prefers-reduced-motion` y la preferencia "Reducir movimiento" ponen todas las duraciones en 1 ms. |
 | **Regla pico-final** | Se recuerda el momento más intenso y el final. | Al crear cuenta o espacio aparece una palomita animada; al guardar, "Versión N guardada". |
+| **Continuidad (todo se mueve)** | El movimiento explica de dónde viene y a dónde va cada cosa; los cortes bruscos desorientan. | Cada pantalla entra en cascada (encabezado, tarjetas y listas con 40 ms entre cada una); el editor baja su barra; menús, ventanas y avisos entran con un pequeño rebote y también **salen** animados; la ruedita gira al abrir y sus acciones aparecen una tras otra; al cambiar de tema los colores se funden en medio segundo; los íconos "saludan" al pasar el cursor. Las entradas usan `animation-fill-mode: backwards` para no dejar transformaciones puestas (romperían los elementos fijos). |
+| **Bienvenida viva** | Mostrar lo que se ofrece en vez de decirlo. | Un documento, una presentación y una hoja flotan junto al título; se apartan del cursor (paralaje), se inclinan hacia él y saltan al tocarlos (`vista-cuentas.js`, `.flotantes`). |
 
 ## 6. Un entorno enfocado, sin distracciones
 
@@ -146,34 +161,48 @@ selector de archivos.
 ## 11. Ruedita de acciones (menú radial)
 
 Inspirada en las ruedas de "ping" de los juegos (Apex Legends, League of Legends,
-la rueda de comunicación de Overwatch): **se mantiene presionado** (clic derecho, o clic
-izquierdo / dedo quieto ~0.45 s) y aparece un anillo de 8 acciones alrededor del puntero.
-Se elige **por dirección**: basta mover hacia la acción y soltar.
+la rueda de comunicación de Overwatch): un anillo de 8 acciones que se elige **por
+dirección**.
+
+**Sale sola.** Al seleccionar algo (texto, una imagen, figuras, celdas) y dejar la
+selección quieta **medio segundo**, la rueda aparece junto a lo seleccionado (debajo; si
+no cabe, arriba o a un lado), sin taparlo. Si se sigue seleccionando se esconde y vuelve en
+la siguiente pausa. No atrapa nada: escribir, tocar fuera o Esc la cierran, y presionarla no
+le quita el foco al documento (el teclado del celular no se cierra). Tras dar formato vuelve
+a salir para seguir; tras copiar, eliminar o Esc no vuelve hasta que cambie la selección.
+También se abre con clic derecho (o la tecla Menú) y, en el lienzo vacío, manteniendo el
+dedo. Reemplaza a la barra pequeña que salía encima del texto.
 
 | Principio | Qué dice la investigación | Cómo se aplica |
 |---|---|---|
 | Menús circulares (pie menus) | Callahan, Hopkins, Weiser y Shneiderman (CHI 1988): elegir en un menú circular es más rápido y con menos errores que en uno en lista, porque todas las opciones quedan a la misma distancia del puntero. | 8 sectores iguales; el puntero empieza en el centro. |
 | Ley de Fitts | El tiempo para alcanzar un objetivo depende de la distancia y el tamaño. | Cada sector es una cuña que crece hacia afuera: el objetivo es "infinito" en su dirección. |
-| Menús de marcas (marking menus) | Kurtenbach y Buxton (CHI 1993/1994): con práctica la gente elige por el gesto, sin mirar el menú. | Las acciones están siempre en la misma posición (Negrita arriba, Cursiva arriba-derecha…). |
+| Menús de marcas (marking menus) | Kurtenbach y Buxton (CHI 1993/1994): con práctica la gente elige por el gesto, sin mirar el menú. | **El mismo orden en todos los editores** (en el sentido del reloj, desde arriba): 0 Negrita · 1 Cursiva · 2 Subrayado · 3 Color · 4 Eliminar o cortar (abajo) · 5 Copiar o duplicar · 6 Estilo, orden o fórmulas · 7 Más. Lo que no aplica se muestra apagado en su lugar, sin recorrer las demás. Lo que ya está puesto (negrita activa, ancho actual) lleva una marca. |
+| Selección que no estorba | La herramienta debe aparecer cuando se necesita y no antes (divulgación progresiva). | La pausa de 0.5 s distingue "estoy eligiendo" de "ya elegí". |
 | Zona muerta y cancelar | Soltar sin moverse no debe ejecutar nada. | Soltar en el centro cancela; un clic derecho rápido deja la rueda abierta para elegir con clic. |
 | Submenús | Mantener la rueda corta (8 máximo). | "Color", "Resaltar", "Estilo" y "Más" abren una segunda rueda en el mismo lugar. |
 | Accesibilidad | Debe poder usarse sin ratón. | Tecla Menú o Mayús+F10 la abre en el cursor; flechas, 1-8 y Enter para elegir; Esc cierra. Mayús+clic derecho deja el menú normal del navegador (corrector ortográfico). |
 
-En el texto ofrece: negrita, cursiva, subrayado, color, resaltar, estilo, enlace y más
-(copiar, cortar, pegar, copiar formato…); sobre una imagen: tamaño, centrar y eliminar.
-En presentaciones y diagramas: duplicar, bloquear, color, al frente, eliminar, al fondo,
-girar y agrupar; en el fondo vacío: crear figuras, texto, imagen o pegar. `rueda.js`.
+| Contexto | Rueda |
+|---|---|
+| Texto | negrita, cursiva, subrayado, color (y resaltar), cortar, copiar, estilo (títulos, listas, cita), más (enlace, pegar, copiar y borrar formato, tachado, buscar, imagen, salto de página) |
+| Imagen en el texto | ancho completo, mitad, un cuarto, libre / en línea, eliminar, copiar, alinear, más (cortar, descargar) |
+| Figuras, cuadros de texto e imágenes del lienzo | negrita, cursiva, subrayado, color (relleno y texto), eliminar, duplicar, orden (frente, fondo, girar, voltear, alinear), más (agrupar, bloquear, copiar, cortar, pegar, editar texto, elegir todo) |
+| Celdas | negrita, cursiva, subrayado, color, borrar, copiar, fórmulas (autosuma y funciones), más (cortar, pegar, editar, agregar filas o columnas) |
+| Lienzo vacío (clic derecho) | texto, rectángulo, elipse, nota, pegar, imagen, más figuras, ver todo |
+
+`rueda.js` (`automatica()` decide cuándo sale; cada editor dice qué hay seleccionado).
 
 ## 12. Figuras como en Canva
 
 | Función | Cómo se usa |
 |---|---|
 | Más de 20 figuras (galería con vista previa real) | Botón "Figuras": rectángulo, elipse, rombo, triángulos, pentágono, hexágono, octágono, estrella, corazón, nube, globo de diálogo, flechas, chevrón, cruz, paralelogramo, trapecio, cilindro, documento, nota, líneas. |
-| **Barra contextual** sobre la selección | Relleno (o sin relleno), borde (color, grosor, sólido/guiones/puntos), texto (tamaño, color, negrita, alineación, fuente), transparencia, esquinas redondeadas, sombra, posición, girar, voltear, agrupar, bloquear, duplicar, eliminar. |
+| **Barra contextual** fija arriba del lienzo (la ruedita es la que va junto a la selección) | Relleno (o sin relleno), borde (color, grosor, sólido/guiones/puntos), texto (tamaño, color, negrita, alineación, fuente), transparencia, esquinas redondeadas, sombra, posición, girar, voltear, agrupar, bloquear, duplicar, eliminar. |
 | Girar | Tirador redondo debajo de la figura; Mayús gira de 15° en 15° y se "pega" a 0°, 90°, 180° y 270°. |
 | Cambiar tamaño | 8 tiradores; funcionan aunque la figura esté girada (la esquina opuesta se queda fija). Mayús conserva la proporción. |
 | **Guías inteligentes** | Al mover, la selección se alinea sola con los bordes y centros de las demás figuras (y con el centro de la diapositiva); se ven líneas rosas. Alt para mover libre. |
-| Selección múltiple | Recuadro arrastrando en el fondo, Mayús+clic, Ctrl+A. |
+| Selección múltiple | Recuadro arrastrando en el fondo, Mayús+clic, Ctrl+A. Con el dedo: **sostener una figura y tocar otras** con otro dedo, o **mantener** una figura (0.45 s) y luego tocar las demás; un aviso abajo cuenta cuántas van y "Listo" termina. Tocar una ya elegida la quita; arrastrar mueve todas. En la hoja, igual: sostener una celda y tocar otra elige el rango; en el texto, sostener la selección y tocar más allá la extiende. |
 | Agrupar, alinear y distribuir | Ctrl+G / Ctrl+Mayús+G; alinear a la izquierda/centro/derecha/arriba/medio/abajo; distribuir con espacios iguales. |
 | Orden y bloqueo | Ctrl+] / Ctrl+[ (Mayús: al frente / al fondo); bloquear evita moverlo por accidente. |
 | Copiar y pegar | Ctrl+C / Ctrl+V entre diapositivas y entre pestañas; Ctrl+D duplica. |
@@ -181,6 +210,24 @@ girar y agrupar; en el fondo vacío: crear figuras, texto, imagen o pegar. `rued
 Todo se exporta a PowerPoint con geometrías **nativas** (`star5`, `heart`, `cloud`,
 `rightArrow`, `can`…), giro, volteo, borde, transparencia y sombra: se ve igual en
 PowerPoint, Google Slides o LibreOffice.
+
+## 13. Estilo protegido
+
+La página se ve como se diseñó, aunque el navegador o el sistema quieran cambiarla:
+
+| Qué podría cambiarla | Cómo se evita |
+|---|---|
+| Modo oscuro automático de Chrome, Samsung Internet y otros | `<meta name="color-scheme" content="light dark">`: la app declara sus propios temas claro y oscuro. |
+| Extensiones de modo oscuro (Dark Reader) | `<meta name="darkreader-lock">`. |
+| Extensiones de temas o estilos (Stylus y similares), traductores | Las hojas de estilo que no son de NOM-COLAB (las nuestras llevan `data-nom`) se quitan en cuanto aparecen (`nucleo.js`, `protegerEstilo()`); `notranslate` evita que un traductor reescriba el texto del editor. |
+| Alto contraste forzado de Windows y colores forzados del navegador | `forced-color-adjust: none` (y la app ya cumple contraste AA por sí misma). |
+| Letra inflada en el celular, tamaño de letra del sistema | `text-size-adjust: 100%`; en la app Android `setTextZoom(100)`. |
+| Modo oscuro forzado de Android o de la marca del teléfono | `setAlgorithmicDarkeningAllowed(false)` / `FORCE_DARK_OFF` y `setForceDarkAllowed(false)` en el WebView. |
+| Impresión que quita fondos | `print-color-adjust: exact`. |
+
+No se puede impedir el zoom del navegador ni el tamaño mínimo de letra que elige la persona
+(son ajustes de accesibilidad del propio navegador), ni lo que una extensión haga con
+permisos mayores que los de la página.
 
 ## Fuentes
 

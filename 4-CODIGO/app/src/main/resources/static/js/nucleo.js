@@ -205,7 +205,9 @@
   }
   function cerrarMenu() {
     if (!menuActual) return;
-    menuActual.remove(); menuActual = null;
+    const m = menuActual; menuActual = null;
+    m.classList.add("saliendo");
+    setTimeout(() => m.remove(), 130);
     document.removeEventListener("pointerdown", fueraMenu, true);
     document.removeEventListener("keydown", escMenu, true);
   }
@@ -256,11 +258,19 @@
   document.addEventListener("contextmenu", (e) => { if (e.target.closest && e.target.closest("[data-micro]") && e.pointerType !== "mouse") e.preventDefault(); });
 
   // ------------------------------------------------------------ preferencias visuales
+  let tTema = null;
   function aplicarPreferencias(p) {
     p = p || {};
     const raiz = document.documentElement;
     const oscuro = p.tema === "oscuro" || (p.tema !== "claro" && matchMedia("(prefers-color-scheme: dark)").matches);
+    const antes = raiz.dataset.tema;
     raiz.dataset.tema = oscuro ? "oscuro" : "claro";
+    // Al cambiar de tema los colores se funden en vez de saltar.
+    if (antes && antes !== raiz.dataset.tema) {
+      raiz.classList.add("cambiando-tema");
+      clearTimeout(tTema);
+      tTema = setTimeout(() => raiz.classList.remove("cambiando-tema"), 480);
+    }
     raiz.dataset.calidad = p.calidad === "baja" ? "baja" : "alta";
     raiz.dataset.movimiento = p.movimientoReducido ? "reducido" : "normal";
     const meta = $('meta[name="theme-color"]');
@@ -269,6 +279,24 @@
   }
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => aplicarPreferencias(leer("nom.pref", {})));
   aplicarPreferencias(leer("nom.pref", {}));
+
+  // ------------------------------------------------------------ estilo protegido
+  // Extensiones de modo oscuro o de temas, y traductores, meten hojas de estilo propias que cambian
+  // la página. Las que no son de NOM-COLAB (las nuestras llevan data-nom) se quitan en cuanto
+  // aparecen. El modo oscuro automático de Chrome y Dark Reader se apagan desde index.html, y el
+  // alto contraste forzado y el tamaño de letra del sistema, desde nom.css.
+  function protegerEstilo() {
+    const ajena = (n) => n.nodeType === 1 && !n.hasAttribute("data-nom") && (n.tagName === "STYLE" || (n.tagName === "LINK" && /(^|\s)stylesheet(\s|$)/i.test(n.rel || "")));
+    const limpiar = (padre) => {
+      Array.from(padre.children).forEach((n) => { if (ajena(n)) n.remove(); });
+      if (document.adoptedStyleSheets && document.adoptedStyleSheets.length) document.adoptedStyleSheets = [];
+    };
+    // Solo los hijos directos de <html>, <head> y <body>: ahí las meten; vigilar todo el árbol
+    // costaría en cada tecla del editor.
+    const obs = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (ajena(n)) n.remove(); })));
+    [document.documentElement, document.head, document.body].filter(Boolean).forEach((padre) => { limpiar(padre); obs.observe(padre, { childList: true }); });
+  }
+  if (document.body) protegerEstilo(); else document.addEventListener("DOMContentLoaded", protegerEstilo);
 
   Object.assign(NOM, {
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,

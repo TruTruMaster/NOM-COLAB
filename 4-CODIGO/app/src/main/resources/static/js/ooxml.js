@@ -523,6 +523,19 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
     const pags = doc.paginas();
     tablas.sort((a, b) => pags.indexOf(a.pagina) - pags.indexOf(b.pagina) || (a.orden || 0) - (b.orden || 0));
     const nombres = [];
+    // Formato de celda (negrita, cursiva, subrayado, color): cada combinación es una fuente y un estilo.
+    const fuentes = ["<font><sz val=\"11\"/><name val=\"Calibri\"/></font>"], estilosCelda = { "": 0 };
+    const estiloDe = (t, ref) => {
+      const k = [t["n:" + ref] ? "b" : "", t["i:" + ref] ? "i" : "", t["u:" + ref] ? "u" : "", t["k:" + ref] || ""].join("|");
+      if (k === "|||") return 0;
+      if (estilosCelda[k] == null) {
+        const [b, i, u, c] = k.split("|");
+        const rgb = /^#[0-9a-f]{6}$/i.test(c) ? "FF" + c.slice(1).toUpperCase() : null;
+        fuentes.push(`<font>${b ? "<b/>" : ""}${i ? "<i/>" : ""}${u ? "<u/>" : ""}<sz val="11"/>${rgb ? `<color rgb="${rgb}"/>` : ""}<name val="Calibri"/></font>`);
+        estilosCelda[k] = fuentes.length - 1;
+      }
+      return estilosCelda[k];
+    };
     const hojas = tablas.map((t, i) => {
       let n = String(t.nombre || doc.valor("_doc", "hojas") && doc.valor("_doc", "hojas")[t.pagina] || `Hoja ${i + 1}`).replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || `Hoja ${i + 1}`;
       while (nombres.includes(n)) n = (n.slice(0, 28) + " " + (i + 1));
@@ -536,7 +549,7 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
       });
       const filas = Object.keys(porFila).map(Number).sort((a, b) => a - b).map((f) => {
         const celdas = porFila[f].sort((a, b) => a.c - b.c).map((c) => {
-          const s = t["n:" + c.ref] ? ' s="1"' : "";
+          const e = estiloDe(t, c.ref), s = e ? ` s="${e}"` : "";
           if (c.crudo.startsWith("=")) {
             const v = ev.valor(c.c, f);
             const val = typeof v === "number" ? `<v>${v}</v>` : typeof v === "boolean" ? `<v>${v ? 1 : 0}</v>` : "";
@@ -551,9 +564,9 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
       return XML + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="26" width="14" customWidth="1"/></cols><sheetData>${filas}</sheetData></worksheet>`;
     });
     const libro = XML + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${nombres.map((n, i) => `<sheet name="${x(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`;
-    const estilos = XML + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+    const estilos = XML + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fuentes.length}">${fuentes.join("")}</fonts>
 <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${fuentes.length}">${fuentes.map((_, i) => `<xf numFmtId="0" fontId="${i}" fillId="0" borderId="0" xfId="0"${i ? ' applyFont="1"' : ""}/>`).join("")}</cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
     const relsLibro = [...hojas.map((_, i) => ({ id: "rId" + (i + 1), tipo: T.hoja, destino: `worksheets/hoja${i + 1}.xml` })),
       { id: "rIdEst", tipo: T.estilos, destino: "styles.xml" }];

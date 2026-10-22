@@ -73,7 +73,12 @@ public class MainActivity extends Activity {
         s.setAllowFileAccessFromFileURLs(true);
         s.setAllowUniversalAccessFromFileURLs(true);   // la interfaz (file://) habla con el servidor de la LAN
         s.setMediaPlaybackRequiresUserGesture(true);
-        s.setTextZoom(100);
+        s.setTextZoom(100);                      // el tamaño de letra del sistema no deforma la interfaz
+        // La interfaz tiene sus propios temas claro y oscuro: el sistema (modo oscuro forzado de
+        // Android o de la marca del teléfono) no la debe repintar.
+        if (Build.VERSION.SDK_INT >= 33) s.setAlgorithmicDarkeningAllowed(false);
+        else if (Build.VERSION.SDK_INT >= 29) s.setForceDark(WebSettings.FORCE_DARK_OFF);
+        if (Build.VERSION.SDK_INT >= 29) web.setForceDarkAllowed(false);
 
         web.setWebViewClient(new WebViewClient() {
             @Override

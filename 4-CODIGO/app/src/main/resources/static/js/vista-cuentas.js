@@ -27,6 +27,33 @@
     </div>`;
   }
 
+  /** Los documentos que flotan en la bienvenida se apartan del cursor (paralaje), se inclinan
+      hacia él y dan un salto al tocarlos. Con movimiento reducido se quedan quietos. */
+  function animarFlotantes(cont) {
+    if (!cont || matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.movimiento === "reducido") return;
+    const zona = cont.closest(".bienvenida") || cont.parentElement;
+    let raf = 0;
+    zona.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = zona.getBoundingClientRect();
+        cont.style.setProperty("--mx", ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+        cont.style.setProperty("--my", ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+      });
+    });
+    zona.addEventListener("pointerleave", () => { cont.style.setProperty("--mx", 0); cont.style.setProperty("--my", 0); });
+    cont.querySelectorAll(".flot-cuerpo").forEach((el) => {
+      el.addEventListener("pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--rx", ((0.5 - (e.clientY - r.top) / r.height) * 22).toFixed(1) + "deg");
+        el.style.setProperty("--ry", (((e.clientX - r.left) / r.width - 0.5) * 26).toFixed(1) + "deg");
+      });
+      el.addEventListener("pointerleave", () => { el.style.removeProperty("--rx"); el.style.removeProperty("--ry"); });
+      el.addEventListener("pointerdown", () => { el.classList.remove("salta"); void el.offsetWidth; el.classList.add("salta"); });
+    });
+  }
+
   function pintar(raiz, opc) {
     opc = opc || {};
     let modo = opc.modo || "entrar";
@@ -44,11 +71,22 @@
             <div class="valor clay"><span class="modo-insignia modo-HOJA">${ico("wifi")}</span><div><b>Funciona en tu red</b><span>Colabora aunque falle el Internet</span></div></div>
             <div class="valor clay"><span class="modo-insignia modo-DIAGRAMA">${ico("users")}</span><div><b>En tiempo real</b><span>Hasta 5 personas en el mismo espacio</span></div></div>
           </div>
-          <div class="flotantes" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="flotantes" aria-hidden="true" data-flotantes>
+            <div class="flot flot-texto modo-TEXTO" style="--p:1.5"><div class="flot-flota"><div class="flot-cuerpo">
+              <span class="flot-insignia">${ico("file-text", "ico-s")}</span><i class="f-titulo"></i><i></i><i></i><i class="corta"></i><i></i><i class="corta"></i>
+            </div></div></div>
+            <div class="flot flot-pres modo-PRESENTACION" style="--p:2.3"><div class="flot-flota"><div class="flot-cuerpo">
+              <span class="flot-insignia">${ico("presentation", "ico-s")}</span><i class="f-titulo"></i><b class="f-forma"></b><b class="f-forma f-circulo"></b><i class="corta"></i>
+            </div></div></div>
+            <div class="flot flot-hoja modo-HOJA" style="--p:1"><div class="flot-flota"><div class="flot-cuerpo">
+              <span class="flot-insignia">${ico("sheet", "ico-s")}</span><div class="f-rejilla">${Array.from({ length: 20 }, (_, i) => `<span class="${i < 4 ? "cab" : [5, 10, 14, 19].includes(i) ? "lleno" : ""}"></span>`).join("")}</div>
+            </div></div></div>
+          </div>
         </section>
         <section class="bienvenida-panel"><div class="tarjeta-cuenta clay" data-tarjeta></div></section>
       </main>`);
     raiz.append(vista);
+    animarFlotantes($("[data-flotantes]", vista));
     const tarjeta = $("[data-tarjeta]", vista);
 
     if (api.empaquetada && !api.servidor()) return pintarServidor(tarjeta, () => pintar(raiz, opc));

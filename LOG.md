@@ -349,3 +349,55 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   texto recién seleccionado (el clic derecho caía en ella y no abría la ruedita). Ahora se quita en
   cuanto cambia la selección y vuelve a salir sobre la nueva.
 - JUnit 7/7 y `cripto.test.js` OK.
+
+---
+
+# LOG — 22 de octubre de 2026 (noche): la ruedita sale sola, vidrio, movimiento y estilo protegido
+
+## 31. La ruedita aparece sola al seleccionar
+- Al seleccionar texto, una imagen, figuras o celdas y dejar la selección quieta medio segundo, la
+  ruedita aparece junto a lo seleccionado (debajo; si no cabe, arriba o a un lado) sin taparlo.
+  Si se sigue seleccionando se esconde y vuelve en la siguiente pausa. No atrapa el puntero ni el
+  teclado (modo "auto" en `rueda.js`): escribir, tocar fuera o Esc la cierran; tocarla no le quita
+  el foco ni la selección al documento. Tras dar formato vuelve a salir; tras copiar, eliminar o
+  Esc no vuelve hasta que cambie la selección. Se acomoda sola al desplazar la página.
+- Mismo orden en todos los editores: negrita, cursiva, subrayado, color, eliminar o cortar (abajo),
+  copiar o duplicar, estilo/orden/fórmulas, más. Lo que no aplica sale apagado en su lugar. Los
+  submenús se abren en el mismo lugar y su centro regresa a la rueda anterior. Lo activo (negrita
+  puesta, ancho actual) lleva una marca.
+- Se quitó la barra pequeña que salía encima del texto seleccionado (la reemplaza la ruedita).
+- Presentación y diagrama: la barra de opciones de la selección queda fija arriba del lienzo.
+- Hoja de cálculo: ruedita nueva (al elegir celdas con el puntero o con Mayús+flechas) y formato
+  de celda nuevo: cursiva, subrayado y color (Ctrl+I, Ctrl+U), que también se exporta a Excel.
+
+## 32. Selección múltiple con el dedo
+- Lienzo: sostener una figura y tocar otras con otro dedo, o mantener una figura 0.45 s y luego
+  tocar las demás. Un aviso abajo dice cuántas van y "Listo" termina. Tocar una elegida la quita;
+  arrastrar mueve todas. Mantener sobre una figura ya no abre la ruedita (sale sola).
+- Hoja: sostener una celda y tocar otra, o mantener una celda y tocar otra, elige el rango.
+- Texto: con la selección sostenida, tocar más allá con otro dedo la extiende hasta ese punto.
+
+## 33. Vidrio (glassmorphism) con arcilla, y más movimiento
+- Lo que flota encima deja ver lo de atrás desenfocado: ruedita, menús y paletas, ventanas, avisos,
+  micro-textos, barra de selección del lienzo, zoom, buscar, cajón de versiones, barras del celular.
+  Opacidad según la cantidad de texto; sin desenfoque disponible o en calidad baja, son opacas.
+- Movimiento: pantallas en cascada, el editor baja su barra, menús y avisos entran con rebote y
+  salen animados, la ruedita gira al abrir y sus acciones aparecen una tras otra, el tema se funde
+  al cambiar, los íconos "saludan". "Reducir movimiento" lo apaga todo.
+- Bienvenida: en lugar de cuadros y círculos, flotan un documento, una presentación y una hoja; se
+  apartan del cursor, se inclinan hacia él y saltan al tocarlos. En el celular van en un grupo
+  pequeño junto a la marca.
+
+## 34. Estilo protegido
+- `index.html`: `darkreader-lock` (Dark Reader), `color-scheme` (modo oscuro automático),
+  `notranslate`. `nom.css`: `forced-color-adjust: none`, `text-size-adjust: 100%`,
+  `print-color-adjust: exact`. `nucleo.js`: las hojas de estilo ajenas (extensiones de temas) se
+  quitan en cuanto aparecen. App Android: sin modo oscuro forzado del sistema (versión 0.3.0).
+
+## 35. Otras correcciones
+- `editor.css` tenía declaraciones sin selector (restos de una regla borrada): el navegador las
+  juntaba con la regla siguiente y se perdía el estilo del indicador "Guardado".
+- La ruedita del lienzo no tapa los tiradores de girar y unir de la figura elegida.
+- Pruebas (LibreWolf/Firefox contra el servidor local): texto, imagen, figuras, celdas, selección
+  múltiple con uno y dos dedos, exportar a Excel con formato, dos navegadores a la vez, todas las
+  pantallas sin errores de JavaScript, tema oscuro y ancho de celular. JUnit 7/7, `cripto.test.js`.

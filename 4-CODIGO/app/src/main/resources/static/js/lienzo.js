@@ -217,7 +217,7 @@
     const acotado = !!opc.acotado;
     let vista = { x: 40, y: 40, z: 1 }, escala = 1;
     let sel = new Set(), selConector = null, herramienta = null, editando = null, origenEnlace = null;
-    let espacio = false;
+    let espacio = false, multiple = false, esperaMultiple = null;
     const capa = html(acotado
       ? `<div class="escenario" data-escenario><div class="diapo" data-mundo><svg class="capa-conectores" data-svg width="${ANCHO}" height="${ALTO}"></svg><svg class="capa-guias" data-guias width="${ANCHO}" height="${ALTO}"></svg></div><div class="lz-marco" data-marco hidden></div></div>`
       : `<div class="pizarra" data-plano><div class="mundo" data-mundo><svg class="capa-conectores" data-svg width="1" height="1"></svg><svg class="capa-guias" data-guias width="1" height="1"></svg></div><div class="lz-marco" data-marco hidden></div></div>`);
@@ -249,6 +249,7 @@
         if (zoomCtl) $("[data-zv]", zoomCtl).textContent = Math.round(vista.z * 100) + "%";
       }
       pintarBarra();
+      if (ruedaAuto.abierta()) ruedaAuto.avisar();
     }
     const zoomActual = () => (acotado ? escala : vista.z);
     function aMundo(ev) {
@@ -299,6 +300,8 @@
       if (editando) { const el = mundo.querySelector(`[data-id="${editando}"] .txt, [data-id="${editando}"] .libre-texto`); if (el) activarEdicion(el, false); }
       ed.pintarPresencia();
       pintarBarra();
+      pintarMultiple();
+      if (ruedaAuto.abierta()) ruedaAuto.avisar();
       opc.alPintar && opc.alPintar();
     }
     function adornos(el, b) {
@@ -362,6 +365,7 @@
       render();
       opc.alSeleccionar && opc.alSeleccionar(unico());
       ed.refrescarHerramientas();
+      ruedaAuto.avisar();
     }
     function activarEdicion(el, todo) {
       el.contentEditable = "true";
@@ -395,6 +399,7 @@
       if (!b || !["texto", "forma"].includes(b.tipo) || b.bloqueado || (b.tipo === "forma" && esLinea(b.figura))) return;
       editando = id;
       barra.hidden = true;
+      ruedaAuto.ocultar();
       const el = mundo.querySelector(`[data-id="${id}"] .txt, [data-id="${id}"] .libre-texto`);
       if (el) activarEdicion(el);
     }
@@ -409,6 +414,7 @@
       if (b.tipo === "forma") { const t = el.innerText.trim(); if (t !== (b.texto || "")) doc().cambiar(id, { texto: t }); }
       else { const h = esc(el.innerText.replace(/\n$/, "")).replace(/\n/g, "<br>"); if (h !== (b.html || "")) doc().cambiar(id, { html: h }); }
       pintarBarra();
+      ruedaAuto.avisar();
     }
 
     // ------------------------------------------------------------ crear
@@ -463,6 +469,7 @@
       });
       sel = new Set(); ed.seleccionar(null);
       render(); ed.refrescarHerramientas();
+      ruedaAuto.avisar();
     }
     function copiarBloques(bs) {
       const ids = new Set(bs.map((b) => b.id));
@@ -596,17 +603,6 @@
           btn("eliminar", ico("trash-2"), "Eliminar|Supr"),
         ].join("");
       barra.hidden = false;
-      // Encima de la selección, sin salirse del lienzo.
-      const els = bs.map((b) => mundo.querySelector(`.bl[data-id="${b.id}"]`)).filter(Boolean);
-      if (!els.length) { barra.hidden = true; return; }
-      const rs = els.map((e) => e.getBoundingClientRect()), base = capa.getBoundingClientRect();
-      const top = Math.min(...rs.map((r) => r.top)) - base.top, bottom = Math.max(...rs.map((r) => r.bottom)) - base.top;
-      const izq = Math.min(...rs.map((r) => r.left)) - base.left, der = Math.max(...rs.map((r) => r.right)) - base.left;
-      const w = barra.offsetWidth, h = barra.offsetHeight;
-      let y = top - h - 30;
-      if (y < 6) y = Math.min(base.height - h - 6, bottom + 26);
-      barra.style.left = Math.max(6, Math.min(base.width - w - 6, (izq + der) / 2 - w / 2)) + "px";
-      barra.style.top = Math.max(6, y) + "px";
     }
     barra.addEventListener("pointerdown", (e) => e.stopPropagation());
     barra.addEventListener("click", (e) => {
@@ -707,9 +703,20 @@
     let gesto = null;
     superficie.addEventListener("pointerdown", (e) => {
       NOM.cerrarMenu();
-      if (e.button === 2 || NOM.rueda.abierta()) return;
-      if (barra.contains(e.target)) return;
+      if (e.button === 2 || NOM.rueda.manual()) return;
+      if (barra.contains(e.target) || e.target.closest(".lz-multiple")) return;
+      ruedaAuto.ocultar();
       punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const blToque = e.target.closest(".bl");
+      // Un dedo sostiene una figura y otro toca otra: se suman a la selección (selección múltiple).
+      if (punteros.size === 2 && gesto && gesto.tipo === "mover" && !gesto.movido && blToque && !ed.soloLectura) {
+        cancelarMultiple();
+        gesto = null;
+        multiple = true;
+        seleccionar([blToque.dataset.id], true);
+        if (navigator.vibrate) navigator.vibrate(10);
+        return;
+      }
       if (punteros.size === 2 && !acotado) {   // pellizco para hacer zoom
         const [a, b] = [...punteros.values()];
         gesto = { tipo: "pellizco", d: Math.hypot(a.x - b.x, a.y - b.y), z: vista.z };
@@ -757,12 +764,28 @@
           origenEnlace = null; return;
         }
         if (e.shiftKey || e.ctrlKey || e.metaKey) { seleccionar([id], true); return; }
-        if (!sel.has(id)) seleccionar(id);
+        // Selección múltiple con el dedo: tocar otra figura la suma; tocar una ya elegida la quita
+        // (si no se arrastra: arrastrar mueve todas juntas).
+        let quitar = null;
+        if (multiple && e.pointerType !== "mouse") { if (sel.has(id)) quitar = id; else seleccionar([id], true); }
+        else if (!sel.has(id)) seleccionar(id);
         if (ed.soloLectura) return;
         const bs = editables();
         if (!bs.length) return;
-        gesto = { tipo: "mover", ids: bs.map((b) => b.id), p0: p, b0: Object.fromEntries(bs.map((b) => [b.id, { x: b.x, y: b.y, w: b.w, h: b.h }])), caja0: cajaDe(bs), movido: false, idClic: id };
+        gesto = { tipo: "mover", ids: bs.map((b) => b.id), p0: p, b0: Object.fromEntries(bs.map((b) => [b.id, { x: b.x, y: b.y, w: b.w, h: b.h }])), caja0: cajaDe(bs), movido: false, idClic: id, quitar };
         superficie.setPointerCapture(e.pointerId);
+        // Mantener el dedo quieto sobre una figura: empieza la selección múltiple.
+        if (e.pointerType !== "mouse" && !multiple) {
+          cancelarMultiple();
+          esperaMultiple = { x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(() => {
+            esperaMultiple = null;
+            if (!gesto || gesto.tipo !== "mover" || gesto.movido) return;
+            gesto = null;
+            multiple = true;
+            if (!sel.has(id)) seleccionar([id], true); else render();
+            if (navigator.vibrate) navigator.vibrate(14);
+          }, 450) };
+        }
         return;
       }
       // Espacio vacío
@@ -791,6 +814,7 @@
     });
     superficie.addEventListener("pointermove", (e) => {
       if (punteros.has(e.pointerId)) punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (esperaMultiple && e.pointerId === esperaMultiple.id && Math.hypot(e.clientX - esperaMultiple.x, e.clientY - esperaMultiple.y) > 7) cancelarMultiple();
       if (!gesto) return;
       if (gesto.tipo === "pellizco" && punteros.size === 2) {
         const [a, b] = [...punteros.values()];
@@ -860,10 +884,12 @@
     });
     function finGesto(e) {
       punteros.delete(e.pointerId);
+      cancelarMultiple();
       if (!gesto) return;
       const g = gesto; gesto = null;
       capa.classList.remove("arrastrando");
       pintarGuias(null);
+      if (g.tipo === "mover" && !g.movido && g.quitar && e.type === "pointerup") { seleccionar([g.quitar], true); return; }
       if (g.tipo === "mover" && g.movido) doc().lote(() => g.ids.forEach((id) => doc().cambiar(id, g.b[id])));
       else if (g.tipo === "mover" && !g.movido && e.type === "pointerup" && doc().valor(g.idClic, "tipo") !== "imagen" && Date.now() - (finGesto.ultimo || 0) < 350 && finGesto.id === g.idClic) editar(g.idClic);
       else if (g.tipo === "tamano" && g.b) doc().cambiar(g.id, g.b);
@@ -882,6 +908,7 @@
       }
       if (g.tipo === "mover") { finGesto.ultimo = Date.now(); finGesto.id = g.idClic; }
       render();
+      ruedaAuto.avisar();
     }
     superficie.addEventListener("pointerup", finGesto);
     superficie.addEventListener("pointercancel", finGesto);
@@ -902,6 +929,88 @@
     }
 
     // ------------------------------------------------------------ ruedita
+    // Sale sola al elegir figuras (y con clic derecho). Mismo orden que en los demás editores:
+    // negrita, cursiva, subrayado, color, eliminar, duplicar, orden, más.
+    const NOMBRE = { forma: "Figura", texto: "Texto", imagen: "Imagen", tabla: "Tabla" };
+    function accionesSeleccion() {
+      const bs = seleccionados(), b0 = bs[0] || {};
+      const bloq = bs.length > 0 && bs.every((b) => b.bloqueado);
+      const conTexto = editables().filter((b) => b.tipo === "texto" || (b.tipo === "forma" && !esLinea(b.figura)));
+      const formas = editables().filter((b) => b.tipo === "forma");
+      const t0 = conTexto[0] || {};
+      const grupo = { grupo: "rueda-" + [...sel].join(",") };
+      const alternarTexto = (k) => () => {
+        const on = !(k === "tNegrita" ? enNegrita(t0) : t0[k]);
+        doc().lote(() => conTexto.forEach((b) => doc().cambiar(b.id, { [k]: on || (k === "tNegrita" ? false : null) }, grupo)));
+        render();
+      };
+      const tonos = COLORES.filter((_, i) => [0, 8, 12, 15, 19, 23, 27].includes(i));
+      const colorTexto = tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => cambiarSel((b) => (conTexto.includes(b) ? { tColor: c } : null), grupo) }));
+      const colorSub = formas.length
+        ? tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => colorear(c) })).concat(conTexto.length ? [{ texto: "Color del texto", corto: "Texto", icono: "baseline", sub: colorTexto }] : [])
+        : colorTexto;
+      const varios = sel.size > 1;
+      const alinearSub = [
+        { texto: "Izquierda", icono: "al-izq", fn: () => alinear("izq") }, { texto: "Centro horizontal", corto: "Centro H", icono: "al-centro-h", fn: () => alinear("centro-h") },
+        { texto: "Derecha", icono: "al-der", fn: () => alinear("der") }, { texto: "Arriba", icono: "al-arriba", fn: () => alinear("arriba") },
+        { texto: "Centro vertical", corto: "Centro V", icono: "al-centro-v", fn: () => alinear("centro-v") }, { texto: "Abajo", icono: "al-abajo", fn: () => alinear("abajo") },
+        ...(sel.size > 2 ? [{ texto: "Distribuir horizontal", corto: "Distribuir H", icono: "distribuir-h", fn: () => distribuir("h") }, { texto: "Distribuir vertical", corto: "Distribuir V", icono: "distribuir-v", fn: () => distribuir("v") }] : []),
+      ];
+      return [
+        { texto: "Negrita", icono: "bold", off: !conTexto.length, marcado: enNegrita(t0), mantener: true, fn: alternarTexto("tNegrita") },
+        { texto: "Cursiva", icono: "italic", off: !conTexto.length, marcado: !!t0.tCursiva, mantener: true, fn: alternarTexto("tCursiva") },
+        { texto: "Subrayado", icono: "underline", off: !conTexto.length, marcado: !!t0.tSubrayado, mantener: true, fn: alternarTexto("tSubrayado") },
+        { texto: "Color", icono: "palette", off: bloq || (!formas.length && !conTexto.length), sub: colorSub },
+        { texto: "Eliminar", icono: "trash-2", off: bloq, fn: eliminar },
+        { texto: "Duplicar", icono: "copy", fn: duplicar },
+        { texto: "Orden", icono: "layers", off: bloq, sub: [
+          { texto: "Traer al frente", corto: "Al frente", icono: "bring-to-front", mantener: true, fn: () => capaZ("frente") },
+          { texto: "Traer adelante", corto: "Adelante", icono: "arrow-up", mantener: true, fn: () => capaZ("adelante") },
+          { texto: "Enviar atrás", corto: "Atrás", icono: "arrow-down", mantener: true, fn: () => capaZ("atras") },
+          { texto: "Enviar al fondo", corto: "Al fondo", icono: "send-to-back", mantener: true, fn: () => capaZ("fondo") },
+          { texto: "Girar 90°", icono: "rotate-cw", mantener: true, fn: () => rotar(90) },
+          { texto: "Voltear horizontal", corto: "Voltear H", icono: "flip-horizontal", mantener: true, fn: () => voltear("h") },
+          { texto: "Voltear vertical", corto: "Voltear V", icono: "flip-vertical", mantener: true, fn: () => voltear("v") },
+          (varios || acotado) ? { texto: "Alinear", icono: "al-centro-h", sub: alinearSub } : { texto: "Alinear", icono: "al-centro-h", off: true }] },
+        { texto: "Más", icono: "more-horizontal", sub: [
+          varios && !bs.every((b) => b.grupo && b.grupo === b0.grupo) ? { texto: "Agrupar", icono: "group", fn: agrupar }
+            : { texto: "Desagrupar", icono: "ungroup", off: !bs.some((b) => b.grupo), fn: desagrupar },
+          { texto: bloq ? "Desbloquear" : "Bloquear", icono: bloq ? "lock-open" : "lock", fn: bloquear },
+          { texto: "Copiar", icono: "clipboard-copy", fn: () => copiar(false) },
+          { texto: "Cortar", icono: "scissors", off: bloq, fn: () => copiar(true) },
+          { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
+          { texto: "Editar texto", icono: "type", off: !(unico() && conTexto.length === 1), fn: () => editar(unico()) },
+          { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo }] },
+      ];
+    }
+    function leerRueda() {
+      if (ed.soloLectura || editando || gesto || herramienta || !sel.size || !capa.isConnected) return null;
+      const els = [...sel].map((id) => mundo.querySelector(`.bl[data-id="${CSS.escape(id)}"]`));
+      const caja = NOM.rueda.rectDe(els);
+      if (!caja) return null;
+      // Con una sola figura se cuentan sus tiradores (girar abajo, unir a la derecha) para no taparlos.
+      const uno = sel.size === 1 && !ed.soloLectura;
+      const rect = { left: caja.left - 12, top: caja.top - 12, right: caja.right + (uno ? 44 : 12), bottom: caja.bottom + (uno ? 62 : 12) };
+      const bs = seleccionados();
+      const tipos = new Set(bs.map((b) => b.tipo));
+      return { firma: [...sel].sort().join(","), rect, titulo: bs.length > 1 ? `${bs.length} elegidos` : NOMBRE[[...tipos][0]] || "Elegido", items: accionesSeleccion() };
+    }
+    const ruedaAuto = NOM.rueda.automatica(leerRueda);
+
+    // Selección múltiple con el dedo: un aviso fijo dice cómo seguir y cómo terminar.
+    let avisoMultiple = null;
+    function cancelarMultiple() { if (esperaMultiple) { clearTimeout(esperaMultiple.t); esperaMultiple = null; } }
+    function pintarMultiple() {
+      if (multiple && !sel.size) multiple = false;
+      if (!multiple) { if (avisoMultiple) { avisoMultiple.remove(); avisoMultiple = null; } return; }
+      if (!avisoMultiple) {
+        avisoMultiple = html(`<div class="pista lz-multiple" role="status"><span data-n></span><button class="btn chico primario" type="button">Listo</button></div>`);
+        $("button", avisoMultiple).onclick = () => { multiple = false; pintarMultiple(); ruedaAuto.avisar(); };
+        capa.append(avisoMultiple);
+      }
+      $("[data-n]", avisoMultiple).textContent = `${sel.size} elegido${sel.size > 1 ? "s" : ""} · toca más para sumarlas`;
+    }
+
     NOM.rueda.enlazar(superficie, (e) => {
       if (ed.soloLectura) return null;
       // La ruedita toma el gesto: lo que había empezado (mover, recuadro) se cancela.
@@ -911,30 +1020,21 @@
       const p = aMundo(e);
       if (bl) {
         if (!sel.has(bl.dataset.id)) seleccionar(bl.dataset.id);
-        const bs = seleccionados(), b0 = bs[0] || {};
-        return [
-          { texto: "Duplicar", icono: "copy", fn: duplicar },
-          { texto: b0.bloqueado ? "Desbloquear" : "Bloquear", icono: b0.bloqueado ? "lock-open" : "lock", fn: bloquear },
-          { texto: "Color", icono: "palette", off: !bs.some((b) => b.tipo === "forma"), sub: COLORES.filter((_, i) => [0, 8, 12, 15, 19, 23, 27, 4].includes(i)).map((c) => ({ texto: c, corto: " ", color: c, fn: () => colorear(c) })) },
-          { texto: "Al frente", icono: "bring-to-front", fn: () => capaZ("frente") },
-          { texto: "Eliminar", icono: "trash-2", fn: eliminar },
-          { texto: "Al fondo", icono: "send-to-back", fn: () => capaZ("fondo") },
-          { texto: "Girar 90°", icono: "rotate-cw", fn: () => rotar(90) },
-          bs.length > 1 ? { texto: "Agrupar", icono: "group", fn: agrupar } : bs.some((b) => b.grupo) ? { texto: "Desagrupar", icono: "ungroup", fn: desagrupar } : { texto: "Copiar", icono: "clipboard-copy", fn: () => copiar(false) },
-        ];
+        ruedaAuto.ocultar();
+        return accionesSeleccion();
       }
       const en = (fn) => () => fn(p);
       return [
-        { texto: "Rectángulo", icono: "square", fn: en((q) => crear("forma", { figura: "rect" }, q)) },
         { texto: "Texto", icono: "type", fn: en((q) => crear("texto", null, q)) },
+        { texto: "Rectángulo", icono: "square", fn: en((q) => crear("forma", { figura: "rect" }, q)) },
         { texto: "Elipse", icono: "circle", fn: en((q) => crear("forma", { figura: "elipse" }, q)) },
-        { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
         { texto: "Nota", icono: "sticky-note", fn: en((q) => crear("forma", { figura: "nota" }, q)) },
+        { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
         { texto: "Imagen", icono: "image", fn: imagen },
-        { texto: "Estrella", icono: "star", fn: en((q) => crear("forma", { figura: "estrella" }, q)) },
+        { texto: "Más figuras", corto: "Figuras", icono: "shapes", sub: [["rombo", "Rombo", "diamond"], ["estrella", "Estrella", "star"], ["flecha", "Flecha", "arrow-right"], ["burbuja", "Burbuja", "message-square"], ["linea-flecha", "Línea", "minus"], ["corazon", "Corazón", "heart"]].map(([f, t, i]) => ({ texto: t, icono: i, fn: en((q) => crear("forma", { figura: f }, q)) })) },
         acotado ? { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo } : { texto: "Ver todo", icono: "maximize-2", fn: ajustar },
       ];
-    }, { izquierdo: true, tactil: true, titulo: "Lienzo", ignorar: (e) => !!(editando || (e.target.closest && (e.target.closest(".tirador, [data-girar], [data-enlazar], .lz-barra"))) || herramienta) });
+    }, { izquierdo: true, tactil: true, titulo: "Lienzo", ignorar: (e) => !!(editando || (e.target.closest && (e.target.closest(".bl, .tirador, [data-girar], [data-enlazar], .lz-barra, .lz-multiple"))) || herramienta) });
 
     // ------------------------------------------------------------ teclado
     function teclas(e) {
@@ -945,7 +1045,7 @@
       if (!ed.vista.contains(t) && t !== document.body) return;
       const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       if (e.key === "Delete" || e.key === "Backspace") { if (sel.size || selConector) { e.preventDefault(); eliminar(); } return; }
-      if (e.key === "Escape") { herramienta = null; origenEnlace = null; opc.alUsarHerramienta && opc.alUsarHerramienta(); if (sel.size) { sel = new Set(); ed.seleccionar(null); render(); } return; }
+      if (e.key === "Escape") { herramienta = null; origenEnlace = null; multiple = false; opc.alUsarHerramienta && opc.alUsarHerramienta(); if (sel.size) { sel = new Set(); ed.seleccionar(null); render(); ruedaAuto.avisar(); } return; }
       if (e.key === "Enter" && unico()) { e.preventDefault(); editar(unico()); return; }
       if (mod && k === "d") { e.preventDefault(); duplicar(); return; }
       if (mod && k === "a") { e.preventDefault(); seleccionarTodo(); return; }
@@ -986,7 +1086,7 @@
         if (editando && lista.length === 1 && lista[0].bloque === editando && lista[0].local) return;
         render();
       },
-      destruir() { document.removeEventListener("keydown", teclas); document.removeEventListener("keyup", teclas); ro.disconnect(); terminarEdicion(); $$(".lz-panel").forEach((x) => x.remove()); },
+      destruir() { document.removeEventListener("keydown", teclas); document.removeEventListener("keyup", teclas); ro.disconnect(); terminarEdicion(); cancelarMultiple(); ruedaAuto.destruir(); $$(".lz-panel").forEach((x) => x.remove()); },
     };
   }
 
@@ -1161,7 +1261,7 @@
         { id: "borrar", icono: "trash-2", micro: "Eliminar|Borra las figuras y sus flechas.|Supr", fn: () => lienzo.eliminar(), off: () => !lienzo.seleccion() },
       ];
       if (!ed.doc.deLaPagina(ed.pagina).length && !ed.soloLectura) {
-        const p = html(`<div class="pista">${ico("info", "ico-s")} Elige una figura arriba y haz clic en el lienzo, o mantén presionado el clic derecho</div>`);
+        const p = html(`<div class="pista">${ico("info", "ico-s")} Elige una figura arriba y haz clic en el lienzo. Clic derecho (o mantener el dedo) en el lienzo vacío para más</div>`);
         ed.lienzo.append(p);
         setTimeout(() => p.remove(), 6500);
       }

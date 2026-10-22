@@ -1995,58 +1995,110 @@
       // Doble clic en la brocha: modo fijo.
       setTimeout(() => { const b = ed.botones && ed.botones.brocha; if (b) b.addEventListener("dblclick", () => copiarFormato(true)); }, 0);
 
-      // ------------------------------------------------------------ ruedita (clic derecho o mantener)
+      // ------------------------------------------------------------ ruedita
+      // Sale sola al seleccionar texto o una imagen (y con clic derecho o la tecla Menú). Mismo orden
+      // que en los demás editores: negrita, cursiva, subrayado, color, cortar, copiar, estilo, más.
       let selRueda = null;
-      NOM.rueda.enlazar(cuerpo, (e) => {
-        if (ed.soloLectura) return null;
-        const o = e.target.closest && e.target.closest("[data-obj]");
-        const s = selRueda || leerSel();
-        const restaurar = () => { cuerpo.focus({ preventScroll: true }); ponerSel(s.a, s.f); };
+      function accionesTexto(s) {
+        const restaurar = () => { if (document.activeElement !== cuerpo) cuerpo.focus({ preventScroll: true }); ponerSel(s.a, s.f); };
         const con = (fn) => () => { restaurar(); fn(); };
-        if (o && o.classList.contains("wd-imagen")) {
-          const it = sec().item(o.dataset.id), ref = it && it.e && it.e.ref;
-          const ancho = (k) => () => { if (ref) doc().cambiar(ref, { w: Math.round(anchoUtil() * k) }); };
-          return [
-            { texto: "Ancho completo", icono: "maximize-2", fn: ancho(1) }, { texto: "Mitad", icono: "minimize-2", fn: ancho(0.5) },
-            { texto: "Centrar", icono: "align-center", fn: () => formatoParrafo({ alin: "centro" }, [psPintado[parrafoEn(sec().posicion(o.dataset.id))]]) },
-            { texto: "Eliminar", icono: "trash-2", fn: () => quitarObjeto(o.dataset.id) },
-            { texto: "Un cuarto", icono: "image", fn: ancho(0.25) },
-            { texto: "Izquierda", icono: "align-left", fn: () => formatoParrafo({ alin: null }, [psPintado[parrafoEn(sec().posicion(o.dataset.id))]]) },
-            ref && doc().valor(ref, "libre")
-              ? { texto: "En línea con el texto", icono: "text-cursor-input", fn: () => ajusteImagen(o.dataset.id, false) }
-              : { texto: "Mover libremente", icono: "move", fn: () => ajusteImagen(o.dataset.id, true) },
-          ];
-        }
+        const a = attrsEnCursor().a;
+        const colores = COLORES.filter((_, i) => [0, 9, 10, 13, 15, 17, 2].includes(i)).map((c) => ({ texto: c === "#000000" ? "Automático" : c, corto: " ", color: c, mantener: true, fn: con(() => formato({ color: c === "#000000" ? null : c })) }));
+        const resaltes = RESALTES.slice(0, 7).map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: con(() => formato({ fondo: c })) })).concat([{ texto: "Sin resaltado", icono: "x", mantener: true, fn: con(() => formato({ fondo: null })) }]);
         return [
-          { texto: "Negrita", icono: "bold", fn: con(() => alternar("b")) },
-          { texto: "Cursiva", icono: "italic", fn: con(() => alternar("i")) },
-          { texto: "Subrayado", icono: "underline", fn: con(() => alternar("u")) },
-          { texto: "Color", icono: "baseline", sub: COLORES.filter((_, i) => [0, 9, 10, 13, 15, 17, 2, 8].includes(i)).map((c) => ({ texto: c, corto: " ", color: c, fn: con(() => formato({ color: c === "#000000" ? null : c })) })) },
-          { texto: "Resaltar", icono: "highlighter", sub: RESALTES.slice(0, 7).map((c) => ({ texto: c, corto: " ", color: c, fn: con(() => formato({ fondo: c })) })).concat([{ texto: "Sin resaltado", icono: "x", fn: con(() => formato({ fondo: null })) }]) },
+          { texto: "Negrita", icono: "bold", marcado: !!a.b, mantener: true, fn: con(() => alternar("b")) },
+          { texto: "Cursiva", icono: "italic", marcado: !!a.i, mantener: true, fn: con(() => alternar("i")) },
+          { texto: "Subrayado", icono: "underline", marcado: !!a.u, mantener: true, fn: con(() => alternar("u")) },
+          { texto: "Color", icono: "baseline", sub: colores.concat([{ texto: "Resaltar", icono: "highlighter", sub: resaltes }]) },
+          { texto: "Cortar", icono: "scissors", off: s.col, fn: con(() => document.execCommand("cut")) },
+          { texto: "Copiar", icono: "copy", off: s.col, fn: con(() => document.execCommand("copy")) },
           { texto: "Estilo", icono: "heading-1", sub: [
-            { texto: "Normal", icono: "pilcrow", fn: con(() => formatoParrafo({ estilo: null })) }, { texto: "Título 1", icono: "heading-1", fn: con(() => formatoParrafo({ estilo: "h1" })) },
-            { texto: "Título 2", icono: "heading-2", fn: con(() => formatoParrafo({ estilo: "h2" })) }, { texto: "Título 3", icono: "heading-3", fn: con(() => formatoParrafo({ estilo: "h3" })) },
-            { texto: "Viñetas", icono: "list", fn: con(() => alternarLista("vinetas")) }, { texto: "Numeración", icono: "list-ordered", fn: con(() => alternarLista("numeros")) },
-            { texto: "Tareas", icono: "list-checks", fn: con(() => alternarLista("tareas")) }, { texto: "Cita", icono: "quote", fn: con(() => formatoParrafo({ estilo: "cita" })) }] },
-          { texto: "Enlace", icono: "link", fn: con(enlace) },
+            { texto: "Normal", icono: "pilcrow", mantener: true, fn: con(() => formatoParrafo({ estilo: null })) }, { texto: "Título 1", icono: "heading-1", mantener: true, fn: con(() => formatoParrafo({ estilo: "h1" })) },
+            { texto: "Título 2", icono: "heading-2", mantener: true, fn: con(() => formatoParrafo({ estilo: "h2" })) }, { texto: "Título 3", icono: "heading-3", mantener: true, fn: con(() => formatoParrafo({ estilo: "h3" })) },
+            { texto: "Viñetas", icono: "list", mantener: true, fn: con(() => alternarLista("vinetas")) }, { texto: "Numeración", icono: "list-ordered", mantener: true, fn: con(() => alternarLista("numeros")) },
+            { texto: "Tareas", icono: "list-checks", mantener: true, fn: con(() => alternarLista("tareas")) }, { texto: "Cita", icono: "quote", mantener: true, fn: con(() => formatoParrafo({ estilo: "cita" })) }] },
           { texto: "Más", icono: "more-horizontal", sub: [
-            { texto: "Copiar", icono: "copy", off: s.col, fn: con(() => document.execCommand("copy")) },
-            { texto: "Cortar", icono: "scissors", off: s.col, fn: con(() => document.execCommand("cut")) },
+            { texto: "Enlace", icono: "link", fn: con(enlace) },
             { texto: "Pegar", icono: "clipboard-paste", fn: con(pegarPortapapeles) },
             { texto: "Copiar formato", icono: "paintbrush", fn: con(() => copiarFormato(false)) },
-            { texto: "Borrar formato", icono: "remove-formatting", fn: con(borrarFormato) },
+            { texto: "Borrar formato", icono: "remove-formatting", mantener: true, fn: con(borrarFormato) },
+            { texto: "Tachado", icono: "strikethrough", marcado: !!a.s, mantener: true, fn: con(() => alternar("s")) },
             { texto: "Buscar", icono: "search", fn: con(() => buscar(false)) },
             { texto: "Insertar imagen", icono: "image", fn: con(insertarImagen) },
             { texto: "Salto de página", icono: "file-plus", fn: con(() => insertarBloque({ tipo: "salto" })) }] },
         ];
+      }
+      function accionesImagen(o) {
+        const id = o.dataset.id, it = sec().item(id), ref = it && it.e && it.e.ref;
+        const ancho = (k) => () => { if (ref) doc().cambiar(ref, { w: Math.round(anchoUtil() * k) }); programarPaginar(); };
+        const w = ref ? +doc().valor(ref, "w") || 0 : 0, util = anchoUtil();
+        const alin = (v) => () => formatoParrafo({ alin: v }, [psPintado[parrafoEn(sec().posicion(id))]]);
+        const libre = !!(ref && doc().valor(ref, "libre"));
+        const img = $("img", o);
+        return [
+          { texto: "Ancho completo", corto: "Completa", icono: "maximize-2", marcado: Math.abs(w - util) < 2, mantener: true, fn: ancho(1) },
+          { texto: "Mitad", icono: "minimize-2", marcado: Math.abs(w - util / 2) < 2, mantener: true, fn: ancho(0.5) },
+          { texto: "Un cuarto", icono: "image", marcado: Math.abs(w - util / 4) < 2, mantener: true, fn: ancho(0.25) },
+          libre ? { texto: "En línea con el texto", corto: "En línea", icono: "text-cursor-input", fn: () => ajusteImagen(id, false) }
+            : { texto: "Mover libremente", corto: "Libre", icono: "move", fn: () => ajusteImagen(id, true) },
+          { texto: "Eliminar", icono: "trash-2", fn: () => { seleccionarImagen(null); quitarObjeto(id); } },
+          { texto: "Copiar", icono: "copy", fn: () => { seleccionarImagen(o); document.execCommand("copy"); } },
+          { texto: "Alinear", icono: "align-center", off: libre, sub: [
+            { texto: "Izquierda", icono: "align-left", fn: alin(null) }, { texto: "Centro", icono: "align-center", fn: alin("centro") }, { texto: "Derecha", icono: "align-right", fn: alin("der") }] },
+          { texto: "Más", icono: "more-horizontal", sub: [
+            { texto: "Cortar", icono: "scissors", fn: () => { seleccionarImagen(o); document.execCommand("cut"); } },
+            { texto: "Descargar", icono: "download", off: !img, fn: () => { const l = document.createElement("a"); l.href = img.src; l.download = "imagen"; l.click(); } }] },
+        ];
+      }
+      NOM.rueda.enlazar(cuerpo, (e) => {
+        if (ed.soloLectura) return null;
+        const o = e.target.closest && e.target.closest("[data-obj]");
+        if (o && o.classList.contains("wd-imagen")) { seleccionarImagen(o); return accionesImagen(o); }
+        return accionesTexto(selRueda || leerSel());
       }, {
-        // Mantener el clic izquierdo es como se empieza a seleccionar texto: aquí la rueda solo va
-        // con el clic derecho (o la tecla Menú).
+        // Mantener el clic izquierdo o el dedo es como se empieza a seleccionar texto: aquí la rueda
+        // sale sola al terminar de seleccionar, o con el clic derecho (o la tecla Menú).
         izquierdo: false, tactil: false, titulo: "Texto",
         alPreparar: () => { selRueda = leerSel(); setTimeout(() => (selRueda = null), 0); },
         ignorar: (e) => !!(e.target.closest && (e.target.closest("[data-celda]") || e.target.closest("[data-tirador]"))),
         puntoTeclado: () => { const s = getSelection(); return s.rangeCount ? s.getRangeAt(0).getBoundingClientRect() : cuerpo.getBoundingClientRect(); },
       });
+      /** Lo seleccionado ahora, para la ruedita automática. */
+      function leerRueda() {
+        if (ed.soloLectura || brocha || componiendo || !cuerpo.contains(document.activeElement)) return null;
+        const s = getSelection();
+        if (!s.rangeCount || s.isCollapsed || !cuerpo.contains(s.anchorNode) || !cuerpo.contains(s.focusNode)) return null;
+        const n = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement;
+        if (n && n.closest("[data-celda]")) return null;   // las celdas de tabla tienen su propia edición
+        const img = imgActiva(), o = img && elImagen(img);
+        if (o) return { firma: "img:" + img, rect: o.getBoundingClientRect(), titulo: "Imagen", items: accionesImagen(o) };
+        const r = s.getRangeAt(0).getBoundingClientRect();
+        if (!r.width && !r.height) return null;
+        const ls = leerSel();
+        if (ls.col) return null;
+        const idEn = (i) => (visPintado[i] ? visPintado[i].id : "#" + i);
+        return { firma: idEn(ls.ini) + ">" + idEn(ls.fin - 1), rect: r, titulo: "Texto", items: accionesTexto(ls) };
+      }
+      const ruedaAuto = NOM.rueda.automatica(leerRueda);
+      const alCambiarSelRueda = () => ruedaAuto.avisar();
+      document.addEventListener("selectionchange", alCambiarSelRueda);
+      cuerpo.addEventListener("keydown", (e) => { if (!["Shift", "Control", "Alt", "Meta"].includes(e.key)) ruedaAuto.ocultar(); });
+      // Un dedo sostiene la selección y otro toca más allá: la selección llega hasta ese punto
+      // (como Mayús + clic con el mouse).
+      const dedos = new Set();
+      cuerpo.addEventListener("pointerdown", (e) => {
+        if (e.pointerType !== "touch") return;
+        if (dedos.size === 1 && !ed.soloLectura) {
+          const i = posEnPunto(e.clientX, e.clientY), s = leerSel();
+          if (i != null) {
+            e.preventDefault(); e.stopPropagation();
+            if (i < s.ini) ponerSel(s.fin, i); else ponerSel(s.ini, i);
+            if (navigator.vibrate) navigator.vibrate(8);
+          }
+        }
+        dedos.add(e.pointerId);
+      }, true);
+      ["pointerup", "pointercancel"].forEach((t) => cuerpo.addEventListener(t, (e) => dedos.delete(e.pointerId), true));
       async function pegarPortapapeles() {
         try {
           if (navigator.clipboard && navigator.clipboard.read) {
@@ -2059,39 +2111,6 @@
           if (t) insertarTexto(t.replace(/\r\n?/g, "\n"));
         } catch (e) { aviso("El navegador no dejó leer el portapapeles. Usa Ctrl+V.", { tipo: "info" }); }
       }
-
-      // ------------------------------------------------------------ barra mini (al seleccionar, como la de Word)
-      let mini = null;
-      function quitarMini() { if (mini) { mini.remove(); mini = null; } }
-      const alSeleccionarMini = NOM.debounce(() => {
-        quitarMini();
-        if (ed.soloLectura) return;
-        const s = getSelection();
-        if (!s.rangeCount || s.isCollapsed || !cuerpo.contains(s.anchorNode) || brocha) return;
-        const r = s.getRangeAt(0).getBoundingClientRect(), base = zona.getBoundingClientRect();
-        if (!r.width) return;
-        mini = html(`<div class="flotante wd-mini" role="toolbar" aria-label="Formato rápido">
-          <button class="icono-btn" data-f="b" aria-label="Negrita">${ico("bold")}</button><button class="icono-btn" data-f="i" aria-label="Cursiva">${ico("italic")}</button>
-          <button class="icono-btn" data-f="u" aria-label="Subrayado">${ico("underline")}</button><button class="icono-btn" data-f="color" aria-label="Color">${ico("baseline")}</button>
-          <button class="icono-btn" data-f="fondo" aria-label="Resaltar">${ico("highlighter")}</button><button class="icono-btn" data-f="link" aria-label="Enlace">${ico("link")}</button></div>`);
-        mini.style.left = Math.max(4, r.left - base.left + r.width / 2 - 120) + "px";
-        mini.style.top = Math.max(4, r.top - base.top - 50) + "px";
-        mini.addEventListener("pointerdown", (e) => e.preventDefault());
-        mini.addEventListener("click", (e) => {
-          const b = e.target.closest("[data-f]");
-          if (!b) return;
-          const f = b.dataset.f;
-          if (f === "color") paleta(b, COLORES, attrsEnCursor().a.color, (c) => formato({ color: c }));
-          else if (f === "fondo") paleta(b, RESALTES, attrsEnCursor().a.fondo, (c) => formato({ fondo: c }), { sinColor: "Sin resaltado" });
-          else if (f === "link") enlace();
-          else alternar(f);
-        });
-        zona.append(mini);
-      }, 350);
-      // La barra de la selección anterior se quita en cuanto cambia, para que no tape el texto
-      // recién seleccionado mientras pasa la espera.
-      const alCambiarSelMini = () => { quitarMini(); alSeleccionarMini(); };
-      document.addEventListener("selectionchange", alCambiarSelMini);
 
       // ------------------------------------------------------------ arranque
       ed.seleccionar(B);
@@ -2112,8 +2131,8 @@
         ro.disconnect();
         clearTimeout(tPag);
         document.removeEventListener("selectionchange", selDeb);
-        document.removeEventListener("selectionchange", alCambiarSelMini);
-        quitarMini();
+        document.removeEventListener("selectionchange", alCambiarSelRueda);
+        ruedaAuto.destruir();
         cerrarBuscar();
         ed.lienzo.classList.remove("con-wd");
         pendCeldas.forEach((f) => f.ya());
