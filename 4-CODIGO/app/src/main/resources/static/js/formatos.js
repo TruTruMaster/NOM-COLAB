@@ -222,7 +222,7 @@ ${partes}
       const luz = (c) => { const n = parseInt(String(c || "#ffffff").slice(1), 16) || 0; return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
       const colorT = b.tColor || (fondo && luz(fondo) < 0.5 ? "#FFFFFF" : "#1F1E26");
       const anchor = b.tAlin === "izq" ? ["start", b.x + 10] : b.tAlin === "der" ? ["end", b.x + b.w - 10] : ["middle", cx];
-      return `<g${giro}${op}>${fig}${txt ? `<text x="${anchor[1]}" y="${cy}" text-anchor="${anchor[0]}" dominant-baseline="middle" font-family="Nunito, sans-serif" font-size="${b.tTam || (b.tipo === "texto" ? 22 : 16)}" font-weight="${b.tNegrita === false ? 500 : 700}" fill="${NOM.esc(colorT)}">${NOM.esc(txt)}</text>` : ""}</g>`;
+      return `<g${giro}${op}>${fig}${txt ? `<text x="${anchor[1]}" y="${cy}" text-anchor="${anchor[0]}" dominant-baseline="middle" font-family="Nunito, sans-serif" font-size="${b.tTam || (b.tipo === "texto" ? 22 : 16)}" font-weight="${NOM.figuras.enNegrita(b) ? 700 : 500}"${b.tCursiva ? ' font-style="italic"' : ""}${b.tSubrayado ? ' text-decoration="underline"' : ""} fill="${NOM.esc(colorT)}">${NOM.esc(txt)}</text>` : ""}</g>`;
     });
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" width="${maxX - minX}" height="${maxY - minY}">
 <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4A4854"/></marker></defs>

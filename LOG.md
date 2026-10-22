@@ -298,3 +298,40 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   cuando otra persona escribe antes en el mismo párrafo.
 - Restaurar versión, modo sin cuenta (sobrevive a recargar), vista de celular, presentaciones,
   hoja de cálculo, vista previa de versiones: sin errores de JavaScript.
+
+---
+
+# LOG — 22 de octubre de 2026 (tarde): negrita, cursiva, Enter y la ruedita no funcionaban
+
+## 27. Causa principal: lo escrito no llegaba al modelo
+- En Chrome, Edge y la app Android (WebView), **lo que se escribía con el teclado solo se veía en
+  pantalla**: no entraba a la secuencia CRDT, así que no se guardaba, no se sincronizaba y los
+  comandos trabajaban sobre un documento vacío. Por eso negrita, cursiva, subrayado, colores,
+  estilos y la ruedita "no hacían nada", y Enter fallaba (`Cannot read properties of undefined`).
+- Motivo: el oyente de `input` de las celdas de tabla va en fase de captura y corre antes que el del
+  editor. Al terminar, el navegador entrega los cambios del DOM al MutationObserver, cuyo callback
+  estaba vacío y los tiraba; `takeRecords()` llegaba vacío. Venía del commit "Texto letra por letra".
+- Arreglo (`modo-texto.js`): el observador guarda los registros en cuanto llegan y el editor los lee
+  de ahí (`tomarRegistros()`), sin importar el orden de los oyentes.
+
+## 28. Otras correcciones
+- Pegar texto plano con varios renglones dentro de un título o una lista: la primera parte perdía su
+  estilo. Ahora los párrafos nuevos toman el formato del párrafo donde se pega (como Word).
+- Presentación y diagrama:
+  - Al crear un cuadro de texto o una figura con la herramienta, el mismo clic le quitaba el foco:
+    lo primero que se escribía se perdía y Enter solo activaba la edición.
+  - El botón Negrita del panel "Texto" salía activado en cuadros de texto normales (que no van en
+    negrita) y el primer clic no hacía nada visible.
+  - Ctrl+B / I / U al escribir en una figura ponían formato que desaparecía al terminar. Ahora cambian
+    la negrita, **cursiva** o **subrayado** de todo el cuadro (nuevos `tCursiva`, `tSubrayado`, también
+    en el panel "Texto") y se exportan a SVG/PNG y PowerPoint.
+
+## 29. Pruebas (Chromium, Playwright)
+- Texto: escribir, Enter, Mayús+Enter, negrita/cursiva/subrayado con atajos, barra, minibarra y
+  ruedita (mantener y soltar, clic rápido, submenús Estilo y Color, Más → Cortar), listas, Tab,
+  atajos de Markdown, estilos, fuente, tamaño, color, enlace, borrar formato, deshacer/rehacer,
+  seleccionar entre párrafos, Ctrl+A, pegar, teclado de celular (composición): todo queda en el
+  modelo y sobrevive a recargar. Sin errores de JavaScript.
+- Dos navegadores con cuenta en el mismo documento + una tercera ventana nueva: idénticos.
+- Diagrama y presentación: escribir al crear, Enter, Ctrl+B/I/U, panel Texto; exportar SVG, PPTX,
+  DOCX, HTML y Markdown con el formato. JUnit 7/7 y `cripto.test.js` OK.

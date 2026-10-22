@@ -6,7 +6,7 @@
    bordear, girar, voltear y redondear sin deformarse. Propiedades (todas registros LWW):
      figura, color (relleno), relleno=false (sin relleno), borde, bordeAncho, bordeEstilo,
      opacidad, radio, sombra, rot, volteoH, volteoV, bloqueado, grupo,
-     tColor, tTam, tNegrita, tAlin, tFuente (texto).
+     tColor, tTam, tNegrita, tCursiva, tSubrayado, tAlin, tFuente (texto, para todo el cuadro).
    Interacción: selección múltiple (Mayús+clic o recuadro), guías inteligentes al mover,
    tiradores para cambiar tamaño y girar, barra contextual y ruedita (clic derecho o mantener). */
 (function () {
@@ -96,11 +96,15 @@
     return `<svg class="forma-svg" viewBox="0 0 ${n2(w)} ${n2(h)}" preserveAspectRatio="none" aria-hidden="true"><g${voltear}><path d="${ruta(e.f, w, h, e.radio)}" fill="${e.relleno ? esc(e.relleno) : "none"}" stroke="${e.trazo ? esc(e.trazo) : "none"}" stroke-width="${e.ancho}"${dash} stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${extra}</g></svg>`;
   }
   const ALIN = { izq: "left", centro: "center", der: "right" };
+  /** ¿El texto se ve en negrita? Si no se eligió: las figuras y los títulos sí; un cuadro de texto normal, no. */
+  const enNegrita = (b) => (b.tNegrita != null ? !!b.tNegrita : b.tipo === "forma" || b.estilo === "h1" || b.estilo === "h2");
   function estiloTexto(b, fondo) {
     const s = [];
     if (b.tColor) s.push(`color:${b.tColor}`); else if (fondo && oscuro(fondo)) s.push("color:#fff");
     if (b.tTam) s.push(`font-size:${+b.tTam}px`);
     if (b.tNegrita === false) s.push("font-weight:500"); else if (b.tNegrita) s.push("font-weight:850");
+    if (b.tCursiva) s.push("font-style:italic");
+    if (b.tSubrayado) s.push("text-decoration:underline");
     if (b.tAlin) s.push(`text-align:${ALIN[b.tAlin] || "center"}`);
     if (b.tFuente && NOM.textoRico) s.push(`font-family:${NOM.textoRico.cssFuente(b.tFuente)}`);
     return s.join(";");
@@ -126,7 +130,7 @@
   }
   const girar = (x, y, grados) => { const a = (grados * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return { x: x * c - y * s, y: x * s + y * c }; };
   NOM.geometria = { conector };
-  NOM.figuras = { ruta, svgFigura, estiloFigura, FIGURAS, esLinea };
+  NOM.figuras = { ruta, svgFigura, estiloFigura, FIGURAS, esLinea, enNegrita };
 
   function contenido(b) {
     if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${b.html || ""}</div>`;
@@ -368,7 +372,22 @@
         const s = getSelection(); s.removeAllRanges(); s.addRange(r);
       }
       el.onblur = () => terminarEdicion();
-      el.onkeydown = (e) => { if (e.key === "Escape") { e.preventDefault(); el.blur(); } e.stopPropagation(); };
+      el.onkeydown = (e) => {
+        if (e.key === "Escape") { e.preventDefault(); el.blur(); }
+        // Ctrl+B / I / U: el formato es de todo el texto del cuadro. El que pone el navegador por su
+        // cuenta se veía mientras se escribía y se perdía al terminar (solo se guarda el texto).
+        const k = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && { b: "tNegrita", i: "tCursiva", u: "tSubrayado" }[e.key.toLowerCase()];
+        if (k) {
+          e.preventDefault();
+          const b = editando && doc().bloque(editando);
+          if (b && !ed.soloLectura) {
+            const on = !(k === "tNegrita" ? enNegrita(b) : b[k]);
+            doc().cambiar(b.id, { [k]: on || (k === "tNegrita" ? false : null) });
+            el.setAttribute("style", estiloTexto(doc().bloque(b.id), b.tipo === "forma" ? estiloFigura(b).relleno : null));
+          }
+        }
+        e.stopPropagation();
+      };
     }
     function editar(id) {
       if (ed.soloLectura) return;
@@ -629,7 +648,9 @@
     function menuTexto(ancla, b0, grupo) {
       const tam = b0.tTam || (b0.tipo === "texto" ? (b0.estilo === "h1" ? 44 : b0.estilo === "h2" ? 30 : 22) : 16);
       const p = panel(ancla, `<div class="lz-desl"><span>Tamaño</span><input type="range" min="8" max="120" step="1" value="${tam}" data-t><output data-o>${tam} px</output></div>
-        <div class="fila lz-fila"><button class="icono-btn" data-n aria-pressed="${b0.tNegrita !== false}" aria-label="Negrita">${ico("bold")}</button>
+        <div class="fila lz-fila"><button class="icono-btn" data-n="tNegrita" aria-pressed="${enNegrita(b0)}" aria-label="Negrita">${ico("bold")}</button>
+          <button class="icono-btn" data-n="tCursiva" aria-pressed="${!!b0.tCursiva}" aria-label="Cursiva">${ico("italic")}</button>
+          <button class="icono-btn" data-n="tSubrayado" aria-pressed="${!!b0.tSubrayado}" aria-label="Subrayado">${ico("underline")}</button>
           ${["izq", "centro", "der"].map((a) => `<button class="icono-btn" data-al="${a}" aria-pressed="${(b0.tAlin || (b0.tipo === "texto" ? "izq" : "centro")) === a}" aria-label="Alinear">${ico({ izq: "align-left", centro: "align-center", der: "align-right" }[a])}</button>`).join("")}
           <select class="mini-select" data-f aria-label="Fuente"><option value="">Nunito</option>${Object.keys((NOM.textoRico && NOM.textoRico.FUENTES) || {}).filter((f) => f !== "Nunito").map((f) => `<option ${b0.tFuente === f ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div>
         <div class="lz-muestras">${COLORES.map((c) => `<button data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div>`, { titulo: "Texto" });
@@ -638,7 +659,8 @@
       $("[data-f]", p).addEventListener("change", (e) => cambiarSel({ tFuente: e.target.value || null }, grupo));
       p.addEventListener("click", (e) => {
         const n = e.target.closest("[data-n]"), al = e.target.closest("[data-al]"), c = e.target.closest("[data-c]");
-        if (n) { const on = n.getAttribute("aria-pressed") !== "true"; n.setAttribute("aria-pressed", on); cambiarSel({ tNegrita: on }, grupo); }
+        // Negrita apagada se guarda como false: las figuras van en negrita si no se elige nada.
+        if (n) { const on = n.getAttribute("aria-pressed") !== "true", k = n.dataset.n; n.setAttribute("aria-pressed", on); cambiarSel({ [k]: on || (k === "tNegrita" ? false : null) }, grupo); }
         if (al) { $$("[data-al]", p).forEach((x) => x.setAttribute("aria-pressed", x === al)); cambiarSel({ tAlin: al.dataset.al }, grupo); }
         if (c) cambiarSel({ tColor: c.dataset.c }, grupo);
       });
@@ -746,8 +768,12 @@
       // Espacio vacío
       terminarEdicion();
       if (herramienta && herramienta !== "conector" && !ed.soloLectura) {
+        // Sin esto, el mismo clic le pasaba el foco al lienzo: el cuadro recién creado dejaba de
+        // editarse y lo que se escribía no llegaba a ningún lado.
+        e.preventDefault();
         const h = herramienta;
-        if (h === "texto") crear("texto", null, p); else crear("forma", { figura: h }, p);
+        const id = h === "texto" ? crear("texto", null, p) : crear("forma", { figura: h }, p);
+        if (editando === id) setTimeout(() => { if (editando !== id && doc().vivo(id)) editar(id); }, 0);
         opc.alUsarHerramienta && opc.alUsarHerramienta();
         return;
       }

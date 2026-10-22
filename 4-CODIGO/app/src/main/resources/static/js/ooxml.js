@@ -605,9 +605,9 @@ ${hojas.map((_, i) => `<Override PartName="/xl/worksheets/hoja${i + 1}.xml" Cont
         const ps = String(html || "").split(/<br\s*\/?>|<\/p>|<\/div>/i);
         const algn = opcT.alin ? { izq: "l", centro: "ctr", der: "r" }[opcT.alin] : centro ? "ctr" : null;
         return ps.map((h) => `<a:p>${algn ? `<a:pPr algn="${algn}"/>` : ""}${tramos(h).filter((t) => !t.br).map((t) =>
-          `<a:r><a:rPr lang="es-MX" sz="${Math.round(tam * k * 75)}" b="${t.b || negrita ? 1 : 0}" i="${t.i ? 1 : 0}"${t.u ? ' u="sng"' : ""} dirty="0"><a:solidFill><a:srgbClr val="${opcT.color || "1F1E26"}"/></a:solidFill><a:latin typeface="${x(opcT.fuente || "Calibri")}"/></a:rPr><a:t>${x(t.t)}</a:t></a:r>`).join("")}</a:p>`).join("") || "<a:p/>";
+          `<a:r><a:rPr lang="es-MX" sz="${Math.round(tam * k * 75)}" b="${t.b || negrita ? 1 : 0}" i="${t.i || opcT.i ? 1 : 0}"${t.u || opcT.u ? ' u="sng"' : ""} dirty="0"><a:solidFill><a:srgbClr val="${opcT.color || "1F1E26"}"/></a:solidFill><a:latin typeface="${x(opcT.fuente || "Calibri")}"/></a:rPr><a:t>${x(t.t)}</a:t></a:r>`).join("")}</a:p>`).join("") || "<a:p/>";
       };
-      const textoDe = (b, fondo) => ({ color: color(b.tColor, fondo && luzHex(fondo) < 0.5 ? "FFFFFF" : "1F1E26"), fuente: b.tFuente, alin: b.tAlin });
+      const textoDe = (b, fondo) => ({ color: color(b.tColor, fondo && luzHex(fondo) < 0.5 ? "FFFFFF" : "1F1E26"), fuente: b.tFuente, alin: b.tAlin, i: b.tCursiva, u: b.tSubrayado });
       const porId = Object.fromEntries(conPos.map((b) => [b.id, b]));
       const figuras = bs.map((b) => {
         const nid = id++;

@@ -421,7 +421,12 @@
       let visPintado = [], psPintado = [];   // lo que la hoja muestra AHORA (para traducir posiciones)
       let componiendo = false, pintando = false, necesitaPintar = false, ultimaSel = { a: 0, f: 0, ini: 0, fin: 0, col: true };
       let pendiente = null;          // formato para lo próximo que se escriba ({ a, pos })
-      const mo = new MutationObserver(() => {});
+      // Los cambios del DOM se guardan en cuanto el navegador los entrega. Si otro oyente de "input"
+      // corre antes (el de las celdas de tabla va en captura), al terminar ese oyente el navegador ya
+      // le pasó los registros al observador y takeRecords() llegaría vacío: lo escrito no entraba al modelo.
+      let registros = [];
+      const mo = new MutationObserver((l) => { registros.push(...l); });
+      function tomarRegistros() { const r = registros.length ? registros.concat(mo.takeRecords()) : mo.takeRecords(); registros = []; return r; }
 
       function actualizarPintado() { visPintado = sec().visibles(); psPintado = calcularParrafos(sec()); }
 
@@ -452,7 +457,7 @@
         while (cuerpo.children.length > ps.length) cuerpo.lastElementChild.remove();
         for (const k of [...elems.keys()]) if (!vivos.has(k)) { elems.delete(k); cache.delete(k); }
         $$(".wd-indice[data-obj]", cuerpo).forEach(pintarIndice);
-        mo.takeRecords();
+        tomarRegistros();
         pintando = false;
         actualizarIndices();
         programarPaginar();
@@ -692,8 +697,8 @@
       }
 
       function sincronizar(e) {
-        if (pintando || ed.soloLectura) { mo.takeRecords(); return; }
-        const recs = mo.takeRecords().filter((r) => !(r.target.nodeType === 1 ? r.target : r.target.parentElement || cuerpo).closest("[data-obj]") || r.target === cuerpo);
+        if (pintando || ed.soloLectura) { tomarRegistros(); return; }
+        const recs = tomarRegistros().filter((r) => !(r.target.nodeType === 1 ? r.target : r.target.parentElement || cuerpo).closest("[data-obj]") || r.target === cuerpo);
         if (!recs.length) return;
         const compo = componiendo || (e && e.isComposing);
         let estructura = false;
@@ -766,7 +771,7 @@
         cache.set(p.k, h);
         el.normalize();
         const t = crearEl(h);
-        if (iguales(el, t) || (el.tagName === t.tagName && mismosHijos(el, t) && el.getAttribute("data-k") === p.k)) { mo.takeRecords(); return; }
+        if (iguales(el, t) || (el.tagName === t.tagName && mismosHijos(el, t) && el.getAttribute("data-k") === p.k)) { tomarRegistros(); return; }
         const sel = leerSel();
         pintando = true;
         if (el.dataset.empuje) { t.style.marginTop = el.style.marginTop; t.dataset.empuje = el.dataset.empuje; }
@@ -774,7 +779,7 @@
         elems.set(p.k, t);
         llenarObjetos(t);
         idxEl.set(t, indiceHijo(t));
-        mo.takeRecords();
+        tomarRegistros();
         pintando = false;
         if (document.activeElement === cuerpo || cuerpo.contains(document.activeElement)) ponerSel(sel.a, sel.f);
       }
@@ -801,7 +806,9 @@
         actualizarPintado();
         return i + toks.length;
       }
-      const textoTokens = (t, a) => cps(t).map((c) => (c === "\n" ? { c: "\n", pa: {} } : { c, a: a || {} }));
+      /** Texto plano a tokens. pa: formato de los párrafos nuevos (el del párrafo donde se pega,
+          como "Mantener solo texto" de Word; sin él, la primera parte perdía su título o su lista). */
+      const textoTokens = (t, a, pa) => cps(t).map((c) => (c === "\n" ? { c: "\n", pa: Object.assign({}, pa, { hecho: null }) } : { c, a: a || {} }));
 
       // ------------------------------------------------------------ atributos en la selección
       function parrafosDeSel(s) {
@@ -936,10 +943,10 @@
       }
       function insertarTexto(t, a) {
         sincronizar();
-        const s = leerSel();
+        const s = leerSel(), cur = attrsEnCursor();
         comando(() => {
           if (!s.col) borrarRango(s.ini, s.fin, grupoEscritura());
-          const fin = insertarEn(s.ini, textoTokens(t, a || attrsEnCursor().a), grupoEscritura());
+          const fin = insertarEn(s.ini, textoTokens(t, a || cur.a, cur.pa), grupoEscritura());
           finEdicion = fin;
           return { sel: [fin, fin] };
         });
@@ -1384,7 +1391,7 @@
         if (h && !e.shiftKey) {
           const d = new DOMParser().parseFromString(h, "text/html");
           toks = tokens(d.body, {});
-        } else toks = textoTokens((t || "").replace(/\r\n?/g, "\n"), attrsEnCursor().a);
+        } else { const cur = attrsEnCursor(); toks = textoTokens((t || "").replace(/\r\n?/g, "\n"), cur.a, cur.pa); }
         if (!toks.length) return;
         // El último fin de párrafo pegado se une al párrafo donde está el cursor.
         if (toks[toks.length - 1].c === "\n" && !(toks.length === 1)) toks.pop();
@@ -1494,7 +1501,7 @@
           }
           if (el.querySelector(".wd-salto")) { const t2 = top + (destino != null && destino > top ? destino - top : 0); forzar = (Math.floor(t2 / paso) + 1) * paso + pg.m.s; }
         }
-        mo.takeRecords();
+        tomarRegistros();
         const fin = cuerpo.offsetHeight;
         numPaginas = Math.max(1, Math.ceil((fin + 1) / paso));
         if (forzar != null) numPaginas = Math.max(numPaginas, Math.round((forzar - pg.m.s) / paso) + 1);
