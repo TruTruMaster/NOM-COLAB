@@ -65,6 +65,7 @@
           <span class="crece"></span>
           <span class="avatares solo-escritorio" data-presencia></span>
           <span class="estado-sync" data-sync role="status" aria-live="polite"></span>
+          <button class="icono-btn solo-escritorio" data-a="paleta" data-micro="Buscar o ir a|Documentos, espacios y acciones.|Ctrl K">${ico("search")}</button>
           <button class="icono-btn solo-escritorio" ${enLocal ? "hidden" : ""} data-a="historial" data-micro="Historial de versiones|Consulta y restaura versiones anteriores.">${ico("history")}</button>
           <button class="icono-btn" data-a="mas" aria-label="Más opciones" data-micro="Más opciones|Exportar, guardar versión, enfoque y más.">${ico("more-horizontal")}</button>
         </header>
@@ -465,6 +466,16 @@
       } }]),
     ]);
 
+    // Acciones de este documento para la paleta de comandos (Ctrl+K).
+    ed.acciones = () => [
+      ...(ed.soloLectura || enLocal ? [] : [{ texto: "Guardar versión", icono: "save", atajo: "Ctrl S", fn: guardarVersion, claves: "guardar" }]),
+      ...(enLocal ? [] : [{ texto: "Historial y actividad", icono: "history", fn: historial, claves: "versiones restaurar" }]),
+      Object.assign({ claves: "exportar office" }, descargarOffice),
+      { texto: "Exportar en otro formato…", icono: "file-down", fn: exportar, claves: "pdf html descargar" },
+      { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl .", fn: () => enfoque(true), claves: "concentrar pantalla completa" },
+      ...(enLocal ? [] : [{ texto: "Compartir espacio", icono: "share-2", fn: () => NOM.vistaEspacios.accesos(ed.espacio), claves: "invitar accesos" }]),
+    ];
+
     function teclas(e) {
       const mod = e.ctrlKey || e.metaKey;
       if (e.key === "Escape" && vista.classList.contains("enfoque")) { enfoque(false); return; }
@@ -495,6 +506,7 @@
 
     // ------------------------------------------------------------ arranque
     montar(tipo);
+    if (NOM.alAbrirEditor) NOM.alAbrirEditor(ed, tipo);
 
     return () => {
       document.removeEventListener("keydown", teclas);

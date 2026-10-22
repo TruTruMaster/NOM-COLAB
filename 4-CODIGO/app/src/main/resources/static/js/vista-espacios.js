@@ -65,6 +65,7 @@
     NOM.app.fijarEspacios(lista);
     const rej = $("[data-espacios]", cont);
     if (!rej) return;
+    if (NOM.primerosPasos) NOM.primerosPasos($(".encabezado", cont), lista);
     $("[data-cuantos]", cont).textContent = lista.length + (lista.length === 1 ? " espacio" : " espacios");
     if (!lista.length) {
       rej.outerHTML = `<div class="vacio">
@@ -661,7 +662,7 @@
       catch (e) { aviso(e.message, { tipo: "error" }); }
     };
     $("[data-guardar]", pie).onclick = async () => {
-      try { const n = sinCuenta ? leerForm() : await api.put("/api/cuentas/preferencias", leerForm()); guardado = true; NOM.aplicarPreferencias(n); h.cerrar(); aviso("Preferencias guardadas", { tipo: "ok" }); }
+      try { const n = sinCuenta ? leerForm() : await api.put("/api/cuentas/preferencias", leerForm()); guardado = true; NOM.aplicarPreferencias(n); if (NOM.hito) NOM.hito("preferencias"); h.cerrar(); aviso("Preferencias guardadas", { tipo: "ok" }); }
       catch (e) { aviso(e.message, { tipo: "error" }); }
     };
   }

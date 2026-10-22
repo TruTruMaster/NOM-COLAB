@@ -401,3 +401,44 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Pruebas (LibreWolf/Firefox contra el servidor local): texto, imagen, figuras, celdas, selección
   múltiple con uno y dos dedos, exportar a Excel con formato, dos navegadores a la vez, todas las
   pantallas sin errores de JavaScript, tema oscuro y ancho de celular. JUnit 7/7, `cripto.test.js`.
+
+---
+
+# LOG — 22 de octubre de 2026 (noche, 2): acabado de producto premium
+
+## 36. Investigación
+- Qué hace que una app se sienta de primer nivel (Linear, Stripe, Vercel, Raycast): densidad de
+  comportamiento con visual sobrio, estados de cada elemento diseñados, movimiento corto con
+  curvas propias, vacíos que invitan a actuar, paleta de comandos y una bienvenida cálida. La
+  estética sube la credibilidad y la facilidad percibidas en los primeros segundos. Detalle y
+  fuentes en `docs/DISENO-UI.md` §14.
+
+## 37. Paleta de comandos (Ctrl+K)
+- Nuevo `experiencia.js`. Busca documentos de todos los espacios, recientes, espacios y acciones
+  (crear, ir a, tema, movimiento, atajos, cerrar sesión, y las del documento abierto: guardar
+  versión, historial, descargar, exportar, enfoque, compartir). Sin acentos y por iniciales;
+  submenú para elegir el espacio de un documento nuevo. En el texto se abre con Alt+/ (Ctrl+K es
+  enlace). Botón "Buscar o ir a…" en el riel, lupa en la barra del celular y en el editor.
+
+## 38. Bienvenida y primeros pasos
+- Al entrar, un instante de bienvenida con el nombre y un mensaje según la hora. Al registrarse
+  se entra directo (sin volver a escribir la contraseña).
+- Tarjeta "Primeros pasos" con anillo de progreso (espacio, documento, ruedita, equipo, ajustes);
+  se marca sola y desaparece al completarla u ocultarla. Consejo de la ruedita la primera vez en
+  cada editor. Hoja de atajos con la tecla `?`.
+
+## 39. Acabado visual y de movimiento
+- Barra de carga arriba (solo si algo tarda, sin parpadeo). Resortes en ventanas, menús, avisos,
+  ruedita y paleta; menús que crecen desde su botón; tema que cambia en círculo desde el clic.
+- Luz que sigue al cursor en tarjetas, borde de luz en superficies principales, brillo en el botón
+  principal, grano fino en el fondo, tipografía balanceada y cifras tabulares, avisos con cuenta
+  regresiva que se detienen con el cursor, barras de desplazamiento discretas.
+- Vidrio más opaco donde hay texto (menús, ventanas, paleta, avisos, barras con etiquetas) para que
+  se lea igual aunque el dispositivo no desenfoque.
+- Corrección: la tarjeta "Continúa donde lo dejaste" se apilaba en vertical (heredaba la columna
+  de `.tarjeta`); ahora es una fila.
+
+## 40. Pruebas
+- Registro → entrada directa → bienvenida → primeros pasos; paleta (buscar, submenú, tema, abrir
+  documento), atajos, consejo en el editor; todas las pantallas sin errores de JavaScript, en
+  escritorio, ancho de celular y tema oscuro. JUnit 7/7 y `cripto.test.js`.

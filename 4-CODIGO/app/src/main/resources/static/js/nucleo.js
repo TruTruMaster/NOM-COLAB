@@ -80,10 +80,15 @@
       b.onclick = () => { opc.accion.fn(); cerrar(); };
       el.append(b);
     }
+    const ms = opc.ms || (opc.accion ? 6000 : 3500);
+    el.style.setProperty("--ms", ms + "ms");
     contAvisos.append(el);
     while (contAvisos.children.length > 3) contAvisos.firstElementChild.remove();
-    const cerrar = () => { el.classList.add("saliendo"); setTimeout(() => el.remove(), 220); };
-    setTimeout(cerrar, opc.ms || (opc.accion ? 6000 : 3500));
+    const cerrar = () => { clearTimeout(t); el.classList.add("saliendo"); setTimeout(() => el.remove(), 220); };
+    // Con el cursor encima el aviso espera (para alcanzar a leerlo); al salir, sigue su cuenta.
+    let resta = ms, desde = Date.now(), t = setTimeout(cerrar, ms);
+    el.addEventListener("pointerenter", () => { clearTimeout(t); resta -= Date.now() - desde; el.classList.add("pausa"); });
+    el.addEventListener("pointerleave", () => { desde = Date.now(); el.classList.remove("pausa"); t = setTimeout(cerrar, Math.max(800, resta)); });
     return cerrar;
   }
 
@@ -187,6 +192,7 @@
     if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 6);
     m.style.left = Math.max(8, x) + "px";
     m.style.top = y + "px";
+    m.style.transformOrigin = `${Math.max(0, Math.min(w, (r.left + r.right) / 2 - Math.max(8, x))).toFixed(0)}px ${y >= r.bottom ? 0 : h}px`;
     menuActual = m;
     setTimeout(() => document.addEventListener("pointerdown", fueraMenu, true), 0);
     document.addEventListener("keydown", escMenu, true);
@@ -258,18 +264,29 @@
   document.addEventListener("contextmenu", (e) => { if (e.target.closest && e.target.closest("[data-micro]") && e.pointerType !== "mouse") e.preventDefault(); });
 
   // ------------------------------------------------------------ preferencias visuales
-  let tTema = null;
+  let tTema = null, ultimoToque = { x: innerWidth / 2, y: 0, t: 0 };
+  document.addEventListener("pointerdown", (e) => { ultimoToque = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
   function aplicarPreferencias(p) {
     p = p || {};
     const raiz = document.documentElement;
     const oscuro = p.tema === "oscuro" || (p.tema !== "claro" && matchMedia("(prefers-color-scheme: dark)").matches);
-    const antes = raiz.dataset.tema;
-    raiz.dataset.tema = oscuro ? "oscuro" : "claro";
-    // Al cambiar de tema los colores se funden en vez de saltar.
-    if (antes && antes !== raiz.dataset.tema) {
-      raiz.classList.add("cambiando-tema");
-      clearTimeout(tTema);
-      tTema = setTimeout(() => raiz.classList.remove("cambiando-tema"), 480);
+    const antes = raiz.dataset.tema, nuevo = oscuro ? "oscuro" : "claro";
+    const quieto = p.movimientoReducido || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (antes && antes !== nuevo && document.startViewTransition && !quieto) {
+      // El tema nuevo se abre en círculo desde el punto donde se hizo clic (o desde arriba).
+      const o = Date.now() - ultimoToque.t < 3000 ? ultimoToque : { x: innerWidth / 2, y: 0 };
+      const radio = Math.hypot(Math.max(o.x, innerWidth - o.x), Math.max(o.y, innerHeight - o.y));
+      const tr = document.startViewTransition(() => { raiz.dataset.tema = nuevo; });
+      tr.ready.then(() => raiz.animate({ clipPath: [`circle(0px at ${o.x}px ${o.y}px)`, `circle(${radio}px at ${o.x}px ${o.y}px)`] },
+        { duration: 620, easing: "cubic-bezier(.16, 1, .3, 1)", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
+    } else {
+      raiz.dataset.tema = nuevo;
+      // Sin View Transitions: los colores se funden en vez de saltar.
+      if (antes && antes !== nuevo) {
+        raiz.classList.add("cambiando-tema");
+        clearTimeout(tTema);
+        tTema = setTimeout(() => raiz.classList.remove("cambiando-tema"), 480);
+      }
     }
     raiz.dataset.calidad = p.calidad === "baja" ? "baja" : "alta";
     raiz.dataset.movimiento = p.movimientoReducido ? "reducido" : "normal";

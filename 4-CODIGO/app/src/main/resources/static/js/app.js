@@ -32,6 +32,7 @@
     const c = html(`<div class="app con-riel">
       <aside class="riel" aria-label="Navegación">
         <a class="marca" href="#/" style="text-decoration:none;color:inherit"><svg class="logo"><use href="#logo"/></svg><div>NOM-COLAB<small>Suite colaborativa en red local</small></div></a>
+        <button class="riel-buscar" type="button" data-a="paleta" aria-label="Buscar o ir a (Ctrl+K)">${ico("search")}<span class="crece">Buscar o ir a…</span><kbd>Ctrl K</kbd></button>
         <a class="riel-item" href="#/" ${actual === "inicio" ? 'aria-current="page"' : ""}>${ico("house")} Inicio</a>
         <a class="riel-item" href="#/dispositivo" ${actual === "dispositivo" ? 'aria-current="page"' : ""} data-micro="Este dispositivo|Documentos guardados aquí, cuánto ocupan y cambios sin enviar.">${ico("hard-drive")} Este dispositivo</a>
         ${esAdmin ? `<a class="riel-item" href="#/admin" ${actual === "admin" ? 'aria-current="page"' : ""}>${ico("shield-check")} Administrar usuarios</a>` : ""}
@@ -54,6 +55,7 @@
         <header class="barra-movil">
           ${actual === "espacio" ? `<a class="icono-btn" href="#/" aria-label="Volver">${ico("chevron-left")}</a>` : `<svg class="logo" style="width:30px;height:30px"><use href="#logo"/></svg>`}
           <span class="titulo recorta" data-titulo-movil>${esc(tituloMovil || "NOM-COLAB")}</span>
+          <button class="icono-btn" data-a="paleta" aria-label="Buscar o ir a">${ico("search")}</button>
           <span class="chip ${api.enLinea ? "ok" : "error"}" data-red-chip style="${api.enLinea ? "display:none" : ""}">${ico("wifi-off", "ico-s")} Sin red</span>
           <button class="icono-btn" data-a="cuenta" aria-label="Cuenta">${avatar(u)}</button>
         </header>
@@ -131,6 +133,10 @@
   // (si no, quedaba un editor "huérfano" conectado y escuchando en segundo plano).
   let turno = 0;
   async function ruta() {
+    const fin = NOM.cargando ? NOM.cargando.empezar() : () => {};
+    try { await rutaInterna(); } finally { fin(); }
+  }
+  async function rutaInterna() {
     const mio = ++turno;
     const vigente = () => mio === turno;
     const montar = async (promesa) => {

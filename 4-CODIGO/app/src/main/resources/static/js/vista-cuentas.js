@@ -160,6 +160,20 @@
       t.classList.remove("sacudir"); void t.offsetWidth; t.classList.add("sacudir");
     }
 
+    /** Abre la sesión (también justo después de registrarse) y da la bienvenida. */
+    async function iniciarSesion(nombre, contrasena, nuevo) {
+      const r = await api.post("/api/cuentas/sesion", { nombre, contrasena }, { sin401: true, ms: ESPERA_BD });
+      NOM.guardar("nom.ultimoNombre", nombre);
+      api.fijarSesion(r.token, r.usuario);
+      // La contraseña abre la bóveda cifrada de esta cuenta en este equipo (y no se guarda).
+      try { await NOM.boveda.abrir(r.usuario.id, contrasena); }
+      catch (e) { console.error(e); NOM.aviso("Este navegador no permite guardar documentos cifrados; se trabajará solo en línea.", { tipo: "aviso", ms: 6000 }); }
+      NOM.aplicarPreferencias(r.preferencias);
+      if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
+      NOM.app.alIniciarSesion(r);
+      if (r.usuario.rol === "ADMINISTRADOR") NOM.aviso("Entraste como Administrador: tienes acceso a Administrar usuarios", { tipo: "info", ms: 4500 });
+    }
+
     async function enviando(f, fn) {
       const b = $("button[type=submit]", f);
       const original = b.innerHTML;
@@ -190,17 +204,7 @@
         const nombre = f.nombre.value.trim(), contrasena = f.contrasena.value;
         if (!nombre) return mostrarError(f, { campo: "nombre", message: "Escribe tu usuario" });
         if (!contrasena) return mostrarError(f, { campo: "contrasena", message: "Escribe tu contraseña" });
-        enviando(f, async () => {
-          const r = await api.post("/api/cuentas/sesion", { nombre, contrasena }, { sin401: true, ms: ESPERA_BD });
-          NOM.guardar("nom.ultimoNombre", nombre);
-          api.fijarSesion(r.token, r.usuario);
-          // La contraseña abre la bóveda cifrada de esta cuenta en este equipo (y no se guarda).
-          try { await NOM.boveda.abrir(r.usuario.id, contrasena); }
-          catch (e) { console.error(e); NOM.aviso("Este navegador no permite guardar documentos cifrados; se trabajará solo en línea.", { tipo: "aviso", ms: 6000 }); }
-          NOM.aplicarPreferencias(r.preferencias);
-          NOM.app.alIniciarSesion(r);
-          if (r.usuario.rol === "ADMINISTRADOR") NOM.aviso("Entraste como Administrador: tienes acceso a Administrar usuarios", { tipo: "info", ms: 4500 });
-        });
+        enviando(f, () => iniciarSesion(nombre, contrasena, false));
       };
       setTimeout(() => (f.nombre.value ? f.contrasena : f.nombre).focus(), 30);
       return f;
@@ -240,8 +244,12 @@
           tarjeta.append(html(`<div class="col" style="align-items:center;text-align:center;padding:24px 0">
             <div class="exito-check">${ico("check")}</div>
             <h2>¡Registro exitoso!</h2>
-            <p class="suave" style="font-weight:650">Tu cuenta <b>${esc(nombre)}</b> está lista. Te llevamos a iniciar sesión…</p></div>`));
-          setTimeout(() => { opc.nombre = nombre; modo = "entrar"; render(); }, 1600);
+            <p class="suave" style="font-weight:650">Tu cuenta <b>${esc(nombre)}</b> está lista. Entrando…</p></div>`));
+          // Sin volver a escribir la contraseña: se entra directo (si algo falla, al formulario de entrar).
+          setTimeout(async () => {
+            try { await iniciarSesion(nombre, contrasena, true); }
+            catch (e) { opc.nombre = nombre; modo = "entrar"; render(); }
+          }, 1200);
         });
       };
       setTimeout(() => f.nombre.focus(), 30);

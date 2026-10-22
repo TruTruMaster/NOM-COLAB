@@ -229,6 +229,44 @@ No se puede impedir el zoom del navegador ni el tamaño mínimo de letra que eli
 (son ajustes de accesibilidad del propio navegador), ni lo que una extensión haga con
 permisos mayores que los de la página.
 
+## 14. Acabado de producto premium
+
+Qué separa una app "que funciona" de una que se siente como un producto de primer nivel
+(Linear, Stripe, Vercel, Raycast). La investigación coincide en tres ideas:
+
+1. **La estética cambia la confianza.** A igual contenido, un diseño más cuidado se percibe
+   más creíble y más fácil de usar, y el juicio se forma en los primeros segundos
+   (efecto estética-usabilidad: Kurosu y Kashimura 1995, Tractinsky et al. 2000; estudio de
+   credibilidad en *Information Processing & Management*, 2007). El efecto se diluye con el
+   uso, así que lo que sostiene la impresión es la calidad de la interacción.
+2. **Densidad de comportamiento, no de pixeles.** Esas apps son visualmente sobrias pero todo
+   responde: cursor, foco, teclado, carga. Cada elemento tiene sus estados diseñados (normal,
+   cursor, foco, presionado, deshabilitado, cargando), los vacíos y errores son específicos, y el
+   movimiento es corto (< 300 ms en lo frecuente), con curvas propias y nunca desde escala 0
+   (guías de interfaz de Vercel; análisis de Stripe, Linear y Vercel de Mantlr; principios de
+   animación de Emil Kowalski).
+3. **Que la persona sepa qué hacer y se sienta esperada.** Vacíos que invitan a la primera
+   acción, listas cortas de primeros pasos en lugar de recorridos largos, y una paleta de
+   comandos (Ctrl+K) que hace descubrible todo y enseña los atajos.
+
+| Detalle | Cómo se aplica | Dónde |
+|---|---|---|
+| Paleta de comandos | Ctrl+K (Alt+/ dentro del texto, donde Ctrl+K es enlace): documentos de todos los espacios, recientes, espacios, crear, ir a, tema, movimiento, atajos y las acciones del documento abierto. Coincidencia sin acentos y por iniciales; se muestra al instante y los documentos llegan después. | `experiencia.js`, `.paleta` |
+| Barra de carga | Arriba, con degradado de los colores de modo; solo si algo tarda > 160 ms y, si sale, dura ≥ 350 ms (no parpadea). | `NOM.cargando`, `.carga` |
+| Bienvenida | Al entrar: "¡Qué gusto verte, Ana!" con un mensaje según la hora, mientras el inicio se arma detrás. Al registrarse ya no se pide la contraseña otra vez: entra directo con "¡Bienvenido a NOM-COLAB!". | `NOM.bienvenida`, `vista-cuentas.js` |
+| Primeros pasos | Tarjeta con anillo de progreso: crear espacio, primer documento, probar la ruedita, invitar al equipo, ajustar la app. Se marca sola; desaparece al completarla (con un "¡Todo listo!") o al ocultarla. En el celular se desliza de lado. | `NOM.primerosPasos`, `.pasos` |
+| Consejo de la ruedita | La primera vez en cada tipo de documento, una píldora de vidrio explica cómo sale la ruedita; se va al usarla. | `NOM.alAbrirEditor`, `.consejo` |
+| Atajos | La tecla `?` (o la paleta) abre todos los atajos agrupados. | `NOM.atajos` |
+| Movimiento con resorte | Curva de resorte real (`linear()`) con rebote mínimo en ventanas, menús, avisos, ruedita y paleta; desaceleración larga (`--salida`) en lo demás. Los menús crecen desde su botón. Presionar es inmediato (70 ms) y soltar es suave. | `--resorte`, `--salida`, `nucleo.js` |
+| Tema en círculo | Al cambiar de tema, el nuevo se abre en círculo desde donde se hizo clic (View Transitions); sin soporte, se funde. | `aplicarPreferencias()` |
+| Luz bajo el cursor | Tarjetas y opciones reciben una luz suave que sigue al cursor (solo con mouse). | `.tarjeta::before`, `--lx`, `--ly` |
+| Borde de luz | Las superficies principales (cuenta, primeros pasos, paleta) tienen un borde degradado de 1 px. | `::after` con máscara |
+| Brillo en el botón principal | Un reflejo cruza el botón al pasar el cursor. | `.btn.primario::after` |
+| Textura | Grano muy fino en el fondo (quita las bandas de los degradados, se siente como papel). Apagado en calidad baja. | `--grano` |
+| Tipografía | Títulos balanceados (`text-wrap: balance`), párrafos sin palabras huérfanas, cifras tabulares en contadores, fechas y celdas. | `nom.css` |
+| Avisos | Una línea muestra cuánto les queda; con el cursor encima se detienen para leerlos. | `aviso()` |
+| Barras de desplazamiento | Delgadas y redondeadas, del color del borde. | `nom.css` |
+
 ## Fuentes
 
 - Laws of UX (Jakob, Hick, Fitts, Doherty, Von Restorff, estético-usabilidad): https://lawsofux.com/

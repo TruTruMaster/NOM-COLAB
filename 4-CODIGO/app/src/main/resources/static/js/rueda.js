@@ -110,6 +110,7 @@
       if (it.sub) { abrir(x, y, it.sub, Object.assign({}, opc, { modo: modo === "mantener" ? "clic" : modo, titulo: it.texto, padre: { items, opc } }), true); return; }
       cerrar();
       it.fn && it.fn();
+      if (NOM.hito) NOM.hito("rueda");
       opc.alElegir && opc.alElegir(it);
     }
     function atras() { if (opc.padre) abrir(x, y, opc.padre.items, opc.padre.opc, true); else cerrar(); }
@@ -210,7 +211,7 @@
     let t = null, firma = null, descartada = null;
     const control = {};
     const mia = () => !!(actual && actual.opc.dueno === control);
-    const ocupado = () => document.hidden || NOM.hayHoja() || !!document.querySelector(".menu:not(.saliendo)") || (actual && !mia()) || (opcA.activa && !opcA.activa());
+    const ocupado = () => document.hidden || NOM.hayHoja() || !!document.querySelector(".menu:not(.saliendo), .paleta-velo, .bienvenida-momento") || (actual && !mia()) || (opcA.activa && !opcA.activa());
     function abrirYa() {
       t = null;
       if (ocupado()) return;
