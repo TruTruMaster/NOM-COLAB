@@ -1,0 +1,15 @@
+{
+  "name": "NOM-COLAB",
+  "short_name": "NOM",
+  "description": "Suite colaborativa en red local",
+  "lang": "es",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F5F3EF",
+  "theme_color": "#5B5BD6",
+  "icons": [
+    { "src": "img/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

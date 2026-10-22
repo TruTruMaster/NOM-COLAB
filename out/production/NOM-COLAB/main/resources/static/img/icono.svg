@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Un documento cuadrado con los 4 tipos que crea NOM-COLAB: texto (azul), hoja (verde), presentación (naranja) y diagrama (morado). Márgenes de 3.5 y separación de 1; esquinas concéntricas. -->
+  <defs>
+    <linearGradient id="lg-fondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A8AF5"/><stop offset="1" stop-color="#5151CC"/></linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="15" fill="url(#lg-fondo)"/>
+  <rect x="5" y="4" width="38" height="16" rx="10" fill="#fff" opacity=".16"/>
+  <rect x="11" y="11" width="26" height="26" rx="6" fill="#fff"/>
+  <rect x="14.5" y="14.5" width="9" height="9" rx="2.5" fill="#3D72F2"/>
+  <rect x="24.5" y="14.5" width="9" height="9" rx="2.5" fill="#2FA868"/>
+  <rect x="14.5" y="24.5" width="9" height="9" rx="2.5" fill="#F08C2A"/>
+  <rect x="24.5" y="24.5" width="9" height="9" rx="2.5" fill="#8B5CF6"/>
+</svg>
