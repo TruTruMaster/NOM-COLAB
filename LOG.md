@@ -442,3 +442,10 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Registro → entrada directa → bienvenida → primeros pasos; paleta (buscar, submenú, tema, abrir
   documento), atajos, consejo en el editor; todas las pantallas sin errores de JavaScript, en
   escritorio, ancho de celular y tema oscuro. JUnit 7/7 y `cripto.test.js`.
+- Prueba en el teléfono real (Samsung A55, app 0.4.0) y a su ancho (411 px): el botón flotante
+  "+" quedaba suelto abajo a la izquierda (la regla nueva del brillo, `.btn.primario
+  { position: relative }`, le ganaba a `.fab`; ahora va con `:where(.btn)`), y en "Tus documentos
+  en este equipo" los botones se salían a la derecha (los encabezados de sección ya se acomodan en
+  dos renglones). La línea de cuenta regresiva de los avisos también salía en el cuadro de
+  advertencia (comparte la clase `aviso`): los estilos de aviso emergente ahora son solo de
+  `.avisos > .aviso`. App 0.4.1.

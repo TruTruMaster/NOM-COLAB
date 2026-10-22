@@ -208,7 +208,8 @@ img { max-width: 100%; }
 .suave { color: var(--tinta-suave); }
 .chico { font-size: 13px; }
 .fila { display: flex; align-items: center; gap: var(--e2); }
-.fila-e { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.fila-e { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); flex-wrap: wrap; }
+.fila-e > .fila { flex-wrap: wrap; }
 .col { display: flex; flex-direction: column; gap: var(--e3); }
 .crece { flex: 1; min-width: 0; }
 .recorta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -570,20 +571,20 @@ kbd {
 
 /* avisos (toasts): abajo, sin modal, sin sonido */
 .avisos { position: fixed; z-index: 300; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: min(480px, calc(100vw - 32px)); }
-.aviso {
+.avisos > .aviso {
   pointer-events: auto; display: flex; align-items: center; gap: var(--e3);
   padding: 12px 14px 12px 16px; border-radius: var(--r-m); width: 100%;
   background: var(--vidrio-tinta); color: #F4F3F8; box-shadow: var(--sombra-flotante);
   backdrop-filter: var(--vidrio-desenfoque); -webkit-backdrop-filter: var(--vidrio-desenfoque);
   font-weight: 650; animation: subir var(--t-largo) var(--rebote);
 }
-:root[data-tema="oscuro"] .aviso { background: var(--vidrio-tinta); color: #1C1B22; }
-.aviso .ico { flex: none; }
-.aviso.ok .ico { color: #5CD69A; }
-.aviso.error .ico { color: #FF8A7E; }
-:root[data-tema="oscuro"] .aviso.ok .ico { color: var(--ok-tenue); }
-.aviso button { margin-left: auto; border: 0; background: rgba(255, 255, 255, .12); color: inherit; border-radius: 10px; padding: 6px 12px; font-weight: 800; }
-.aviso.saliendo { animation: aviso-out var(--t-corto) var(--suave) forwards; }
+:root[data-tema="oscuro"] .avisos > .aviso { background: var(--vidrio-tinta); color: #1C1B22; }
+.avisos > .aviso .ico { flex: none; }
+.avisos > .aviso.ok .ico { color: #5CD69A; }
+.avisos > .aviso.error .ico { color: #FF8A7E; }
+:root[data-tema="oscuro"] .avisos > .aviso.ok .ico { color: var(--ok-tenue); }
+.avisos > .aviso button { margin-left: auto; border: 0; background: rgba(255, 255, 255, .12); color: inherit; border-radius: 10px; padding: 6px 12px; font-weight: 800; }
+.avisos > .aviso.saliendo { animation: aviso-out var(--t-corto) var(--suave) forwards; }
 @keyframes aviso-out { to { opacity: 0; transform: translateY(10px) scale(.96); } }
 
 /* ---------------------------------------------------------------- cuentas (bienvenida) */
@@ -782,7 +783,8 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 .btn:active { transition-duration: 70ms; }
 .btn.primario::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .34) 50%, transparent 70%); transform: translateX(-130%); transition: transform .8s var(--salida); }
-.btn.primario { position: relative; }
+/* sin especificidad: así no le gana a .fab (que es fixed) ni a otros botones posicionados */
+:where(.btn) { position: relative; }
 .btn.primario:hover::after { transform: translateX(130%); }
 .btn.primario:hover { filter: saturate(1.08) brightness(1.03); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3), inset 0 -3px 0 rgba(0, 0, 0, .14), 0 14px 28px -8px color-mix(in srgb, var(--acento) 75%, transparent); }
 :focus-visible { transition: box-shadow 160ms var(--salida); }
@@ -815,13 +817,13 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 /* resortes en lo que aparece encima */
 .hoja { animation: subir 560ms var(--resorte); }
 .menu { animation: menu-in 420ms var(--resorte); }
-.aviso { animation: subir 560ms var(--resorte); position: relative; overflow: hidden; }
+.avisos > .aviso { animation: subir 560ms var(--resorte); position: relative; overflow: hidden; }
 .rueda { transition: transform 460ms var(--resorte), opacity 160ms linear; }
 .rueda-item { transition: opacity 160ms calc(var(--i) * 22ms + 40ms), transform 460ms var(--resorte) calc(var(--i) * 22ms + 40ms), color 90ms; }
 
 /* avisos: una línea muestra cuánto les queda; se detiene con el cursor encima */
-.aviso::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: currentColor; opacity: .25; transform-origin: 0 50%; animation: aviso-cuenta var(--ms, 3500ms) linear forwards; }
-.aviso.pausa::after { animation-play-state: paused; }
+.avisos > .aviso::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: currentColor; opacity: .25; transform-origin: 0 50%; animation: aviso-cuenta var(--ms, 3500ms) linear forwards; }
+.avisos > .aviso.pausa::after { animation-play-state: paused; }
 @keyframes aviso-cuenta { to { transform: scaleX(0); } }
 
 /* cambio de tema en círculo (View Transitions) */
