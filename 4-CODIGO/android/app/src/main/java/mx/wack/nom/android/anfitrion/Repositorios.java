@@ -2,7 +2,6 @@ package mx.wack.nom.android.anfitrion;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -16,7 +15,6 @@ import mx.wack.nom.core.almacen.RepositorioUsuarios;
 import mx.wack.nom.core.crdt.EstadoDocumento;
 import mx.wack.nom.core.modelo.Documento;
 import mx.wack.nom.core.modelo.Espacio;
-import mx.wack.nom.core.modelo.Rol;
 import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.core.modelo.Version;
@@ -66,13 +64,6 @@ final class Repositorios {
             return Optional.empty();
         }
 
-        /** La más antigua primero (así "la cuenta más antigua administra" es igual que en la computadora). */
-        @Override public synchronized Collection<Usuario> todos() {
-            List<Usuario> l = new ArrayList<>(usuarios.values());
-            l.sort(Comparator.comparingLong(u -> u.creado));
-            return l;
-        }
-
         @Override public synchronized void guardar(Usuario u) {
             usuarios.put(u.id, u);
             almacen.escribir("usuarios.json", usuarios);
@@ -87,10 +78,6 @@ final class Repositorios {
 
         @Override public synchronized void borrarSesion(String token) {
             if (sesiones.remove(token) != null) almacen.escribir("sesiones.json", sesiones);
-        }
-
-        @Override public synchronized long cuantosConRol(Rol rol) {
-            return usuarios.values().stream().filter(u -> u.rol == rol).count();
         }
     }
 

@@ -16,7 +16,6 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 | **Visitante** | Persona sin sesión iniciada. Solo puede registrarse y autenticarse. |
 | **Usuario** | Visitante autenticado. Hereda todo lo del Visitante y accede a sus espacios y preferencias. |
 | **Propietario** | Usuario que creó un espacio. Hereda todo lo del Usuario y además administra accesos, conexión y almacenamiento de ese espacio. |
-| **Administrador** | Usuario con el rol `ADMINISTRADOR` en la base de datos. Hereda todo lo del Usuario y además administra las cuentas y sus roles (CU-30). |
 | **Módulo de seguridad** | Actor sistema. Cifra credenciales y aplica el bloqueo por intentos fallidos. |
 | **Nodo remoto (LAN)** | Actor sistema. Otra instancia de NOM-COLAB en la red local. |
 | **Dispositivo Android** | Actor sistema. Cliente móvil que sincroniza con un espacio. |
@@ -31,7 +30,6 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 | CU-04 | Bloquear acceso por intentos fallidos | Cuentas | Alta |
 | CU-05 | Cifrar credenciales | Cuentas | Alta |
 | CU-27 | Configurar preferencias del sistema | Cuentas | Media |
-| CU-30 | Administrar usuarios y roles | Cuentas | Alta |
 | CU-13 | Crear espacio de trabajo | Espacios | Alta |
 | CU-14 | Activar conexión del proyecto | Espacios | Alta |
 | CU-15 | Descubrir espacios en la LAN | Espacios | Alta |
@@ -218,35 +216,6 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 **Requerimientos** Proceso de negocio Fase 5 · Requerimientos de hardware (WebGL 1 mínimo)
 
 ---
-
-## CU-30 · Administrar usuarios y roles
-
-| | |
-|---|---|
-| **Actor principal** | Administrador |
-| **Actores secundarios** | Módulo de seguridad |
-| **Descripción** | Consulta las cuentas registradas en la base de datos, cambia el rol de una cuenta (ADMINISTRADOR / USUARIO) y desbloquea cuentas bloqueadas por intentos fallidos. |
-| **Precondiciones** | Sesión vigente y la cuenta tiene el rol `ADMINISTRADOR` en la tabla `rol`. |
-| **Postcondiciones** | El rol o el bloqueo de la cuenta queda actualizado en la base de datos y aplica en la siguiente petición de esa cuenta. |
-| **Incluye** | CU-02 Iniciar sesión |
-
-**Flujo principal**
-1. El Administrador abre "Administrar usuarios" desde el menú lateral o el menú de su cuenta.
-2. El sistema vuelve a leer el rol de la sesión en la base de datos y confirma que es `ADMINISTRADOR`.
-3. El sistema muestra cada cuenta con su empresa, fecha de registro, rol y si está bloqueada.
-4. El Administrador elige "Hacer administrador" o "Quitar administrador" en una cuenta.
-5. El sistema actualiza `usuario.id_rol` y muestra el rol nuevo.
-6. Si la cuenta está bloqueada, el Administrador elige "Desbloquear" y el sistema reinicia `bloqueado_hasta` e `intentos_fallidos`.
-
-**Flujos alternativos**
-- *4a.* El Administrador cancela la confirmación → no cambia nada.
-
-**Excepciones**
-- *2a.* La cuenta tiene rol `USUARIO` → el servidor responde 403 "Esta sección es solo para administradores"; la interfaz ni siquiera muestra la opción.
-- *4b.* El Administrador intenta quitarse su propio rol → se rechaza para que siempre quede al menos un administrador.
-- *5a.* Rol desconocido → se rechaza indicando los roles válidos.
-
-**Requerimientos** RF Cuentas 4 (gestionar y validar el acceso) · RNF Cuentas 1 (seguridad)
 
 ---
 

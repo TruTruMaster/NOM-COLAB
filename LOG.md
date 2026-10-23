@@ -551,3 +551,51 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   - Un aviso que aparece bajo el ratón quieto ya no se queda congelado: solo se pausa si el cursor
     se mueve encima.
 - Jar y APK recompilados; app 0.7.0.
+
+## 48. Sin administrador general y servidor propio en internet
+- **Se quitó el rol ADMINISTRADOR** (pantalla "Administrar usuarios", `/api/admin/**`, `FiltroRol`,
+  `Rol`, la cuenta inicial `NOM_ADMIN_*` y la regla "la primera cuenta administra"), en el servidor,
+  el teléfono como servidor y la interfaz. Nadie ve ni maneja las cuentas de los demás: cada cuenta
+  controla sus espacios y documentos, y el propietario de cada espacio cambia permisos (*Puede
+  editar* / *Solo lectura*) o quita el acceso; el servidor responde 403 a lo demás.
+- **Base de datos:** ya no existe la tabla `rol` ni `usuario.id_rol`. Las bases de antes se
+  migran solas al arrancar (H2 y Azure SQL), conservando las cuentas. Probado: una base creada con
+  la versión anterior abre con la nueva (cuentas y espacios intactos, `/api/admin` ya no existe,
+  segundo arranque sin errores) y el script de Azure SQL se probó en un esquema aparte de la base
+  real (el acceso se abrió unos minutos y se volvió a cerrar).
+- Diagramas actualizados (casos de uso de cuentas sin CU-30, entidad-relación, modelo de datos,
+  secuencia de inicio de sesión, mapa de navegación), la especificación de casos de uso,
+  `DESPLIEGUE-AZURE.md`, `LEEME.md` y `README.md`. **Falta** actualizar la presentación y el PDF
+  del módulo, que todavía muestran el rol de administrador (pendiente de decidir).
+- **Servidor propio:** NOM-COLAB corre en la laptop del equipo y sale a internet con Tailscale
+  Funnel en `https://nomcolab.tailfd65f2.ts.net` (enlace corto `is.gd/nomcolab`), gratis, sin abrir
+  puertos y con HTTPS. Servicio de usuario `nomcolab.service` (no arranca solo), datos en
+  `~/nomcolab-servidor`, respaldo diario y al apagar. Archivos e instalador en
+  `4-CODIGO/servidor-propio/`; guía en `docs/SERVIDOR-PROPIO.md`.
+- **`nomcolab` con menú:** 1 Azure / 2 Local, y luego Prender, Apagar, Estado o Reiniciar (también
+  `nomcolab local up`, etc.; `--up/--down` siguen para Azure). Mensajes en español.
+- Dominio `nomcolab.eu.org` solicitado (gratis), zona lista en Cloudflare; pendiente de aprobación.
+
+## 49. Seguridad con roles en la base de datos, documentación al día y sin presentación
+- **Roles en Azure SQL, como la práctica 7** (usuarios y privilegios en Oracle): la página ya no
+  entra con el administrador del servidor (`nomadmin`) sino con `nomcolab_app`, que recibe sus
+  privilegios por el rol `rol_nomcolab_app` (`SELECT/INSERT/UPDATE/DELETE` en `usuario`, `sesion` y
+  `preferencias`; nada de `CREATE/ALTER/DROP`). `rol_nomcolab_consulta` (usuario `nomcolab_lector`)
+  lee por columnas, sin `hash_contrasena` ni `sal`. Script `azure/roles-bd.sql`, aplicado con
+  `./desplegar.sh roles` (nuevo; usa `azure/AplicarSql.java` con el controlador del propio jar).
+- Aplicado y probado en Azure: 15 de 15 comprobaciones (sin rol: todo negado; la app no puede
+  crear, cambiar ni borrar tablas; el lector no ve contraseñas) y el flujo completo de la página
+  conectada como `nomcolab_app`. La Web App quedó con ese usuario y sin `NOM_ADMIN_*`. La base se
+  abrió solo durante las pruebas y quedó cerrada.
+- **Pruebas de seguridad de la aplicación** en `4-CODIGO/pruebas/seguridad.py`: 20 de 20 (sesión,
+  validación, bloqueo y los roles de cada espacio).
+- **Solo lectura:** la barra del editor ahora solo trae buscar, enfoque y descargar (antes la regla
+  que la atenuaba no se aplicaba y además habría bloqueado las descargas); buscar no ofrece reemplazar.
+- **Se eliminó la presentación** (PDF, fuentes e imágenes que solo usaba ella). `5-PRESENTACION`
+  pasó a `5-DOCUMENTO-MODULO` con lo que usa el documento del módulo; `imprimir.py` ya no necesita
+  Selenium. El PDF es ahora `ENTREGA/Modulo web con BD, Azure y roles - NOM-COLAB.pdf` (9 páginas),
+  reescrito: roles en la base y por espacio, pruebas reales, capturas nuevas de Compartir y de
+  Solo lectura.
+- **Documentación revisada contra el código:** `LEEME.md`, `README.md`, `DESPLIEGUE-AZURE.md`
+  (sección de roles de la base), `DISENO-UI.md` (ya no habla del selector de modo ni de la
+  minibarra; agrega miniaturas y solo lectura), diagrama de paquetes (Spring Boot 4.1, dónde corre).

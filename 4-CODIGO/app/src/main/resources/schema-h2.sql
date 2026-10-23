@@ -1,13 +1,7 @@
--- NOM-COLAB · Modulo Gestion de cuentas (usuarios, roles, sesiones y preferencias).
+-- NOM-COLAB · Modulo Gestion de cuentas (usuarios, sesiones y preferencias).
 -- H2 embebido: el equipo que comparte el espacio en la red local.
 -- La version para Azure SQL Database es schema-sqlserver.sql (mismas tablas).
 -- Se ejecuta en cada arranque; todo es idempotente.
-
-CREATE TABLE IF NOT EXISTS rol (
-    id          INT          PRIMARY KEY,
-    nombre      VARCHAR(20)  NOT NULL UNIQUE,
-    descripcion VARCHAR(160) NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS usuario (
     id                VARCHAR(16)  PRIMARY KEY,
@@ -19,9 +13,13 @@ CREATE TABLE IF NOT EXISTS usuario (
     intentos_fallidos INT          DEFAULT 0 NOT NULL,
     bloqueado_hasta   BIGINT       DEFAULT 0 NOT NULL,
     creado            BIGINT       NOT NULL,
-    color             VARCHAR(9)   NOT NULL,
-    id_rol            INT          DEFAULT 2 NOT NULL REFERENCES rol(id)
+    color             VARCHAR(9)   NOT NULL
 );
+
+-- Bases de antes: ya no hay administrador general (cada cuenta controla sus espacios),
+-- asi que se quitan la columna id_rol y la tabla rol. Las cuentas se conservan.
+ALTER TABLE usuario DROP COLUMN IF EXISTS id_rol;
+DROP TABLE IF EXISTS rol;
 
 CREATE TABLE IF NOT EXISTS preferencias (
     id_usuario          VARCHAR(16) PRIMARY KEY REFERENCES usuario(id) ON DELETE CASCADE,
@@ -41,7 +39,3 @@ CREATE TABLE IF NOT EXISTS sesion (
     expira     BIGINT      NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_sesion_usuario ON sesion(id_usuario);
-
-MERGE INTO rol (id, nombre, descripcion) KEY (id) VALUES
-    (1, 'ADMINISTRADOR', 'Administra las cuentas: ve a todos los usuarios, cambia su rol y desbloquea cuentas'),
-    (2, 'USUARIO',       'Crea espacios y documentos y colabora en los espacios donde tiene acceso');

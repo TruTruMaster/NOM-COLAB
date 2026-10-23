@@ -179,7 +179,6 @@
       NOM.aplicarPreferencias(r.preferencias);
       if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
       NOM.app.alIniciarSesion(r);
-      if (r.usuario.rol === "ADMINISTRADOR") NOM.aviso("Entraste como Administrador: tienes acceso a Administrar usuarios", { tipo: "info", ms: 4500 });
     }
 
     async function enviando(f, fn) {
@@ -230,7 +229,7 @@
         <div class="campo"><label for="re">Empresa u organización <span class="suave" style="font-weight:600">(opcional)</span></label>
           <div class="entrada">${ico("door-open")}<input id="re" name="empresa" autocomplete="organization" maxlength="80" placeholder="Ej. CECyT 11 Wilfredo Massieu"></div></div>
         <button class="btn primario ancho" type="submit">Crear cuenta ${ico("sparkles")}</button>
-        <p class="suave chico" style="text-align:center">Tu contraseña se guarda cifrada; nadie puede leerla, ni el administrador.</p>
+        <p class="suave chico" style="text-align:center">Tu contraseña se guarda cifrada; nadie puede leerla, ni quien instaló el servidor.</p>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
         <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       </form>`);

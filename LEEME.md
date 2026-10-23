@@ -4,21 +4,39 @@ Equipo 6 "WACK" · CECyT 9 · 5IM7
 
 | Carpeta | Qué es | Qué hacer |
 |---|---|---|
-| **`ENTREGA/`** | **Los 2 PDF para entregar:** la presentación y el documento del módulo web (BD + Azure + roles) | Entregar ambos |
+| **`ENTREGA/`** | **El PDF para entregar:** el documento del módulo web (base de datos + Azure + seguridad con roles) | Entregarlo |
 | `1-ENTREGA-Diagramas-de-Actividades/` | **PDF para entregar** (y el mismo en .docx), las 7 imágenes sueltas y los editables de draw.io | Entregar `Diagrama de Actividades NOM-COLAB.pdf` |
 | `2-PAGINA-Servidor/` | La página completa (servidor + interfaz), **con Java incluido** | Windows: doble clic en `INICIAR-Windows.bat` · Linux: `./INICIAR-Linux.sh` |
 | `3-APP-Android/` | `NOM-COLAB.apk` (Android 7 en adelante) | Pasarla al celular e instalarla |
 | `4-CODIGO/` | Todo el código fuente, diagramas UML y documentación | Para revisar o seguir desarrollando |
-| `5-PRESENTACION/` | Imágenes de la presentación (diagramas y capturas). | Presentar |
-| `CREDENCIALES-AZURE.txt` | Usuario administrador y contraseña de la base de datos de Azure. **Privado** | No compartir ni subir |
+| `5-DOCUMENTO-MODULO/` | Fuentes del PDF del módulo: `fuentes/modulo.html`, sus imágenes y `fuentes/imprimir.py`, que lo vuelve a generar en `ENTREGA/` | Solo si se cambia el documento |
+| `CREDENCIALES-AZURE.txt` | Contraseñas de la base de Azure (administrador y usuarios con rol) y cuentas de prueba. **Privado** | No compartir ni subir |
 | `LOG.md` | Registro de todo lo que se hizo | — |
 
 ## En Internet (Azure)
 
 **https://nomcolab-wack.azurewebsites.net** — el módulo de cuentas conectado a Azure SQL
-Database, con roles (Administrador / Usuario). Cómo se subió y cómo hacer la demo:
-`4-CODIGO/docs/DESPLIEGUE-AZURE.md`. Ábrelo unos minutos antes de presentar: la primera
-entrada tras un rato sin uso tarda ~1 min porque el plan gratuito se duerme.
+Database, con seguridad con roles: en la base (la página entra como `nomcolab_app`, con el rol
+`rol_nomcolab_app`, sin poder tocar las tablas) y en cada espacio (Propietario / Puede editar /
+Solo lectura). Cómo se subió y cómo hacer la demo:
+`4-CODIGO/docs/DESPLIEGUE-AZURE.md`. Normalmente está apagado para no gastar: antes de presentar,
+prenderlo con `nomcolab` → 1 Azure → 1 Prender (abre la base y despierta la página; la primera
+entrada tras un rato sin uso tarda ~1 min porque el plan gratuito se duerme). Al terminar,
+`nomcolab` → 1 Azure → 2 Apagar.
+
+## En Internet desde una computadora propia
+
+**https://nomcolab.tailfd65f2.ts.net** (enlace corto: **is.gd/nomcolab**): la misma página, pero
+corriendo en la laptop del equipo y publicada gratis con Tailscale Funnel, sin los límites del
+plan gratuito de Azure. Solo está en línea cuando se prende:
+
+```
+nomcolab            # menú: 1 Azure o 2 Local, y luego Prender / Apagar / Estado / Reiniciar
+nomcolab local up   # o directo, sin menú (también: down, estado, reiniciar; y "azure ...")
+```
+
+Azure y el servidor propio son independientes (cada uno tiene sus cuentas y documentos). Cómo
+funciona, respaldos e instalación: `4-CODIGO/docs/SERVIDOR-PROPIO.md`.
 
 ## Usarlo en 3 pasos
 
@@ -65,7 +83,8 @@ y con **… → Subir a un espacio** quedan guardados en el servidor.
 Para que otra persona entre a tu espacio, en el espacio usa **Compartir** y
 escribe su nombre de usuario (o acepta su solicitud).
 
-Los datos se guardan en `2-PAGINA-Servidor/datos/`: usuarios, roles y sesiones en la base
-de datos H2 (`nom-db.mv.db`); espacios, documentos y versiones en JSON. Para empezar desde
-cero, borra esa carpeta. **La primera cuenta que se registra queda como Administrador** y ve
-"Administrar usuarios" (cambiar roles, desbloquear cuentas).
+Los datos se guardan en `2-PAGINA-Servidor/datos/`: usuarios y sesiones en la base de datos
+H2 (`nom-db.mv.db`); espacios, documentos y versiones en JSON. Para empezar desde cero, borra
+esa carpeta. **No hay administrador:** cada cuenta controla solo sus espacios y documentos. El
+propietario de un espacio decide quién entra, cambia a cada miembro entre *Puede editar* y
+*Solo lectura*, o le quita el acceso.

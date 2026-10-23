@@ -25,7 +25,7 @@ regeneran con:
 | 14 | Secuencia — unirse a un espacio en la LAN | `src/14-secuencia-unirse.puml` |
 | 15 | Secuencia — edición concurrente y convergencia CRDT | `src/15-secuencia-edicion.puml` |
 | 16 | Secuencia — Android sin conexión y resincronización | `src/16-secuencia-android.puml` |
-| 17 | **Base de datos del módulo Gestión de cuentas** (usuario, rol, sesión, preferencias — Azure SQL) | `src/17-er-cuentas.puml` |
+| 17 | **Base de datos del módulo Gestión de cuentas** (usuario, sesión, preferencias — Azure SQL) | `src/17-er-cuentas.puml` |
 
 | A1–A8 | **Actividades** por módulo del mapa de navegación (carriles Usuario / Sistema / Base de datos) | `actividades/generar.py` |
 

@@ -5,14 +5,6 @@ skinparam linetype ortho
 hide circle
 
 ' ===================== CUENTAS =====================
-entity "rol" as rol {
-  * id : int <<PK>>
-  --
-  * nombre : varchar(20) <<UNIQUE>>
-  ' ADMINISTRADOR | USUARIO
-  * descripcion : nvarchar(160)
-}
-
 entity "usuario" as usuario {
   * id : varchar(16) <<PK>>
   --
@@ -208,7 +200,6 @@ entity "cola_pendiente" as cola {
 }
 
 ' ===================== RELACIONES =====================
-rol ||--o{ usuario
 usuario ||--o| pref
 usuario ||--o{ sesion
 usuario ||--o{ espacio

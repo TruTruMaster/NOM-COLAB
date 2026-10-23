@@ -1,7 +1,6 @@
 package mx.wack.nom.core.servicio;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -9,14 +8,16 @@ import java.util.Optional;
 
 import mx.wack.nom.core.almacen.RepositorioUsuarios;
 import mx.wack.nom.core.modelo.Preferencias;
-import mx.wack.nom.core.modelo.Rol;
 import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.Usuario;
 
 /**
  * Modulo 1 - Gestion de cuentas (CU-01 a CU-05, CU-27). Diagramas A1 y A2.
- * Las cuentas y su rol viven en la base de datos (RepositorioUsuariosJdbc) en la computadora, y en
+ * Las cuentas viven en la base de datos (RepositorioUsuariosJdbc) en la computadora, y en
  * archivos JSON en el teléfono. La misma lógica para los dos.
+ *
+ * No hay administrador general: cada cuenta controla solo sus espacios y documentos, y quién
+ * entra a cada espacio (Lectura / Edición / Propietario) lo decide su propietario.
  */
 public class ServicioCuentas {
 
@@ -31,52 +32,14 @@ public class ServicioCuentas {
     private final int maxIntentos;
     private final int minutosBloqueo;
     private final int horasSesion;
-    private final String adminUsuario;
-    private final String adminContrasena;
 
     public ServicioCuentas(RepositorioUsuarios repo, Cifrado cifrado,
-                           int maxIntentos, int minutosBloqueo, int horasSesion,
-                           String adminUsuario, String adminContrasena) {
+                           int maxIntentos, int minutosBloqueo, int horasSesion) {
         this.repo = repo;
         this.cifrado = cifrado;
         this.maxIntentos = maxIntentos;
         this.minutosBloqueo = minutosBloqueo;
         this.horasSesion = horasSesion;
-        this.adminUsuario = adminUsuario == null ? "" : adminUsuario;
-        this.adminContrasena = adminContrasena == null ? "" : adminContrasena;
-    }
-
-    /**
-     * Cuenta de administrador inicial. En Azure se crea con NOM_ADMIN_USUARIO y
-     * NOM_ADMIN_CONTRASENA (configuracion de la Web App, nunca en el codigo).
-     * Sin esas variables, en la red local, la primera cuenta que se registra
-     * queda como administradora (es quien instalo el servidor). Se llama al arrancar.
-     */
-    public synchronized void asegurarAdministrador() {
-        if (adminUsuario.isBlank() || adminContrasena.isBlank()) {
-            // Cuentas importadas de una version anterior: la mas antigua administra.
-            if (repo.cuantosConRol(Rol.ADMINISTRADOR) == 0)
-                repo.todos().stream().findFirst().ifPresent(u -> {
-                    u.rol = Rol.ADMINISTRADOR;
-                    repo.guardar(u);
-                    log.info("La cuenta {} (la mas antigua) ahora es ADMINISTRADOR", u.nombre);
-                });
-            return;
-        }
-        Optional<Usuario> existente = repo.porNombre(adminUsuario);
-        if (existente.isPresent()) {
-            Usuario u = existente.get();
-            if (!u.esAdministrador()) {
-                u.rol = Rol.ADMINISTRADOR;
-                repo.guardar(u);
-                log.info("La cuenta {} ahora es ADMINISTRADOR", u.nombre);
-            }
-            return;
-        }
-        Usuario u = registrar(adminUsuario, adminContrasena, "WACK");
-        u.rol = Rol.ADMINISTRADOR;
-        repo.guardar(u);
-        log.info("Cuenta de administrador creada: {}", u.nombre);
     }
 
     /** CU-01 Crear usuario. */
@@ -100,9 +63,8 @@ public class ServicioCuentas {
         u.hashContrasena = cifrado.hash(contrasena.toCharArray(), u.sal);
         u.creado = System.currentTimeMillis();
         u.color = COLORES[Math.floorMod(u.nombreClave.hashCode(), COLORES.length)];
-        u.rol = repo.cuantosConRol(Rol.ADMINISTRADOR) == 0 && adminUsuario.isBlank() ? Rol.ADMINISTRADOR : Rol.USUARIO;
         repo.guardar(u);
-        log.info("Usuario registrado: {} ({})", u.nombre, u.rol);
+        log.info("Usuario registrado: {}", u.nombre);
         return u;
     }
 
@@ -178,45 +140,12 @@ public class ServicioCuentas {
         return p;
     }
 
-    // ------------------------------------------------------------ administracion (solo ADMINISTRADOR)
-
-    public List<Usuario> todos() { return List.copyOf(repo.todos()); }
-
-    /** Cambia el rol de otra cuenta. Siempre debe quedar al menos un administrador. */
-    public synchronized Usuario cambiarRol(Usuario admin, String id, String rolNuevo) {
-        Rol rol;
-        try {
-            rol = Rol.valueOf(rolNuevo == null ? "" : rolNuevo.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw ErrorNom.invalido("El rol debe ser ADMINISTRADOR o USUARIO", "rol");
-        }
-        Usuario u = repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("La cuenta"));
-        if (u.id.equals(admin.id) && rol != Rol.ADMINISTRADOR)
-            throw ErrorNom.prohibido("No puedes quitarte tu propio rol de administrador");
-        if (u.rol == rol) return u;
-        u.rol = rol;
-        repo.guardar(u);
-        log.info("{} cambio el rol de {} a {}", admin.nombre, u.nombre, rol);
-        return u;
-    }
-
-    /** Quita el bloqueo por intentos fallidos (CU-04) antes de que pasen los 15 minutos. */
-    public synchronized Usuario desbloquear(Usuario admin, String id) {
-        Usuario u = repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("La cuenta"));
-        u.bloqueadoHasta = 0;
-        u.intentosFallidos = 0;
-        repo.guardar(u);
-        log.info("{} desbloqueo la cuenta {}", admin.nombre, u.nombre);
-        return u;
-    }
-
     public static Map<String, Object> publico(Usuario u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", u.id);
         m.put("nombre", u.nombre);
         m.put("empresa", u.empresa);
         m.put("color", u.color);
-        m.put("rol", u.rol.name());
         m.put("creado", u.creado);
         return m;
     }

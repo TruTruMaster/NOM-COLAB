@@ -27,7 +27,6 @@
   function cascaron(actual, tituloMovil) {
     const sinCuenta = NOM.local.activo();
     const u = sinCuenta ? NOM.local.usuario() : api.usuario() || {};
-    const esAdmin = !sinCuenta && u.rol === "ADMINISTRADOR";
     raiz.innerHTML = "";
     const c = html(`<div class="app con-riel">
       <aside class="riel" aria-label="Navegación">
@@ -35,7 +34,6 @@
         <button class="riel-buscar" type="button" data-a="paleta" aria-label="Buscar o ir a (Ctrl+K)">${ico("search")}<span class="crece">Buscar o ir a…</span><kbd>Ctrl K</kbd></button>
         <a class="riel-item" href="#/" ${actual === "inicio" ? 'aria-current="page"' : ""}>${ico("house")} Inicio</a>
         <a class="riel-item" href="#/dispositivo" ${actual === "dispositivo" ? 'aria-current="page"' : ""} data-micro="Este dispositivo|Documentos guardados aquí, cuánto ocupan y cambios sin enviar.">${ico("hard-drive")} Este dispositivo</a>
-        ${esAdmin ? `<a class="riel-item" href="#/admin" ${actual === "admin" ? 'aria-current="page"' : ""}>${ico("shield-check")} Administrar usuarios</a>` : ""}
         ${sinCuenta ? `
         <div class="clay" style="margin-top:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
           <b style="font-size:14px">Sin cuenta</b>
@@ -47,7 +45,7 @@
         <nav class="riel-lista" data-riel-espacios></nav>`}
         <div class="riel-pie">
           ${avatar(u)}
-          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${sinCuenta ? "" : `<div class="chico suave recorta" style="font-weight:800">${ico(esAdmin ? "shield-check" : "users", "ico-s")} ${esAdmin ? "Administrador" : "Usuario"}</div>`}</div>
+          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${!sinCuenta && u.empresa ? `<div class="chico suave recorta" style="font-weight:800">${esc(u.empresa)}</div>` : ""}</div>
           <button class="icono-btn" data-a="cuenta" aria-label="Cuenta y ajustes" data-micro="Cuenta|Preferencias y cerrar sesión.">${ico("settings")}</button>
         </div>
       </aside>
@@ -79,8 +77,7 @@
       { texto: "Archivos en este dispositivo", icono: "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
     ] : [
-      { titulo: u.nombre + (u.empresa ? " · " + u.empresa : "") + " · " + (esAdmin ? "Administrador" : "Usuario") },
-      ...(esAdmin ? [{ texto: "Administrar usuarios", icono: "shield-check", fn: () => { location.hash = "#/admin"; } }] : []),
+      { titulo: u.nombre + (u.empresa ? " · " + u.empresa : "") },
       { texto: "Archivos en este dispositivo", icono: "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
       ...(api.empaquetada ? [{ texto: "Cambiar de servidor", icono: "server", fn: () => { api.fijarServidor(""); cerrarSesion(true); } }] : []),
@@ -184,13 +181,6 @@
       await montar(NOM.vistaEspacios.espacio(v, decodeURIComponent(m[1])));
       return;
     }
-    if (h.startsWith("#/admin")) {
-      const v = cascaron("admin", "Administrar usuarios");
-      app.fijarFab(null);
-      document.title = "Administrar usuarios · NOM-COLAB";
-      await NOM.vistaAdmin.pintar(v);
-      return;
-    }
     const v = cascaron("inicio", "Inicio");
     app.fijarFab(NOM.vistaEspacios.nuevoEspacio);
     await NOM.vistaEspacios.inicio(v);
@@ -211,12 +201,10 @@
   // ¿Servidor en la red local o en la nube? Cambia los textos de conexión y "Unirse".
   api.get("/api/red/info", undefined, { ms: 90000 }).then((i) => { api.lan = i.lan !== false; NOM.guardar("nom.lan", api.lan); }).catch(() => {});
 
-  // El rol también se refresca aquí: si un administrador lo cambió, el menú se actualiza al recargar.
+  // Los datos de la cuenta y sus preferencias se refrescan al abrir (pudieron cambiar en otro equipo).
   if (api.token()) api.get("/api/cuentas/yo").then((r) => {
-    const antes = (api.usuario() || {}).rol;
     api.fijarSesion(api.token(), r.usuario);
     NOM.aplicarPreferencias(r.preferencias);
-    if (antes !== r.usuario.rol) ruta();
   }).catch(() => {});
 
   /** Al abrir la página con sesión: se reabre la bóveda cifrada de la cuenta. Si su llave ya no

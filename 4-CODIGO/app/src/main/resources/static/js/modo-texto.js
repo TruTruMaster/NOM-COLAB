@@ -1585,13 +1585,14 @@
       let panelBuscar = null, hallazgos = [], actual = -1;
       const resaltar = (typeof CSS !== "undefined" && CSS.highlights) ? CSS.highlights : null;
       function buscar(reemplazar) {
+        if (ed.soloLectura) reemplazar = false;   // con solo lectura se busca, pero no se reemplaza
         if (panelBuscar) { panelBuscar.classList.toggle("con-reemplazo", !!reemplazar || panelBuscar.classList.contains("con-reemplazo")); $("[data-q]", panelBuscar).select(); return; }
         const s = leerSel();
         const inicial = s.col ? "" : visPintado.slice(s.ini, s.fin).map((x) => x.c).join("").slice(0, 100);
         panelBuscar = html(`<div class="wd-buscar ${reemplazar ? "con-reemplazo" : ""}" role="search">
           <div class="fila"><input data-q placeholder="Buscar en el documento" aria-label="Buscar" value="${esc(inicial)}"><span data-cuenta class="suave">0/0</span>
             <button class="icono-btn chico" data-b="ant" aria-label="Anterior">${ico("chevron-up", "ico-s")}</button><button class="icono-btn chico" data-b="sig" aria-label="Siguiente">${ico("chevron-down", "ico-s")}</button>
-            <button class="icono-btn chico" data-b="mas" aria-label="Reemplazar" data-micro="Reemplazar||Ctrl+H">${ico("replace", "ico-s")}</button><button class="icono-btn chico" data-b="cerrar" aria-label="Cerrar">${ico("x", "ico-s")}</button></div>
+            ${ed.soloLectura ? "" : `<button class="icono-btn chico" data-b="mas" aria-label="Reemplazar" data-micro="Reemplazar||Ctrl+H">${ico("replace", "ico-s")}</button>`}<button class="icono-btn chico" data-b="cerrar" aria-label="Cerrar">${ico("x", "ico-s")}</button></div>
           <div class="fila reemplazo"><input data-r placeholder="Reemplazar con" aria-label="Reemplazar con"><button class="btn chico" data-b="uno">Reemplazar</button><button class="btn chico" data-b="todos">Todos</button></div>
           <div class="fila opciones"><label><input type="checkbox" data-mm> Mayúsculas/minúsculas</label><label><input type="checkbox" data-pc> Palabra completa</label></div></div>`);
         ed.vista.append(panelBuscar);

@@ -5,10 +5,8 @@ left to right direction
 
 actor "Visitante" as V
 actor "Usuario" as U
-actor "Administrador" as AD
 actor "Módulo de\nseguridad" as S <<sistema>>
 U -up-|> V
-AD -up-|> U
 
 rectangle "Gestión de cuentas" {
   usecase "CU-01\nCrear usuario" as CU01
@@ -17,19 +15,15 @@ rectangle "Gestión de cuentas" {
   usecase "CU-04\nBloquear acceso\npor intentos fallidos" as CU04
   usecase "CU-05\nCifrar credenciales" as CU05
   usecase "CU-27\nConfigurar\npreferencias" as CU27
-  usecase "CU-30\nAdministrar\nusuarios y roles" as CU30
 }
 
 V --> CU01
 V --> CU02
 U --> CU03
 U --> CU27
-AD --> CU30
-CU30 ..> CU02 : <<include>>
 CU01 ..> CU05 : <<include>>
 CU02 ..> CU05 : <<include>>
 CU04 ..> CU02 : <<extend>>
 CU04 -- S
 CU05 -- S
-CU30 -- S
 @enduml

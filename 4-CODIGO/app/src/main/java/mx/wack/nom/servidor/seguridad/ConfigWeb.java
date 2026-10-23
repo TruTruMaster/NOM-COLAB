@@ -9,11 +9,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class ConfigWeb implements WebMvcConfigurer {
 
     private final FiltroSesion filtro;
-    private final FiltroRol filtroRol;
 
-    public ConfigWeb(FiltroSesion filtro, FiltroRol filtroRol) {
+    public ConfigWeb(FiltroSesion filtro) {
         this.filtro = filtro;
-        this.filtroRol = filtroRol;
     }
 
     @Override
@@ -21,7 +19,6 @@ public class ConfigWeb implements WebMvcConfigurer {
         registry.addInterceptor(filtro)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/cuentas/registro", "/api/cuentas/sesion", "/api/red/info");
-        registry.addInterceptor(filtroRol).addPathPatterns("/api/admin/**");
     }
 
     /**

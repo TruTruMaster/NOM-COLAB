@@ -9,18 +9,9 @@
 -- =====================================================================
 
 -- ------------------------- CUENTAS -----------------------------------
--- Rol de la cuenta: la seguridad del modulo Gestion de cuentas.
--- (Lo implementado y desplegado en Azure SQL esta en
---  app/src/main/resources/schema-sqlserver.sql y schema-h2.sql.)
-CREATE TABLE rol (
-    id          INT          PRIMARY KEY,
-    nombre      VARCHAR(20)  NOT NULL UNIQUE,
-    descripcion VARCHAR(160) NOT NULL
-);
-INSERT INTO rol VALUES
-    (1, 'ADMINISTRADOR', 'Administra las cuentas: ve a todos los usuarios, cambia su rol y desbloquea cuentas'),
-    (2, 'USUARIO',       'Crea espacios y documentos y colabora en los espacios donde tiene acceso');
-
+-- Sin administrador general: cada cuenta controla sus espacios; los permisos viven en
+-- la tabla acceso (por espacio). Lo implementado y desplegado en Azure SQL esta en
+-- app/src/main/resources/schema-sqlserver.sql y schema-h2.sql.
 CREATE TABLE usuario (
     id                UUID         PRIMARY KEY,
     nombre            VARCHAR(50)  NOT NULL UNIQUE,
@@ -28,8 +19,7 @@ CREATE TABLE usuario (
     empresa           VARCHAR(120),
     intentos_fallidos SMALLINT     NOT NULL DEFAULT 0,
     bloqueado         BOOLEAN      NOT NULL DEFAULT FALSE,
-    creado            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    id_rol            INT          NOT NULL DEFAULT 2 REFERENCES rol(id)
+    creado            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE preferencias (

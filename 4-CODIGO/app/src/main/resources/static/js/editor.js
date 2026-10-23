@@ -106,16 +106,26 @@
     }
 
     // ------------------------------------------------------------ herramientas
-    // Cada modo aporta las suyas; deshacer/rehacer e historial son comunes.
+    // Cada modo aporta las suyas; deshacer/rehacer e historial son comunes. Con permiso de solo
+    // lectura solo quedan las que no cambian el documento (buscar, enfoque y exportar).
     function pintarHerramientas() {
-      const items = [
+      const deModo = ed.modoApi.herramientas ? ed.modoApi.herramientas(ed) : [];
+      const comunes = [
+        { id: "enfoque", icono: "scan-eye", micro: "Modo enfoque|Oculta todo menos tu contenido.|Ctrl+.", fn: () => enfoque(true), clase: "solo-escritorio" },
+        { id: "exportar", icono: "download", micro: "Exportar|Guarda una copia en otro formato.", fn: exportar },
+      ];
+      const items = ed.soloLectura ? [
+        { html: `<span class="ed-lectura-aviso">${ico("eye", "ico-s")} Solo lectura: puedes ver, buscar y descargar</span>` },
+        "->",
+        ...deModo.filter((it) => it && it.id === "buscar"),
+        ...comunes,
+      ] : [
         { id: "deshacer", icono: "undo-2", micro: "Deshacer|Revierte tu último cambio; los demás lo verán.|Ctrl+Z", fn: () => ed.deshacer(), off: () => !doc.puedeDeshacer() },
         { id: "rehacer", icono: "redo-2", micro: "Rehacer|Vuelve a aplicar lo que deshiciste.|Ctrl+Y", fn: () => ed.rehacer(), off: () => !doc.puedeRehacer() },
         "|",
-        ...(ed.modoApi.herramientas ? ed.modoApi.herramientas(ed) : []),
+        ...deModo,
         "->",
-        { id: "enfoque", icono: "scan-eye", micro: "Modo enfoque|Oculta todo menos tu contenido.|Ctrl+.", fn: () => enfoque(true), clase: "solo-escritorio" },
-        { id: "exportar", icono: "download", micro: "Exportar|Guarda una copia en otro formato.", fn: exportar },
+        ...comunes,
       ];
       ed.herr.innerHTML = "";
       ed.botones = {};

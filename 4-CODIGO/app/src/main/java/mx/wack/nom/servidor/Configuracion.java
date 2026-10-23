@@ -34,10 +34,8 @@ public class Configuracion {
     public ServicioCuentas servicioCuentas(RepositorioUsuarios repo, Cifrado cifrado,
                                            @Value("${nom.cuentas.max-intentos}") int maxIntentos,
                                            @Value("${nom.cuentas.minutos-bloqueo}") int minutosBloqueo,
-                                           @Value("${nom.cuentas.horas-sesion}") int horasSesion,
-                                           @Value("${nom.admin.usuario:}") String adminUsuario,
-                                           @Value("${nom.admin.contrasena:}") String adminContrasena) {
-        return new ServicioCuentas(repo, cifrado, maxIntentos, minutosBloqueo, horasSesion, adminUsuario, adminContrasena);
+                                           @Value("${nom.cuentas.horas-sesion}") int horasSesion) {
+        return new ServicioCuentas(repo, cifrado, maxIntentos, minutosBloqueo, horasSesion);
     }
 
     @Bean

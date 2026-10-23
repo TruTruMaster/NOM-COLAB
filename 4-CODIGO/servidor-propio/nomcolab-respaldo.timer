@@ -1,0 +1,9 @@
+[Unit]
+Description=Respaldo diario de NOM-COLAB (03:30; si la computadora estaba apagada, al prenderla)
+
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

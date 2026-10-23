@@ -2,7 +2,6 @@ package mx.wack.nom.servidor.repositorio;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,19 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import mx.wack.nom.core.almacen.RepositorioUsuarios;
 import mx.wack.nom.core.modelo.Preferencias;
-import mx.wack.nom.core.modelo.Rol;
 import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.Usuario;
 import tools.jackson.core.type.TypeReference;
 
 /**
- * Usuarios, roles, sesiones y preferencias en la base de datos (diagrama 12).
+ * Usuarios, sesiones y preferencias en la base de datos (diagrama 12).
  * H2 embebido en la red local; Azure SQL Database en la nube. El SQL es el
  * comun a los dos motores; las tablas se crean con schema-h2.sql o
  * schema-sqlserver.sql segun spring.sql.init.platform.
- *
- * El rol se "jala" de la tabla rol con un JOIN en cada consulta, asi que un
- * cambio de rol aplica en la siguiente peticion sin cerrar la sesion.
  */
 @Repository
 public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
@@ -40,11 +35,10 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
 
     private static final String SELECT_USUARIO = """
             SELECT u.id, u.nombre, u.nombre_clave, u.empresa, u.hash_contrasena, u.sal,
-                   u.intentos_fallidos, u.bloqueado_hasta, u.creado, u.color, r.nombre AS rol,
+                   u.intentos_fallidos, u.bloqueado_hasta, u.creado, u.color,
                    p.tema, p.autoguardado_min, p.versiones_conservar, p.calidad,
                    p.movimiento_reducido, p.enfoque_atenuar, p.idioma
               FROM usuario u
-              JOIN rol r ON r.id = u.id_rol
               LEFT JOIN preferencias p ON p.id_usuario = u.id
             """;
 
@@ -65,26 +59,22 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         return db.sql(SELECT_USUARIO + " WHERE u.nombre_clave = ?").param(clave).query(this::usuario).optional();
     }
 
-    @Override public Collection<Usuario> todos() {
-        return db.sql(SELECT_USUARIO + " ORDER BY u.creado").query(this::usuario).list();
-    }
-
     @Override @Transactional
     public void guardar(Usuario u) {
         int n = db.sql("""
                 UPDATE usuario SET nombre = ?, nombre_clave = ?, empresa = ?, hash_contrasena = ?, sal = ?,
-                       intentos_fallidos = ?, bloqueado_hasta = ?, color = ?, id_rol = ?
+                       intentos_fallidos = ?, bloqueado_hasta = ?, color = ?
                  WHERE id = ?""")
                 .params(u.nombre, u.nombreClave, u.empresa, u.hashContrasena, u.sal,
-                        u.intentosFallidos, u.bloqueadoHasta, u.color, u.rol.id, u.id)
+                        u.intentosFallidos, u.bloqueadoHasta, u.color, u.id)
                 .update();
         if (n == 0) {
             db.sql("""
                     INSERT INTO usuario (id, nombre, nombre_clave, empresa, hash_contrasena, sal,
-                                         intentos_fallidos, bloqueado_hasta, creado, color, id_rol)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
+                                         intentos_fallidos, bloqueado_hasta, creado, color)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
                     .params(u.id, u.nombre, u.nombreClave, u.empresa, u.hashContrasena, u.sal,
-                            u.intentosFallidos, u.bloqueadoHasta, u.creado, u.color, u.rol.id)
+                            u.intentosFallidos, u.bloqueadoHasta, u.creado, u.color)
                     .update();
         }
         Preferencias p = u.preferencias == null ? new Preferencias() : u.preferencias;
@@ -127,10 +117,6 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         db.sql("DELETE FROM sesion WHERE token = ?").param(token).update();
     }
 
-    @Override public long cuantosConRol(Rol rol) {
-        return db.sql("SELECT COUNT(*) FROM usuario WHERE id_rol = ?").param(rol.id).query(Long.class).single();
-    }
-
     /**
      * Al arrancar: se borran las sesiones vencidas y, si la base esta vacia y
      * existe el usuarios.json de versiones anteriores, se importan esas cuentas
@@ -146,7 +132,7 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
                 new TypeReference<LinkedHashMap<String, Usuario>>() { }, null);
         if (viejos == null || viejos.isEmpty()) return;
         List<Usuario> lista = List.copyOf(viejos.values());
-        lista.forEach(u -> { if (u.rol == null) u.rol = Rol.USUARIO; guardar(u); });
+        lista.forEach(this::guardar);
         log.info("Se importaron {} cuentas de usuarios.json a la base de datos", lista.size());
     }
 
@@ -162,7 +148,6 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         u.bloqueadoHasta = rs.getLong("bloqueado_hasta");
         u.creado = rs.getLong("creado");
         u.color = rs.getString("color");
-        u.rol = Rol.valueOf(rs.getString("rol"));
         Preferencias p = new Preferencias();
         if (rs.getString("tema") != null) {
             p.tema = rs.getString("tema");

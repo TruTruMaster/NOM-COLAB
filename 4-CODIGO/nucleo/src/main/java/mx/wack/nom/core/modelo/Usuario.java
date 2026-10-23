@@ -15,13 +15,7 @@ public class Usuario {
     public long creado;
     /** Color con el que aparece su cursor y su avatar. */
     public String color;
-    /** Se lee de la tabla rol (usuario.id_rol). Los nuevos registros son USUARIO. */
-    public Rol rol = Rol.USUARIO;
     public Preferencias preferencias = new Preferencias();
-
-    public boolean esAdministrador() {
-        return rol == Rol.ADMINISTRADOR;
-    }
 
     public boolean estaBloqueado(long ahora) {
         return bloqueadoHasta > ahora;

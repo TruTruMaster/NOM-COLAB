@@ -124,11 +124,10 @@ public class ServicioAnfitrion extends Service {
         Cifrado cifrado = new Cifrado();
         // Mismos valores que application.properties del servidor de la computadora.
         Difusor difusor = new Difusor(5);
-        ServicioCuentas cuentas = new ServicioCuentas(usuarios, cifrado, 5, 15, 72, "", "");
+        ServicioCuentas cuentas = new ServicioCuentas(usuarios, cifrado, 5, 15, 72);
         ServicioEspacios espacios = new ServicioEspacios(espaciosRepo, docsRepo, cuentas, difusor, nodo, cifrado);
         documentos = new ServicioDocumentos(docsRepo, espacios, cuentas, difusor, cifrado, nodo);
         descubrimiento = new Descubrimiento(nodo, espaciosRepo, usuarios, Json.YO, true, 47474);
-        cuentas.asegurarAdministrador();
 
         http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo));
         puerto = http.iniciar(8080);

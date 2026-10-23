@@ -312,8 +312,8 @@
 .editor.enfoque .salir-enfoque { opacity: .35; }
 .editor.enfoque .salir-enfoque:hover { opacity: 1; }
 
-/* solo lectura */
-.editor.lectura .ed-herramientas { pointer-events: none; opacity: .5; }
+/* solo lectura: la barra solo trae buscar, enfoque y exportar (editor.js · pintarHerramientas) */
+.ed-lectura-aviso { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 13px; font-weight: 750; color: var(--tinta-suave); white-space: nowrap; }
 
 /* ---------------------------------------------------------------- impresión (exportar a PDF) */
 @media print {

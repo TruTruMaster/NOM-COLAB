@@ -1,52 +1,56 @@
 #!/usr/bin/env bash
-# nomcolab - control the NOM-COLAB deployment on Azure (web app + database).
+# nomcolab - prende y apaga NOM-COLAB en Azure o en esta computadora.
 #
-#   nomcolab --up      allow DB network access, start the web app, wake web and DB
-#   nomcolab --down    stop the web app, deny DB network access (DB auto-pauses when idle)
-#   nomcolab --state   report web app and database status
-#   nomcolab --reset   full cycle: --down followed by --up
+#   nomcolab                       menú: 1) Azure o 2) Local, y luego qué hacer
+#   nomcolab azure up|down|estado|reiniciar
+#   nomcolab local up|down|estado|reiniciar
+#   nomcolab --up|--down|--state|--reset   (forma anterior, solo Azure)
 #
-# Web app : nomcolab-wack (App Service, plan F1 Free, Linux, Java 21)  rg-nomcolab / westus
-# Database: nomcolab on server nomcolab-sql-6a073f.database.windows.net
-#           (Azure SQL Database, serverless GP_S_Gen5_1, free offer)  rg-nomcolab / westus
-# All operations stay within free tiers.
-
+# Azure: Web App nomcolab-wack (App Service F1 gratis, Linux, Java 21) y la base nomcolab en
+#        nomcolab-sql-6a073f.database.windows.net (Azure SQL serverless, oferta gratis), en
+#        rg-nomcolab / westus. "down" detiene la página y cierra la base a internet.
+# Local: el jar como servicio de usuario (systemd: nomcolab.service, puerto 8080, datos en
+#        ~/nomcolab-servidor) publicado por Tailscale Funnel. No arranca solo con la
+#        computadora: se prende y se apaga solo con este script.
+# Todo se queda en planes gratuitos. Más detalles: docs/SERVIDOR-PROPIO.md y docs/DESPLIEGUE-AZURE.md.
 URL="https://nomcolab-wack.azurewebsites.net"
 RG="rg-nomcolab"; APP="nomcolab-wack"; PLAN="plan-nomcolab"; SQL="nomcolab-sql-6a073f"; DB="nomcolab"
 
+AQUI="$(dirname "$(readlink -f "$0")")"
+LOCAL_DIR="$HOME/nomcolab-servidor"
+LOCAL_PUERTO=8080
+SERVICIO="nomcolab.service"
+
 T0=$(date +%s.%N)
 ERR=0
-log() { printf '[%12.6f] %s\n' "$(echo "$(date +%s.%N) - $T0" | bc)" "$*"; }
+log() { printf '[%9.3f] %s\n' "$(echo "$(date +%s.%N) - $T0" | bc)" "$*"; }
 err() { ERR=$((ERR + 1)); log "$*"; }
-
 TMP=$(mktemp); trap 'rm -f "$TMP" "$TMP.err"' EXIT
+finish() {
+  if [ "$ERR" -eq 0 ]; then log "nomcolab: $DESTINO $ACCION terminado, 0 errores"; exit 0; fi
+  log "nomcolab: $DESTINO $ACCION terminó con $ERR error(es)"; exit 1
+}
 
-# Runs an az command; logs its error output on failure. Usage: azc <subsystem> <description> az args...
+# ==================================================================== Azure
+# Corre un comando az; si falla, muestra su error. Uso: azc <parte> <descripción> args de az...
 azc() {
-  local sub="$1" what="$2"; shift 2
+  local parte="$1" que="$2"; shift 2
   if az "$@" >"$TMP" 2>"$TMP.err"; then return 0; fi
-  err "$sub: $what failed: $(grep -v '^WARNING' "$TMP.err" | head -1 | cut -c1-160)"
+  err "$parte: falló $que: $(grep -v '^WARNING' "$TMP.err" | head -1 | cut -c1-160)"
   return 1
 }
-
 need_az() {
-  if ! command -v az >/dev/null 2>&1; then err "az: Azure CLI not installed (pipx install azure-cli)"; finish; fi
-  if ! az account show -o none 2>/dev/null; then err "az: not logged in (az login --use-device-code)"; finish; fi
-  log "az: subscription '$(az account show --query name -o tsv 2>/dev/null)' user $(az account show --query user.name -o tsv 2>/dev/null)"
+  if ! command -v az >/dev/null 2>&1; then err "az: falta la Azure CLI (pipx install azure-cli)"; finish; fi
+  if ! az account show -o none 2>/dev/null; then err "az: no hay sesión (az login --use-device-code)"; finish; fi
+  log "az: suscripción '$(az account show --query name -o tsv 2>/dev/null)', usuario $(az account show --query user.name -o tsv 2>/dev/null)"
 }
-
-finish() {
-  if [ "$ERR" -eq 0 ]; then log "nomcolab: $ACTION completed, 0 errors"; exit 0; fi
-  log "nomcolab: $ACTION finished with $ERR error(s)"; exit 1
-}
-
-# HTTP probe. Prints "<code> <seconds>".
+# Prueba HTTP. Imprime "<código> <segundos>".
 probe() { curl -s -o "$TMP" -w '%{http_code} %{time_total}' --max-time "${2:-60}" "$URL$1"; }
-# A login with a non-existent user forces a DB query: 401 = DB answered, 5xx/000 = DB not reachable.
+# Un inicio de sesión con un usuario que no existe obliga a consultar la base:
+# 401 = la base respondió; 5xx/000 = no se alcanza.
 probe_db() { curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time 90 -H 'Content-Type: application/json' \
                -X POST "$URL/api/cuentas/sesion" -d '{"nombre":"nomcolab-probe","contrasena":"x"}'; }
 quota_hit() { [ "$1" = "403" ] && grep -qi "disabled\|quota" "$TMP" 2>/dev/null; }
-
 web_state() { az webapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null; }
 db_status() { az sql db show -g "$RG" -s "$SQL" -n "$DB" --query status -o tsv 2>/dev/null; }
 db_network() { az sql server show -g "$RG" -n "$SQL" --query publicNetworkAccess -o tsv 2>/dev/null; }
@@ -55,99 +59,237 @@ report_web() {
   local s; s=$(az webapp show -g "$RG" -n "$APP" --query "[state, defaultHostName, location, siteConfig.linuxFxVersion, httpsOnly]" -o tsv 2>/dev/null | tr '\n' '\t')
   local sku; sku=$(az appservice plan show -g "$RG" -n "$PLAN" --query "sku.name" -o tsv 2>/dev/null)
   IFS=$'\t' read -r st host loc rt https <<<"$s"
-  log "web: app $APP state=${st:-unknown} host=$host region=\"$loc\" plan=$PLAN sku=$sku runtime=${rt:-JAVA|21} https_only=$https"
+  log "web: app $APP estado=${st:-desconocido} dirección=$host región=\"$loc\" plan=$PLAN sku=$sku runtime=${rt:-JAVA|21} solo_https=$https"
 }
 
 report_db() {
   local s; s=$(az sql db show -g "$RG" -s "$SQL" -n "$DB" --query "[status, currentServiceObjectiveName, location, autoPauseDelay, maxSizeBytes, useFreeLimit, freeLimitExhaustionBehavior]" -o tsv 2>/dev/null | tr '\n' '\t')
   IFS=$'\t' read -r st sku loc ap max free ex <<<"$s"
-  log "db: server $SQL.database.windows.net database=$DB status=${st:-unknown} sku=$sku region=$loc"
-  log "db: auto_pause=${ap}min max_size=$((max / 1073741824))GB free_offer=$free on_exhaustion=$ex public_network=$(db_network)"
+  log "bd: servidor $SQL.database.windows.net base=$DB estado=${st:-desconocido} sku=$sku región=$loc"
+  log "bd: pausa_auto=${ap}min tamaño_max=$((max / 1073741824))GB oferta_gratis=$free al_agotarse=$ex acceso_internet=$(db_network)"
   local id rem; id=$(az sql db show -g "$RG" -s "$SQL" -n "$DB" --query id -o tsv 2>/dev/null)
   rem=$(az monitor metrics list --resource "$id" --metric free_amount_remaining --interval PT1H \
          --query "value[0].timeseries[0].data[-1].minimum" -o tsv 2>/dev/null)
-  [ -n "$rem" ] && [ "$rem" != "None" ] && log "db: free allowance remaining this month: ${rem%.*}/100000 vCore-seconds"
+  [ -n "$rem" ] && [ "$rem" != "None" ] && log "bd: cuota gratis restante del mes: ${rem%.*}/100000 vCore-segundos"
 }
 
 wake_web() {
-  log "web: probing $URL/api/red/info"
+  log "web: probando $URL/api/red/info"
   local r c t i
   for i in 1 2 3 4 5 6 7 8; do
     r=$(probe /api/red/info 60); c=${r%% *}; t=${r##* }
-    if [ "$c" = "200" ]; then log "web: HTTP 200 in ${t}s, app responding"; return 0; fi
-    if quota_hit "$c"; then err "web: HTTP 403 site disabled, F1 daily CPU quota (60 min) exhausted; resets 00:00 UTC"; return 1; fi
-    log "web: HTTP $c after ${t}s (attempt $i/8), retrying in 10s"
+    if [ "$c" = "200" ]; then log "web: HTTP 200 en ${t}s, la página responde"; return 0; fi
+    if quota_hit "$c"; then err "web: HTTP 403, sitio deshabilitado: se agotó la cuota diaria de CPU del F1 (60 min); se reinicia a las 00:00 UTC"; return 1; fi
+    log "web: HTTP $c tras ${t}s (intento $i/8), reintento en 10 s"
     sleep 10
   done
-  err "web: not responding after 8 attempts"; return 1
+  err "web: no responde tras 8 intentos"; return 1
 }
 
 wake_db() {
-  log "db: opening a connection through the app (login probe)"
+  log "bd: abriendo una conexión a través de la página (prueba de inicio de sesión)"
   local r c t i
   for i in 1 2 3 4 5 6; do
     r=$(probe_db); c=${r%% *}; t=${r##* }
-    if [ "$c" = "401" ]; then log "db: query answered in ${t}s, database online"; return 0; fi
-    log "db: probe returned HTTP $c after ${t}s (attempt $i/6, resuming), retrying in 15s"
+    if [ "$c" = "401" ]; then log "bd: respondió en ${t}s, base en línea"; return 0; fi
+    log "bd: la prueba devolvió HTTP $c tras ${t}s (intento $i/6, despertando), reintento en 15 s"
     sleep 15
   done
-  err "db: not reachable after 6 attempts (status=$(db_status))"; return 1
+  err "bd: no se alcanza tras 6 intentos (estado=$(db_status))"; return 1
 }
 
-do_up() {
+azure_up() {
   if [ "$(db_network)" != "Enabled" ]; then
-    log "db: public network access Disabled -> Enabled"
-    azc db "enable network access" sql server update -g "$RG" -n "$SQL" --enable-public-network true -o none && log "db: network access enabled"
+    log "bd: acceso desde internet Disabled -> Enabled"
+    azc bd "abrir el acceso" sql server update -g "$RG" -n "$SQL" --enable-public-network true -o none && log "bd: acceso abierto"
   else
-    log "db: public network access already Enabled"
+    log "bd: el acceso ya estaba abierto"
   fi
   local st; st=$(web_state)
   if [ "$st" != "Running" ]; then
-    log "web: state ${st:-unknown} -> Running"
-    azc web "start" webapp start -g "$RG" -n "$APP" -o none && log "web: start issued"
+    log "web: estado ${st:-desconocido} -> Running"
+    azc web "prender" webapp start -g "$RG" -n "$APP" -o none && log "web: se mandó a prender"
   else
-    log "web: state already Running"
+    log "web: ya estaba prendida"
   fi
   wake_web && wake_db
-  log "web: state=$(web_state)"; log "db: status=$(db_status)"
+  log "web: estado=$(web_state)"; log "bd: estado=$(db_status)"
+  log "listo: $URL"
 }
 
-do_down() {
+azure_down() {
   local st; st=$(web_state)
   if [ "$st" != "Stopped" ]; then
-    log "web: state ${st:-unknown} -> Stopped"
-    azc web "stop" webapp stop -g "$RG" -n "$APP" -o none && log "web: stop issued, state=$(web_state)"
+    log "web: estado ${st:-desconocido} -> Stopped"
+    azc web "apagar" webapp stop -g "$RG" -n "$APP" -o none && log "web: apagada, estado=$(web_state)"
   else
-    log "web: state already Stopped"
+    log "web: ya estaba apagada"
   fi
   if [ "$(db_network)" != "Disabled" ]; then
-    log "db: public network access Enabled -> Disabled (drops all client connections)"
-    azc db "disable network access" sql server update -g "$RG" -n "$SQL" --enable-public-network false -o none && log "db: network access disabled"
+    log "bd: acceso desde internet Enabled -> Disabled (corta todas las conexiones)"
+    azc bd "cerrar el acceso" sql server update -g "$RG" -n "$SQL" --enable-public-network false -o none && log "bd: acceso cerrado"
   else
-    log "db: public network access already Disabled"
+    log "bd: el acceso ya estaba cerrado"
   fi
-  log "db: status=$(db_status); serverless has no manual pause, auto-pause after $(az sql db show -g "$RG" -s "$SQL" -n "$DB" --query autoPauseDelay -o tsv 2>/dev/null) min without connections"
+  log "bd: estado=$(db_status); la base serverless no se pausa a mano: se pausa sola tras $(az sql db show -g "$RG" -s "$SQL" -n "$DB" --query autoPauseDelay -o tsv 2>/dev/null) min sin conexiones"
 }
 
-do_state() {
+azure_estado() {
   report_web
   local st; st=$(web_state)
   if [ "$st" = "Running" ]; then
     local r c t; r=$(probe /api/red/info 10); c=${r%% *}; t=${r##* }
-    if [ "$c" = "200" ]; then log "web: HTTP 200 in ${t}s (awake)"
-    elif quota_hit "$c"; then log "web: HTTP 403 site disabled (F1 daily CPU quota exhausted)"
-    else log "web: HTTP $c after ${t}s (asleep or starting)"; fi
+    if [ "$c" = "200" ]; then log "web: HTTP 200 en ${t}s (despierta)"
+    elif quota_hit "$c"; then log "web: HTTP 403, sitio deshabilitado (cuota diaria de CPU del F1 agotada)"
+    else log "web: HTTP $c tras ${t}s (dormida o arrancando)"; fi
   fi
   report_db
 }
 
-ACTION="${1#--}"
-log "nomcolab: ${ACTION:-help} started at $(date +%Y-%m-%dT%H:%M:%S.%3N%:z) on $(hostname)"
+# ==================================================================== Local
+# El jar que se publica: el de 2-PAGINA-Servidor en la copia de entrega, o el recién compilado.
+jar_fuente() {
+  local j
+  for j in "$AQUI/../../2-PAGINA-Servidor/nom-colab.jar" "$AQUI/../app/target/nom-colab.jar"; do
+    [ -f "$j" ] && { readlink -f "$j"; return 0; }
+  done
+  return 1
+}
+local_dir_publica() { tailscale status --json 2>/dev/null | python3 -c "import sys,json;print('https://'+json.load(sys.stdin)['Self']['DNSName'].rstrip('.'))" 2>/dev/null; }
+local_activo() { systemctl --user is-active --quiet "$SERVICIO"; }
+local_http() { curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time "${2:-5}" "$1"; }
+
+need_local() {
+  if ! systemctl --user cat "$SERVICIO" >/dev/null 2>&1; then
+    err "local: no existe el servicio $SERVICIO (ver docs/SERVIDOR-PROPIO.md, sección Instalar)"; finish
+  fi
+  command -v tailscale >/dev/null 2>&1 || { err "local: falta Tailscale"; finish; }
+}
+
+# Copia el jar nuevo solo con el servidor apagado (cambiarlo con la JVM leyéndolo la tumba).
+local_actualizar_jar() {
+  local fuente; fuente=$(jar_fuente) || { log "local: no encontré un jar nuevo; se usa el que ya está"; return 0; }
+  if [ ! -f "$LOCAL_DIR/nom-colab.jar" ] || ! cmp -s "$fuente" "$LOCAL_DIR/nom-colab.jar"; then
+    mkdir -p "$LOCAL_DIR" && cp "$fuente" "$LOCAL_DIR/nom-colab.jar" && log "local: jar actualizado desde $fuente"
+  else
+    log "local: el jar ya es la versión más reciente"
+  fi
+}
+
+local_up() {
+  if local_activo; then
+    log "local: el servidor ya estaba prendido"
+  else
+    local_actualizar_jar
+    log "local: prendiendo el servidor (puerto $LOCAL_PUERTO)"
+    systemctl --user start "$SERVICIO" || { err "local: no arrancó (journalctl --user -u $SERVICIO)"; return 1; }
+    local i r
+    for i in $(seq 1 60); do
+      r=$(local_http "http://127.0.0.1:$LOCAL_PUERTO/api/red/info" 2)
+      [ "${r%% *}" = "200" ] && break
+      sleep 1
+    done
+    if [ "${r%% *}" = "200" ]; then log "local: responde en http://127.0.0.1:$LOCAL_PUERTO"; else err "local: no responde tras 60 s"; return 1; fi
+  fi
+  log "funnel: publicando en internet"
+  if tailscale funnel --bg "$LOCAL_PUERTO" >"$TMP" 2>&1; then
+    local pub; pub=$(local_dir_publica)
+    log "funnel: encendido -> $pub"
+    r=$(local_http "$pub/api/red/info" 20)
+    if [ "${r%% *}" = "200" ]; then log "funnel: HTTP 200 en ${r##* }s"; else log "funnel: HTTP ${r%% *} (puede tardar unos segundos)"; fi
+    log "listo: $pub"
+  else
+    err "funnel: falló: $(head -3 "$TMP" | tr '\n' ' ')"
+  fi
+}
+
+local_down() {
+  if tailscale funnel status 2>/dev/null | grep -q "Funnel on"; then
+    tailscale funnel --https=443 off >/dev/null 2>&1 && log "funnel: apagado (la dirección pública deja de responder)" || err "funnel: no se pudo apagar"
+  else
+    log "funnel: ya estaba apagado"
+  fi
+  if local_activo; then
+    systemctl --user stop "$SERVICIO" && log "local: servidor apagado" || err "local: no se pudo apagar"
+  else
+    log "local: el servidor ya estaba apagado"
+  fi
+}
+
+local_estado() {
+  if local_activo; then
+    local pid desde mem
+    pid=$(systemctl --user show "$SERVICIO" -p MainPID --value)
+    desde=$(systemctl --user show "$SERVICIO" -p ActiveEnterTimestamp --value)
+    mem=$(systemctl --user show "$SERVICIO" -p MemoryCurrent --value)
+    log "local: PRENDIDO (pid $pid, desde $desde, RAM $((mem / 1048576)) MB)"
+    local r; r=$(local_http "http://127.0.0.1:$LOCAL_PUERTO/api/red/info" 5)
+    log "local: http://127.0.0.1:$LOCAL_PUERTO -> HTTP ${r%% *} en ${r##* }s"
+  else
+    log "local: APAGADO"
+  fi
+  local pub; pub=$(local_dir_publica)
+  if tailscale funnel status 2>/dev/null | grep -q "Funnel on"; then
+    local r; r=$(local_http "$pub/api/red/info" 15)
+    log "funnel: ENCENDIDO $pub -> HTTP ${r%% *}"
+  else
+    log "funnel: APAGADO ($pub no responde desde internet)"
+  fi
+  log "datos: $LOCAL_DIR/datos ($(du -sh "$LOCAL_DIR/datos" 2>/dev/null | cut -f1))"
+  local ult; ult=$(ls -1t "$LOCAL_DIR"/respaldos/datos-*.tar.gz 2>/dev/null | head -1)
+  log "respaldo: ${ult:+último $(basename "$ult")}${ult:-todavía no hay} (diario 03:30; también al apagar con este script)"
+}
+
+# Respaldo al apagar: lo que se escribió hoy queda guardado aunque la computadora no esté a las 03:30.
+local_respaldar() { [ -x "$LOCAL_DIR/respaldar.sh" ] && "$LOCAL_DIR/respaldar.sh" && log "respaldo: hecho"; }
+
+# ==================================================================== menú
+elegir() {  # elegir "Pregunta" opción1 opción2 ...  -> deja el número en $ELEGIDO
+  local p="$1"; shift; local i=1 o
+  echo; echo "$p"
+  for o in "$@"; do echo "  $i) $o"; i=$((i + 1)); done
+  while :; do
+    read -r -p "Elige [1-$#] (q para salir): " ELEGIDO || exit 0
+    [ "$ELEGIDO" = "q" ] && exit 0
+    [[ "$ELEGIDO" =~ ^[0-9]+$ ]] && [ "$ELEGIDO" -ge 1 ] && [ "$ELEGIDO" -le $# ] && return 0
+  done
+}
+
+DESTINO=""; ACCION=""
 case "$1" in
-  --up)    need_az; do_up ;;
-  --down)  need_az; do_down ;;
-  --state) need_az; do_state ;;
-  --reset) need_az; log "nomcolab: phase 1/2 down"; do_down; log "nomcolab: phase 2/2 up"; do_up ;;
-  *)       sed -n 2,13p "$0" | sed 's/^# \{0,1\}//'; [ -n "$1" ] && { err "nomcolab: unknown option '$1'"; }; ACTION=help ;;
+  --up) DESTINO=azure; ACCION=up ;;
+  --down) DESTINO=azure; ACCION=down ;;
+  --state) DESTINO=azure; ACCION=estado ;;
+  --reset) DESTINO=azure; ACCION=reiniciar ;;
+  azure|local) DESTINO=$1; ACCION=$2 ;;
+  "") ;;
+  -h|--help|ayuda) sed -n 2,15p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) sed -n 2,15p "$0" | sed 's/^# \{0,1\}//'; echo; echo "nomcolab: opción desconocida '$1'"; exit 1 ;;
+esac
+
+if [ -z "$DESTINO" ]; then
+  echo "NOM-COLAB"
+  if systemctl --user is-active --quiet "$SERVICIO" 2>/dev/null; then est="prendido"; else est="apagado"; fi
+  elegir "¿Dónde?" "Azure  ($URL)" "Local  (esta computadora, por Tailscale Funnel; ahora: $est)"
+  [ "$ELEGIDO" = 1 ] && DESTINO=azure || DESTINO=local
+fi
+if [ -z "$ACCION" ]; then
+  elegir "¿Qué hago en $DESTINO?" "Prender (up)" "Apagar (down)" "Estado" "Reiniciar"
+  ACCION=$(echo "up down estado reiniciar" | cut -d' ' -f"$ELEGIDO")
+fi
+case "$ACCION" in status|state) ACCION=estado ;; restart|reset) ACCION=reiniciar ;; esac
+
+echo
+log "nomcolab: $DESTINO $ACCION, $(date +%Y-%m-%dT%H:%M:%S%:z) en $(hostname)"
+case "$DESTINO:$ACCION" in
+  azure:up) need_az; azure_up ;;
+  azure:down) need_az; azure_down ;;
+  azure:estado) need_az; azure_estado ;;
+  azure:reiniciar) need_az; log "nomcolab: fase 1/2 apagar"; azure_down; log "nomcolab: fase 2/2 prender"; azure_up ;;
+  local:up) need_local; local_up ;;
+  local:down) need_local; local_down; local_respaldar ;;
+  local:estado) need_local; local_estado ;;
+  local:reiniciar) need_local; log "nomcolab: fase 1/2 apagar"; local_down; log "nomcolab: fase 2/2 prender"; local_up ;;
+  *) err "nomcolab: acción desconocida '$ACCION' (usa up, down, estado o reiniciar)" ;;
 esac
 finish

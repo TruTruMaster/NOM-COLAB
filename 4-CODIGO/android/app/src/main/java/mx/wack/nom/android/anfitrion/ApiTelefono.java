@@ -1,7 +1,6 @@
 package mx.wack.nom.android.anfitrion;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,8 +24,8 @@ import mx.wack.nom.core.servicio.ServicioEspacios;
 
 /**
  * La API del servidor del teléfono: las mismas rutas, respuestas y códigos que la de la
- * computadora (CuentasApi, EspaciosApi, DocumentosApi, AdminApi, RedApi y los filtros de sesión
- * y de rol), sobre los mismos servicios compartidos.
+ * computadora (CuentasApi, EspaciosApi, DocumentosApi, RedApi y el filtro de sesión), sobre los
+ * mismos servicios compartidos.
  */
 final class ApiTelefono {
     private static final Bitacora log = Bitacora.de(ApiTelefono.class);
@@ -108,14 +107,6 @@ final class ApiTelefono {
         return m;
     }
 
-    private static Map<String, Object> fila(Usuario u, long ahora) {
-        Map<String, Object> m = ServicioCuentas.publico(u);
-        m.put("bloqueado", u.estaBloqueado(ahora));
-        m.put("bloqueadoHasta", u.bloqueadoHasta);
-        m.put("intentosFallidos", u.intentosFallidos);
-        return m;
-    }
-
     Map<String, Object> info() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("nom", 1);
@@ -164,7 +155,6 @@ final class ApiTelefono {
         }
 
         Usuario u = usuario(p);
-        if (r.startsWith("/api/admin/") && !u.esAdministrador()) throw ErrorNom.prohibido("Esta sección es solo para administradores");
 
         // ---- cuentas
         if (r.equals("/api/cuentas/yo") && m.equals("GET")) return ok(yo(u, null, 0));
@@ -260,18 +250,6 @@ final class ApiTelefono {
             return ok(documentos.foto(u, x.group(1), Integer.parseInt(x.group(2))));
         if ((x = coincide("/api/documentos/" + ID + "/versiones/(\\d+)/restaurar", r)) != null && m.equals("POST"))
             return ok(documentos.restaurar(u, x.group(1), Integer.parseInt(x.group(2))));
-
-        // ---- administración (FiltroRol ya revisó arriba)
-        if (r.equals("/api/admin/usuarios") && m.equals("GET")) {
-            long ahora = System.currentTimeMillis();
-            List<Map<String, Object>> l = new java.util.ArrayList<>();
-            for (Usuario x2 : cuentas.todos()) l.add(fila(x2, ahora));
-            return ok(l);
-        }
-        if ((x = coincide("/api/admin/usuarios/" + ID + "/rol", r)) != null && m.equals("PUT"))
-            return ok(fila(cuentas.cambiarRol(u, x.group(1), texto(cuerpo(p), "rol")), System.currentTimeMillis()));
-        if ((x = coincide("/api/admin/usuarios/" + ID + "/desbloquear", r)) != null && m.equals("POST"))
-            return ok(fila(cuentas.desbloquear(u, x.group(1)), System.currentTimeMillis()));
 
         // ---- red
         if (r.equals("/api/red/descubrir") && m.equals("GET")) {

@@ -129,7 +129,7 @@ prolongada no se ejecuta la acción, así explorar nunca causa un cambio.
 | Navegación | Riel lateral con tus espacios | Barra superior + pestañas abajo + botón "+" |
 | Hojas (modales) | Centradas | Suben desde abajo, con agarradera |
 | Herramientas del editor | Arriba | **Abajo**, sobre el teclado (la app usa `adjustResize`) |
-| Selector de modo | En la barra, al centro | Fila propia; solo el modo activo muestra su nombre |
+| Tipo de documento | Etiqueta de color junto al nombre (no se cambia después de crearlo) | Igual |
 | Diapositivas | Miniaturas a la izquierda | Tira horizontal abajo |
 
 La app Android (`android/`) empaqueta **los mismos archivos** de la interfaz
@@ -152,7 +152,7 @@ selector de archivos.
 | **Una sola hoja editable** con páginas reales (Carta, A4, Oficio; vertical u horizontal; márgenes de Word), en vez de un cuadro por párrafo. | Es el modelo mental de Word: seleccionar varios párrafos, arrastrar, pegar o borrar a través de párrafos funciona como siempre. | `modo-texto.js` |
 | Estilos con los nombres y medidas de Word: Normal (Calibri 11, interlineado 1.15, 8 pt después), Título, Subtítulo, Título 1-3, Cita, Código. | Familiaridad (ley de Jakob) y exportar a .docx con estilos **reales** de Word: el panel de navegación y el índice de Word los reconocen. | `modo-texto.js`, `ooxml.js` |
 | Barra de herramientas en el orden de Google Docs: estilo · fuente · tamaño · B I U S · color · resaltado · enlace · alinear · interlineado · listas · sangría · insertar · copiar formato. | Lo que más se usa, a un clic; lo demás en "Más" e "Insertar" (ley de Hick). | `modo-texto.js` |
-| **Minibarra al seleccionar** (como la de Word) y atajos de Word/Docs: Ctrl+B/I/U, Ctrl+Mayús+L/E/R/J, Ctrl+Alt+1/2/3, Ctrl+Mayús+7/8/9, Ctrl+K, Ctrl+Enter, Mayús+F3… | Las manos no dejan el teclado; quien viene de Word no aprende nada nuevo. | `modo-texto.js · dialogoAtajos` |
+| Atajos de Word/Docs (lo que en Word hace la minibarra al seleccionar aquí lo hace la ruedita, sección 11): Ctrl+B/I/U, Ctrl+Mayús+L/E/R/J, Ctrl+Alt+1/2/3, Ctrl+Mayús+7/8/9, Ctrl+K, Ctrl+Enter, Mayús+F3… | Las manos no dejan el teclado; quien viene de Word no aprende nada nuevo. | `modo-texto.js · dialogoAtajos` |
 | Atajos al escribir: `# `, `## `, `- `, `1. `, `[] `, `> ` al inicio del párrafo. | Autoformato como el de Word y Notion. | `atajosMarkdown` |
 | **Cursores de los demás** con su nombre y color, y su selección sombreada. | Se ve dónde escribe cada quien antes de chocar (Google Docs). | `pintarCursores` |
 | Deshacer por palabra; Enter, pegar o mover el cursor empiezan un paso nuevo. Solo deshace **tus** cambios. | Como Word; deshacer nunca borra lo que escribió otra persona. | `crdt.js · _inversoSeq` |
@@ -196,7 +196,7 @@ pequeña que salía encima del texto.
 | Celdas | negrita, cursiva, subrayado, color, borrar, copiar, fórmulas (autosuma y funciones), más (cortar, pegar, editar, agregar filas o columnas) |
 | Lienzo vacío (clic derecho) | texto, rectángulo, elipse, nota, pegar, imagen, más figuras, ver todo |
 
-`rueda.js` (`automatica()` decide cuándo sale; cada editor dice qué hay seleccionado).
+`rueda.js` (`enlazar()` decide cuándo sale: al sostener o con clic derecho; cada editor dice qué hay seleccionado).
 
 ## 12. Figuras como en Canva
 
@@ -269,7 +269,9 @@ Qué separa una app "que funciona" de una que se siente como un producto de prim
 | Brillo en el botón principal | Un reflejo cruza el botón al pasar el cursor. | `.btn.primario::after` |
 | Textura | Grano muy fino en el fondo (quita las bandas de los degradados, se siente como papel). Apagado en calidad baja. | `--grano` |
 | Tipografía | Títulos balanceados (`text-wrap: balance`), párrafos sin palabras huérfanas, cifras tabulares en contadores, fechas y celdas. | `nom.css` |
-| Avisos | Una línea muestra cuánto les queda; con el cursor encima se detienen para leerlos. | `aviso()` |
+| Avisos | Una línea muestra cuánto les queda; si el cursor se mueve encima se detienen para leerlos (un aviso que aparece bajo el ratón quieto no se congela). | `aviso()` |
+| Miniaturas de documentos | Cada tarjeta muestra una hoja de papel con la forma de su tipo (renglones, cuadrícula, diapositiva o figuras unidas) que se levanta al pasar el cursor; el nombre va en una línea para que todas queden alineadas. | `NOM.miniatura`, `.dmini` |
+| Solo lectura | Con ese permiso la barra del editor solo trae lo que no cambia el documento (buscar, enfoque, descargar) y dice "Solo lectura: puedes ver, buscar y descargar"; buscar no ofrece reemplazar. | `editor.js · pintarHerramientas` |
 | Barras de desplazamiento | Delgadas y redondeadas, del color del borde. | `nom.css` |
 
 ## 15. El teléfono como servidor

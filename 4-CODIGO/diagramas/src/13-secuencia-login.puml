@@ -8,7 +8,7 @@ participant "VistaLogin" as V <<web>>
 participant "ControladorCuentas" as C <<api>>
 participant "ServicioCuentas" as S
 participant "RepositorioUsuarios" as R
-database "Azure SQL\n(usuario, rol, sesion)" as BD
+database "Azure SQL\n(usuario, sesion)" as BD
 participant "u : Usuario" as U
 participant "ServicioEspacios" as SE
 
@@ -18,9 +18,9 @@ activate C
 C -> S : iniciarSesion(nombre, contrasena)
 activate S
 S -> R : porNombre(nombre)
-R -> BD : SELECT u.*, r.nombre AS rol\nFROM usuario u JOIN rol r ON r.id = u.id_rol
-BD --> R : fila (con su rol)
-R --> S : u (u.rol)
+R -> BD : SELECT u.*, p.*\nFROM usuario u LEFT JOIN preferencias p
+BD --> R : fila
+R --> S : u
 
 alt no existe o está bloqueado
   S --> C : error "credenciales inválidas"
@@ -53,13 +53,9 @@ else existe y activo
     deactivate S
     C -> SE : listarPorUsuario(u)
     SE --> C : List<Espacio>
-    C --> V : token + usuario (rol) + espacios
+    C --> V : token + usuario + espacios
     deactivate C
-    alt rol = ADMINISTRADOR
-      V --> A : Inicio + "Administrar usuarios"
-    else rol = USUARIO
-      V --> A : Inicio (sin administración)
-    end
+    V --> A : Inicio con sus espacios
   end
 end
 
@@ -68,8 +64,9 @@ note over C, S
   debe cerrar en menos de 2 s.
 end note
 note over C, BD
-  Seguridad por roles: cada petición a /api/admin/**
-  vuelve a leer el rol de la BD (FiltroRol);
-  si no es ADMINISTRADOR responde 403.
+  Sin administrador general. La seguridad son los
+  roles de cada espacio (Propietario / Puede editar /
+  Solo lectura): el servidor los revisa en cada
+  petición y responde 403 a lo que no se permite.
 end note
 @enduml

@@ -12,13 +12,6 @@ skinparam class {
 hide circle
 left to right direction
 
-entity "rol" as rol {
-  * id : int <<PK>>
-  --
-  * nombre : varchar(20) <<UNIQUE>>
-  * descripcion : nvarchar(160)
-}
-
 entity "usuario" as usuario {
   * id : varchar(16) <<PK>>
   --
@@ -31,7 +24,6 @@ entity "usuario" as usuario {
   * bloqueado_hasta : bigint
   * creado : bigint
   * color : varchar(9)
-  * id_rol : int <<FK>>
 }
 
 entity "sesion" as sesion {
@@ -54,19 +46,15 @@ entity "preferencias" as pref {
   * idioma : varchar(5)
 }
 
-rol ||--o{ usuario : "tiene"
 usuario ||--o{ sesion : "abre"
 usuario ||--o| pref : "configura"
 
-note bottom of rol
-  1 ADMINISTRADOR: ve todas las cuentas,
-    cambia roles y desbloquea cuentas
-  2 USUARIO: trabaja en sus espacios
-end note
 note bottom of usuario
   La contraseña nunca se guarda:
   solo hash PBKDF2-SHA256 + sal.
   bloqueado_hasta > ahora = cuenta
   bloqueada (6.º intento fallido, 15 min)
+  Sin administrador general: cada cuenta
+  controla solo sus espacios.
 end note
 @enduml

@@ -88,7 +88,9 @@ note bottom of esc
 end note
 
 note bottom of servidor
-  Spring Boot 3.5 / JDK 17.
-  Servidor LOCAL: solo LAN, solo para la parte web.
+  Spring Boot 4.1 / JDK 17.
+  El mismo jar corre en la red local (H2),
+  en Azure (Azure SQL) o en una computadora
+  propia publicada con Tailscale Funnel.
 end note
 @enduml

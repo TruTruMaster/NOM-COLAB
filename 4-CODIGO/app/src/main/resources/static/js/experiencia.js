@@ -142,7 +142,6 @@
     l.push({ grupo: "Ir a", texto: "Inicio", icono: "house", fn: () => (location.hash = "#/"), claves: "principal home" });
     l.push({ grupo: "Ir a", texto: "Archivos en este dispositivo", icono: "hard-drive", fn: () => (location.hash = "#/dispositivo"), claves: "local almacenamiento" });
     if (NOM.anfitrion && NOM.anfitrion.disponible() && conCuenta()) l.push({ grupo: "Ir a", texto: "Servidor en este teléfono", icono: "smartphone", fn: () => (location.hash = "#/dispositivo"), claves: "anfitrion compartir red wifi punto de acceso" });
-    if (u && u.rol === "ADMINISTRADOR") l.push({ grupo: "Ir a", texto: "Administrar usuarios", icono: "shield-check", fn: () => (location.hash = "#/admin"), claves: "admin cuentas roles" });
 
     const tema = pref.tema || "auto";
     l.push({ grupo: "Apariencia", texto: "Tema oscuro", icono: "moon", marcado: tema === "oscuro", fn: () => cambiarPreferencia({ tema: "oscuro" }, "Tema oscuro"), claves: "noche negro dark" });

@@ -30,7 +30,6 @@ C = {
     "diag": ("#F0EAFF", "#8B5CF6", "#4C2A9E"),
     "editor": ("#F5F3EF", "#6B6875", "#2E2C38"),
     "sistema": ("#F5F3EF", "#9A97A6", "#3A3752"),
-    "admin": ("#FFF4D6", "#C98A00", "#5E4100"),
 }
 
 # id: (texto (\n = renglón), x del centro, fila, estilo)
@@ -45,8 +44,7 @@ N = {
     "espacio": ("Espacio de trabajo", 700, 3, "espacios"),
     "unirse": ("Unirse a un espacio\nred local o compartido", 1110, 3, "espacios"),
     "dispositivo": ("Este dispositivo\ncopias y espacio usado", 1390, 3, "sistema"),
-    "admin": ("Administrar usuarios\nsolo rol ADMINISTRADOR", 1670, 3, "admin"),
-    "cuenta": ("Menú de la cuenta\najustes · cerrar sesión", 1950, 3, "inicio"),
+    "cuenta": ("Menú de la cuenta\najustes · cerrar sesión", 1670, 3, "inicio"),
     "editorlocal": ("Editor local\nmismos 4 tipos", 2300, 3, "sistema"),
     "subir": ("Subir a un espacio\nal crear cuenta o entrar", 2300, 4, "sistema"),
     "docs": ("Documentos del espacio\nfiltrar por tipo · buscar", 330, 4, "espacios"),
@@ -67,11 +65,11 @@ N = {
 # (padre, [hijos], etiqueta opcional junto al padre)
 ARBOL = [
     ("bienvenida", ["login", "registro", "sincuenta"], None),
-    ("login", ["inicio"], "sesión válida · rol desde la BD"),
+    ("login", ["inicio"], "sesión válida · cuenta en la BD"),
     ("sincuenta", ["locales"], None),
     ("locales", ["editorlocal"], None),
     ("editorlocal", ["subir"], None),
-    ("inicio", ["continua", "espacio", "unirse", "dispositivo", "admin", "cuenta"], None),
+    ("inicio", ["continua", "espacio", "unirse", "dispositivo", "cuenta"], None),
     ("espacio", ["docs", "accesos", "conexion", "almacen"], None),
     ("docs", ["nuevo", "abrir"], None),
 ]
@@ -190,7 +188,7 @@ def generar():
     ley = [f'<rect x="{lx0}" y="{ly0}" width="1010" height="300" rx="18" fill="#FBFAF7" stroke="#D9D4CA"/>',
            etiqueta(lx0 + 28, ly0 + 44, "Cómo leer el mapa", color="#1E1B2E")]
     items = [("cuentas", "Gestión de cuentas"), ("inicio", "Inicio y cuenta"), ("espacios", "Espacios de trabajo"),
-             ("admin", "Solo administradores (rol de la base de datos)"), ("sistema", "Sin cuenta / este dispositivo")]
+             ("sistema", "Sin cuenta / este dispositivo")]
     for i, (e, t) in enumerate(items):
         f, b, _ = C[e]
         y = ly0 + 80 + i * 40
@@ -200,8 +198,8 @@ def generar():
              "Punteada: atajo o regreso (siempre al espacio del documento).",
              "Un documento conserva el tipo con el que se creó:",
              "cambiarlo rompería su formato (texto ↔ hoja).",
-             "Un USUARIO no ve “Administrar usuarios”; si escribe",
-             "la ruta, el servidor responde 403."]
+             "Sin administrador: el propietario de cada espacio",
+             "da, cambia o quita accesos; lo demás recibe 403."]
     for i, t in enumerate(notas):
         ley.append(etiqueta(lx0 + 520, ly0 + 82 + i * 40, t, color="#3A3752"))
 
