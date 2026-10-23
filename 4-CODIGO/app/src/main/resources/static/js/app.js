@@ -222,6 +222,8 @@
   /** Al abrir la página con sesión: se reabre la bóveda cifrada de la cuenta. Si su llave ya no
       está (se cerró sesión en otra pestaña, se borraron datos), se pide la contraseña otra vez. */
   async function arrancar() {
+    // App Android: si este teléfono era el servidor y Android lo cerró, se vuelve a encender.
+    if (NOM.anfitrion) NOM.anfitrion.reanudar();
     if (api.token()) {
       const u = api.usuario() || {};
       if (u.id && await NOM.boveda.reanudar(u.id)) {

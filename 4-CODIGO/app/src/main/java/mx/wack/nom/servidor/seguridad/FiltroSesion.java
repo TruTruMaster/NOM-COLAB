@@ -1,14 +1,13 @@
 package mx.wack.nom.servidor.seguridad;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mx.wack.nom.core.modelo.Usuario;
-import mx.wack.nom.servidor.api.ErrorNom;
-import mx.wack.nom.servidor.servicio.ServicioCuentas;
+import mx.wack.nom.core.servicio.ErrorNom;
+import mx.wack.nom.core.servicio.ServicioCuentas;
 
 /**
  * Toda la API, salvo registro, inicio de sesion e info de red, exige un token.
@@ -33,9 +32,9 @@ public class FiltroSesion implements HandlerInterceptor {
         if (cab != null && cab.startsWith("Bearer ")) token = cab.substring(7).trim();
         if (token == null) token = req.getParameter("token");
         if (token == null || token.isBlank())
-            throw new ErrorNom(HttpStatus.UNAUTHORIZED, "Inicia sesion para continuar");
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Inicia sesion para continuar");
         Usuario u = cuentas.usuarioDeToken(token)
-                .orElseThrow(() -> new ErrorNom(HttpStatus.UNAUTHORIZED, "Tu sesion expiro. Inicia sesion de nuevo."));
+                .orElseThrow(() -> new ErrorNom(ErrorNom.SIN_SESION, "Tu sesion expiro. Inicia sesion de nuevo."));
         req.setAttribute(ATRIBUTO, u);
         req.setAttribute("nom.token", token);
         return true;

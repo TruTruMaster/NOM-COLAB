@@ -5,7 +5,7 @@ name: Desplegar en Azure
 on:
   push:
     branches: [main]
-    paths: ['4-CODIGO/app/**', '.github/workflows/azure.yml']
+    paths: ['4-CODIGO/app/**', '4-CODIGO/nucleo/**', '.github/workflows/azure.yml']
   workflow_dispatch:
 
 jobs:

@@ -1,4 +1,4 @@
-package mx.wack.nom.servidor.servicio;
+package mx.wack.nom.core.servicio;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 
 import mx.wack.nom.core.almacen.RepositorioDocumentos;
 import mx.wack.nom.core.almacen.RepositorioEspacios;
@@ -16,12 +14,8 @@ import mx.wack.nom.core.modelo.Espacio;
 import mx.wack.nom.core.modelo.Permiso;
 import mx.wack.nom.core.modelo.SolicitudAcceso;
 import mx.wack.nom.core.modelo.Usuario;
-import mx.wack.nom.red.nodo.NodoLocal;
-import mx.wack.nom.servidor.api.ErrorNom;
-import mx.wack.nom.servidor.seguridad.Cifrado;
 
 /** Modulo 3 - Espacios de trabajo: CU-13 a CU-17 y CU-24. Diagramas A3, A4, A5 y A7. */
-@Service
 public class ServicioEspacios {
 
     private static final String[] COLORES = { "#7AA7FF", "#5CC08A", "#FFB547", "#A88BFF", "#FF8FA3", "#4CC9D8" };
@@ -30,11 +24,11 @@ public class ServicioEspacios {
     private final RepositorioDocumentos docs;
     private final ServicioCuentas cuentas;
     private final Difusor difusor;
-    private final NodoLocal nodo;
+    private final Nodo nodo;
     private final Cifrado cifrado;
 
     public ServicioEspacios(RepositorioEspacios repo, RepositorioDocumentos docs, ServicioCuentas cuentas,
-                            Difusor difusor, NodoLocal nodo, Cifrado cifrado) {
+                            Difusor difusor, Nodo nodo, Cifrado cifrado) {
         this.repo = repo;
         this.docs = docs;
         this.cuentas = cuentas;
@@ -95,7 +89,7 @@ public class ServicioEspacios {
         String clave = nombre.toLowerCase(Locale.ROOT);
         boolean repetido = repo.todos().stream()
                 .anyMatch(e -> u.id.equals(e.propietarioId) && e.nombre.toLowerCase(Locale.ROOT).equals(clave));
-        if (repetido) throw new ErrorNom(HttpStatus.CONFLICT, "Ya tienes un espacio con ese nombre", "nombre");
+        if (repetido) throw new ErrorNom(ErrorNom.CONFLICTO, "Ya tienes un espacio con ese nombre", "nombre");
         Espacio e = new Espacio();
         e.id = cifrado.id();
         e.nombre = nombre;
@@ -189,7 +183,7 @@ public class ServicioEspacios {
         exigir(e, u, Permiso.PROPIETARIO);
         if (nombreUsuario == null || nombreUsuario.isBlank()) throw ErrorNom.invalido("Escribe el nombre de usuario", "usuario");
         Usuario otro = cuentas.porNombre(nombreUsuario)
-                .orElseThrow(() -> new ErrorNom(HttpStatus.NOT_FOUND, "El usuario \"" + nombreUsuario.trim() + "\" no existe", "usuario"));
+                .orElseThrow(() -> new ErrorNom(ErrorNom.NO_EXISTE, "El usuario \"" + nombreUsuario.trim() + "\" no existe", "usuario"));
         if (otro.id.equals(e.propietarioId))
             throw ErrorNom.invalido("El espacio no puede quedar sin dueño", "usuario");
         if (permiso == Permiso.PROPIETARIO)

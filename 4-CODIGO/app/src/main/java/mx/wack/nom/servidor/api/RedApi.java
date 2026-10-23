@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import mx.wack.nom.red.descubrimiento.EspacioRemoto;
-import mx.wack.nom.red.descubrimiento.ServicioDescubrimiento;
+import mx.wack.nom.core.red.EspacioRemoto;
+import mx.wack.nom.core.red.Descubrimiento;
 import mx.wack.nom.red.nodo.NodoLocal;
 
 @RestController
@@ -16,9 +16,9 @@ import mx.wack.nom.red.nodo.NodoLocal;
 public class RedApi {
 
     private final NodoLocal nodo;
-    private final ServicioDescubrimiento descubrimiento;
+    private final Descubrimiento descubrimiento;
 
-    public RedApi(NodoLocal nodo, ServicioDescubrimiento descubrimiento) {
+    public RedApi(NodoLocal nodo, Descubrimiento descubrimiento) {
         this.nodo = nodo;
         this.descubrimiento = descubrimiento;
     }

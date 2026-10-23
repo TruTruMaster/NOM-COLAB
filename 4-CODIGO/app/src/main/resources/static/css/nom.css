@@ -492,6 +492,19 @@ kbd {
 .vacio .burbuja .ico { width: 32px; height: 32px; }
 .vacio h3 { color: var(--tinta); }
 .vacio .fila { flex-wrap: wrap; justify-content: center; }
+/* el teléfono como servidor (app Android) */
+.anfitrion-opcion { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: var(--r-l); background: linear-gradient(135deg, var(--acento-tenue), var(--sup-2) 120%); border: 1px solid color-mix(in srgb, var(--acento) 22%, transparent); }
+.anfitrion-opcion b { display: block; }
+.anfitrion-opcion small { display: block; color: var(--tinta-suave); font-weight: 650; font-size: 12.5px; margin-top: 2px; }
+.anfitrion-icono { width: 42px; height: 42px; border-radius: 14px; flex: none; display: grid; place-items: center; background: var(--sup); color: var(--acento-tinta); box-shadow: var(--clay); }
+.anfitrion-icono.chico { width: 32px; height: 32px; border-radius: 10px; }
+.anfitrion-pie { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-radius: var(--r-m); background: var(--ok-tenue); color: var(--ok); font-size: 13px; font-weight: 650; text-align: center; }
+.anfitrion-pie b { font-weight: 850; }
+.anfitrion-pie button { border: 0; background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); font-weight: 800; padding: 4px 10px; border-radius: 8px; }
+.anfitrion-caja { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.anfitrion-caja .lista-item .crece { min-width: 0; }
+.anfitrion-caja .lista-item b { overflow-wrap: anywhere; font-size: 14.5px; }
+@media (max-width: 520px) { .anfitrion-opcion { flex-wrap: wrap; } .anfitrion-opcion .btn { width: 100%; } }
 /* app: a qué servidor se conecta, al pie de la tarjeta de entrar */
 .servidor-pie { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 2px; font-size: 13px; font-weight: 650; color: var(--tinta-suave); text-align: center; }
 .servidor-pie b { color: var(--tinta-2); }

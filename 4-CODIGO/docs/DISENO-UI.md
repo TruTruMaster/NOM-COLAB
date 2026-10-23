@@ -175,8 +175,7 @@ resultó molesto, así que solo aparece cuando la persona la pide sosteniendo:
 | Figuras y celdas, con el dedo | Mantener ~0.55 s; se puede deslizar hacia la acción y soltar. |
 | Siempre | Clic derecho o tecla Menú: al instante. |
 
-Al soltar sin moverse la rueda se queda abierta para elegir con un toque; en formato (negrita,
-color…) sigue abierta con lo activo marcado para seguir dando formato. Reemplaza a la barra
+Al soltar sin moverse la rueda se queda abierta hasta que se elige; al hacer la acción, se va. Reemplaza a la barra
 pequeña que salía encima del texto.
 
 | Principio | Qué dice la investigación | Cómo se aplica |
@@ -272,6 +271,22 @@ Qué separa una app "que funciona" de una que se siente como un producto de prim
 | Tipografía | Títulos balanceados (`text-wrap: balance`), párrafos sin palabras huérfanas, cifras tabulares en contadores, fechas y celdas. | `nom.css` |
 | Avisos | Una línea muestra cuánto les queda; con el cursor encima se detienen para leerlos. | `aviso()` |
 | Barras de desplazamiento | Delgadas y redondeadas, del color del borde. | `nom.css` |
+
+## 15. El teléfono como servidor
+
+- **Dónde:** en la app, "Conecta con tu red" muestra primero *Usar este teléfono como servidor*
+  (tarjeta con acento, botón Encender). Encendido, la app se conecta a sí misma (127.0.0.1) y al
+  pie de Entrar dice "Este teléfono es el servidor · los demás entran en IP:puerto" con
+  *Compartir*. En *Este dispositivo* hay un panel con el estado (Encendido/Apagado), cada
+  dirección con Copiar y Compartir, *Usarlo en esta app* y *Apagar*. La paleta (Ctrl K) lleva ahí.
+- **Arquitectura:** la lógica del servidor vive en `4-CODIGO/nucleo` sin Spring (solo `java.*`).
+  El servidor de la computadora la envuelve con Spring (`Configuracion`, `Tareas`, `CanalSse`);
+  el teléfono con un servidor HTTP propio (`ServidorHttp`, `ApiTelefono`, `ServicioAnfitrion`) y
+  repositorios en archivos JSON con el mismo formato. Las respuestas son idénticas: la misma
+  prueba de API (41 casos) pasa en ambos y la forma de cada respuesta coincide.
+- **Reglas:** Android 8+ (el cifrado de contraseñas lo necesita); servicio en primer plano con
+  notificación y botón Detener, Wi-Fi y procesador despiertos mientras sirve; si Android cierra
+  la app, al abrirla se vuelve a encender si la app usaba este teléfono.
 
 ## Fuentes
 

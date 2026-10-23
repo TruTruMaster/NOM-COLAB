@@ -19,7 +19,7 @@ import mx.wack.nom.core.modelo.Preferencias;
 import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.servidor.seguridad.FiltroSesion;
-import mx.wack.nom.servidor.servicio.ServicioCuentas;
+import mx.wack.nom.core.servicio.ServicioCuentas;
 
 @RestController
 @RequestMapping("/api/cuentas")

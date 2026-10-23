@@ -1,4 +1,4 @@
-package mx.wack.nom.servidor.servicio;
+package mx.wack.nom.core.servicio;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -6,31 +6,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 
 import mx.wack.nom.core.almacen.RepositorioUsuarios;
 import mx.wack.nom.core.modelo.Preferencias;
 import mx.wack.nom.core.modelo.Rol;
 import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.Usuario;
-import mx.wack.nom.servidor.api.ErrorNom;
-import mx.wack.nom.servidor.seguridad.Cifrado;
 
 /**
  * Modulo 1 - Gestion de cuentas (CU-01 a CU-05, CU-27). Diagramas A1 y A2.
- * Las cuentas y su rol viven en la base de datos (RepositorioUsuariosJdbc).
+ * Las cuentas y su rol viven en la base de datos (RepositorioUsuariosJdbc) en la computadora, y en
+ * archivos JSON en el teléfono. La misma lógica para los dos.
  */
-@Service
 public class ServicioCuentas {
 
-    private static final Logger log = LoggerFactory.getLogger(ServicioCuentas.class);
+    private static final Bitacora log = Bitacora.de(ServicioCuentas.class);
     /** Colores de avatar: saturados, distinguibles entre si y legibles con texto blanco. */
     private static final String[] COLORES = {
         "#E8590C", "#2F9E44", "#1C7ED6", "#AE3EC9", "#D6336C", "#0C8599", "#F08C00", "#6741D9"
@@ -45,28 +35,23 @@ public class ServicioCuentas {
     private final String adminContrasena;
 
     public ServicioCuentas(RepositorioUsuarios repo, Cifrado cifrado,
-                           @Value("${nom.cuentas.max-intentos}") int maxIntentos,
-                           @Value("${nom.cuentas.minutos-bloqueo}") int minutosBloqueo,
-                           @Value("${nom.cuentas.horas-sesion}") int horasSesion,
-                           @Value("${nom.admin.usuario:}") String adminUsuario,
-                           @Value("${nom.admin.contrasena:}") String adminContrasena) {
+                           int maxIntentos, int minutosBloqueo, int horasSesion,
+                           String adminUsuario, String adminContrasena) {
         this.repo = repo;
         this.cifrado = cifrado;
         this.maxIntentos = maxIntentos;
         this.minutosBloqueo = minutosBloqueo;
         this.horasSesion = horasSesion;
-        this.adminUsuario = adminUsuario;
-        this.adminContrasena = adminContrasena;
+        this.adminUsuario = adminUsuario == null ? "" : adminUsuario;
+        this.adminContrasena = adminContrasena == null ? "" : adminContrasena;
     }
 
     /**
      * Cuenta de administrador inicial. En Azure se crea con NOM_ADMIN_USUARIO y
      * NOM_ADMIN_CONTRASENA (configuracion de la Web App, nunca en el codigo).
      * Sin esas variables, en la red local, la primera cuenta que se registra
-     * queda como administradora (es quien instalo el servidor).
+     * queda como administradora (es quien instalo el servidor). Se llama al arrancar.
      */
-    @EventListener(ApplicationReadyEvent.class)
-    @Order(1)
     public synchronized void asegurarAdministrador() {
         if (adminUsuario.isBlank() || adminContrasena.isBlank()) {
             // Cuentas importadas de una version anterior: la mas antigua administra.
@@ -104,7 +89,7 @@ public class ServicioCuentas {
         if (contrasena.length() < 8)
             throw ErrorNom.invalido("La contraseña necesita al menos 8 caracteres", "contrasena");
         if (repo.porNombre(nombre).isPresent())
-            throw new ErrorNom(HttpStatus.CONFLICT, "El nombre ya está en uso", "nombre");
+            throw new ErrorNom(ErrorNom.CONFLICTO, "El nombre ya está en uso", "nombre");
 
         Usuario u = new Usuario();
         u.id = cifrado.id();
@@ -129,12 +114,12 @@ public class ServicioCuentas {
         Optional<Usuario> encontrado = repo.porNombre(nombre);
         if (encontrado.isEmpty()) {
             // Mensaje generico: no revela si el nombre existe (CU-02, 2a).
-            throw new ErrorNom(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos");
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos");
         }
         Usuario u = encontrado.get();
         if (u.estaBloqueado(ahora)) {
             long min = Math.max(1, (u.bloqueadoHasta - ahora + 59_999) / 60_000);
-            throw new ErrorNom(HttpStatus.LOCKED, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.",
+            throw new ErrorNom(ErrorNom.BLOQUEADO, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.",
                     null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
         }
         if (!cifrado.coincide(contrasena.toCharArray(), u.sal, u.hashContrasena)) {
@@ -142,18 +127,18 @@ public class ServicioCuentas {
             if (u.intentosFallidos > maxIntentos) {
                 u.bloqueadoHasta = ahora + minutosBloqueo * 60_000L;
                 u.intentosFallidos = 0;
-                log.warn("Cuenta bloqueada por intentos fallidos: {}", u.nombre);
+                log.aviso("Cuenta bloqueada por intentos fallidos: {}", u.nombre);
                 try {
                     repo.guardar(u);
                 } catch (RuntimeException e) {
                     log.error("No se pudo persistir el bloqueo; se rechaza igual (falla cerrada)", e);
                 }
-                throw new ErrorNom(HttpStatus.LOCKED, "Acceso bloqueado por " + minutosBloqueo
+                throw new ErrorNom(ErrorNom.BLOQUEADO, "Acceso bloqueado por " + minutosBloqueo
                         + " minutos tras demasiados intentos.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
             }
             repo.guardar(u);
             int quedan = maxIntentos + 1 - u.intentosFallidos;
-            throw new ErrorNom(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos. "
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos. "
                     + (quedan == 1 ? "Te queda 1 intento." : "Te quedan " + quedan + " intentos."),
                     null, Map.of("intentosRestantes", quedan));
         }

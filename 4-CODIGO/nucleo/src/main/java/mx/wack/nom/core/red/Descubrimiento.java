@@ -1,4 +1,4 @@
-package mx.wack.nom.red.descubrimiento;
+package mx.wack.nom.core.red;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -6,63 +6,67 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import mx.wack.nom.core.almacen.RepositorioEspacios;
 import mx.wack.nom.core.almacen.RepositorioUsuarios;
 import mx.wack.nom.core.modelo.Espacio;
-import mx.wack.nom.red.nodo.NodoLocal;
-import mx.wack.nom.servidor.repositorio.AlmacenJson;
-import tools.jackson.databind.JsonNode;
+import mx.wack.nom.core.servicio.Bitacora;
+import mx.wack.nom.core.servicio.CodecJson;
+import mx.wack.nom.core.servicio.Nodo;
 
 /**
  * Anuncia por UDP broadcast los espacios con la conexion activa y escucha los
  * anuncios de otros equipos. No necesita Internet ni un servidor central: es
- * lo que hace visible un proyecto "a otros usuarios de la misma red".
+ * lo que hace visible un proyecto "a otros usuarios de la misma red". Lo usan
+ * igual el servidor de la computadora y el del teléfono.
  *
  * Paquete: {"nom":1,"servidor":"..","equipo":"..","puerto":8080,"espacios":[{id,nombre,propietario,color}]}
  */
-@Service
-public class ServicioDescubrimiento {
+public class Descubrimiento {
 
-    private static final Logger log = LoggerFactory.getLogger(ServicioDescubrimiento.class);
+    private static final Bitacora log = Bitacora.de(Descubrimiento.class);
     private static final long CADUCA_MS = 10_000;
 
-    private record Anuncio(String equipo, String host, int puerto, List<Map<String, Object>> espacios, long visto) { }
+    private static final class Anuncio {
+        final String equipo, host;
+        final int puerto;
+        final List<Map<String, Object>> espacios;
+        final long visto;
 
-    private final NodoLocal nodo;
+        Anuncio(String equipo, String host, int puerto, List<Map<String, Object>> espacios, long visto) {
+            this.equipo = equipo;
+            this.host = host;
+            this.puerto = puerto;
+            this.espacios = espacios;
+            this.visto = visto;
+        }
+    }
+
+    private final Nodo nodo;
     private final RepositorioEspacios espacios;
     private final RepositorioUsuarios usuarios;
-    private final AlmacenJson almacen;
+    private final CodecJson json;
     private final boolean activo;
     private final int puertoUdp;
     private final Map<String, Anuncio> remotos = new ConcurrentHashMap<>();
     private volatile boolean corriendo = true;
     private DatagramSocket socket;
 
-    public ServicioDescubrimiento(NodoLocal nodo, RepositorioEspacios espacios, RepositorioUsuarios usuarios,
-                                  AlmacenJson almacen,
-                                  @Value("${nom.descubrimiento.activo}") boolean activo,
-                                  @Value("${nom.descubrimiento.puerto}") int puertoUdp) {
+    public Descubrimiento(Nodo nodo, RepositorioEspacios espacios, RepositorioUsuarios usuarios,
+                          CodecJson json, boolean activo, int puertoUdp) {
         this.nodo = nodo;
         this.espacios = espacios;
         this.usuarios = usuarios;
-        this.almacen = almacen;
+        this.json = json;
         this.activo = activo;
         this.puertoUdp = puertoUdp;
     }
 
-    @PostConstruct
-    void iniciar() {
+    public void iniciar() {
         if (!activo) return;
         try {
             socket = new DatagramSocket(null);
@@ -70,7 +74,7 @@ public class ServicioDescubrimiento {
             socket.setBroadcast(true);
             socket.bind(new InetSocketAddress(puertoUdp));
         } catch (Exception e) {
-            log.warn("Descubrimiento LAN desactivado: no se pudo abrir UDP {} ({})", puertoUdp, e.getMessage());
+            log.aviso("Descubrimiento LAN desactivado: no se pudo abrir UDP {} ({})", puertoUdp, e.getMessage());
             socket = null;
             return;
         }
@@ -83,8 +87,7 @@ public class ServicioDescubrimiento {
         log.info("Descubrimiento LAN en UDP {}", puertoUdp);
     }
 
-    @PreDestroy
-    void detener() {
+    public void detener() {
         corriendo = false;
         if (socket != null) socket.close();
     }
@@ -106,8 +109,13 @@ public class ServicioDescubrimiento {
                 // la lista solo incluye los espacios con la "Conexión del proyecto" activa.
                 List<Map<String, Object>> vis = visibles();
                 if (socket != null) {
-                    byte[] datos = almacen.json().writeValueAsBytes(Map.of("nom", 1, "servidor", nodo.id(),
-                            "equipo", nodo.equipo(), "puerto", nodo.puerto(), "espacios", vis));
+                    Map<String, Object> paquete = new LinkedHashMap<>();
+                    paquete.put("nom", 1);
+                    paquete.put("servidor", nodo.id());
+                    paquete.put("equipo", nodo.equipo());
+                    paquete.put("puerto", nodo.puerto());
+                    paquete.put("espacios", vis);
+                    byte[] datos = json.escribir(paquete);
                     List<InetAddress> destinos = new ArrayList<>(nodo.difusion());
                     destinos.add(InetAddress.getByName("255.255.255.255"));
                     for (InetAddress d : destinos) {
@@ -120,28 +128,38 @@ public class ServicioDescubrimiento {
             } catch (InterruptedException e) {
                 return;
             } catch (Exception e) {
-                log.debug("Anuncio fallido: {}", e.getMessage());
+                log.detalle("Anuncio fallido: {}", e.getMessage());
             }
         }
     }
 
+    private static String texto(Object o) { return o == null ? "" : String.valueOf(o); }
+
+    @SuppressWarnings("unchecked")
     private void escuchar() {
         byte[] buf = new byte[16 * 1024];
         while (corriendo && socket != null) {
             try {
                 DatagramPacket p = new DatagramPacket(buf, buf.length);
                 socket.receive(p);
-                JsonNode n = almacen.json().readTree(new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8));
-                if (n.path("nom").asInt() != 1) continue;
-                String servidor = n.path("servidor").asString();
+                Object leido = json.leer(new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8));
+                if (!(leido instanceof Map)) continue;
+                Map<String, Object> n = (Map<String, Object>) leido;
+                if (!(n.get("nom") instanceof Number) || ((Number) n.get("nom")).intValue() != 1) continue;
+                String servidor = texto(n.get("servidor"));
                 if (nodo.id().equals(servidor)) continue;
                 List<Map<String, Object>> lista = new ArrayList<>();
-                for (JsonNode e : n.path("espacios")) {
-                    lista.add(Map.of("id", e.path("id").asString(), "nombre", e.path("nombre").asString(),
-                            "propietario", e.path("propietario").asString(), "color", e.path("color").asString()));
+                if (n.get("espacios") instanceof List) {
+                    for (Object o : (List<Object>) n.get("espacios")) {
+                        if (!(o instanceof Map)) continue;
+                        Map<String, Object> e = (Map<String, Object>) o;
+                        lista.add(Map.of("id", texto(e.get("id")), "nombre", texto(e.get("nombre")),
+                                "propietario", texto(e.get("propietario")), "color", texto(e.get("color"))));
+                    }
                 }
-                remotos.put(servidor, new Anuncio(n.path("equipo").asString(), p.getAddress().getHostAddress(),
-                        n.path("puerto").asInt(8080), lista, System.currentTimeMillis()));
+                int puerto = n.get("puerto") instanceof Number ? ((Number) n.get("puerto")).intValue() : 8080;
+                remotos.put(servidor, new Anuncio(texto(n.get("equipo")), p.getAddress().getHostAddress(), puerto, lista,
+                        System.currentTimeMillis()));
             } catch (Exception e) {
                 if (!corriendo) return;
             }
@@ -151,7 +169,7 @@ public class ServicioDescubrimiento {
     /** CU-15: espacios visibles de este equipo y de los demas equipos que se anunciaron hace poco. */
     public List<EspacioRemoto> buscarEnLan() {
         long ahora = System.currentTimeMillis();
-        remotos.values().removeIf(a -> ahora - a.visto() > CADUCA_MS);
+        remotos.values().removeIf(a -> ahora - a.visto > CADUCA_MS);
         List<EspacioRemoto> r = new ArrayList<>();
         List<String> dirs = nodo.direcciones();
         String host = dirs.isEmpty() ? "localhost" : dirs.get(0);
@@ -160,9 +178,9 @@ public class ServicioDescubrimiento {
                     (String) e.get("color"), nodo.equipo(), host, nodo.puerto(), true));
         }
         remotos.forEach((srv, a) -> {
-            for (Map<String, Object> e : a.espacios()) {
+            for (Map<String, Object> e : a.espacios) {
                 r.add(new EspacioRemoto((String) e.get("id"), (String) e.get("nombre"), (String) e.get("propietario"),
-                        (String) e.get("color"), a.equipo(), a.host(), a.puerto(), false));
+                        (String) e.get("color"), a.equipo, a.host, a.puerto, false));
             }
         });
         return r;

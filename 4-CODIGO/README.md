@@ -8,9 +8,11 @@ Equipo 6 "WACK" · CECyT 9 "Juan de Dios Bátiz" · 5IM7
 
 ```
 NOM-COLAB/
+├── nucleo/        Lógica del servidor sin Spring (cuentas, espacios, documentos, CRDT, red):
+│                   la comparten el servidor de la computadora y el del teléfono
 ├── app/            Servidor (Java 17 + Spring Boot 4.1) e interfaz web
 │   └── src/main/resources/static/   la interfaz (la misma para navegador y Android)
-├── android/        App Android 7+ que empaqueta esa interfaz
+├── android/        App Android 7+ que empaqueta esa interfaz (y en Android 8+ puede ser el servidor)
 ├── diagramas/      UML en PlantUML + diagramas de actividades (A1-A7)
 ├── azure/          desplegar.sh: crea y actualiza la versión en Azure
 ├── docs/           DISENO-UI.md (interfaz) · DESPLIEGUE-AZURE.md (nube, BD y roles)
@@ -57,6 +59,18 @@ cd android
 Al abrirla pide el servidor: **Buscar en la red** lo encuentra por UDP, o se escribe
 `IP:8080`. La app abre los documentos aunque no haya red y envía los cambios al
 volver (CU-26).
+
+### El teléfono como servidor (Android 8+)
+
+En "Conecta con tu red" → **Usar este teléfono como servidor** (o en *Este dispositivo* →
+*Servidor en este teléfono*). La app enciende un servicio en primer plano
+(`android/.../anfitrion/`) que arma los mismos servicios de `nucleo/` sobre archivos de la app,
+abre el puerto 8080 (o el siguiente libre), sirve la API, los canales en tiempo real y la misma
+página web, y se anuncia por UDP como cualquier otro servidor. Los demás entran desde la app
+(**Buscar en la red**) o desde el navegador con `http://IP-del-teléfono:8080`, en el mismo
+Wi-Fi o conectados al punto de acceso del teléfono (sin router ni Internet). Mientras sirve hay
+una notificación con la dirección y un botón **Detener**; si Android cierra la app, al abrirla
+otra vez se enciende solo.
 
 ## Pruebas
 

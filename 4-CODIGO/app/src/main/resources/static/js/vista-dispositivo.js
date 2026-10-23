@@ -123,6 +123,7 @@
           `<a class="btn chico" href="#/local/${esc(d.id)}">Abrir</a>`)).join("")
           || `<p class="suave chico" style="padding:4px 12px;font-weight:650">No hay documentos solo en este equipo.</p>`}</div>
       </section>`;
+    if (NOM.anfitrion) NOM.anfitrion.panel(cont);
 
     $$("[data-a=quitar]", cont).forEach((b) => (b.onclick = () => {
       const id = b.closest("[data-id]").dataset.id;

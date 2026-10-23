@@ -6,7 +6,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mx.wack.nom.core.modelo.Usuario;
-import mx.wack.nom.servidor.api.ErrorNom;
+import mx.wack.nom.core.servicio.ErrorNom;
 
 /**
  * Seguridad por roles: /api/admin/** solo responde si la cuenta de la sesion

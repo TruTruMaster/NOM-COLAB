@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.servidor.seguridad.FiltroSesion;
-import mx.wack.nom.servidor.servicio.ServicioCuentas;
+import mx.wack.nom.core.servicio.ServicioCuentas;
 
 /** Administracion de cuentas. FiltroRol deja pasar solo a ADMINISTRADOR. */
 @RestController

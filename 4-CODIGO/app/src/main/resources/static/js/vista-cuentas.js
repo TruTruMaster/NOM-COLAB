@@ -122,7 +122,10 @@
       });
       // En la app: a qué servidor se conecta, dicho en palabras, y cómo cambiarlo (para equipos que
       // usan NOM-COLAB en su propia red, sin Internet).
-      if (api.empaquetada) {
+      if (NOM.anfitrion && NOM.anfitrion.esLocal()) {
+        const p = NOM.anfitrion.pie();
+        if (p) f.append(p);
+      } else if (api.empaquetada) {
         const srv = api.servidor().replace(/^https?:\/\//, "");
         const internet = /azurewebsites\.net/.test(srv);
         const s = html(`<p class="servidor-pie">${ico(internet ? "globe" : "wifi", "ico-s")}<span>Conectado a <b>${internet ? "NOM-COLAB en Internet" : "tu red · " + esc(srv)}</b></span>
@@ -282,6 +285,9 @@
       <p class="suave chico" style="text-align:center">Sin servidor puedes crear y editar documentos en este teléfono; no se comparten hasta que los subas a un espacio.</p>
     </form>`);
     f.querySelector("[data-sin-cuenta]").onclick = () => NOM.app.sinCuenta();
+    // El teléfono también puede ser el servidor de la red (Android 8+).
+    const propio = NOM.anfitrion && NOM.anfitrion.opcion(listo);
+    if (propio) f.querySelector("[data-alerta]").before(propio);
     tarjeta.append(f);
     const alerta = $("[data-alerta]", f);
     async function probar(dir) {

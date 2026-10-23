@@ -23,9 +23,9 @@ import mx.wack.nom.core.modelo.Espacio;
 import mx.wack.nom.core.modelo.Permiso;
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.servidor.seguridad.FiltroSesion;
-import mx.wack.nom.servidor.servicio.Difusor;
-import mx.wack.nom.servidor.servicio.ServicioDocumentos;
-import mx.wack.nom.servidor.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.Difusor;
+import mx.wack.nom.core.servicio.ServicioDocumentos;
+import mx.wack.nom.core.servicio.ServicioEspacios;
 
 @RestController
 @RequestMapping("/api/espacios")
@@ -79,7 +79,9 @@ public class EspaciosApi {
     public SseEmitter eventos(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
                               @RequestParam(defaultValue = "") String cliente) {
         espacios.exigir(espacios.requerir(id), u, Permiso.LECTURA);
-        return difusor.suscribir(u, id, null, cliente);
+        CanalSse canal = new CanalSse();
+        difusor.suscribir(u, id, null, cliente, canal);
+        return canal.emisor;
     }
 
     @PutMapping("/{id}/conexion")

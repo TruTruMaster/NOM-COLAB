@@ -1,4 +1,4 @@
-package mx.wack.nom.servidor.servicio;
+package mx.wack.nom.core.servicio;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,14 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import mx.wack.nom.core.modelo.Usuario;
-import mx.wack.nom.servidor.api.ErrorNom;
 
 /**
  * Canal en tiempo real (CanalSync del lado web). Cada cliente abre un
@@ -26,19 +20,21 @@ import mx.wack.nom.servidor.api.ErrorNom;
  *
  * Tambien aplica el RNF "maximo 5 usuarios simultaneos" contando usuarios
  * distintos con un canal abierto en el espacio.
+ *
+ * El canal concreto (Canal) lo pone quien sirve la API: Spring en la computadora, el servidor de
+ * la app en el teléfono. latido() se llama cada 20 s.
  */
-@Component
 public class Difusor {
 
     public static class Suscriptor {
-        final SseEmitter emisor;
+        final Canal canal;
         final String usuarioId, nombre, color, espacioId, docId, cliente;
         volatile String bloque;
         volatile String modo;
         volatile Map<String, Object> cursor;
 
-        Suscriptor(SseEmitter e, Usuario u, String espacioId, String docId, String cliente) {
-            this.emisor = e;
+        Suscriptor(Canal c, Usuario u, String espacioId, String docId, String cliente) {
+            this.canal = c;
             this.usuarioId = u.id;
             this.nombre = u.nombre;
             this.color = u.color;
@@ -51,18 +47,18 @@ public class Difusor {
     private final List<Suscriptor> subs = new CopyOnWriteArrayList<>();
     private final int maxUsuarios;
 
-    public Difusor(@org.springframework.beans.factory.annotation.Value("${nom.espacio.max-usuarios}") int maxUsuarios) {
+    public Difusor(int maxUsuarios) {
         this.maxUsuarios = maxUsuarios;
     }
 
-    public SseEmitter suscribir(Usuario u, String espacioId, String docId, String cliente) {
+    /** Abre el canal de un cliente en un espacio (y, si edita, en un documento). */
+    public void suscribir(Usuario u, String espacioId, String docId, String cliente, Canal canal) {
         Set<String> conectados = usuariosEn(espacioId);
         if (!conectados.contains(u.id) && conectados.size() >= maxUsuarios) {
-            throw new ErrorNom(HttpStatus.CONFLICT, "El espacio está lleno: ya hay " + maxUsuarios
+            throw new ErrorNom(ErrorNom.CONFLICTO, "El espacio está lleno: ya hay " + maxUsuarios
                     + " personas conectadas. Intenta en un momento.", null, Map.of("max", maxUsuarios));
         }
-        SseEmitter e = new SseEmitter(0L);
-        Suscriptor s = new Suscriptor(e, u, espacioId, docId, cliente);
+        Suscriptor s = new Suscriptor(canal, u, espacioId, docId, cliente == null ? "" : cliente);
         subs.add(s);
         Runnable fuera = () -> {
             if (subs.remove(s)) {
@@ -70,13 +66,10 @@ public class Difusor {
                 avisarEspacio(espacioId, "conectados", Map.of("usuarios", conectadosPublico(espacioId)));
             }
         };
-        e.onCompletion(fuera);
-        e.onTimeout(fuera);
-        e.onError(x -> fuera.run());
+        canal.alCerrar(fuera);
         enviar(s, "hola", Map.of("ok", true));
         if (docId != null) presencia(docId);
         avisarEspacio(espacioId, "conectados", Map.of("usuarios", conectadosPublico(espacioId)));
-        return e;
     }
 
     public Set<String> usuariosEn(String espacioId) {
@@ -153,25 +146,24 @@ public class Difusor {
         for (Suscriptor s : subs) {
             if (s.espacioId.equals(espacioId) && s.usuarioId.equals(usuarioId)) {
                 enviar(s, "expulsado", Map.of("motivo", "El propietario retiró tu acceso a este espacio"));
-                s.emisor.complete();
+                s.canal.cerrar();
             }
         }
     }
 
     private void enviar(Suscriptor s, String evento, Object datos) {
         try {
-            s.emisor.send(SseEmitter.event().name(evento).data(datos, MediaType.APPLICATION_JSON));
+            s.canal.enviar(evento, datos);
         } catch (IOException | IllegalStateException ex) {
             subs.remove(s);
         }
     }
 
     /** Latido: mantiene vivas las conexiones a traves de proxies y detecta clientes muertos. */
-    @Scheduled(fixedRate = 20_000)
     public void latido() {
         for (Suscriptor s : subs) {
             try {
-                s.emisor.send(SseEmitter.event().comment("latido"));
+                s.canal.latido();
             } catch (IOException | IllegalStateException ex) {
                 subs.remove(s);
             }

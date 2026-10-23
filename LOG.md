@@ -492,3 +492,19 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Hoja de cálculo: las celdas ya no seleccionan texto al mantener el dedo.
 - Presentación: la tira de miniaturas salía vacía hasta el primer cambio (se pintaba antes de que
   existiera su función); ahora sale desde el inicio. App 0.5.0.
+
+## 45. El teléfono puede ser el servidor; la ruedita se va al hacer la acción
+- La lógica del servidor (cuentas, espacios, documentos, CRDT, descubrimiento) se separó de
+  Spring en `4-CODIGO/nucleo`. El servidor de la computadora la usa igual que antes (mismas
+  rutas y respuestas; pruebas de API 41/41 y de interfaz sin errores).
+- La app Android (8+) trae ese mismo núcleo: "Usar este teléfono como servidor" enciende un
+  servicio en primer plano con su servidor HTTP en el puerto 8080, la API, el tiempo real y la
+  página web para los demás. Se anuncia en la red: otras apps lo encuentran con "Buscar en la
+  red" y las computadoras entran con `http://IP-del-teléfono:8080`. Funciona también con el
+  punto de acceso del teléfono, sin router ni Internet.
+- Probado en el teléfono: la prueba de API pasa 41/41 contra el teléfono con las mismas formas
+  de respuesta que la computadora; desde una computadora se abrió la página servida por el
+  teléfono, se creó cuenta, espacio y documento, y lo escrito llegó en vivo a otro cliente.
+- Notificación fija con la dirección y botón Detener; panel "Servidor en este teléfono" en
+  *Este dispositivo* (copiar y compartir la dirección, apagar).
+- Ruedita: al elegir cualquier acción (también formato) la rueda se cierra. App 0.6.0.

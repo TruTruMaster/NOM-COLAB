@@ -27,6 +27,8 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import mx.wack.nom.android.anfitrion.ServicioAnfitrion;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -210,6 +212,43 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> web.evaluateJavascript(
                         "window.__nomServidores && window.__nomServidores(" + JSONObject.quote(json) + ")", null));
             }, "nom-buscar").start();
+        }
+
+        // ------------------------------------------------------------ el teléfono como servidor
+
+        /** Enciende el servidor del teléfono y espera a que abra su puerto (hasta 6 s). */
+        @JavascriptInterface
+        public String iniciarServidor() {
+            if (Build.VERSION.SDK_INT < 26)
+                return "{\"activo\":false,\"error\":\"Para que el teléfono sea el servidor se necesita Android 8.0 o más reciente.\"}";
+            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                runOnUiThread(() -> requestPermissions(new String[] { android.Manifest.permission.POST_NOTIFICATIONS }, 3));
+            startForegroundService(new Intent(MainActivity.this, ServicioAnfitrion.class));
+            long fin = System.currentTimeMillis() + 6000;
+            String estado = ServicioAnfitrion.estadoJson();
+            while (System.currentTimeMillis() < fin && !estado.contains("\"activo\":true") && !estado.contains("\"error\"")) {
+                try { Thread.sleep(60); } catch (InterruptedException e) { break; }
+                estado = ServicioAnfitrion.estadoJson();
+            }
+            return estado;
+        }
+
+        @JavascriptInterface
+        public String detenerServidor() {
+            startService(new Intent(MainActivity.this, ServicioAnfitrion.class).setAction(ServicioAnfitrion.DETENER));
+            return "{\"activo\":false}";
+        }
+
+        @JavascriptInterface
+        public String estadoServidor() { return ServicioAnfitrion.estadoJson(); }
+
+        /** Hoja de compartir de Android (WhatsApp, correo, Bluetooth…) con un texto, p. ej. la dirección del servidor. */
+        @JavascriptInterface
+        public void compartirTexto(String texto) {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, texto);
+                startActivity(Intent.createChooser(i, "Compartir"));
+            });
         }
 
         /** CU-29 en Android: los Blob de descarga no funcionan en WebView; se guarda en Descargas. */

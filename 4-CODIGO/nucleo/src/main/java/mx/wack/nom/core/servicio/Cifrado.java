@@ -1,4 +1,4 @@
-package mx.wack.nom.servidor.seguridad;
+package mx.wack.nom.core.servicio;
 
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -9,14 +9,12 @@ import java.util.Base64;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
-import org.springframework.stereotype.Component;
 
 /**
  * CU-05 Cifrar credenciales. PBKDF2-HMAC-SHA256 con sal aleatoria de 16 bytes.
  * Viene en el JDK, asi que no agrega dependencias. 120 000 iteraciones tardan
  * ~0.1 s: lento para un ataque de diccionario, rapido para el RNF de 2 s.
  */
-@Component
 public class Cifrado {
 
     private static final int ITERACIONES = 120_000;

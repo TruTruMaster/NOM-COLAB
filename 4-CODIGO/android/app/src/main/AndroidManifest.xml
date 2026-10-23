@@ -6,6 +6,13 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Para escuchar el anuncio UDP de los espacios en la red local (CU-15). -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- El teléfono como servidor de la red: servicio en primer plano con su notificación, y el
+         Wi-Fi y el procesador despiertos mientras sirve. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <!-- Guardar exportaciones en Descargas en Android 7-9. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
@@ -27,6 +34,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".anfitrion.ServicioAnfitrion"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Servidor de la red local: comparte los documentos de NOM-COLAB con otros equipos de la misma red" />
+        </service>
     </application>
 
 </manifest>

@@ -20,8 +20,8 @@ import mx.wack.nom.core.modelo.Permiso;
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.core.modelo.Version;
 import mx.wack.nom.servidor.seguridad.FiltroSesion;
-import mx.wack.nom.servidor.servicio.Difusor;
-import mx.wack.nom.servidor.servicio.ServicioDocumentos;
+import mx.wack.nom.core.servicio.Difusor;
+import mx.wack.nom.core.servicio.ServicioDocumentos;
 
 @RestController
 @RequestMapping("/api/documentos")
@@ -68,7 +68,9 @@ public class DocumentosApi {
                               @RequestParam(defaultValue = "") String cliente) {
         Documento d = documentos.requerir(id);
         documentos.permiso(u, d, Permiso.LECTURA);
-        return difusor.suscribir(u, d.espacioId, id, cliente);
+        CanalSse canal = new CanalSse();
+        difusor.suscribir(u, d.espacioId, id, cliente, canal);
+        return canal.emisor;
     }
 
     @PostMapping("/{id}/presencia")

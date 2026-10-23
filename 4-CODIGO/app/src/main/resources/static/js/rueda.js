@@ -9,7 +9,7 @@
      manda la pulsación larga del sistema: la rueda sale en ese momento, junto con la selección.
    - Clic derecho (o la tecla Menú): al instante.
    Cómo se elige: deslizar hacia la acción y soltar; o soltar sin moverse y luego tocar la acción
-   (la rueda se queda abierta). En formato (negrita, color…) se queda abierta para seguir.
+   (la rueda se queda abierta hasta elegir). Al terminar la acción, la rueda se va.
    Teclado: flechas, Enter, 1-8 directo, Retroceso regresa de un submenú, Esc cierra.
    Mayús + clic derecho deja el menú normal del navegador (corrector ortográfico, etc.).
 
@@ -42,8 +42,7 @@
 
   /**
    * Abre la rueda centrada en (x, y). items: [{ texto, icono | color, fn, off, marcado, mantener, sub: [...] }]
-   * (hasta 8). opc.modo: "mantener" (se elige al soltar) o "clic". opc.alCerrar,
-   * opc.recargar(): acciones nuevas para seguir abierta tras una de formato (mantener: true).
+   * (hasta 8). opc.modo: "mantener" (se elige al soltar) o "clic". opc.alCerrar.
    */
   function abrir(x, y, items, opc, interno) {
     cerrar(!!interno);
@@ -94,16 +93,10 @@
       if (!it || it.off) return;
       // El submenú se abre en el mismo lugar; su centro regresa a la rueda anterior.
       if (it.sub) { abrir(x, y, it.sub, Object.assign({}, opc, { modo: "clic", titulo: it.texto, padre: { items, opc } }), true); return; }
-      const seguir = modo === "clic" && it.mantener && opc.recargar;
-      cerrar(!!seguir);
+      // Al hacer la acción la rueda se va.
+      cerrar();
       it.fn && it.fn();
       if (NOM.hito) NOM.hito("rueda");
-      // Dar formato con toques: la rueda sigue abierta (con lo activo al día) para seguir.
-      if (seguir) {
-        const l = opc.recargar();
-        const raiz = opc.padre ? (function base(o) { return o.padre ? base(o.padre.opc) : o; })(opc) : opc;
-        if (l) abrir(x, y, l, Object.assign({}, raiz, { modo: "clic", padre: null }), true);
-      }
     }
     function atras() { if (opc.padre) abrir(x, y, opc.padre.items, opc.padre.opc, true); else cerrar(); }
     function mover(e) { if (modo === "mantener" || e.pointerType === "mouse") marcar(porPunto(e.clientX, e.clientY)); }
@@ -181,7 +174,7 @@
       opc.alPreparar && opc.alPreparar(ev);
       const l = items(ev);
       if (!l) return null;
-      const r = abrir(x, y, l, { modo, titulo: l.titulo || opc.titulo, tactil, recargar: () => items(ev) });
+      const r = abrir(x, y, l, { modo, titulo: l.titulo || opc.titulo, tactil });
       if (r && tactil && navigator.vibrate) navigator.vibrate(12);
       return r;
     };

@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Texto letra por letra (CRDT de secuencia tipo RGA). Gemelo de static/js/secuencia.js.
@@ -34,8 +33,9 @@ public class Secuencia {
     public List<Map<String, Object>> fmt = new ArrayList<>();
 
     /** nodo -> (t inicial -> tramo), para no repetir caracteres ya guardados. */
-    @JsonIgnore private Map<String, TreeMap<Long, Map<String, Object>>> indice;
-    @JsonIgnore private Set<String> vistas;
+    // Privados y sin "getters": no salen en el JSON (ni con Jackson ni con el del teléfono).
+    private Map<String, TreeMap<Long, Map<String, Object>>> indice;
+    private Set<String> vistas;
 
     // ------------------------------------------------------------------ fusionar
 

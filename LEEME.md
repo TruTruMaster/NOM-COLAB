@@ -37,6 +37,17 @@ entrada tras un rato sin uso tarda ~1 min porque el plan gratuito se duerme.
    encuentra sola el servidor y se conecta; si hay varios, eliges uno. Si la
    red bloquea el descubrimiento, escribe la dirección (`192.168.1.20:8080`).
 
+### Sin computadora: el teléfono es el servidor
+En Android 8 o más reciente, en **"Conecta con tu red" → Usar este teléfono como servidor →
+Encender**. Ese teléfono guarda las cuentas, los espacios y los documentos, y los demás entran:
+- con la app, en el mismo Wi-Fi: **Buscar en la red** (aparece el nombre del teléfono);
+- con el navegador (computadora u otro celular): la dirección que muestra la app, por ejemplo
+  `http://192.168.0.232:8080` (botón **Compartir** para mandarla por WhatsApp o correo).
+
+Sin router: activa el **punto de acceso** de ese teléfono y conecta a los demás a esa red.
+Mientras está encendido aparece una notificación con la dirección y el botón **Detener**; gasta
+algo más de batería. Se apaga en *Este dispositivo → Servidor en este teléfono*.
+
 ### Sin cuenta
 En la pantalla de inicio está el botón **"Usar sin cuenta"**. En la app Android también aparece
 cuando no hay servidor, así que la app funciona sola en el teléfono. Sin cuenta se pueden crear,

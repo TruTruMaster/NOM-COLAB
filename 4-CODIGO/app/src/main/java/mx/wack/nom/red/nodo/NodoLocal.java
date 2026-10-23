@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.core.env.Environment;
+import mx.wack.nom.core.servicio.Nodo;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Component;
  * HTTP y las direcciones por las que otros pueden entrar (CU-14).
  */
 @Component
-public class NodoLocal {
+public class NodoLocal implements Nodo {
 
     private final String id = UUID.randomUUID().toString().substring(0, 8);
     private final Environment env;

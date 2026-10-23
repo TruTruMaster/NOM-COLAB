@@ -1,4 +1,4 @@
-package mx.wack.nom.servidor.servicio;
+package mx.wack.nom.core.servicio;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -7,10 +7,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 import mx.wack.nom.core.almacen.RepositorioDocumentos;
 import mx.wack.nom.core.crdt.EstadoDocumento;
@@ -23,15 +19,11 @@ import mx.wack.nom.core.modelo.ModoEditor;
 import mx.wack.nom.core.modelo.Permiso;
 import mx.wack.nom.core.modelo.Usuario;
 import mx.wack.nom.core.modelo.Version;
-import mx.wack.nom.red.nodo.NodoLocal;
-import mx.wack.nom.servidor.api.ErrorNom;
-import mx.wack.nom.servidor.seguridad.Cifrado;
 
 /** Editor y versiones: CU-18 a CU-23. Diagramas A6 y A7. */
-@Service
 public class ServicioDocumentos {
 
-    private static final Logger log = LoggerFactory.getLogger(ServicioDocumentos.class);
+    private static final Bitacora log = Bitacora.de(ServicioDocumentos.class);
     private static final int MAX_BYTES_ESTADO = 25 * 1024 * 1024;
 
     private final RepositorioDocumentos repo;
@@ -39,7 +31,7 @@ public class ServicioDocumentos {
     private final ServicioCuentas cuentas;
     private final Difusor difusor;
     private final Cifrado cifrado;
-    private final NodoLocal nodo;
+    private final Nodo nodo;
     private final Map<String, MotorCRDT> motores = new ConcurrentHashMap<>();
     private final Map<String, Object> candados = new ConcurrentHashMap<>();
     /** Documentos con cambios aun no escritos a disco (se escriben cada ~0.8 s, no en cada tecla). */
@@ -49,7 +41,7 @@ public class ServicioDocumentos {
     private static final long RACHA_MS = 60_000;
 
     public ServicioDocumentos(RepositorioDocumentos repo, ServicioEspacios espacios, ServicioCuentas cuentas,
-                              Difusor difusor, Cifrado cifrado, NodoLocal nodo) {
+                              Difusor difusor, Cifrado cifrado, Nodo nodo) {
         this.repo = repo;
         this.espacios = espacios;
         this.cuentas = cuentas;
@@ -142,7 +134,7 @@ public class ServicioDocumentos {
         Permiso p = permiso(u, d, Permiso.LECTURA);
         if (!p.alMenos(Permiso.EDICION)) {
             // CU-26 7a: el permiso cambio a lectura mientras estaba sin conexion.
-            throw new ErrorNom(org.springframework.http.HttpStatus.FORBIDDEN,
+            throw new ErrorNom(ErrorNom.PROHIBIDO,
                     "Tu permiso cambió a solo lectura; tus cambios no se aplicaron", null, Map.of("permiso", p));
         }
         if (ops == null || ops.isEmpty()) return Map.of("aplicadas", 0);
@@ -248,7 +240,7 @@ public class ServicioDocumentos {
     }
 
     /** Persistencia diferida: el estado vive en memoria y se escribe a disco como mucho cada 0.8 s. */
-    @Scheduled(fixedDelay = 800)
+    /** Cada ~0.8 s. */
     public void persistir() {
         for (String id : new ArrayList<>(sucios)) {
             sucios.remove(id);
@@ -260,10 +252,10 @@ public class ServicioDocumentos {
         }
     }
 
-    @Scheduled(fixedDelay = 10_000)
+    /** Cada 10 s. */
     public void escribirBitacora() { cerrarRachas(null, false); }
 
-    @jakarta.annotation.PreDestroy
+    /** Al apagar el servidor: escribe lo pendiente. */
     public void alApagar() {
         persistir();
         cerrarRachas(null, true);
@@ -380,7 +372,7 @@ public class ServicioDocumentos {
     }
 
     /** Autoguardado: crea version de los documentos con cambios cada N minutos (preferencia del autor del ultimo cambio). */
-    @Scheduled(fixedRate = 60_000, initialDelay = 60_000)
+    /** Cada minuto. */
     public void autoguardar() {
         long ahora = System.currentTimeMillis();
         for (String id : new ArrayList<>(motores.keySet())) {
@@ -394,7 +386,7 @@ public class ServicioDocumentos {
                     nuevaVersion(d, repo.estado(id), autor, "Autoguardado");
                 }
                 difusor.avisarDocumento(id, "guardado", Map.of("numero", d.version, "auto", true));
-                log.debug("Autoguardado {} v{}", d.nombre, d.version);
+                log.detalle("Autoguardado {} v{}", d.nombre, d.version);
             });
         }
     }
