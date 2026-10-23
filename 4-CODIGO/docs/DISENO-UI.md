@@ -88,7 +88,7 @@ Supr (borra).
 | **Umbrales de respuesta (Nielsen)** | 0.1 s se siente instantáneo; 1 s es el límite antes de perder el hilo ([SAP Fiori, motion](https://www.sap.com/design-system/fiori-design-web/v1-120/foundations/visual/motion-design)). | Cada cambio se **aplica en local primero** y se envía después (CRDT); escribir nunca espera a la red. Medido: 42 ms entre que un equipo envía y otro recibe. |
 | **Umbral de Doherty** | La productividad sube cuando la respuesta baja de ≈ 400 ms ([Laws of UX](https://lawsofux.com/)). | Esqueletos de carga en lugar de pantallas en blanco; si la red tarda más de 2.5 s, el indicador ya dice "Sin conexión" en vez de dejar esperando. |
 | **Duración del movimiento** | Microinteracciones ≤ 150 ms; movimientos pequeños 150–250 ms; grandes 250–500 ms ([SAP Fiori](https://www.sap.com/design-system/fiori-design-web/v1-120/foundations/visual/motion-design), [Val Head](https://valhead.com/?p=2978)). | Tokens `--t-micro` 120 ms, `--t-corto` 200 ms, `--t-largo` 280 ms. Curva de salida suave `cubic-bezier(.2,.8,.2,1)`; rebote solo en el interruptor y en los avisos de éxito. |
-| **Respeto al movimiento reducido** | Las animaciones pueden marear a algunas personas. | `prefers-reduced-motion` y la preferencia "Reducir movimiento" ponen todas las duraciones en 1 ms. |
+| **Respeto al movimiento reducido** | Las animaciones pueden marear a algunas personas. | La preferencia de la app "Reducir movimiento" (Ajustes o Ctrl+K) pone todas las duraciones en 1 ms. Ya no se toma la del sistema: muchos teléfonos tienen las animaciones del sistema apagadas (opciones de desarrollador, ahorro de batería) y la app se veía distinta en el celular que en la computadora. |
 | **Regla pico-final** | Se recuerda el momento más intenso y el final. | Al crear cuenta o espacio aparece una palomita animada; al guardar, "Versión N guardada". |
 | **Continuidad (todo se mueve)** | El movimiento explica de dónde viene y a dónde va cada cosa; los cortes bruscos desorientan. | Cada pantalla entra en cascada (encabezado, tarjetas y listas con 40 ms entre cada una); el editor baja su barra; menús, ventanas y avisos entran con un pequeño rebote y también **salen** animados; la ruedita gira al abrir y sus acciones aparecen una tras otra; al cambiar de tema los colores se funden en medio segundo; los íconos "saludan" al pasar el cursor. Las entradas usan `animation-fill-mode: backwards` para no dejar transformaciones puestas (romperían los elementos fijos). |
 | **Bienvenida viva** | Mostrar lo que se ofrece en vez de decirlo. | Un documento, una presentación y una hoja flotan junto al título; se apartan del cursor (paralaje), se inclinan hacia él y saltan al tocarlos (`vista-cuentas.js`, `.flotantes`). |
@@ -164,21 +164,27 @@ Inspirada en las ruedas de "ping" de los juegos (Apex Legends, League of Legends
 la rueda de comunicación de Overwatch): un anillo de 8 acciones que se elige **por
 dirección**.
 
-**Sale sola.** Al seleccionar algo (texto, una imagen, figuras, celdas) y dejar la
-selección quieta **medio segundo**, la rueda aparece junto a lo seleccionado (debajo; si
-no cabe, arriba o a un lado), sin taparlo. Si se sigue seleccionando se esconde y vuelve en
-la siguiente pausa. No atrapa nada: escribir, tocar fuera o Esc la cierran, y presionarla no
-le quita el foco al documento (el teclado del celular no se cierra). Tras dar formato vuelve
-a salir para seguir; tras copiar, eliminar o Esc no vuelve hasta que cambie la selección.
-También se abre con clic derecho (o la tecla Menú) y, en el lienzo vacío, manteniendo el
-dedo. Reemplaza a la barra pequeña que salía encima del texto.
+**Sale al mantener presionado, centrada en el dedo o el cursor.** Igual en computadora,
+celular y la app (probado en un Samsung A55 real). Que salga sola al terminar de seleccionar
+resultó molesto, así que solo aparece cuando la persona la pide sosteniendo:
+
+| Dónde | Cómo |
+|---|---|
+| Texto, con el dedo | La pulsación larga del sistema elige la palabra y la rueda sale en ese momento bajo el dedo. Si se sostiene sobre una selección que ya existía (o una imagen), se conserva esa selección. En la app se quita la barra nativa de Cortar · Copiar · Seleccionar todo (esas acciones están en la rueda; las manijas para ajustar la selección se quedan). En Chrome esa barra es del navegador y no se puede quitar. |
+| Texto y celdas, con el mouse | Mantener el clic quieto ~0.55 s, también como pausa mientras se arrastra para seleccionar. |
+| Figuras y celdas, con el dedo | Mantener ~0.55 s; se puede deslizar hacia la acción y soltar. |
+| Siempre | Clic derecho o tecla Menú: al instante. |
+
+Al soltar sin moverse la rueda se queda abierta para elegir con un toque; en formato (negrita,
+color…) sigue abierta con lo activo marcado para seguir dando formato. Reemplaza a la barra
+pequeña que salía encima del texto.
 
 | Principio | Qué dice la investigación | Cómo se aplica |
 |---|---|---|
 | Menús circulares (pie menus) | Callahan, Hopkins, Weiser y Shneiderman (CHI 1988): elegir en un menú circular es más rápido y con menos errores que en uno en lista, porque todas las opciones quedan a la misma distancia del puntero. | 8 sectores iguales; el puntero empieza en el centro. |
 | Ley de Fitts | El tiempo para alcanzar un objetivo depende de la distancia y el tamaño. | Cada sector es una cuña que crece hacia afuera: el objetivo es "infinito" en su dirección. |
 | Menús de marcas (marking menus) | Kurtenbach y Buxton (CHI 1993/1994): con práctica la gente elige por el gesto, sin mirar el menú. | **El mismo orden en todos los editores** (en el sentido del reloj, desde arriba): 0 Negrita · 1 Cursiva · 2 Subrayado · 3 Color · 4 Eliminar o cortar (abajo) · 5 Copiar o duplicar · 6 Estilo, orden o fórmulas · 7 Más. Lo que no aplica se muestra apagado en su lugar, sin recorrer las demás. Lo que ya está puesto (negrita activa, ancho actual) lleva una marca. |
-| Selección que no estorba | La herramienta debe aparecer cuando se necesita y no antes (divulgación progresiva). | La pausa de 0.5 s distingue "estoy eligiendo" de "ya elegí". |
+| Selección que no estorba | La herramienta debe aparecer cuando se necesita y no antes (divulgación progresiva). | Solo sale si se sostiene: seleccionar, tocar o desplazarse nunca la saca. |
 | Zona muerta y cancelar | Soltar sin moverse no debe ejecutar nada. | Soltar en el centro cancela; un clic derecho rápido deja la rueda abierta para elegir con clic. |
 | Submenús | Mantener la rueda corta (8 máximo). | "Color", "Resaltar", "Estilo" y "Más" abren una segunda rueda en el mismo lugar. |
 | Accesibilidad | Debe poder usarse sin ratón. | Tecla Menú o Mayús+F10 la abre en el cursor; flechas, 1-8 y Enter para elegir; Esc cierra. Mayús+clic derecho deja el menú normal del navegador (corrector ortográfico). |
@@ -202,7 +208,7 @@ dedo. Reemplaza a la barra pequeña que salía encima del texto.
 | Girar | Tirador redondo debajo de la figura; Mayús gira de 15° en 15° y se "pega" a 0°, 90°, 180° y 270°. |
 | Cambiar tamaño | 8 tiradores; funcionan aunque la figura esté girada (la esquina opuesta se queda fija). Mayús conserva la proporción. |
 | **Guías inteligentes** | Al mover, la selección se alinea sola con los bordes y centros de las demás figuras (y con el centro de la diapositiva); se ven líneas rosas. Alt para mover libre. |
-| Selección múltiple | Recuadro arrastrando en el fondo, Mayús+clic, Ctrl+A. Con el dedo: **sostener una figura y tocar otras** con otro dedo, o **mantener** una figura (0.45 s) y luego tocar las demás; un aviso abajo cuenta cuántas van y "Listo" termina. Tocar una ya elegida la quita; arrastrar mueve todas. En la hoja, igual: sostener una celda y tocar otra elige el rango; en el texto, sostener la selección y tocar más allá la extiende. |
+| Selección múltiple | Recuadro arrastrando en el fondo, Mayús+clic, Ctrl+A. Con el dedo: **sostener una figura y tocar otras** con otro dedo, o en la ruedita "Más → Elegir varias" y luego tocar las demás; un aviso abajo cuenta cuántas van y "Listo" termina. Tocar una ya elegida la quita; arrastrar mueve todas. En la hoja, igual: sostener una celda y tocar otra elige el rango; en el texto, sostener la selección y tocar más allá la extiende. |
 | Agrupar, alinear y distribuir | Ctrl+G / Ctrl+Mayús+G; alinear a la izquierda/centro/derecha/arriba/medio/abajo; distribuir con espacios iguales. |
 | Orden y bloqueo | Ctrl+] / Ctrl+[ (Mayús: al frente / al fondo); bloquear evita moverlo por accidente. |
 | Copiar y pegar | Ctrl+C / Ctrl+V entre diapositivas y entre pestañas; Ctrl+D duplica. |

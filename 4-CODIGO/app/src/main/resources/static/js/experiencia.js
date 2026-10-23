@@ -11,7 +11,8 @@
   const NOM = window.NOM;
   const { esc, ico, html, $, $$ } = NOM;
   const api = () => NOM.api;
-  const reducido = () => document.documentElement.dataset.movimiento === "reducido" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // El movimiento lo decide la preferencia de la app ("Reducir movimiento"), igual en todos los equipos.
+  const reducido = () => document.documentElement.dataset.movimiento === "reducido";
   const conCuenta = () => !!(NOM.api && NOM.api.token());
   const clave = (k) => (conCuenta() ? api().clave(k) : "nom.local." + k);
 
@@ -241,7 +242,7 @@
       ${g("En toda la app", [["Buscar o ir a…", "Ctrl K"], ["Buscar dentro del texto", "Alt /"], ["Estos atajos", "?"], ["Cerrar ventanas y menús", "Esc"]])}
       ${g("Documentos", [["Guardar versión", "Ctrl S"], ["Deshacer", "Ctrl Z"], ["Rehacer", "Ctrl Y"], ["Modo enfoque", "Ctrl ."], ["Buscar y reemplazar", "Ctrl F"]])}
       ${g("Formato", [["Negrita", "Ctrl B"], ["Cursiva", "Ctrl I"], ["Subrayado", "Ctrl U"], ["Enlace (texto)", "Ctrl K"], ["Título 1, 2, 3", "Ctrl Alt 1"]])}
-      ${g("Ruedita", [["Aparece sola al seleccionar", "pausa"], ["Abrirla donde está el cursor", "Menú"], ["Elegir directo", "1-8"], ["Recorrer", "← →"], ["Regresar de un submenú", "Retroceso"]])}
+      ${g("Ruedita", [["Mantener presionado (dedo o clic)", "½ s"], ["Al instante", "Clic derecho"], ["Abrirla donde está el cursor", "Menú"], ["Elegir directo", "1-8"], ["Recorrer", "← →"], ["Regresar de un submenú", "Retroceso"]])}
       ${g("Presentaciones y diagramas", [["Duplicar", "Ctrl D"], ["Agrupar", "Ctrl G"], ["Elegir todo", "Ctrl A"], ["Eliminar", "Supr"], ["Mover fino", "Flechas"], ["Elegir varias", "Mayús clic"]])}
       ${g("Hoja de cálculo", [["Editar celda", "F2"], ["Elegir un rango", "Mayús Flechas"], ["Siguiente celda", "Tab"], ["Bajar", "Enter"], ["Borrar", "Supr"]])}
     </div>` });
@@ -310,7 +311,7 @@
     const pasos = [
       { id: "espacio", t: "Crea tu primer espacio", d: "Reúne los documentos de un equipo o proyecto.", ok: espacios.length > 0, fn: () => NOM.vistaEspacios.nuevoEspacio(), icono: "layout-grid" },
       { id: "documento", t: "Escribe tu primer documento", d: "Texto, hoja, presentación o diagrama.", ok: espacios.some((e) => e.documentos > 0) || recientes.length > 0, fn: () => (propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "file-plus" },
-      { id: "rueda", t: "Prueba la ruedita", d: "Selecciona algo y espera medio segundo.", ok: !!h.rueda, fn: () => (recientes[0] ? (location.hash = "#/doc/" + recientes[0].id) : propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "circle-dot" },
+      { id: "rueda", t: "Prueba la ruedita", d: "Mantén presionado medio segundo sobre lo que quieras cambiar.", ok: !!h.rueda, fn: () => (recientes[0] ? (location.hash = "#/doc/" + recientes[0].id) : propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "circle-dot" },
       { id: "equipo", t: "Invita a tu equipo", d: "Comparte el espacio en tu red o con su usuario.", ok: espacios.some((e) => e.miembros > 1 || e.conexion), fn: () => (propio ? NOM.vistaEspacios.accesos(propio) : NOM.vistaEspacios.unirse()), icono: "users" },
       { id: "ajustes", t: "Hazla tuya", d: "Tema, guardado automático y movimiento.", ok: !!h.preferencias, fn: () => NOM.vistaEspacios.preferencias(), icono: "palette" },
     ];
@@ -337,10 +338,10 @@
 
   // ================================================================== consejo de la ruedita en el editor
   const CONSEJOS = {
-    TEXTO: "Selecciona texto y espera medio segundo: sale la ruedita con negrita, color, estilos y más.",
-    HOJA: "Elige celdas y espera medio segundo: sale la ruedita con formato, fórmulas y más.",
-    PRESENTACION: "Toca una figura y sale su ruedita. Para elegir varias, mantén una y toca las demás.",
-    DIAGRAMA: "Toca una figura y sale su ruedita. Para elegir varias, mantén una y toca las demás.",
+    TEXTO: "Mantén presionado sobre el texto (o haz una pausa al seleccionar): sale la ruedita con negrita, color, estilos y más.",
+    HOJA: "Mantén presionada una celda: sale la ruedita con formato, fórmulas y más.",
+    PRESENTACION: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",
+    DIAGRAMA: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",
   };
   NOM.alAbrirEditor = (ed, tipo) => {
     if (!ed || ed.soloLectura || !CONSEJOS[tipo]) return;

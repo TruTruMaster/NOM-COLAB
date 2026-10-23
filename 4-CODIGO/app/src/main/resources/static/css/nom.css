@@ -162,13 +162,11 @@
   :root { --vidrio: var(--sup); --vidrio-fuerte: var(--sup); --vidrio-tinta: #23222B; }
   :root[data-tema="oscuro"] { --vidrio-tinta: #ECEBF3; }
 }
+/* Movimiento reducido: lo decide la preferencia de la app (Ajustes → "Reducir movimiento"), no la del
+   sistema, para que la web y la app se vean igual en todos los equipos. */
 :root[data-movimiento="reducido"] { --t-micro: 1ms; --t-corto: 1ms; --t-largo: 1ms; }
 :root[data-movimiento="reducido"] *, :root[data-movimiento="reducido"] *::before, :root[data-movimiento="reducido"] *::after {
   animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 1ms !important; transition-delay: 0s !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root { --t-micro: 1ms; --t-corto: 1ms; --t-largo: 1ms; }
-  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 1ms !important; transition-delay: 0s !important; }
 }
 /* cambio de tema: los colores se funden (la clase dura medio segundo) */
 :root.cambiando-tema, :root.cambiando-tema *, :root.cambiando-tema *::before, :root.cambiando-tema *::after {
@@ -493,6 +491,12 @@ kbd {
 }
 .vacio .burbuja .ico { width: 32px; height: 32px; }
 .vacio h3 { color: var(--tinta); }
+.vacio .fila { flex-wrap: wrap; justify-content: center; }
+/* app: a qué servidor se conecta, al pie de la tarjeta de entrar */
+.servidor-pie { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 2px; font-size: 13px; font-weight: 650; color: var(--tinta-suave); text-align: center; }
+.servidor-pie b { color: var(--tinta-2); }
+.servidor-pie button { border: 0; background: transparent; color: var(--acento-tinta); font-weight: 800; padding: 4px 8px; border-radius: 8px; }
+.servidor-pie button:hover { background: var(--acento-tenue); }
 
 /* esqueletos: la pantalla nunca se queda en blanco esperando la red */
 .esqueleto { background: linear-gradient(90deg, var(--sup-hundida) 25%, var(--sup) 50%, var(--sup-hundida) 75%); background-size: 200% 100%; animation: brillo 1.4s linear infinite; border-radius: var(--r-l); }
@@ -930,6 +934,12 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 .bm-tarjeta h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 900; letter-spacing: -.025em; max-width: 22ch; }
 .bm-tarjeta p { color: var(--tinta-suave); font-weight: 650; font-size: 16px; }
 
+/* celulares angostos: los botones de los vacíos se apilan del mismo ancho, centrados */
+@media (max-width: 520px) {
+  .vacio { padding: var(--e6) var(--e4); }
+  .vacio .fila { flex-direction: column; align-items: stretch; width: 100%; max-width: 320px; }
+  .vacio .fila .btn { width: 100%; }
+}
 @media (max-width: 860px) {
   .paleta-velo { padding: 10px; }
   .paleta { max-height: 82vh; border-radius: 20px; }

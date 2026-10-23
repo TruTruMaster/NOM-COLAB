@@ -39,7 +39,7 @@
         ${sinCuenta ? `
         <div class="clay" style="margin-top:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
           <b style="font-size:14px">Sin cuenta</b>
-          <span class="chico suave" style="font-weight:650">Tus documentos viven solo en este navegador. Con una cuenta los guardas en un espacio y colaboras con tu equipo.</span>
+          <span class="chico suave" style="font-weight:650">Tus documentos viven solo ${NOM.aqui().en}. Con una cuenta los guardas en un espacio y colaboras con tu equipo.</span>
           <button class="btn primario chico" data-a="ir-cuenta">${ico("user-plus", "ico-s")} Crear cuenta</button>
         </div><span class="crece"></span>` : `
         <button class="riel-item" data-a="unirse" data-micro="Unirse a un espacio|Encuentra los espacios que se comparten en esta red.">${ico("radio")} Unirse a un espacio</button>
@@ -148,6 +148,7 @@
     NOM.cerrarHoja();
     NOM.cerrarMenu();
     NOM.ocultarMicro();
+    if (NOM.rueda) NOM.rueda.cerrar();
     if (desmontar) { try { desmontar(); } catch (e) { console.error(e); } desmontar = null; }
     document.title = "NOM-COLAB";
     const h = location.hash || "#/";

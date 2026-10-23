@@ -102,7 +102,7 @@
           ${inv.ajenos ? `<span class="chip" data-micro="Otras cuentas|Copias de otras cuentas que usaron este dispositivo. No se muestran ni se pueden abrir desde tu sesión.">${ico("users", "ico-s")} ${esc(bytes(inv.ajenos))} de otras cuentas</span>` : ""}
         </div>
         ${cifradoCon ? `<div class="alerta ok">${ico("lock")}<span>Tus documentos en este equipo están <b>cifrados</b> (${esc(cifradoCon)}) con una llave que solo se abre con tu contraseña. Otra cuenta, o alguien sin tu contraseña, no puede leerlos.</span></div>`
-          : conCuenta ? "" : `<div class="alerta aviso">${ico("triangle-alert")}<span>Sin cuenta no hay cifrado: cualquiera que use este navegador puede abrir estos documentos.</span></div>`}
+          : conCuenta ? "" : `<div class="alerta aviso">${ico("triangle-alert")}<span>Sin cuenta no hay cifrado: cualquiera que use ${NOM.aqui().aqui} puede abrir estos documentos.</span></div>`}
       </section>
 
       <section class="seccion">
@@ -118,7 +118,7 @@
 
       <section class="seccion">
         <div class="fila-e"><h2>Solo en este equipo</h2></div>
-        <p class="suave chico" style="font-weight:650;margin-bottom:12px">No están en ningún servidor. <b>Es la única copia:</b> si borras los datos del navegador se pierden, salvo que los descargues o los guardes en la nube o en un espacio.</p>
+        <p class="suave chico" style="font-weight:650;margin-bottom:12px">No están en ningún servidor. <b>Es la única copia:</b> si ${NOM.aqui().borrar} se pierden, salvo que los descargues o los guardes en la nube o en un espacio.</p>
         <div class="lista">${inv.locales.map((d) => fila(d, `${d.cifrado ? "cifrado · " : "sin cifrar (sin cuenta) · "}modificado ${esc(haceCuanto(d.modificado))}`,
           `<a class="btn chico" href="#/local/${esc(d.id)}">Abrir</a>`)).join("")
           || `<p class="suave chico" style="padding:4px 12px;font-weight:650">No hay documentos solo en este equipo.</p>`}</div>

@@ -15,7 +15,7 @@
     try {
       if (enLocal) {
         const est = NOM.local.estado(docId), m = NOM.local.meta(docId);
-        if (!est || !m) throw Object.assign(new Error("Este documento ya no existe en este equipo (¿se borraron los datos del navegador?)"), { estado: 404 });
+        if (!est || !m) throw Object.assign(new Error("Este documento ya no existe en este equipo (¿se borraron " + (NOM.enApp() ? "los datos de la app" : "los datos del navegador") + "?)"), { estado: 404 });
         datos = { estado: est, documento: m, permiso: "EDICION", espacio: { id: null, nombre: "Solo en este equipo" } };
       } else datos = await api.get(`/api/documentos/${docId}`);
     } catch (e) {
@@ -171,7 +171,7 @@
       }[ed.soloLectura ? "lectura" : ed.local ? "local" : e] || ["", "", ""];
       s.className = "estado-sync " + t[2];
       s.innerHTML = `${t[0]}<span class="solo-escritorio">${t[1]}</span>`;
-      s.setAttribute("data-micro", ed.local ? "Solo en este equipo|Se guarda automáticamente en este navegador, pero si borras sus datos o la caché se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
+      s.setAttribute("data-micro", ed.local ? "Solo en este equipo|Se guarda automáticamente " + NOM.aqui().en + ", pero si " + NOM.aqui().borrar + " se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
         : ed.soloLectura ? "Solo lectura|Tu permiso permite ver, no editar."
         : e === "sin-red" ? "Sin conexión|Sigue trabajando: tus cambios se guardan en este equipo y se envían solos al volver la red."
         : "Sincronización|Cada cambio se ve al instante aquí y en menos de 1.5 s en los demás equipos.");
@@ -392,7 +392,7 @@
     async function guardarVersion() {
       if (ed.soloLectura) return;
       if (enLocal) {
-        aviso(doc.guardarYa() ? "Guardado en este equipo. Para no perderlo si se borra la caché, descárgalo (.nom)." : "No se pudo guardar: el navegador no tiene espacio", { tipo: "ok", accion: { texto: "Descargar", fn: () => NOM.formatos.exportar(doc, "nom", nombre.value || "documento") } });
+        aviso(doc.guardarYa() ? "Guardado en este equipo. Para no perderlo si se borran los datos, descárgalo (.nom)." : "No se pudo guardar: " + NOM.aqui().sinEspacio.toLowerCase(), { tipo: "ok", accion: { texto: "Descargar", fn: () => NOM.formatos.exportar(doc, "nom", nombre.value || "documento") } });
         return;
       }
       try {

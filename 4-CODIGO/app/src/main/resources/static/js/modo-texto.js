@@ -1996,8 +1996,9 @@
       setTimeout(() => { const b = ed.botones && ed.botones.brocha; if (b) b.addEventListener("dblclick", () => copiarFormato(true)); }, 0);
 
       // ------------------------------------------------------------ ruedita
-      // Sale sola al seleccionar texto o una imagen (y con clic derecho o la tecla Menú). Mismo orden
-      // que en los demás editores: negrita, cursiva, subrayado, color, cortar, copiar, estilo, más.
+      // Sale al mantener presionado (dedo o clic, también en una pausa al seleccionar) o con clic
+      // derecho, centrada en el dedo o el cursor. Mismo orden que en los demás editores: negrita,
+      // cursiva, subrayado, color, cortar, copiar, estilo, más.
       let selRueda = null;
       function accionesTexto(s) {
         const restaurar = () => { if (document.activeElement !== cuerpo) cuerpo.focus({ preventScroll: true }); ponerSel(s.a, s.f); };
@@ -2019,12 +2020,12 @@
             { texto: "Tareas", icono: "list-checks", mantener: true, fn: con(() => alternarLista("tareas")) }, { texto: "Cita", icono: "quote", mantener: true, fn: con(() => formatoParrafo({ estilo: "cita" })) }] },
           { texto: "Más", icono: "more-horizontal", sub: [
             { texto: "Enlace", icono: "link", fn: con(enlace) },
+            { texto: "Elegir todo", icono: "text-select", fn: () => { cuerpo.focus({ preventScroll: true }); ponerSel(0, visPintado.length); } },
             { texto: "Pegar", icono: "clipboard-paste", fn: con(pegarPortapapeles) },
             { texto: "Copiar formato", icono: "paintbrush", fn: con(() => copiarFormato(false)) },
             { texto: "Borrar formato", icono: "remove-formatting", mantener: true, fn: con(borrarFormato) },
             { texto: "Tachado", icono: "strikethrough", marcado: !!a.s, mantener: true, fn: con(() => alternar("s")) },
             { texto: "Buscar", icono: "search", fn: con(() => buscar(false)) },
-            { texto: "Insertar imagen", icono: "image", fn: con(insertarImagen) },
             { texto: "Salto de página", icono: "file-plus", fn: con(() => insertarBloque({ tipo: "salto" })) }] },
         ];
       }
@@ -2053,36 +2054,30 @@
       NOM.rueda.enlazar(cuerpo, (e) => {
         if (ed.soloLectura) return null;
         const o = e.target.closest && e.target.closest("[data-obj]");
-        if (o && o.classList.contains("wd-imagen")) { seleccionarImagen(o); return accionesImagen(o); }
+        if (o && o.classList.contains("wd-imagen")) { seleccionarImagen(o); const l = accionesImagen(o); l.titulo = "Imagen"; return l; }
         return accionesTexto(selRueda || leerSel());
       }, {
-        // Mantener el clic izquierdo o el dedo es como se empieza a seleccionar texto: aquí la rueda
-        // sale sola al terminar de seleccionar, o con el clic derecho (o la tecla Menú).
-        izquierdo: false, tactil: false, titulo: "Texto",
+        titulo: "Texto",
+        // Con el clic, una pausa mientras se arrastra para seleccionar también la saca (menos sobre
+        // una imagen: ahí moverse es arrastrarla).
+        rearmar: (e) => !(e.target.closest && e.target.closest(".wd-imagen")),
+        // Con el dedo, la pulsación larga del sistema elige la palabra y la rueda sale con ella. Si
+        // ya había una selección (o es una imagen) y se mantiene sobre ella, se conserva.
+        tactilPorSistema: true,
+        alPulsacionLarga: (e) => {
+          const o = e.target.closest && e.target.closest(".wd-imagen");
+          if (o) { seleccionarImagen(o); return "propia"; }
+          const s = getSelection();
+          if (s.rangeCount && !s.isCollapsed && cuerpo.contains(s.anchorNode)) {
+            const rs = Array.from(s.getRangeAt(0).getClientRects());
+            if (rs.some((r) => e.clientX >= r.left - 6 && e.clientX <= r.right + 6 && e.clientY >= r.top - 6 && e.clientY <= r.bottom + 6)) return "propia";
+          }
+          return "sistema";
+        },
         alPreparar: () => { selRueda = leerSel(); setTimeout(() => (selRueda = null), 0); },
         ignorar: (e) => !!(e.target.closest && (e.target.closest("[data-celda]") || e.target.closest("[data-tirador]"))),
         puntoTeclado: () => { const s = getSelection(); return s.rangeCount ? s.getRangeAt(0).getBoundingClientRect() : cuerpo.getBoundingClientRect(); },
       });
-      /** Lo seleccionado ahora, para la ruedita automática. */
-      function leerRueda() {
-        if (ed.soloLectura || brocha || componiendo || !cuerpo.contains(document.activeElement)) return null;
-        const s = getSelection();
-        if (!s.rangeCount || s.isCollapsed || !cuerpo.contains(s.anchorNode) || !cuerpo.contains(s.focusNode)) return null;
-        const n = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement;
-        if (n && n.closest("[data-celda]")) return null;   // las celdas de tabla tienen su propia edición
-        const img = imgActiva(), o = img && elImagen(img);
-        if (o) return { firma: "img:" + img, rect: o.getBoundingClientRect(), titulo: "Imagen", items: accionesImagen(o) };
-        const r = s.getRangeAt(0).getBoundingClientRect();
-        if (!r.width && !r.height) return null;
-        const ls = leerSel();
-        if (ls.col) return null;
-        const idEn = (i) => (visPintado[i] ? visPintado[i].id : "#" + i);
-        return { firma: idEn(ls.ini) + ">" + idEn(ls.fin - 1), rect: r, titulo: "Texto", items: accionesTexto(ls) };
-      }
-      const ruedaAuto = NOM.rueda.automatica(leerRueda);
-      const alCambiarSelRueda = () => ruedaAuto.avisar();
-      document.addEventListener("selectionchange", alCambiarSelRueda);
-      cuerpo.addEventListener("keydown", (e) => { if (!["Shift", "Control", "Alt", "Meta"].includes(e.key)) ruedaAuto.ocultar(); });
       // Un dedo sostiene la selección y otro toca más allá: la selección llega hasta ese punto
       // (como Mayús + clic con el mouse).
       const dedos = new Set();
@@ -2131,8 +2126,6 @@
         ro.disconnect();
         clearTimeout(tPag);
         document.removeEventListener("selectionchange", selDeb);
-        document.removeEventListener("selectionchange", alCambiarSelRueda);
-        ruedaAuto.destruir();
         cerrarBuscar();
         ed.lienzo.classList.remove("con-wd");
         pendCeldas.forEach((f) => f.ya());

@@ -125,7 +125,7 @@
 .rejilla-hoja { flex: 1; overflow: auto; background: var(--sup-2); position: relative; }
 .rejilla-hoja table { border-collapse: separate; border-spacing: 0; font-size: 14px; table-layout: fixed; }
 .rejilla-hoja th, .rejilla-hoja td { height: 32px; border-right: 1px solid var(--borde); border-bottom: 1px solid var(--borde); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rejilla-hoja td { width: 120px; max-width: 120px; cursor: cell; font-variant-numeric: tabular-nums; }
+.rejilla-hoja td { width: 120px; max-width: 120px; cursor: cell; font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .rejilla-hoja td.num { text-align: right; }
 .rejilla-hoja td.err { color: var(--error); font-weight: 800; }
 .rejilla-hoja td[data-negrita] { font-weight: 850; }
@@ -518,18 +518,22 @@
 /* Vidrio con volumen de arcilla: el anillo deja ver lo de atrás desenfocado (lo que se eligió
    sigue a la vista) y conserva la luz arriba y la sombra abajo. */
 .rueda-velo { position: fixed; inset: 0; z-index: 1000; touch-action: none; }
-.rueda-velo.pasivo { pointer-events: none; touch-action: auto; }
 .rueda { position: absolute; width: 224px; height: 224px; margin: -112px 0 0 -112px; transform: scale(.5) rotate(-12deg); opacity: 0; pointer-events: none;
   transition: transform 260ms var(--rebote), opacity 140ms linear; user-select: none; -webkit-user-select: none; }
 .rueda.sub { transform: scale(.82) rotate(18deg); }
 .rueda.abierta { transform: none; opacity: 1; }
 .rueda-velo.saliendo .rueda { transform: scale(.86); opacity: 0; transition-duration: 150ms; }
 .rueda-velo.cambiando .rueda { transform: scale(.94) rotate(-10deg); opacity: 0; transition-duration: 90ms; }
-.rueda-fondo { position: absolute; inset: 0; border-radius: 50%; pointer-events: auto; touch-action: none; cursor: pointer;
-  background: var(--vidrio); border: 1px solid var(--vidrio-borde);
-  backdrop-filter: var(--vidrio-desenfoque); -webkit-backdrop-filter: var(--vidrio-desenfoque);
+.rueda-fondo { position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--sup) 58%, transparent), color-mix(in srgb, var(--sup) 38%, transparent) 75%);
+  border: 1px solid var(--vidrio-borde);
+  backdrop-filter: blur(14px) saturate(1.9); -webkit-backdrop-filter: blur(14px) saturate(1.9);
   box-shadow: var(--vidrio-luz), inset 0 -10px 22px rgba(74, 60, 40, .07), 0 18px 38px -12px rgba(20, 16, 40, .34), 0 3px 8px rgba(20, 16, 40, .12); }
-.rueda-velo:not(.pasivo) .rueda-fondo { pointer-events: none; }
+:root[data-calidad="baja"] .rueda-fondo { background: var(--sup); }
+/* en oscuro el anillo va más denso: la tinta clara necesita fondo oscuro aunque atrás haya una hoja blanca */
+:root[data-tema="oscuro"] .rueda-fondo { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--sup) 80%, transparent), color-mix(in srgb, var(--sup) 66%, transparent) 75%); }
+.rueda-item small { text-shadow: 0 1px 2px color-mix(in srgb, var(--sup) 80%, transparent); }
+.rueda-fondo { pointer-events: none; }
 .rueda-svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .rueda-sector { fill: transparent; stroke: var(--borde-fuerte); stroke-width: 1; transform-box: view-box; transform-origin: 50% 50%;
   transition: fill 90ms linear, transform 160ms var(--rebote); }
@@ -555,7 +559,6 @@
   display: grid; place-items: center; align-content: center; text-align: center; padding: 6px; font-weight: 850; font-size: 11px; line-height: 1.15; color: var(--tinta-2);
   box-shadow: var(--vidrio-luz), 0 2px 6px rgba(20, 16, 40, .10); overflow: hidden; word-break: break-word; }
 .rueda-centro .ico { margin-bottom: 1px; color: var(--acento-tinta); }
-.rueda-velo.pasivo .rueda-centro { cursor: pointer; }
 :root[data-movimiento="reducido"] .rueda, :root[data-movimiento="reducido"] .rueda-item { transition: none; }
 
 @media print {

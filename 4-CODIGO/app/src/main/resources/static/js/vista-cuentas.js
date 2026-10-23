@@ -30,7 +30,7 @@
   /** Los documentos que flotan en la bienvenida se apartan del cursor (paralaje), se inclinan
       hacia él y dan un salto al tocarlos. Con movimiento reducido se quedan quietos. */
   function animarFlotantes(cont) {
-    if (!cont || matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.movimiento === "reducido") return;
+    if (!cont || document.documentElement.dataset.movimiento === "reducido") return;
     const zona = cont.closest(".bienvenida") || cont.parentElement;
     let raf = 0;
     zona.addEventListener("pointermove", (e) => {
@@ -120,10 +120,15 @@
         const rev = (e) => { if (e.getModifierState) avisoMayus.hidden = !e.getModifierState("CapsLock"); };
         i.addEventListener("keyup", rev); i.addEventListener("keydown", rev);
       });
+      // En la app: a qué servidor se conecta, dicho en palabras, y cómo cambiarlo (para equipos que
+      // usan NOM-COLAB en su propia red, sin Internet).
       if (api.empaquetada) {
-        const s = html(`<button type="button" class="chip" style="align-self:flex-start;border:0;cursor:pointer" data-micro="Servidor|El equipo de tu red con el que trabajas. Toca para cambiarlo.">${ico("server", "ico-s")} ${esc(api.servidor().replace(/^https?:\/\//, ""))} · cambiar</button>`);
-        s.onclick = () => pintarServidor(tarjeta, render);
-        f.prepend(s);
+        const srv = api.servidor().replace(/^https?:\/\//, "");
+        const internet = /azurewebsites\.net/.test(srv);
+        const s = html(`<p class="servidor-pie">${ico(internet ? "globe" : "wifi", "ico-s")}<span>Conectado a <b>${internet ? "NOM-COLAB en Internet" : "tu red · " + esc(srv)}</b></span>
+          <button type="button" data-micro="Cambiar de servidor|Si tu equipo usa NOM-COLAB en su propia red (aunque no haya Internet), elige aquí ese equipo.">Cambiar</button></p>`);
+        $("button", s).onclick = () => pintarServidor(tarjeta, render);
+        f.append(s);
       }
     }
 
@@ -195,7 +200,7 @@
         <button class="btn primario ancho" type="submit">Entrar ${ico("arrow-right")}</button>
         <p class="suave chico" style="text-align:center">¿Primera vez? <a href="#" data-ir2="registro">Crea tu cuenta en un minuto</a></p>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo en este navegador: si borras la caché se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       </form>`);
       enlazarComunes(f);
       $("[data-ir2]", f).onclick = (e) => { e.preventDefault(); modo = "registro"; render(); };
@@ -224,7 +229,7 @@
         <button class="btn primario ancho" type="submit">Crear cuenta ${ico("sparkles")}</button>
         <p class="suave chico" style="text-align:center">Tu contraseña se guarda cifrada; nadie puede leerla, ni el administrador.</p>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo en este navegador: si borras la caché se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       </form>`);
       enlazarComunes(f);
       f.contrasena.addEventListener("input", () => {
@@ -273,7 +278,7 @@
         <button class="btn primario crece" type="submit">Conectar</button>
       </div>
       <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo en este navegador: si borras la caché se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       <p class="suave chico" style="text-align:center">Sin servidor puedes crear y editar documentos en este teléfono; no se comparten hasta que los subas a un espacio.</p>
     </form>`);
     f.querySelector("[data-sin-cuenta]").onclick = () => NOM.app.sinCuenta();

@@ -451,3 +451,44 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   `.avisos > .aviso`. App 0.4.1.
 - En el teléfono, el consejo de la ruedita tapaba la barra de estado: ahora va encima. El contador
   dice "1 palabra" en singular. App 0.4.2.
+
+---
+
+# LOG — 22 de octubre de 2026 (noche, 3): paridad celular, web y app, probada en el teléfono
+
+## 41. Cómo se probó
+- En el teléfono real (Samsung A55) por adb: Chrome contra el servidor local (por Tailscale) y el
+  WebView de la app, manejados con el protocolo de DevTools; toques reales con `adb input` para que
+  la pulsación larga, la selección y la barra nativa se comporten como con el dedo. Además, todas
+  las pantallas a 320, 360, 375, 390, 412 y 430 px de ancho y en horizontal (740×360, 915×412),
+  sin nada que se salga.
+
+## 42. La ruedita sale al mantener presionado, centrada en el dedo o el cursor
+- Ya no sale sola al terminar de seleccionar (estorbaba). Con el dedo sobre texto sale con la
+  pulsación larga del sistema; sobre figuras y celdas, al mantener ~0.55 s. Con el mouse, al
+  mantener el clic quieto (también en una pausa al seleccionar arrastrando). Clic derecho: al
+  instante. Soltar sin moverse la deja abierta para elegir con un toque; en formato sigue abierta.
+- En la app se quitó la barra nativa de Cortar · Copiar · Seleccionar todo (WebView propio,
+  `MainActivity.Hoja`); las manijas de selección se quedan. En Chrome esa barra es del navegador.
+- "Elegir todo" en la rueda del texto; "Elegir varias" en la del lienzo (reemplaza al mantener una
+  figura, que ahora abre la rueda). El título dice qué se eligió (Figura, B2:D5, Imagen…).
+- Al cambiar de pantalla se cierra la ruedita (se quedaba abierta encima del inicio). El clic que
+  manda el navegador al soltar el mismo gesto ya no la cierra.
+
+## 43. Mismo movimiento y vidrio en todos lados
+- El teléfono tenía las animaciones del sistema apagadas y la página lo respetaba: en el celular
+  no se veía ninguna animación. Ahora manda la preferencia de la app ("Reducir movimiento").
+- La ruedita es vidrio de verdad (más transparente, con desenfoque y saturación); en tema oscuro un
+  poco más densa para que la tinta clara se lea sobre hojas blancas.
+
+## 44. Textos y detalles del celular y la app
+- En la app ya no dice "este navegador": los documentos sin cuenta viven en la app (en el teléfono)
+  y se pierden si se desinstala o se borran sus datos.
+- Entrar en la app: en vez de "dirección · cambiar" arriba, abajo dice "Conectado a NOM-COLAB en
+  Internet · Cambiar" (o "tu red · IP"), con su explicación.
+- Sin cuenta: tarjeta "Espacios de trabajo" que explica qué son (necesitan cuenta) con "Crear
+  cuenta" y "Ya tengo cuenta".
+- Vacíos: en celulares angostos los botones se apilan del mismo ancho y centrados.
+- Hoja de cálculo: las celdas ya no seleccionan texto al mantener el dedo.
+- Presentación: la tira de miniaturas salía vacía hasta el primer cambio (se pintaba antes de que
+  existiera su función); ahora sale desde el inicio. App 0.5.0.

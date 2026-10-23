@@ -271,7 +271,7 @@
     const raiz = document.documentElement;
     const oscuro = p.tema === "oscuro" || (p.tema !== "claro" && matchMedia("(prefers-color-scheme: dark)").matches);
     const antes = raiz.dataset.tema, nuevo = oscuro ? "oscuro" : "claro";
-    const quieto = p.movimientoReducido || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const quieto = !!p.movimientoReducido;
     if (antes && antes !== nuevo && document.startViewTransition && !quieto) {
       // El tema nuevo se abre en círculo desde el punto donde se hizo clic (o desde arriba).
       const o = Date.now() - ultimoToque.t < 3000 ? ultimoToque : { x: innerWidth / 2, y: 0 };
@@ -315,7 +315,15 @@
   }
   if (document.body) protegerEstilo(); else document.addEventListener("DOMContentLoaded", protegerEstilo);
 
+  // ------------------------------------------------------------ dónde viven los documentos sin servidor
+  // La app Android guarda en su propio almacenamiento (no en un navegador): los textos lo dicen así.
+  const enApp = () => location.protocol === "file:" || !!window.NomAndroid;
+  const aqui = () => (enApp()
+    ? { en: "en esta app (en este teléfono)", aqui: "esta app", borrar: "desinstalas la app o borras sus datos", sinEspacio: "Ya no queda espacio en el teléfono para la app" }
+    : { en: "en este navegador", aqui: "este navegador", borrar: "borras la caché o los datos del navegador", sinEspacio: "El navegador ya no tiene espacio" });
+
   Object.assign(NOM, {
+    enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
     leer, guardar, quitar, MODOS, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,
   });

@@ -1,18 +1,17 @@
 /* NOM-COLAB · Ruedita de acciones (menú radial o "pie menu").
-   Como la rueda de "ping" de los juegos: un anillo de acciones alrededor de un punto. Se elige
-   por DIRECCIÓN, no por posición exacta; con práctica se hace de memoria sin mirar (marking menu,
-   Kurtenbach y Buxton).
+   Como la rueda de "ping" de los juegos: un anillo de acciones alrededor del dedo o del cursor.
+   Se elige por DIRECCIÓN, no por posición exacta; con práctica se hace de memoria sin mirar
+   (marking menu, Kurtenbach y Buxton). Igual en computadora, celular y la app.
 
-   Formas de abrirla:
-   - Sola (modo "auto"): al seleccionar algo (texto, una imagen, figuras, celdas) y dejar la
-     selección quieta medio segundo, aparece junto a lo seleccionado. Si se sigue seleccionando se
-     esconde y vuelve en la siguiente pausa. No atrapa el puntero ni el teclado: lo de abajo se
-     sigue usando; escribir, tocar fuera o Esc la cierran. Se elige con un toque o un clic.
-   - Clic derecho (o la tecla Menú): se elige al soltar en la dirección de la acción. Un clic
-     derecho rápido deja la rueda abierta para elegir con clic. Mayús + clic derecho abre el menú
-     normal del navegador (corrector ortográfico, etc.).
-   - Mantener el dedo o el clic izquierdo quieto ~0.45 s, donde cada editor lo permite.
-   Teclado (rueda abierta con clic derecho o tecla Menú): flechas, Enter, 1-8 directo, Esc.
+   Cómo se abre (siempre centrada donde está el dedo o el cursor, y solo si se mantiene):
+   - Mantener presionado (dedo o clic izquierdo) ~0.55 s sin moverse. Con el clic, también al
+     hacer una pausa mientras se arrastra para seleccionar texto o celdas. Con el dedo sobre texto
+     manda la pulsación larga del sistema: la rueda sale en ese momento, junto con la selección.
+   - Clic derecho (o la tecla Menú): al instante.
+   Cómo se elige: deslizar hacia la acción y soltar; o soltar sin moverse y luego tocar la acción
+   (la rueda se queda abierta). En formato (negrita, color…) se queda abierta para seguir.
+   Teclado: flechas, Enter, 1-8 directo, Retroceso regresa de un submenú, Esc cierra.
+   Mayús + clic derecho deja el menú normal del navegador (corrector ortográfico, etc.).
 
    Las 8 posiciones tienen el mismo orden en todos los editores (en el sentido del reloj, desde
    arriba), para que la mano las aprenda:
@@ -25,7 +24,7 @@
   const { esc, ico, html } = NOM;
 
   const R = 112, RI = 38, MUERTA = 26;   // radio externo, interno y zona muerta del centro
-  const ESPERA_AUTO = 500;                // pausa de la selección antes de que aparezca sola
+  const MANTENER_MS = 550;                // cuánto hay que mantener presionado para que salga
   let actual = null;
 
   function sector(i, n) {
@@ -40,34 +39,22 @@
     const vv = window.visualViewport;
     return vv ? { x: vv.offsetLeft, y: vv.offsetTop, w: vv.width, h: vv.height } : { x: 0, y: 0, w: innerWidth, h: innerHeight };
   }
-  /** Centro para una rueda junto a lo seleccionado (rect en coordenadas de pantalla): debajo; si no
-      cabe, arriba; si no, a un lado. Así no tapa lo que se eligió ni las manijas de selección. */
-  function puntoJunto(r) {
-    const v = visible(), m = 10, d = R + 16;
-    const cx = Math.min(v.x + v.w - R - m, Math.max(v.x + R + m, (r.left + r.right) / 2));
-    if (r.bottom + d + R + m <= v.y + v.h) return { x: cx, y: r.bottom + d };
-    if (r.top - d - R - m >= v.y) return { x: cx, y: r.top - d };
-    const cy = Math.min(v.y + v.h - R - m, Math.max(v.y + R + m, (r.top + r.bottom) / 2));
-    if (r.right + d + R + m <= v.x + v.w) return { x: r.right + d, y: cy };
-    if (r.left - d - R - m >= v.x) return { x: r.left - d, y: cy };
-    return { x: cx, y: v.y + v.h - R - m };   // no hay hueco: abajo de la pantalla (el vidrio deja ver lo de atrás)
-  }
 
   /**
-   * Abre la rueda en (x, y). items: [{ texto, icono | color, fn, off, marcado, mantener, sub: [...] }]
-   * (hasta 8). opc.modo: "mantener" (se elige al soltar), "clic" o "auto" (no atrapa nada).
-   * opc.alCerrar, opc.alElegir(item), opc.alDescartar (Esc en modo auto), opc.padre (submenú).
+   * Abre la rueda centrada en (x, y). items: [{ texto, icono | color, fn, off, marcado, mantener, sub: [...] }]
+   * (hasta 8). opc.modo: "mantener" (se elige al soltar) o "clic". opc.alCerrar,
+   * opc.recargar(): acciones nuevas para seguir abierta tras una de formato (mantener: true).
    */
   function abrir(x, y, items, opc, interno) {
     cerrar(!!interno);
     opc = opc || {};
     items = items.filter(Boolean).slice(0, 8);
     if (!items.length) return null;
-    const n = items.length, auto = opc.modo === "auto";
+    const n = items.length;
     const v = visible();
     x = Math.min(v.x + v.w - R - 8, Math.max(v.x + R + 8, x));
     y = Math.min(v.y + v.h - R - 8, Math.max(v.y + R + 8, y));
-    const velo = html(`<div class="rueda-velo${auto ? " pasivo" : ""}" role="presentation">
+    const velo = html(`<div class="rueda-velo" role="presentation">
       <div class="rueda${opc.padre ? " sub" : ""}" role="menu" aria-label="${esc(opc.titulo || "Acciones rápidas")}" style="left:${x}px;top:${y}px">
         <div class="rueda-fondo"></div>
         <svg class="rueda-svg" viewBox="${-R} ${-R} ${R * 2} ${R * 2}" width="${R * 2}" height="${R * 2}" aria-hidden="true">
@@ -84,12 +71,11 @@
       </div></div>`);
     document.body.append(velo);
     const rueda = velo.firstElementChild;
-    const fondo = rueda.querySelector(".rueda-fondo");
     const etq = rueda.querySelector("[data-etq]");
-    let elegido = -1, modo = opc.modo || "clic", abajo = false;
-    const t0 = Date.now();
+    let elegido = -1, modo = opc.modo || "clic", seMovio = false, soltado = null;
 
     function marcar(i) {
+      if (i >= 0) seMovio = true;
       if (i === elegido) return;
       elegido = i;
       velo.querySelectorAll("[data-i]").forEach((el) => el.classList.toggle("activo", +el.dataset.i === i));
@@ -107,24 +93,32 @@
       const it = items[i];
       if (!it || it.off) return;
       // El submenú se abre en el mismo lugar; su centro regresa a la rueda anterior.
-      if (it.sub) { abrir(x, y, it.sub, Object.assign({}, opc, { modo: modo === "mantener" ? "clic" : modo, titulo: it.texto, padre: { items, opc } }), true); return; }
-      cerrar();
+      if (it.sub) { abrir(x, y, it.sub, Object.assign({}, opc, { modo: "clic", titulo: it.texto, padre: { items, opc } }), true); return; }
+      const seguir = modo === "clic" && it.mantener && opc.recargar;
+      cerrar(!!seguir);
       it.fn && it.fn();
       if (NOM.hito) NOM.hito("rueda");
-      opc.alElegir && opc.alElegir(it);
+      // Dar formato con toques: la rueda sigue abierta (con lo activo al día) para seguir.
+      if (seguir) {
+        const l = opc.recargar();
+        const raiz = opc.padre ? (function base(o) { return o.padre ? base(o.padre.opc) : o; })(opc) : opc;
+        if (l) abrir(x, y, l, Object.assign({}, raiz, { modo: "clic", padre: null }), true);
+      }
     }
     function atras() { if (opc.padre) abrir(x, y, opc.padre.items, opc.padre.opc, true); else cerrar(); }
-    function mover(e) { marcar(porPunto(e.clientX, e.clientY)); }
+    function mover(e) { if (modo === "mantener" || e.pointerType === "mouse") marcar(porPunto(e.clientX, e.clientY)); }
     function soltar(e) {
       if (modo !== "mantener") return;
       const i = porPunto(e.clientX, e.clientY);
-      // Clic derecho rápido sin moverse: la rueda se queda abierta para elegir con clic.
-      if (i < 0 && Date.now() - t0 < 350) { modo = "clic"; return; }
-      if (i < 0) { cerrar(); return; }
+      // Soltar sin haber ido hacia ninguna acción: se queda abierta para elegir con un toque.
+      if (i < 0) { if (!seMovio) { modo = "clic"; soltado = { t: Date.now(), x: e.clientX, y: e.clientY }; marcar(-1); } else cerrar(); return; }
       elegir(i);
     }
     function clic(e) {
       if (modo !== "clic") return;
+      // El clic que el navegador manda al soltar el mismo gesto que la abrió no cuenta.
+      if (soltado && Date.now() - soltado.t < 500 && Math.hypot(e.clientX - soltado.x, e.clientY - soltado.y) < 12) { soltado = null; return; }
+      soltado = null;
       const d = Math.hypot(e.clientX - x, e.clientY - y);
       if (d < RI && opc.padre) { atras(); return; }
       const i = porPunto(e.clientX, e.clientY);
@@ -143,51 +137,23 @@
       if (b) b.focus({ preventScroll: true });
     }
 
-    let oyentes;
-    const tragar = (e) => { e.preventDefault(); e.stopPropagation(); };
-    if (auto) {
-      // Solo el anillo recibe el puntero (el velo deja pasar todo). Presionar sobre él no le quita
-      // el foco ni la selección al documento: así el teclado del celular no se cierra.
-      fondo.addEventListener("pointermove", mover);
-      fondo.addEventListener("pointerleave", () => { if (!abajo) marcar(-1); });
-      fondo.addEventListener("pointerdown", (e) => { tragar(e); abajo = true; mover(e); });
-      fondo.addEventListener("pointerup", (e) => {
-        tragar(e);
-        if (!abajo) return;
-        abajo = false;
-        if (Math.hypot(e.clientX - x, e.clientY - y) < RI) { atras(); return; }
-        const i = porPunto(e.clientX, e.clientY);
-        if (i >= 0) elegir(i);
-      });
-      fondo.addEventListener("pointercancel", () => { abajo = false; marcar(-1); });
-      ["touchstart", "touchend", "mousedown", "click", "contextmenu"].forEach((t) => fondo.addEventListener(t, (e) => e.cancelable && tragar(e), { passive: false }));
-      const fuera = (e) => { if (!fondo.contains(e.target)) cerrar(); };
-      const teclaAuto = (e) => {
-        if (e.key === "Escape") { tragar(e); cerrar(); opc.alDescartar && opc.alDescartar(); return; }
-        if (!["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(e.key)) cerrar();   // la tecla sigue su camino
-      };
-      oyentes = [["pointerdown", fuera], ["keydown", teclaAuto]];
-    } else {
-      // En el documento (fase de captura): con el dedo, el puntero queda capturado por el elemento
-      // donde empezó el toque, así que los eventos no llegarían al velo.
-      oyentes = [["pointermove", mover], ["pointerup", (e) => { tragar(e); soltar(e); }], ["click", (e) => { tragar(e); clic(e); }],
-        ["contextmenu", tragar], ["keydown", tecla], ["touchmove", (e) => e.cancelable && e.preventDefault()]];
-    }
+    // En el documento (fase de captura): con el dedo, el puntero queda capturado por el elemento
+    // donde empezó el toque, así que los eventos no llegarían al velo.
+    const tragar = (e) => { if (e.cancelable) e.preventDefault(); e.stopPropagation(); };
+    const oyentes = [["pointermove", mover], ["pointerup", (e) => { tragar(e); soltar(e); }], ["click", (e) => { tragar(e); clic(e); }],
+      // Si el sistema se queda con el toque (pulsación larga sobre texto), se elige con otro toque.
+      ["pointercancel", () => { if (modo === "mantener") { modo = "clic"; marcar(-1); } }],
+      ["pointerdown", (e) => { if (modo === "clic") tragar(e); }],
+      ["contextmenu", tragar], ["keydown", tecla], ["touchmove", (e) => e.cancelable && e.preventDefault()]];
     oyentes.forEach(([t, f]) => document.addEventListener(t, f, { capture: true, passive: false }));
     const quitarSel = document.body.style.userSelect;
-    if (!auto) document.body.style.userSelect = "none";
+    document.body.style.userSelect = "none";
     actual = {
-      velo, opc, auto,
-      mover(nx, ny) {
-        const w = visible();
-        x = Math.min(w.x + w.w - R - 8, Math.max(w.x + R + 8, nx));
-        y = Math.min(w.y + w.h - R - 8, Math.max(w.y + R + 8, ny));
-        rueda.style.left = x + "px"; rueda.style.top = y + "px";
-      },
+      velo, opc,
       cerrar(sinAviso) {
         // El clic que sigue a soltar el botón todavía debe tragarse; se quitan un instante después.
         setTimeout(() => oyentes.forEach(([t, f]) => document.removeEventListener(t, f, { capture: true })), 0);
-        if (!auto) document.body.style.userSelect = quitarSel;
+        document.body.style.userSelect = quitarSel;
         velo.classList.add(sinAviso ? "cambiando" : "saliendo");
         setTimeout(() => velo.remove(), sinAviso ? 90 : 170);
         if (!sinAviso) opc.alCerrar && opc.alCerrar();
@@ -200,120 +166,83 @@
   function cerrar(sinAviso) { if (actual) { const a = actual; actual = null; a.cerrar(sinAviso); } }
 
   /**
-   * Ruedita que aparece sola. leer() describe lo seleccionado ahora:
-   *   { firma, rect, items, titulo } o null si no hay nada.
-   * firma identifica la selección (no cambia si solo se repinta o se desplaza la página).
-   * El editor llama avisar() cada vez que la selección cambia o termina un gesto, y ocultar()
-   * al empezar a escribir, arrastrar o editar.
-   */
-  function automatica(leer, opcA) {
-    opcA = opcA || {};
-    let t = null, firma = null, descartada = null;
-    const control = {};
-    const mia = () => !!(actual && actual.opc.dueno === control);
-    const ocupado = () => document.hidden || NOM.hayHoja() || !!document.querySelector(".menu:not(.saliendo), .paleta-velo, .bienvenida-momento") || (actual && !mia()) || (opcA.activa && !opcA.activa());
-    function abrirYa() {
-      t = null;
-      if (ocupado()) return;
-      const d = leer();
-      if (!d || !d.items) { firma = null; return; }
-      if (d.firma != null && d.firma === descartada) return;
-      firma = d.firma;
-      const p = puntoJunto(d.rect);
-      abrir(p.x, p.y, d.items, {
-        modo: "auto", titulo: d.titulo, dueno: control, tactil: matchMedia("(pointer: coarse)").matches,
-        alDescartar: () => (descartada = firma),
-        // Formato (negrita, color…): vuelve a salir para seguir dando formato. Lo demás termina.
-        alElegir: (it) => { if (it.mantener) { descartada = null; control.avisar(); } else descartada = firma; },
-      });
-    }
-    function acomodar(d) { const p = puntoJunto(d.rect); actual.mover(p.x, p.y); }
-    control.avisar = () => {
-      clearTimeout(t);
-      if (mia()) {
-        const d = leer();
-        if (d && d.firma === firma) { acomodar(d); return; }   // misma selección: solo se acomoda
-        cerrar();
-      }
-      t = setTimeout(abrirYa, opcA.ms || ESPERA_AUTO);
-    };
-    control.ocultar = () => { clearTimeout(t); if (mia()) cerrar(); };
-    control.abierta = mia;
-    // Al desplazar la página o abrir el teclado del celular, la rueda acompaña a la selección.
-    const alDesplazar = () => {
-      if (!mia()) return;
-      const d = leer();
-      if (d && d.firma === firma) acomodar(d); else cerrar();
-    };
-    document.addEventListener("scroll", alDesplazar, true);
-    if (window.visualViewport) visualViewport.addEventListener("resize", alDesplazar);
-    control.destruir = () => {
-      control.ocultar();
-      document.removeEventListener("scroll", alDesplazar, true);
-      if (window.visualViewport) visualViewport.removeEventListener("resize", alDesplazar);
-    };
-    return control;
-  }
-
-  /**
    * Conecta la rueda a un elemento. items(e) devuelve las acciones para ese punto (o null).
-   * opc.izquierdo: también al mantener el clic izquierdo quieto; opc.tactil: también con el dedo.
-   * opc.alPreparar(e): se llama al presionar, antes de abrir (para guardar la selección).
+   * opc.izquierdo: también al mantener el clic izquierdo; opc.tactil: también con el dedo.
+   * opc.rearmar(e): true si moverse reinicia la espera en vez de cancelarla (pausa al seleccionar).
+   * opc.tactilPorSistema: con el dedo manda la pulsación larga del sistema (texto seleccionable);
+   *   opc.alPulsacionLarga(e) decide: "propia" (no dejar que el sistema seleccione) o "sistema".
+   * opc.alPreparar(e): se llama justo antes de abrir (para guardar la selección).
    */
   function enlazar(el, items, opc) {
-    opc = Object.assign({ izquierdo: true, tactil: true, ms: 450 }, opc);
+    opc = Object.assign({ izquierdo: true, tactil: true, ms: MANTENER_MS }, opc);
     let espera = null;
     const cancelar = () => { if (espera) { clearTimeout(espera.t); espera = null; } };
-    const manual = () => actual && !actual.auto;
+    const abrirEn = (ev, x, y, modo, tactil) => {
+      opc.alPreparar && opc.alPreparar(ev);
+      const l = items(ev);
+      if (!l) return null;
+      const r = abrir(x, y, l, { modo, titulo: l.titulo || opc.titulo, tactil, recargar: () => items(ev) });
+      if (r && tactil && navigator.vibrate) navigator.vibrate(12);
+      return r;
+    };
     el.addEventListener("contextmenu", (e) => {
       if (e.shiftKey) return;   // menú nativo: corrector ortográfico, copiar enlace, etc.
-      if (e.pointerType === "touch" || (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)) { if (opc.tactil) e.preventDefault(); return; }
+      const tactil = e.pointerType === "touch" || e.pointerType === "pen" || !!(e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents);
+      if (tactil) {
+        if (!opc.tactil || (opc.ignorar && opc.ignorar(e))) return;
+        cancelar();
+        if (actual) { e.preventDefault(); return; }   // ya la abrió la espera propia
+        if (!opc.tactilPorSistema) { e.preventDefault(); abrirEn(e, e.clientX, e.clientY, "clic", true); return; }
+        // Texto: la pulsación larga del sistema elige la palabra; la rueda sale con ella, en el dedo.
+        const decide = opc.alPulsacionLarga ? opc.alPulsacionLarga(e) : "sistema";
+        if (decide === "propia") { e.preventDefault(); abrirEn(e, e.clientX, e.clientY, "clic", true); }
+        else { const x = e.clientX, y = e.clientY; setTimeout(() => { if (!actual) abrirEn(e, x, y, "clic", true); }, 140); }
+        return;
+      }
       e.preventDefault();
       // Teclado (tecla Menú o Mayús+F10): se abre donde está el cursor.
       if (e.button === 0 && e.clientX === 0 && e.clientY === 0) {
         const r = opc.puntoTeclado ? opc.puntoTeclado() : el.getBoundingClientRect();
-        const l = items(e);
-        if (l) abrir(r.left + (r.width || 0) / 2, r.top + (r.height || 0) / 2, l, { modo: "clic", titulo: opc.titulo });
+        abrirEn(e, r.left + (r.width || 0) / 2, r.top + (r.height || 0) / 2, "clic", false);
       }
     });
     el.addEventListener("pointerdown", (e) => {
-      if (manual()) return;
+      if (actual) return;
       if (e.pointerType === "mouse" && e.button === 2 && !e.shiftKey) {
-        opc.alPreparar && opc.alPreparar(e);
-        const l = items(e);
-        if (l) { e.preventDefault(); abrir(e.clientX, e.clientY, l, { modo: "mantener", titulo: opc.titulo }); }
+        const r = abrirEn(e, e.clientX, e.clientY, "mantener", false);
+        if (r) e.preventDefault();
         return;
       }
       const tactil = e.pointerType !== "mouse";
-      if ((e.button !== 0) || (tactil && !opc.tactil) || (!tactil && !opc.izquierdo)) return;
+      if ((e.button !== 0) || (tactil && (!opc.tactil || opc.tactilPorSistema)) || (!tactil && !opc.izquierdo)) return;
       if (opc.ignorar && opc.ignorar(e)) return;
       cancelar();
-      espera = { x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(() => {
-        const ev = e;
+      const armar = (x, y) => setTimeout(() => {
+        const ev = espera && espera.ev;
         espera = null;
-        opc.alPreparar && opc.alPreparar(ev);
-        const l = items(ev);
-        if (!l) return;
-        abrir(ev.clientX, ev.clientY, l, { modo: "mantener", titulo: opc.titulo, tactil });
-        if (navigator.vibrate && tactil) navigator.vibrate(12);
+        if (!ev || actual) return;
+        if (!abrirEn(ev, x, y, "mantener", tactil)) return;
         // El clic que termina este gesto no debe llegar al elemento de abajo.
         const tragar = (c) => { c.stopPropagation(); c.preventDefault(); };
         document.addEventListener("click", tragar, { capture: true, once: true });
         setTimeout(() => document.removeEventListener("click", tragar, { capture: true }), 600);
-      }, opc.ms) };
+      }, opc.ms);
+      espera = { x: e.clientX, y: e.clientY, id: e.pointerId, ev: e, rearmar: !!(opc.rearmar && opc.rearmar(e)), t: armar(e.clientX, e.clientY) };
+      espera.armar = armar;
     });
-    const mover = (e) => { if (espera && e.pointerId === espera.id && Math.hypot(e.clientX - espera.x, e.clientY - espera.y) > 7) cancelar(); };
-    el.addEventListener("pointermove", mover);
-    ["pointerup", "pointercancel", "dragstart", "wheel"].forEach((t) => el.addEventListener(t, cancelar));
+    const mover = (e) => {
+      if (!espera || e.pointerId !== espera.id || Math.hypot(e.clientX - espera.x, e.clientY - espera.y) <= 7) return;
+      if (!espera.rearmar) { cancelar(); return; }
+      // Se sigue seleccionando: la cuenta empieza otra vez desde el punto nuevo.
+      clearTimeout(espera.t);
+      espera.x = e.clientX; espera.y = e.clientY; espera.ev = e;
+      espera.t = espera.armar(e.clientX, e.clientY);
+    };
+    document.addEventListener("pointermove", mover, true);
+    ["pointerup", "pointercancel", "dragstart"].forEach((t) => document.addEventListener(t, (e) => { if (espera && (t === "dragstart" || e.pointerId === espera.id)) cancelar(); }, true));
+    el.addEventListener("wheel", cancelar, { passive: true });
     el.addEventListener("scroll", cancelar, true);
   }
 
-  /** Rectángulo de pantalla que encierra varios elementos (o null). */
-  function rectDe(els) {
-    const rs = els.filter(Boolean).map((e) => e.getBoundingClientRect()).filter((r) => r.width || r.height);
-    if (!rs.length) return null;
-    return { left: Math.min(...rs.map((r) => r.left)), top: Math.min(...rs.map((r) => r.top)), right: Math.max(...rs.map((r) => r.right)), bottom: Math.max(...rs.map((r) => r.bottom)) };
-  }
-
-  NOM.rueda = { abrir, cerrar: () => cerrar(), enlazar, automatica, rectDe, abierta: () => !!actual, manual: () => !!(actual && !actual.auto) };
+  NOM.rueda = { abrir, cerrar: () => cerrar(), enlazar, abierta: () => !!actual };
 })();

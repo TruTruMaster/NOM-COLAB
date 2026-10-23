@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -12,6 +13,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
@@ -57,7 +61,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle guardado) {
         super.onCreate(guardado);
-        web = new WebView(this);
+        web = new Hoja(this);
         web.setBackgroundColor(Color.parseColor("#F5F3EF"));
         // El WebView no respeta su propio padding: el margen de las barras va en un contenedor.
         FrameLayout raiz = new FrameLayout(this);
@@ -227,6 +231,53 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "No se pudo guardar el archivo", Toast.LENGTH_LONG).show());
             }
+        }
+    }
+
+    /**
+     * WebView sin la barra nativa de "Cortar · Copiar · Seleccionar todo" al seleccionar texto: esas
+     * acciones (y más) están en la ruedita, que sale al mantener presionado. Las manijas para ajustar
+     * la selección se conservan.
+     */
+    static class Hoja extends WebView {
+        Hoja(Context c) { super(c); }
+
+        @Override
+        public ActionMode startActionMode(ActionMode.Callback cb) { return super.startActionMode(new SinMenu(cb)); }
+
+        @Override
+        public ActionMode startActionMode(ActionMode.Callback cb, int tipo) { return super.startActionMode(new SinMenu(cb), tipo); }
+    }
+
+    /** Envuelve el callback del sistema y deja su menú vacío (así la barra flotante no aparece). */
+    static class SinMenu extends ActionMode.Callback2 {
+        private final ActionMode.Callback original;
+        SinMenu(ActionMode.Callback original) { this.original = original; }
+
+        @Override
+        public boolean onCreateActionMode(ActionMode modo, Menu menu) {
+            original.onCreateActionMode(modo, menu);
+            menu.clear();
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode modo, Menu menu) {
+            original.onPrepareActionMode(modo, menu);
+            menu.clear();
+            return true;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode modo, MenuItem item) { return original.onActionItemClicked(modo, item); }
+
+        @Override
+        public void onDestroyActionMode(ActionMode modo) { original.onDestroyActionMode(modo); }
+
+        @Override
+        public void onGetContentRect(ActionMode modo, View vista, Rect rect) {
+            if (original instanceof ActionMode.Callback2) ((ActionMode.Callback2) original).onGetContentRect(modo, vista, rect);
+            else super.onGetContentRect(modo, vista, rect);
         }
     }
 }

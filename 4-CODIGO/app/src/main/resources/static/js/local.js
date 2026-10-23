@@ -27,7 +27,7 @@
       ok = NOM.guardar(clave(id), estado);
       if (!ok && !avisadoLleno) {
         avisadoLleno = true;
-        NOM.aviso("El navegador ya no tiene espacio para este documento. Descárgalo (Exportar → .nom) para no perder cambios.", { tipo: "error", ms: 8000 });
+        NOM.aviso(NOM.aqui().sinEspacio + " para este documento. Descárgalo (Exportar → .nom) para no perder cambios.", { tipo: "error", ms: 8000 });
       }
       // Nombre y modo se copian al índice para listar sin abrir el documento.
       const d = estado.bloques._doc || {};
@@ -57,7 +57,7 @@
       const l = NOM.leer(INDICE(), []) || [];
       l.push({ id, nombre, modo, creado: Date.now(), modificado: Date.now() });
       NOM.guardar(INDICE(), l);
-      if (!local.guardarEstado(id, doc.estado)) throw new Error("El navegador no tiene espacio para crear el documento");
+      if (!local.guardarEstado(id, doc.estado)) throw new Error(NOM.aqui().sinEspacio + " para crear el documento");
       return { id, nombre, modo };
     },
 

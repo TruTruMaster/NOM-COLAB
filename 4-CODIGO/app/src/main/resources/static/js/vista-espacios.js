@@ -383,7 +383,7 @@
     </form>`);
     const pie = html(`<div style="display:contents"><button type="button" class="btn" data-importar>${ico("upload")} Importar archivo</button><span class="crece solo-escritorio"></span><button class="btn primario" data-crear>Crear documento</button></div>`);
     const h = hoja({ titulo: esp ? "Nuevo documento" : "Nuevo documento (en este equipo)", cuerpo, pie, ancha: true });
-    if (!esp) cuerpo.prepend(html(`<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo en este navegador</b>. Si borras la caché se pierde, salvo que lo descargues.</span></div>`));
+    if (!esp) cuerpo.prepend(html(`<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar} se pierde, salvo que lo descargues.</span></div>`));
     function pintarPlantillas() {
       const ps = NOM.plantillas.delModo(modo);
       if (!plantilla || plantilla.modo !== modo) plantilla = ps[0];
@@ -447,7 +447,7 @@
         <div class="fila"><button class="btn chico" data-importar-local>${ico("upload", "ico-s")} Importar</button>
         <button class="btn chico ${conCuenta ? "" : "primario"}" data-nuevo-local>${ico("plus", "ico-s")} Nuevo documento</button></div></div>
       ${conCuenta ? `<p class="suave chico" style="font-weight:650;margin:-6px 0 14px">${ico("lock", "ico-s")} Solo en este dispositivo y cifrados con tu contraseña: no ocupan espacio en la nube. Para colaborar, guárdalos en un espacio.</p>` : ""}
-      ${sueltos.length ? `<div class="alerta info" style="margin-bottom:12px">${ico("info")}<span class="crece">Hay ${sueltos.length} documento(s) creados sin cuenta en este navegador, sin cifrar.</span><button class="btn chico" data-mover-local>Pasarlos a mi cuenta</button></div>` : ""}
+      ${sueltos.length ? `<div class="alerta info" style="margin-bottom:12px">${ico("info")}<span class="crece">Hay ${sueltos.length} documento(s) creados sin cuenta ${NOM.aqui().en}, sin cifrar.</span><button class="btn chico" data-mover-local>Pasarlos a mi cuenta</button></div>` : ""}
       ${docs.length ? `<div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${docs.map(tarjetaLocal).join("")}</div>`
         : `<div class="vacio"><div class="burbuja">${ico("file-text")}</div><h3>Aún no tienes documentos</h3>
             <p style="max-width:44ch">Texto, hoja de cálculo, presentación o diagrama: todo en el mismo lienzo.</p>
@@ -484,10 +484,18 @@
         <div><h1>${saludo()}</h1><p class="sub">Estás usando NOM-COLAB sin cuenta</p></div>
         <div class="fila solo-escritorio"><button class="btn primario" data-cuenta>${ico("user-plus")} Crear cuenta o iniciar sesión</button></div>
       </div>
-      <div class="alerta aviso" style="margin-bottom:8px">${ico("triangle-alert")}<span>Tus documentos se guardan <b>solo en este navegador</b>. Si borras la caché o los datos del navegador, <b>se pierden</b>. Descárgalos (menú … → Descargar copia) o crea una cuenta para guardarlos en un espacio y trabajar con tu equipo.</span></div>
+      <div class="alerta aviso" style="margin-bottom:8px" data-aviso-local>${ico("triangle-alert")}<span>Tus documentos se guardan <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar}, <b>se pierden</b>. Descárgalos (menú … → Descargar copia) o crea una cuenta para guardarlos en un espacio y trabajar con tu equipo.</span></div>
       <section class="seccion" data-locales></section>`;
     $("[data-cuenta]", cont).onclick = () => NOM.app.irACuentas("registro");
     seccionLocal($("[data-locales]", cont), false);
+    // Los espacios viven en un servidor y son de una cuenta: sin cuenta se explica qué son y cómo tenerlos.
+    $("[data-locales]", cont).after(html(`<section class="seccion"><div class="fila-e"><h2>Espacios de trabajo</h2></div>
+      <div class="vacio espacios-sin-cuenta"><div class="burbuja">${ico("users")}</div>
+        <h3>Trabaja con tu equipo en tiempo real</h3>
+        <p style="max-width:44ch">Un espacio reúne los documentos de un equipo y los guarda en el servidor: los editan juntos, desde la computadora o el celular, y no se pierden si cambias de equipo. Para tener espacios necesitas una cuenta (es gratis).</p>
+        <div class="fila"><button class="btn" data-v="entrar">${ico("log-in")} Ya tengo cuenta</button><button class="btn primario" data-v="registro">${ico("user-plus")} Crear cuenta</button></div></div></section>`));
+    $("[data-v=entrar]", cont).onclick = () => NOM.app.irACuentas("entrar");
+    $("[data-v=registro]", cont).onclick = () => NOM.app.irACuentas("registro");
   }
 
   /** Sube un documento local a un espacio donde el usuario puede editar. */

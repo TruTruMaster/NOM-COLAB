@@ -21,7 +21,6 @@
       ed.lienzo.style.overflow = "hidden";
       const rej = $("[data-rejilla]", raiz), fx = $("[data-fx]", raiz), refEl = $("[data-ref]", raiz);
       let sel = { c: 0, f: 0 }, ancla = null, editor = null, arrastrando = false;
-      let porPuntero = false, extender = false, esperaRango = null;
       const dedos = new Set();
 
       function tabla() {
@@ -117,7 +116,6 @@
 
       function abrirEditor(inicial, conservar) {
         if (ed.soloLectura || !t) return;
-        ruedaAuto.ocultar();
         cerrarEditor(false);
         const td = celda(sel.c, sel.f);
         if (!td) return;
@@ -153,7 +151,7 @@
         if (editor || !t) return;
         const mod = e.ctrlKey || e.metaKey;
         const flechas = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
-        if (flechas[e.key]) { e.preventDefault(); porPuntero = false; mover(...flechas[e.key], e.shiftKey); ruedaAuto.avisar(); return; }
+        if (flechas[e.key]) { e.preventDefault(); mover(...flechas[e.key], e.shiftKey); return; }
         if (e.key === "Enter") { e.preventDefault(); e.shiftKey ? mover(0, -1) : abrirEditor(null, true); return; }
         if (e.key === "Tab") { e.preventDefault(); mover(e.shiftKey ? -1 : 1, 0); return; }
         if (e.key === "F2") { e.preventDefault(); abrirEditor(null, true); return; }
@@ -221,7 +219,6 @@
       }
 
       rej.addEventListener("pointerdown", (e) => {
-        ruedaAuto.ocultar();
         const td = e.target.closest("td");
         if (e.pointerType === "touch") dedos.add(e.pointerId);
         if (!td) return;
@@ -236,21 +233,15 @@
           return;
         }
         if (editor) cerrarEditor(true);
-        // Mayús + clic, un dedo sosteniendo otra celda, o tocar después de mantener: rango.
-        const sumar = e.shiftKey || (e.pointerType === "touch" && (dedos.size > 1 || extender));
-        if (sumar) { if (!ancla) ancla = { ...sel }; extender = false; } else ancla = { c, f };
+        // Mayús + clic, o un dedo sosteniendo una celda mientras otro toca otra: rango.
+        const sumar = e.shiftKey || (e.pointerType === "touch" && dedos.size > 1);
+        if (sumar) { if (!ancla) ancla = { ...sel }; } else ancla = { c, f };
         sel = { c, f };
-        porPuntero = true;
         arrastrando = e.pointerType === "mouse";
         pintarSeleccion();
-        if (e.pointerType === "touch" && !sumar) {
-          clearTimeout(esperaRango && esperaRango.t);
-          esperaRango = { x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(() => { esperaRango = null; extender = true; if (navigator.vibrate) navigator.vibrate(14); aviso("Toca otra celda para elegir el rango", { ms: 1800 }); }, 450) };
-        }
         if (e.pointerType === "mouse") rej.focus({ preventScroll: true });
       });
       rej.addEventListener("pointermove", (e) => {
-        if (esperaRango && e.pointerId === esperaRango.id && Math.hypot(e.clientX - esperaRango.x, e.clientY - esperaRango.y) > 7) { clearTimeout(esperaRango.t); esperaRango = null; }
         if (!arrastrando) return;
         const td = e.target.closest && e.target.closest("td");
         if (!td) return;
@@ -259,11 +250,8 @@
       });
       const soltar = (e) => {
         dedos.delete(e.pointerId);
-        if (esperaRango && e.pointerId === esperaRango.id) { clearTimeout(esperaRango.t); esperaRango = null; }
-        const eraMio = arrastrando || (e.target && e.target.closest && e.target.closest("[data-rejilla]"));
         arrastrando = false;
         if (ancla && ancla.c === sel.c && ancla.f === sel.f) ancla = null;
-        if (eraMio && porPuntero) ruedaAuto.avisar();
       };
       document.addEventListener("pointerup", soltar);
       document.addEventListener("pointercancel", soltar);
@@ -298,8 +286,9 @@
         escribir(sel.c, sel.f, `=SUMA(${F().ref(sel.c, f + 1)}:${F().ref(sel.c, sel.f - 1)})`);
       }
       // ------------------------------------------------------------ ruedita
-      // Sale sola al elegir celdas con el puntero o con Mayús+flechas (y con clic derecho). Mismo
-      // orden que en los demás editores: negrita, cursiva, subrayado, color, borrar, copiar, fórmulas, más.
+      // Sale al mantener presionada una celda (dedo o clic, también en una pausa al elegir un rango
+      // arrastrando) o con clic derecho, centrada en el dedo o el cursor. Mismo orden que en los
+      // demás editores: negrita, cursiva, subrayado, color, borrar, copiar, fórmulas, más.
       const COLORES_CELDA = ["#000000", "#C2372B", "#E8590C", "#2FA868", "#1D7A4C", "#3D72F2", "#8B5CF6"];
       function accionesCeldas() {
         const ref = F().ref(sel.c, sel.f), lect = ed.soloLectura || !t;
@@ -320,23 +309,16 @@
             { texto: "Agregar columnas", corto: "+ Columnas", icono: "columns-3", off: lect, fn: () => t && doc().cambiar(t.id, { cols: (t.cols || 10) + 2 }) }] },
         ];
       }
-      function leerRueda() {
-        if (editor || !t || !rej.isConnected || arrastrando) return null;
-        const r = rango(), varias = r.c1 !== r.c2 || r.f1 !== r.f2;
-        if (!varias && !porPuntero) return null;   // moverse con las flechas no la saca
-        const rect = NOM.rueda.rectDe([celda(r.c1, r.f1), celda(r.c2, r.f2)]);
-        if (!rect) return null;
-        return { firma: `${ed.pagina}:${r.c1},${r.f1}:${r.c2},${r.f2}`, rect, titulo: varias ? `${F().ref(r.c1, r.f1)}:${F().ref(r.c2, r.f2)}` : F().ref(sel.c, sel.f), items: accionesCeldas() };
-      }
-      const ruedaAuto = NOM.rueda.automatica(leerRueda);
       NOM.rueda.enlazar(rej, (e) => {
         const td = e.target.closest && e.target.closest("td");
         if (!td) return null;
         const c = +td.dataset.c, f = +td.dataset.f, r = rango();
         if (!(c >= r.c1 && c <= r.c2 && f >= r.f1 && f <= r.f2)) { ancla = null; sel = { c, f }; pintarSeleccion(); }
-        ruedaAuto.ocultar();
-        return accionesCeldas();
-      }, { izquierdo: false, tactil: false, titulo: "Celdas" });
+        arrastrando = false;
+        const l = accionesCeldas(), q = rango();
+        l.titulo = q.c1 !== q.c2 || q.f1 !== q.f2 ? `${F().ref(q.c1, q.f1)}:${F().ref(q.c2, q.f2)}` : F().ref(sel.c, sel.f);
+        return l;
+      }, { titulo: "Celdas", rearmar: (e) => e.pointerType === "mouse", ignorar: () => !!editor });
 
       this._herr = [
         { id: "negrita", icono: "bold", micro: "Negrita|Para encabezados y totales.|Ctrl+B", fn: negrita },
@@ -385,7 +367,7 @@
           rej.scrollLeft = scroll[0]; rej.scrollTop = scroll[1];
         } else pintarBandeja();
       };
-      this.desmontar = () => { cerrarEditor(true); ruedaAuto.destruir(); document.removeEventListener("pointerup", soltar); document.removeEventListener("pointercancel", soltar); ed.lienzo.style.overflow = ""; };
+      this.desmontar = () => { cerrarEditor(true); document.removeEventListener("pointerup", soltar); document.removeEventListener("pointercancel", soltar); ed.lienzo.style.overflow = ""; };
 
       render();
       if (matchMedia("(hover: hover)").matches) rej.focus({ preventScroll: true });
