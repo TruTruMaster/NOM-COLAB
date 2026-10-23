@@ -150,7 +150,7 @@
 .mini { position: relative; border-radius: 12px; padding: 0; border: 2px solid transparent; background: var(--sup-2); box-shadow: var(--clay); aspect-ratio: 16 / 9; overflow: hidden; flex: none; }
 .mini[aria-current="true"] { border-color: var(--m-pres); }
 .mini .num { position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 900; color: var(--tinta-suave); }
-.mini .mini-cont { position: absolute; top: 0; left: 0; width: 960px; height: 540px; transform-origin: 0 0; pointer-events: none; }
+.mini .mini-cont { position: absolute; top: 0; left: 0; width: 960px; height: 540px; transform-origin: 0 0; pointer-events: none; text-align: left; }
 .escenario { position: relative; overflow: hidden; display: grid; place-items: center; background: var(--fondo); }
 .diapo {
   position: absolute; left: 0; top: 0; width: 960px; height: 540px; transform-origin: 0 0;

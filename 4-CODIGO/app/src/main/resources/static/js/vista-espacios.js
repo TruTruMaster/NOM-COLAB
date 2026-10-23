@@ -430,7 +430,7 @@
   function tarjetaLocal(d) {
     const m = MODOS[d.modo] || MODOS.TEXTO;
     return `<a class="tarjeta doc-tarjeta clay modo-${esc(d.modo)}" href="#/local/${esc(d.id)}">
-      <div class="miniatura">${d.modo === "TEXTO" ? `<div class="lineas"><i style="width:60%;height:10px"></i><i></i><i style="width:85%"></i><i style="width:70%"></i></div>` : ico(m.icono)}</div>
+      <div class="miniatura">${NOM.miniatura(d.modo)}</div>
       <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(d.nombre)}</span>
         <span class="meta"><span>${ico("hard-drive", "ico-s")} En este equipo</span><span>${esc(haceCuanto(d.modificado))}</span></span></div>
       <div class="acciones"><button class="icono-btn" data-menu-local="${esc(d.id)}" aria-label="Más opciones">${ico("more-horizontal")}</button></div>
@@ -581,7 +581,7 @@
       if (!docs.length) { cont2.innerHTML = `<p class="suave" style="padding:24px 4px;font-weight:650">Nada coincide con tu búsqueda.</p>`; return; }
       cont2.innerHTML = `<div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${docs.map((x) => `
         <a class="tarjeta doc-tarjeta clay modo-${esc(x.modo)}" href="#/doc/${esc(x.id)}">
-          <div class="miniatura">${x.modo === "TEXTO" ? `<div class="lineas"><i style="width:60%;height:10px"></i><i></i><i style="width:85%"></i><i style="width:70%"></i></div>` : ico(MODOS[x.modo].icono)}</div>
+          <div class="miniatura">${NOM.miniatura(x.modo)}</div>
           <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(x.nombre)}</span>
             <span class="meta"><span>${ico(MODOS[x.modo].icono, "ico-s")} ${esc(MODOS[x.modo].nombre)}</span><span>${esc(haceCuanto(x.modificado))}</span></span></div>
           ${edita ? `<div class="acciones"><button class="icono-btn" data-menu="${esc(x.id)}" aria-label="Más opciones">${ico("more-horizontal")}</button></div>` : ""}

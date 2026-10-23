@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 7: sin íconos adaptables, el mismo fondo con esquinas redondeadas. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/fondo_icono" />
+            <gradient android:angle="270" android:startColor="@color/fondo_icono" android:endColor="@color/fondo_icono_abajo" />
             <corners android:radius="30dp" />
         </shape>
     </item>
-    <item android:drawable="@drawable/ic_documentos" />
+    <item android:drawable="@drawable/ic_llama" />
 </layer-list>

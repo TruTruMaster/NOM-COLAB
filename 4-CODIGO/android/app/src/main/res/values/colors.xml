@@ -1,3 +1,4 @@
 <resources>
-    <color name="fondo_icono">#5B5BD6</color>
+    <color name="fondo_icono">#2B2952</color>
+    <color name="fondo_icono_abajo">#15142A</color>
 </resources>

@@ -473,8 +473,37 @@ kbd {
   border-bottom: 1px solid var(--borde);
 }
 .doc-tarjeta .miniatura .ico { width: 40px; height: 40px; opacity: .9; }
-.doc-tarjeta .miniatura .lineas { position: absolute; inset: 18px 22px auto 22px; display: flex; flex-direction: column; gap: 7px; }
-.doc-tarjeta .miniatura .lineas i { display: block; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--mc) 30%, transparent); }
+/* la hoja de papel de cada tipo asoma desde abajo y se levanta un poco al pasar encima */
+.dmini { position: absolute; left: 50%; bottom: -14px; width: min(74%, 176px); height: 104px; transform: translateX(-50%);
+  background: var(--sup-2); border: 1px solid var(--borde); border-radius: 10px 10px 0 0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 12px 26px -12px color-mix(in srgb, var(--mi) 45%, transparent);
+  overflow: hidden; transition: transform .35s var(--salida, ease), box-shadow .35s; }
+.doc-tarjeta:hover .dmini { transform: translate(-50%, -5px); box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 18px 30px -12px color-mix(in srgb, var(--mi) 55%, transparent); }
+.dmini i { display: block; }
+.dmini-texto { padding: 15px 16px; display: flex; flex-direction: column; gap: 6px; }
+.dmini-texto i { height: 4px; border-radius: 3px; background: color-mix(in srgb, var(--tinta) 13%, transparent); }
+.dmini-texto .t { width: 56%; height: 8px; margin-bottom: 3px; background: var(--mc); }
+.dmini-texto .h { width: 38%; height: 5px; margin-top: 4px; background: color-mix(in srgb, var(--mc) 70%, transparent); }
+.dmini-hoja { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); grid-auto-rows: 1fr; gap: 1px; padding: 0; overflow: hidden; background: var(--borde-fuerte); }
+.dmini-hoja i { background: var(--sup-2); }
+.dmini-hoja i:nth-child(-n+4) { background: color-mix(in srgb, var(--mc) 26%, var(--sup-2)); }
+.dmini-hoja i:nth-child(4n+1):not(:first-child) { background: color-mix(in srgb, var(--mc) 8%, var(--sup-2)); }
+.dmini-hoja i:nth-child(10), .dmini-hoja i:nth-child(15) { background: color-mix(in srgb, var(--mc) 40%, var(--sup-2)); }
+.dmini-pres { bottom: auto; top: 50%; height: auto; aspect-ratio: 16 / 10; border-radius: 9px; transform: translate(-50%, -46%);
+  display: grid; grid-template-columns: 6px 1fr .8fr; grid-template-rows: 1fr auto auto 1fr; column-gap: 10px; row-gap: 6px; padding: 0 14px 0 16px; }
+.doc-tarjeta:hover .dmini-pres { transform: translate(-50%, -52%); }
+.dmini-pres .barra { grid-column: 1; grid-row: 2 / 4; border-radius: 3px; background: var(--acento); }
+.dmini-pres .t { grid-column: 2; grid-row: 2; height: 9px; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 75%, transparent); }
+.dmini-pres .s { grid-column: 2; grid-row: 3; width: 70%; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--tinta) 22%, transparent); }
+.dmini-pres .img { grid-column: 3; grid-row: 2 / 4; align-self: center; height: 34px; border-radius: 7px; background: color-mix(in srgb, var(--mc) 55%, var(--sup-2)); }
+.dmini-diag { display: grid; place-items: center; padding: 12px 10px 18px;
+  background: radial-gradient(color-mix(in srgb, var(--tinta) 14%, transparent) 1px, transparent 1.2px) 0 0 / 10px 10px, var(--sup-2); }
+.dmini-diag svg { width: 100%; height: 100%; }
+.dmini-diag .ln { fill: none; stroke: color-mix(in srgb, var(--tinta) 45%, transparent); stroke-width: 2; stroke-linecap: round; }
+.dmini-diag .n1 { fill: color-mix(in srgb, var(--m-hoja) 38%, var(--sup-2)); }
+.dmini-diag .n2 { fill: color-mix(in srgb, var(--mc) 40%, var(--sup-2)); }
+.dmini-diag .n3 { fill: color-mix(in srgb, #F5C542 55%, var(--sup-2)); }
+.doc-tarjeta .cuerpo .titulo { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-tarjeta .cuerpo { padding: var(--e3) var(--e4) var(--e4); display: flex; flex-direction: column; gap: 6px; }
 .doc-tarjeta .acciones { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity var(--t-corto); }
 .doc-tarjeta:hover .acciones, .doc-tarjeta:focus-within .acciones { opacity: 1; }
@@ -760,6 +789,8 @@ kbd {
   .rejilla { grid-template-columns: 1fr; }
   .doc-rejilla { grid-template-columns: repeat(2, 1fr) !important; gap: var(--e3) !important; }
   .doc-tarjeta .miniatura { height: 96px; }
+  .dmini { height: 80px; width: min(78%, 150px); }
+  .dmini-pres { height: auto; width: min(68%, 128px); }
   .doc-tarjeta .acciones { opacity: 1; }
   .avisos { bottom: calc(96px + env(safe-area-inset-bottom)); }
   .solo-escritorio { display: none !important; }
@@ -910,7 +941,7 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 .pasos-anillo .fondo { stroke: var(--sup-hundida); }
 .pasos-anillo .avance { stroke: var(--ok); stroke-linecap: round; stroke-dashoffset: var(--fin); animation: anillo 1.2s .35s var(--salida) backwards; }
 @keyframes anillo { from { stroke-dashoffset: 113.1; } }
-.pasos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 8px; margin-top: 14px; }
+.pasos-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 14px; }
 .pasos-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-m); border: 1px solid var(--borde); background: var(--sup-2);
   text-align: left; color: var(--tinta); transition: transform .25s var(--salida), box-shadow .25s, border-color .2s; animation: entrar .45s var(--salida) backwards; animation-delay: calc(var(--i) * 55ms + 220ms); }
 .pasos-item:hover { transform: translateY(-2px); box-shadow: var(--clay); border-color: var(--borde-fuerte); }
@@ -921,6 +952,11 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 .pasos-item.hecho { opacity: .6; }
 .pasos-item.hecho .pasos-check { background: var(--ok); color: #fff; }
 .pasos-item.hecho b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+/* lo hecho se queda en una línea; lo pendiente lleva su explicación en dos líneas como máximo */
+.pasos-item { align-items: center; min-height: 64px; }
+.pasos-item small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; margin-top: 2px; }
+.pasos-item.hecho small { display: none; }
+.pasos-item.hecho b { color: var(--tinta-suave); font-size: 13.5px; }
 
 /* ---------------------------------------------------------------- consejo en el editor */
 .consejo { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 45; display: flex; align-items: center; gap: 12px;

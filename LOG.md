@@ -508,3 +508,46 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Notificación fija con la dirección y botón Detener; panel "Servidor en este teléfono" en
   *Este dispositivo* (copiar y compartir la dirección, apagar).
 - Ruedita: al elegir cualquier acción (también formato) la rueda se cierra. App 0.6.0.
+
+## 46. Logo nuevo: "la llama compartida"
+- Se investigó la psicología de formas y colores en logos (Jiang et al. 2016; Henderson y Cote
+  1998; Wiessner 2014 sobre la plática junto al fuego) y las reglas de íconos de app y de
+  Android. El ícono anterior (cuatro cuadros de colores) caía en el problema de los íconos de
+  Google Workspace de 2020 y se parecía al logo de Microsoft.
+- Marca nueva: dos lenguas de fuego, índigo (la interfaz) y naranja (`--llama`, el lema de
+  WACK), que se inclinan una hacia la otra y forman una sola llama, sobre un fondo de noche
+  índigo. Logotipo en Nunito con el guion color llama. Manual en `4-CODIGO/docs/MARCA.md`,
+  archivos en `4-CODIGO/marca/`.
+- Aplicado en la página (favicon, símbolo `#logo`, íconos del manifiesto y versión maskable)
+  y en Android (ícono adaptable con degradados, capa monocromática para los íconos con tema y
+  un ícono de un solo color para la notificación del servidor). Jar y APK recompilados.
+
+## 47. El logo nuevo en todas partes y revisión de la interfaz
+- **Logo nuevo en la presentación y el documento del módulo:** `5-PRESENTACION/imagenes/logo-nom.png`
+  es ahora la llama compartida (texto alternativo actualizado). El logo de WACK no cambió.
+- **Capturas rehechas** (las 17 `lf-*.png`, mismos tamaños) con datos de demostración en un servidor
+  aparte: cuentas maestra.lupita (administradora), profe.demo, uriel.mo y josep.sf (bloqueada);
+  calificaciones con números, plan de clase lleno y una edición de uriel.mo desde el celular para la
+  pestaña Actividad. Se volvieron a imprimir los dos PDF de `ENTREGA/` y se actualizó el deck publicado
+  (portada y las cuatro diapositivas de Look & Feel).
+- **La presentación cubre toda la lista de la rúbrica:** se agregaron dos diapositivas de la empresa
+  (de `PE_WACK.docx`): nombre, eslogan, misión y visión, y el organigrama redibujado con los cuatro
+  integrantes. Quedan 22 diapositivas: empresa (nombre, misión y visión, organigrama) y proyecto
+  (nombre, problemática, mapa de navegación, casos de uso con especificación, secuencia y actividades
+  de los 2 módulos, Look & Feel de los 2 módulos, entidad-relación y avance web y móvil).
+- **Revisión de la interfaz** (claro, oscuro y celular), corregido:
+  - Tarjetas de documento: cada tipo tiene su miniatura (renglones, cuadrícula, diapositiva o
+    figuras unidas) que se levanta al pasar el cursor; el nombre va en una línea para que todas
+    las tarjetas queden alineadas. Clase `.dmini` (la `.mini` ya era de las diapositivas).
+  - Plantillas: "Plan de clase" y "Acta de reunión" usan el estilo Título de Word; en "Proyecto",
+    la barra de color ya no tapa el título; los promedios de "Calificaciones" se redondean.
+  - Editor de texto: el tamaño de letra se ve desde que abre (antes salía vacío) y la fuente dice
+    "Calibri" sin cortarse.
+  - Las miniaturas de diapositivas alinean el texto igual que la diapositiva (antes salía centrado).
+  - El consejo del editor de texto ya no menciona la pausa al seleccionar (la ruedita sale solo al
+    mantener presionado).
+  - Primeros pasos: lo hecho ocupa una línea y lo pendiente explica en dos como máximo.
+  - Este dispositivo ya no lista filas sin nombre (colas vacías de documentos sin copia).
+  - Un aviso que aparece bajo el ratón quieto ya no se queda congelado: solo se pausa si el cursor
+    se mueve encima.
+- Jar y APK recompilados; app 0.7.0.

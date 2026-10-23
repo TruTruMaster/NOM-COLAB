@@ -339,7 +339,7 @@
 
   // ================================================================== consejo de la ruedita en el editor
   const CONSEJOS = {
-    TEXTO: "Mantén presionado sobre el texto (o haz una pausa al seleccionar): sale la ruedita con negrita, color, estilos y más.",
+    TEXTO: "Mantén presionado sobre el texto: sale la ruedita con negrita, color, estilos y más.",
     HOJA: "Mantén presionada una celda: sale la ruedita con formato, fórmulas y más.",
     PRESENTACION: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",
     DIAGRAMA: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",

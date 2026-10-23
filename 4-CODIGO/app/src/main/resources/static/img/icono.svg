@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <!-- Un documento cuadrado con los 4 tipos que crea NOM-COLAB: texto (azul), hoja (verde), presentación (naranja) y diagrama (morado). Márgenes de 3.5 y separación de 1; esquinas concéntricas. -->
-  <defs>
-    <linearGradient id="lg-fondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A8AF5"/><stop offset="1" stop-color="#5151CC"/></linearGradient>
-  </defs>
-  <rect x="2" y="2" width="44" height="44" rx="15" fill="url(#lg-fondo)"/>
-  <rect x="5" y="4" width="38" height="16" rx="10" fill="#fff" opacity=".16"/>
-  <rect x="11" y="11" width="26" height="26" rx="6" fill="#fff"/>
-  <rect x="14.5" y="14.5" width="9" height="9" rx="2.5" fill="#3D72F2"/>
-  <rect x="24.5" y="14.5" width="9" height="9" rx="2.5" fill="#2FA868"/>
-  <rect x="14.5" y="24.5" width="9" height="9" rx="2.5" fill="#F08C2A"/>
-  <rect x="24.5" y="24.5" width="9" height="9" rx="2.5" fill="#8B5CF6"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><!-- NOM-COLAB · la llama compartida: dos lenguas de fuego (dos personas) que se inclinan una hacia la otra y forman una sola llama. Índigo = la interfaz; naranja = la llama de WACK. Construcción en docs/MARCA.md. --><defs><linearGradient id="nf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B2952"/><stop offset="1" stop-color="#15142A"/></linearGradient><linearGradient id="ni" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9A9FF"/><stop offset="1" stop-color="#6767E8"/></linearGradient><linearGradient id="nd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F57"/><stop offset="1" stop-color="#EE4F38"/></linearGradient><radialGradient id="nb" cx="52" cy="80" r="46" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F06A3D" stop-opacity=".26"/><stop offset="1" stop-color="#F06A3D" stop-opacity="0"/></radialGradient><linearGradient id="nl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#nf)"/><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#nb)"/><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#nl)"/><g transform="translate(50 50.5) scale(0.84) translate(-50.5 -47.5)"><path d="M34 29C34 40 40.15 39 42.75 49C45.25 59 56.25 71 49.75 85.70A24 24 0 0 1 26 62C26 49 27 38 34 29Z" fill="url(#ni)"/><path d="M55 9C64 24 75 38 74 62A24 24 0 0 1 53.25 85.70C59.75 71 48.75 59 46.25 49C42.75 36 49 26 55 9Z" fill="url(#nd)"/></g></svg>

@@ -58,6 +58,15 @@
     }
     let ajenos = 0;
     try { ajenos = await NOM.boveda.ajenos(); } catch (e) { /* sin IndexedDB */ }
+    // Una cola vacía sin copia del documento no es algo que el usuario pueda abrir ni liberar:
+    // no se lista. Si tiene cambios sin enviar, se nombra con la lista de recientes.
+    const recientes = NOM.leer(api.clave("recientes"), []) || [];
+    for (const c of copias.values()) {
+      if (c.nombre) continue;
+      if (!c.pendientes) { copias.delete(c.id); continue; }
+      const r = recientes.find((x) => x.id === c.id) || {};
+      c.nombre = r.nombre || "Documento"; c.modo = r.modo || "TEXTO"; c.espacio = r.espacio || null;
+    }
     const lista = [...copias.values()].sort((a, b) => b.guardado - a.guardado);
     return { total: cifrado + otros, cifrado, otros, ajenos, copias: lista, locales: locales.sort((a, b) => b.modificado - a.modificado) };
   }

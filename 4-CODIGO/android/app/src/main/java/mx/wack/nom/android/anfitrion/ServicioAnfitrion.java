@@ -208,7 +208,7 @@ public class ServicioAnfitrion extends Service {
         PendingIntent abrir = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), fl);
         PendingIntent detener = PendingIntent.getService(this, 1, new Intent(this, ServicioAnfitrion.class).setAction(DETENER), fl);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CANAL) : new Notification.Builder(this);
-        Notification n = b.setSmallIcon(R.drawable.ic_documentos)
+        Notification n = b.setSmallIcon(R.drawable.ic_notificacion)
                 .setContentTitle("Este teléfono es el servidor de NOM-COLAB")
                 .setContentText(texto)
                 .setStyle(new Notification.BigTextStyle().bigText(texto))

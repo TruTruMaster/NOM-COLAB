@@ -10,7 +10,17 @@ BLOB = {"59ae60dc8c6f226a4075a9d86549fd53": "logo-wack.png", "a88e62b0947189e0ba
  "e0cd1f6a98351c148b59713f9d76fd90": "lf-cuentas-4-usuario-sin-permiso.png", "3af264b801b8718add010ab3f10da074": "lf-cuentas-6-administrar-usuarios.png",
  "ff7a67db2d0fb0c64581211a5cb69c36": "lf-espacios-2-espacio.png", "6f88e28529b2c37bbddbf46f9b9b32af": "lf-espacios-3-editor-texto.png",
  "cdbc24fc23d1e53cfa01cb9b87c56d61": "lf-espacios-5-nuevo-documento.png", "2ee66b847059159358536ee4c989a148": "lf-espacios-6-descargar.png",
- "e97ec224439dece05fbe21b5c30b4b44": "lf-espacios-7-actividad.png", "a77627bb420cfc4444b0f00be2584c7d": "lf-movil-login.png"}
+ "e97ec224439dece05fbe21b5c30b4b44": "lf-espacios-7-actividad.png", "a77627bb420cfc4444b0f00be2584c7d": "lf-movil-login.png",
+ "317e071d177c681c800366017a1f16b2": "logo-nom.png",
+ "c28ec657035f037a09430ad478418bd8": "lf-cuentas-2-crear-cuenta.png",
+ "ccc806897c09a13d5b2d941a571bc200": "lf-movil-login.png",
+ "29b4408c97977de967a63f1dad3eac92": "lf-cuentas-6-administrar-usuarios.png",
+ "7a39ea44d220492f93b3d94ddf6e5c65": "lf-cuentas-4-usuario-sin-permiso.png",
+ "af60262a755cfde06580c8e7edce0dda": "lf-espacios-2-espacio.png",
+ "df7b0b4e2a2cb2dd2719f17beba82e5b": "lf-espacios-3-editor-texto.png",
+ "fde12dcbe02e974b9fc89d8d8a292a74": "lf-espacios-5-nuevo-documento.png",
+ "04b58a5db6b10228efa838635787c189": "lf-espacios-6-descargar.png",
+ "7d977a618155160bed66e3b714f28f95": "lf-espacios-7-actividad.png"}
 ICONOS = {  # trazos estilo Lucide (24x24)
  "GraduationCap": '<path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
  "Globe": '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',

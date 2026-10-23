@@ -67,6 +67,15 @@
     DIAGRAMA: { nombre: "Diagrama", icono: "workflow", micro: "Organizador gráfico: figuras unidas con flechas." },
   };
 
+  /** Miniatura de una tarjeta de documento: una hoja de papel con la forma de cada tipo
+      (renglones, cuadrícula, diapositiva o figuras unidas), en el color del tipo. */
+  function miniatura(modo) {
+    if (modo === "HOJA") return `<div class="dmini dmini-hoja" aria-hidden="true">${"<i></i>".repeat(24)}</div>`;
+    if (modo === "PRESENTACION") return `<div class="dmini dmini-pres" aria-hidden="true"><i class="barra"></i><i class="t"></i><i class="s"></i><i class="img"></i></div>`;
+    if (modo === "DIAGRAMA") return `<div class="dmini dmini-diag" aria-hidden="true"><svg viewBox="0 0 132 84"><path d="M38 27v16M58 52h22" class="ln"/><rect x="18" y="9" width="40" height="18" rx="9" class="n1"/><rect x="18" y="43" width="40" height="18" rx="5" class="n2"/><path d="M96 39l16 13-16 13-16-13z" class="n3"/></svg></div>`;
+    return `<div class="dmini dmini-texto" aria-hidden="true"><i class="t"></i><i></i><i style="width:92%"></i><i style="width:96%"></i><i style="width:58%"></i><i class="h"></i><i style="width:88%"></i></div>`;
+  }
+
   // ------------------------------------------------------------ avisos (toasts)
   let contAvisos;
   function aviso(texto, opc) {
@@ -87,8 +96,10 @@
     const cerrar = () => { clearTimeout(t); el.classList.add("saliendo"); setTimeout(() => el.remove(), 220); };
     // Con el cursor encima el aviso espera (para alcanzar a leerlo); al salir, sigue su cuenta.
     let resta = ms, desde = Date.now(), t = setTimeout(cerrar, ms);
-    el.addEventListener("pointerenter", () => { clearTimeout(t); resta -= Date.now() - desde; el.classList.add("pausa"); });
-    el.addEventListener("pointerleave", () => { desde = Date.now(); el.classList.remove("pausa"); t = setTimeout(cerrar, Math.max(800, resta)); });
+    // Solo cuenta un cursor que se mueve encima: un aviso que aparece bajo el ratón quieto se va solo.
+    let pausado = false;
+    el.addEventListener("pointermove", (e) => { if (pausado || e.pointerType !== "mouse") return; pausado = true; clearTimeout(t); resta -= Date.now() - desde; el.classList.add("pausa"); });
+    el.addEventListener("pointerleave", () => { if (!pausado) return; pausado = false; desde = Date.now(); el.classList.remove("pausa"); t = setTimeout(cerrar, Math.max(800, resta)); });
     return cerrar;
   }
 
@@ -325,6 +336,6 @@
   Object.assign(NOM, {
     enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
-    leer, guardar, quitar, MODOS, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,
+    leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,
   });
 })();

@@ -364,7 +364,7 @@
         const d = document.createElement("div");
         d.innerHTML = b.html || "";
         const tk = tokens(d, {});
-        const pa = { h1: { estilo: "h1" }, h2: { estilo: "h2" }, cita: { estilo: "cita" }, lista: { lista: "vinetas" }, tarea: { lista: "tareas", hecho: !!b.hecho } }[b.estilo] || {};
+        const pa = { titulo: { estilo: "titulo" }, subtitulo: { estilo: "subtitulo" }, h1: { estilo: "h1" }, h2: { estilo: "h2" }, cita: { estilo: "cita" }, lista: { lista: "vinetas" }, tarea: { lista: "tareas", hecho: !!b.hecho } }[b.estilo] || {};
         let tramos = [];
         tk.forEach((t) => {
           if (t.c === "\n") { ps.push({ tramos, a: limpio(Object.assign({}, t.pa, pa)) }); tramos = []; return; }
@@ -1958,7 +1958,7 @@
       }
 
       const selectEstilo = `<select class="mini-select wd-sel-estilo" aria-label="Estilo de párrafo" data-micro="Estilo|Normal, títulos, cita o código. Atajos: Ctrl+Alt+1, 2, 3.">${ESTILOS.map((s) => `<option value="${s.v || ""}">${s.t}</option>`).join("")}</select>`;
-      const selectFuente = `<select class="mini-select wd-sel-fuente" aria-label="Fuente" data-micro="Fuente|Tipo de letra del texto seleccionado."><option value="">Calibri (predeterminada)</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option value="${esc(f)}" style="font-family:${esc(cssFuente(f))}">${esc(f)}</option>`).join("")}<option value="_otra" hidden></option></select>`;
+      const selectFuente = `<select class="mini-select wd-sel-fuente" aria-label="Fuente" data-micro="Fuente|Tipo de letra del texto seleccionado."><option value="">Calibri</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option value="${esc(f)}" style="font-family:${esc(cssFuente(f))}">${esc(f)}</option>`).join("")}<option value="_otra" hidden></option></select>`;
       const tamHtml = `<span class="wd-tam" data-micro="Tamaño de letra|En puntos, como en Word.|Ctrl+] / Ctrl+["><button class="icono-btn chico" data-tam="-" aria-label="Reducir tamaño">${ico("minus", "ico-s")}</button><input class="mini-select" inputmode="decimal" aria-label="Tamaño de letra" list="wd-tamanos" size="3"><datalist id="wd-tamanos">${TAMANOS.map((t) => `<option value="${t}">`).join("")}</datalist><button class="icono-btn chico" data-tam="+" aria-label="Aumentar tamaño">${ico("plus", "ico-s")}</button></span>`;
       this._herr = [
         { html: selectEstilo, montar: (n) => { ctl.estilo = n; n.onchange = () => { formatoParrafo({ estilo: n.value || null }); cuerpo.focus({ preventScroll: true }); }; } },
@@ -1968,6 +1968,8 @@
           $$("[data-tam]", n).forEach((b) => { b.addEventListener("pointerdown", (e) => e.preventDefault()); b.onclick = () => cambiarTam(b.dataset.tam === "+" ? 1 : -1); });
           ctl.tam.addEventListener("change", () => { const v = parseFloat(String(ctl.tam.value).replace(",", ".")); if (v > 0 && v <= 400) formato({ tam: Math.round(v * 2) / 2 }); cuerpo.focus({ preventScroll: true }); });
           ctl.tam.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ctl.tam.dispatchEvent(new Event("change")); } });
+          // Antes de tocar el texto ya se ve el tamaño del primer párrafo, como en Word.
+          ctl.tam.value = 11; programarReflejo();
         } },
         "|",
         { id: "negrita", icono: "bold", micro: "Negrita||Ctrl+B", fn: () => alternar("b") },

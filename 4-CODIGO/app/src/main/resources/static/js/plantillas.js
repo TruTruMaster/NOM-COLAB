@@ -32,7 +32,7 @@
     {
       id: "acta", modo: "TEXTO", nombre: "Acta de reunión", desc: "Asistentes y acuerdos",
       crear: () => ops([
-        texto("Acta de reunión", "h1", 1),
+        texto("Acta de reunión", "titulo", 1),
         texto("<b>Fecha:</b> " + new Date().toLocaleDateString("es-MX", { dateStyle: "long" }) + " · <b>Lugar:</b> ", "p", 2),
         texto("Asistentes", "h2", 3), texto("", "lista", 4),
         texto("Temas tratados", "h2", 5), texto("", "lista", 6),
@@ -42,7 +42,7 @@
     {
       id: "plan-clase", modo: "TEXTO", nombre: "Plan de clase", desc: "Inicio, desarrollo y cierre",
       crear: () => ops([
-        texto("Plan de clase", "h1", 1),
+        texto("Plan de clase", "titulo", 1),
         texto("<b>Materia:</b>  · <b>Grupo:</b>  · <b>Fecha:</b> ", "p", 2),
         texto("Propósito", "h2", 3), texto("", "p", 4),
         texto("Secuencia didáctica", "h2", 5),
@@ -57,10 +57,10 @@
         const c = { A1: "Alumno", B1: "Parcial 1", C1: "Parcial 2", D1: "Parcial 3", E1: "Promedio", F1: "Estado" };
         for (let f = 2; f <= 9; f++) {
           c["A" + f] = "Alumno " + (f - 1);
-          c["E" + f] = `=SI(CONTAR(B${f}:D${f})=0,"",PROMEDIO(B${f}:D${f}))`;
+          c["E" + f] = `=SI(CONTAR(B${f}:D${f})=0,"",REDONDEAR(PROMEDIO(B${f}:D${f}),1))`;
           c["F" + f] = `=SI(E${f}="","",SI(E${f}>=6,"Aprobado","Revisar"))`;
         }
-        c.A11 = "Promedio del grupo"; c.E11 = '=SI(CONTAR(E2:E9)=0,"",PROMEDIO(E2:E9))';
+        c.A11 = "Promedio del grupo"; c.E11 = '=SI(CONTAR(E2:E9)=0,"",REDONDEAR(PROMEDIO(E2:E9),2))';
         return ops([tabla(c, 30, 8, ["A1", "B1", "C1", "D1", "E1", "F1", "A11", "E11"])]);
       },
     },
@@ -83,9 +83,9 @@
       id: "proyecto", modo: "PRESENTACION", nombre: "Proyecto", desc: "Portada, problema y propuesta",
       crear: () => {
         const b = [
-          Object.assign(texto("Nombre del proyecto", "h1", 1), { x: 80, y: 180, w: 800, h: 80, z: 1 }),
-          Object.assign(texto("Equipo · Fecha", "p", 2), { x: 80, y: 280, w: 800, h: 50, z: 1 }),
-          forma("rect", "", 80, 150, 12, 120, "#5B5BD6", "p1"),
+          Object.assign(texto("Nombre del proyecto", "h1", 1), { x: 116, y: 170, w: 760, h: 80, z: 1 }),
+          Object.assign(texto("Equipo · Fecha", "p", 2), { x: 116, y: 262, w: 760, h: 50, z: 1 }),
+          forma("rect", "", 80, 176, 10, 128, "#5B5BD6", "p1"),
           Object.assign(texto("El problema", "h2", 1), { x: 80, y: 60, w: 800, h: 60, z: 1, pagina: "p2" }),
           Object.assign(texto("¿Qué pasa hoy?", "lista", 2), { x: 80, y: 150, w: 800, h: 50, z: 1, pagina: "p2", animacion: "aparecer" }),
           Object.assign(texto("¿A quién afecta?", "lista", 3), { x: 80, y: 210, w: 800, h: 50, z: 1, pagina: "p2", animacion: "aparecer" }),
