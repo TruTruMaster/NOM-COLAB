@@ -1,0 +1,4 @@
+#!/bin/sh
+# Kernel messages -> /dev/log -> /var/log/syslogd (survive reboots, unlike dmesg)
+exec 2>&1
+exec klogd -n

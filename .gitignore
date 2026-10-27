@@ -17,3 +17,7 @@ CREDENCIALES-*.txt
 
 # Token personal de GitHub (nunca subir)
 tokensito
+
+# servidor-alpine: la configuración real lleva contraseñas (el ejemplo sí se sube)
+4-CODIGO/servidor-alpine/config.env
+!4-CODIGO/servidor-alpine/config.example.env

@@ -1,0 +1,6 @@
+#!/bin/sh
+# OpenSSH in the foreground, logging to stderr (-> /var/log/sshd).
+exec 2>&1
+[ -f /etc/ssh/ssh_host_ed25519_key ] || ssh-keygen -q -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key
+mkdir -p /var/empty
+exec /usr/sbin/sshd -D -e

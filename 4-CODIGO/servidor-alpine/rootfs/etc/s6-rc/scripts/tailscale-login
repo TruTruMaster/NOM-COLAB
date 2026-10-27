@@ -1,0 +1,21 @@
+#!/bin/sh
+# First boot only: join the tailnet with the auth key left by the installer.
+# Also applies TS_ACCEPT_DNS every boot. Never fails the boot.
+. /etc/servidor-alpine.conf
+i=0
+until tailscale status >/dev/null 2>&1 || tailscale status 2>&1 | grep -q 'Logged out\|NeedsLogin'; do
+  i=$((i + 1)); [ $i -gt 30 ] && { echo "tailscale-login: tailscaled not answering"; exit 0; }
+  sleep 1
+done
+dns=false; [ "${TS_ACCEPT_DNS:-no}" = yes ] && dns=true
+if [ -s /etc/tailscale/authkey ]; then
+  if tailscale up --auth-key="file:/etc/tailscale/authkey" --hostname="$(hostname)" --accept-dns=$dns; then
+    rm -f /etc/tailscale/authkey
+    echo "tailscale-login: joined the tailnet as $(hostname)"
+  else
+    echo "tailscale-login: login with the auth key failed; run 'tailscale up --qr' on the console"
+  fi
+else
+  tailscale set --accept-dns=$dns 2>/dev/null
+fi
+exit 0

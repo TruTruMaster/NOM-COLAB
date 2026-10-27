@@ -1,0 +1,62 @@
+#!/bin/sh
+# svc: everyday s6 / s6-rc commands in one place.
+#
+#   svc                      state of every service (up/down, pid, uptime)
+#   svc start|stop <name>    bring a service (and what it needs) up / down
+#   svc restart <name>       restart a longrun (s6 keeps supervising it)
+#   svc log <name> [lines]   follow /var/log/<name>/current (sshd, tailscaled,
+#                            nginx, nomcolab, net, system, syslogd)
+#   svc enable|disable <name>  add/remove from the boot bundle "default"
+#   svc reload               recompile /etc/s6-rc/source and switch live
+#   svc boot                 messages of the last boot (catch-all log)
+SRC=/etc/s6-rc/source
+LIVE=/run/s6-rc
+SCAN=/run/service
+
+die() { echo "svc: $*" >&2; exit 1; }
+# Service state lives in root-only directories: everything but `log` runs as root
+if [ "$(id -u)" != 0 ] && [ "${1:-}" != log ]; then exec doas "$0" "$@"; fi
+
+recompile() {
+  new=/etc/s6-rc/compiled-$(date +%Y%m%d-%H%M%S)
+  s6-rc-compile "$new" "$SRC" || die "s6-rc-compile failed, nothing changed"
+  if [ -d "$LIVE" ]; then s6-rc-update -l "$LIVE" "$new" || die "s6-rc-update failed"; fi
+  ln -sfn "$(basename "$new")" /etc/s6-rc/compiled
+  for old in /etc/s6-rc/compiled-*; do
+    [ "$old" = "$new" ] || rm -rf "$old"
+  done
+  echo "svc: service database updated ($(basename "$new"))"
+}
+
+status() {
+  active=$(s6-rc -a list 2>/dev/null)
+  for s in $(s6-rc-db list all 2>/dev/null | sort); do
+    t=$(s6-rc-db type "$s" 2>/dev/null)
+    [ "$t" = bundle ] && continue
+    if [ "$t" = longrun ]; then
+      st=$(s6-svstat "$SCAN/$s" 2>/dev/null || echo "not running")
+    elif echo "$active" | grep -qx "$s"; then st="done"; else st="-"; fi
+    printf '%-18s %-8s %s\n' "$s" "$t" "$st"
+  done
+}
+
+case "$1" in
+  ""|status) status ;;
+  start)   [ -n "$2" ] || die "start what?"; exec s6-rc -v2 -u change "$2" ;;
+  stop)    [ -n "$2" ] || die "stop what?"; exec s6-rc -v2 -d change "$2" ;;
+  restart) [ -d "$SCAN/$2" ] || die "$2 is not a running longrun"; exec s6-svc -r "$SCAN/$2" ;;
+  log)
+    [ -n "$2" ] || die "log of what? ($(ls /var/log | tr '\n' ' '))"
+    f=/var/log/$2/current; [ -r "$f" ] || f=/run/log/$2/current
+    [ -r "$f" ] || die "no readable log $f (are you in group adm?)"
+    exec tail -n "${3:-50}" -f "$f" ;;
+  boot)    exec cat /run/uncaught-logs/current ;;
+  enable|disable)
+    [ -d "$SRC/$2" ] || die "no service $2 in $SRC"
+    if [ "$1" = enable ]; then : > "$SRC/default/contents.d/$2"; else rm -f "$SRC/default/contents.d/$2"; fi
+    recompile
+    [ "$1" = enable ] && s6-rc -v2 -u change "$2"
+    exit 0 ;;
+  reload)  recompile ;;
+  *) sed -n '2,13p' "$0"; exit 1 ;;
+esac

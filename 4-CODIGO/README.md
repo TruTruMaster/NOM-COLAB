@@ -18,6 +18,7 @@ NOM-COLAB/
 ├── azure/          desplegar.sh (crea Azure, roles de la base, sube el jar) · roles-bd.sql · AplicarSql.java ·
 │                   nomcolab (prende y apaga Azure o el servidor propio)
 ├── servidor-propio/ servicio, respaldo diario e instalar.sh para publicar NOM-COLAB desde una computadora
+├── servidor-alpine/ la laptop como servidor dedicado: Alpine + s6 + kernel propio, solo SSH y Tailscale
 ├── pruebas/        seguridad.py: sesión, validación, bloqueo y roles de cada espacio contra un servidor nuevo
 ├── docs/           DISENO-UI.md (interfaz) · DESPLIEGUE-AZURE.md (nube, BD y roles) · SERVIDOR-PROPIO.md · MARCA.md
 └── entregables/    Documentos para entregar (PDF / DOCX)

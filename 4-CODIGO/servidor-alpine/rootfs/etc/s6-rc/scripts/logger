@@ -1,0 +1,10 @@
+#!/bin/sh
+# logger <name>: keep 10 files x 1 MB with ISO 8601 timestamps in /var/log/<name>,
+# readable by group adm (the admin user is in it). If / stayed read-only after a
+# failed fsck, log to /run/log/<name> so the services (sshd!) still start.
+d=/var/log/$1
+if ! { mkdir -p "$d" && chown s6log:adm "$d" && chmod 2750 "$d"; } 2>/dev/null; then
+  d=/run/log/$1
+  mkdir -p "$d" && chown s6log:adm "$d" && chmod 2750 "$d"
+fi
+exec s6-setuidgid s6log s6-log -d 3 -- n10 s1000000 T "$d"

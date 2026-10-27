@@ -1,0 +1,28 @@
+# OpenSSH: keys only, no root, no passwords. Applies to the LAN and the
+# tailnet alike. Check after editing: sshd -t   then: svc restart sshd
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+AuthorizedKeysFile .ssh/authorized_keys
+# configure.sh appends: AllowUsers <ADMIN_USER>
+
+MaxAuthTries 3
+MaxSessions 10
+LoginGraceTime 20
+ClientAliveInterval 60
+ClientAliveCountMax 3
+UseDNS no
+
+AllowTcpForwarding yes
+AllowAgentForwarding no
+X11Forwarding no
+PermitTunnel no
+
+# Built-in SFTP server: scp/sftp/rsync-over-sftp without an extra package
+Subsystem sftp internal-sftp

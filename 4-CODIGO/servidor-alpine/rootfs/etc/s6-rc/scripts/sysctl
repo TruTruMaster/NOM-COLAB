@@ -1,0 +1,5 @@
+#!/bin/sh
+for f in /etc/sysctl.d/*.conf; do
+  [ -r "$f" ] && sysctl -q -e -p "$f"
+done
+exit 0

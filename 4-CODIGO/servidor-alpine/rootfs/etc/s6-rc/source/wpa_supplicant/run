@@ -1,0 +1,4 @@
+#!/bin/sh
+exec 2>&1
+if ! [ -e /sys/class/net/wlan0 ]; then echo "wpa_supplicant: wlan0 not present yet"; exec sleep 5; fi
+exec wpa_supplicant -i wlan0 -D nl80211 -c /etc/wpa_supplicant/wpa_supplicant.conf

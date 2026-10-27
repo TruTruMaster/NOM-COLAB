@@ -1,0 +1,31 @@
+#!/bin/sh
+# The battery is a built-in UPS: after a power cut keep serving, then power off
+# cleanly before it is empty. Logs every AC/battery change.
+exec 2>&1
+. /etc/servidor-alpine.conf
+min=${BATTERY_MIN:-10}
+last=""
+while :; do
+  mains=0 online=0 cap=""
+  for s in /sys/class/power_supply/*; do
+    case $(cat "$s/type" 2>/dev/null) in
+      Mains) mains=1; [ "$(cat "$s/online" 2>/dev/null)" = 1 ] && online=1 ;;
+      Battery) [ -r "$s/capacity" ] && cap=$(cat "$s/capacity") ;;
+    esac
+  done
+  # No AC adapter device or no battery: nothing to guard
+  if [ $mains = 0 ] || [ -z "$cap" ]; then
+    [ "$last" != none ] && echo "battery-guard: no AC adapter or battery found, idling"
+    last=none; sleep 300; continue
+  fi
+  if [ "$online" != "$last" ]; then
+    if [ $online = 1 ]; then echo "battery-guard: on AC power, battery ${cap}%"
+    else echo "battery-guard: POWER CUT, running on battery ${cap}% (poweroff at ${min}%)"; fi
+    last=$online
+  fi
+  if [ $online = 0 ] && [ "$cap" -le "$min" ]; then
+    echo "battery-guard: battery at ${cap}%, powering off"
+    exec poweroff
+  fi
+  sleep 30
+done

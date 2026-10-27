@@ -1,0 +1,5 @@
+#!/bin/sh
+# Hotplug: permissions from /etc/mdev.conf, module autoload and firmware for
+# the stock kernel. -D 3: tell s6 when the netlink socket is listening.
+exec 2>&1
+exec mdevd -D 3 -b 1048576 -f /etc/mdev.conf

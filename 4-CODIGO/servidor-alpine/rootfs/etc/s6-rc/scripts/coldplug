@@ -1,0 +1,3 @@
+#!/bin/sh
+# Replay uevents for devices that appeared before mdevd was listening.
+exec mdevd-coldplug

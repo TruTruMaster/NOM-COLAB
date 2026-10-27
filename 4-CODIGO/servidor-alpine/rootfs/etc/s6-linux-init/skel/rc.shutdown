@@ -1,0 +1,4 @@
+#!/bin/sh -e
+# Before poweroff/reboot: stop every service in reverse dependency order.
+# s6-linux-init then kills what is left, unmounts and remounts / read-only.
+exec s6-rc -v2 -bDa change

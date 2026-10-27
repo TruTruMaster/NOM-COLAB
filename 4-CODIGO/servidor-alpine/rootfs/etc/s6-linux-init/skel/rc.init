@@ -1,0 +1,12 @@
+#!/bin/sh -e
+# Stage 2, run once by s6-linux-init after PID 1 (s6-svscan) is up.
+# s6-linux-init has mounted /run; /dev comes from the kernel (devtmpfs) or the
+# initramfs of the stock kernel. /proc and /sys are ours.
+rl="$1"
+shift
+
+mountpoint -q /proc || mount -t proc -o nosuid,nodev,noexec proc /proc
+mountpoint -q /sys || mount -t sysfs -o nosuid,nodev,noexec sysfs /sys
+
+s6-rc-init -c /etc/s6-rc/compiled /run/service
+exec /etc/s6-linux-init/current/scripts/runlevel "$rl"

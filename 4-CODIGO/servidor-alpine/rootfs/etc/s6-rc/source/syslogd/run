@@ -1,0 +1,4 @@
+#!/bin/sh
+# /dev/log for programs that use syslog(3); lines go to /var/log/syslogd
+exec 2>&1
+exec s6-socklog -d 3 -t 3000

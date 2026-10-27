@@ -1,0 +1,4 @@
+#!/bin/sh
+# Loaded before any network interface comes up. Only touches table "inet host",
+# so it can be reloaded at any time without breaking Tailscale's own tables.
+exec nft -f /etc/nftables.nft

@@ -1,0 +1,2 @@
+#!/bin/sh -e
+# Nothing to do after the filesystems are unmounted.

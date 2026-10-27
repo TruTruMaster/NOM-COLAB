@@ -38,6 +38,9 @@ nomcolab local up   # o directo, sin menú (también: down, estado, reiniciar; y
 Azure y el servidor propio son independientes (cada uno tiene sus cuentas y documentos). Cómo
 funciona, respaldos e instalación: `4-CODIGO/docs/SERVIDOR-PROPIO.md`.
 
+Para dejar la laptop como servidor dedicado (Alpine mínimo con s6, kernel propio, sin pantalla,
+manejada solo por SSH y Tailscale): `4-CODIGO/servidor-alpine/README.md`.
+
 ## Usarlo en 3 pasos
 
 1. **En la computadora que comparte** (la del profesor o un compañero): abrir

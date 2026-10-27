@@ -1,0 +1,10 @@
+#!/bin/sh
+# Tailscale node: WireGuard over a TUN device, nftables rules in its own chains.
+exec 2>&1
+modprobe -q tun 2>/dev/null
+mkdir -p /var/lib/tailscale /run/tailscale
+export TS_DEBUG_FIREWALL_MODE=nftables
+exec /usr/sbin/tailscaled \
+  --state=/var/lib/tailscale/tailscaled.state \
+  --socket=/run/tailscale/tailscaled.sock \
+  --port=41641

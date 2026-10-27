@@ -1,0 +1,35 @@
+#!/usr/sbin/nft -f
+# Host firewall. Loaded at boot before any interface is up (s6-rc: firewall).
+# Reload after editing: nft -f /etc/nftables.nft   (Tailscale's tables are untouched)
+#
+# Everything from the tailnet is allowed; from the LAN only what is listed
+# below; from anywhere else nothing (public web traffic arrives through
+# Tailscale Funnel, which is an outgoing connection: no port is opened).
+
+define LAN4 = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 }
+define LAN6 = { fe80::/10, fc00::/7 }
+define LAN_TCP = { 22, 80, 8080 }      # ssh, nginx, NOM-COLAB
+define LAN_UDP = { 47474 }             # NOM-COLAB LAN discovery
+
+table inet host
+delete table inet host
+table inet host {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    ct state established,related accept
+    ct state invalid drop
+    iif lo accept
+    iifname "tailscale0" accept
+    ip protocol icmp limit rate 20/second accept
+    meta l4proto 58 accept comment "ICMPv6: IPv6 neighbour discovery needs it"
+    udp dport 41641 accept comment "tailscale direct (peer-to-peer) connections"
+    udp sport 67 udp dport 68 accept comment "DHCP replies"
+    ip saddr $LAN4 tcp dport $LAN_TCP accept
+    ip6 saddr $LAN6 tcp dport $LAN_TCP accept
+    ip saddr $LAN4 udp dport $LAN_UDP accept
+    ip6 saddr $LAN6 udp dport $LAN_UDP accept
+  }
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+}

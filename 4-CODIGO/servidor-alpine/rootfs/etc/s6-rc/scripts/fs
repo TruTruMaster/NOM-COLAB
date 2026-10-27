@@ -1,0 +1,37 @@
+#!/bin/sh
+# First oneshot: kernel filesystems, fsck of the read-only root, remount it
+# read-write, then everything in /etc/fstab.
+mounted() { awk -v d="$1" '$2 == d { f = 1 } END { exit !f }' /proc/mounts; }
+mnt() { # mnt <type> <dir> <options>
+  mounted "$2" && return 0
+  mkdir -p "$2" && mount -t "$1" -o "$3" "$1" "$2"
+}
+mnt devpts /dev/pts nosuid,noexec,gid=5,mode=0620,ptmxmode=0666
+mnt tmpfs /dev/shm nosuid,nodev,noexec,mode=1777
+[ -d /sys/fs/cgroup ] && mnt cgroup2 /sys/fs/cgroup nosuid,nodev,noexec
+[ -d /sys/firmware/efi/efivars ] && mnt efivarfs /sys/firmware/efi/efivars nosuid,nodev,noexec
+
+# The custom kernel mounts / read-only (cmdline "ro"); check it before writing.
+rc=0
+if awk '$2 == "/" { o = $4 } END { exit !(o ~ /^ro(,|$)/) }' /proc/mounts; then
+  spec=$(awk '$1 !~ /^#/ && $2 == "/" { print $1; exit }' /etc/fstab)
+  dev=$(findfs "$spec" 2>/dev/null || echo "$spec")
+  e2fsck -p "$dev"
+  rc=$?
+fi
+if [ $rc -ge 4 ]; then
+  echo "fs: e2fsck found errors it could not fix on $dev (code $rc)."
+  echo "fs: / stays READ-ONLY. Log in (console or LAN ssh) and run: e2fsck -f $dev"
+  exit 0
+fi
+if [ $((rc & 2)) -ne 0 ]; then
+  echo "fs: e2fsck repaired $dev and asks for a reboot"
+  sync
+  exec s6-linux-init-hpr -r -f
+fi
+mount -o remount,rw / || exit 1
+mount -a || echo "fs: some /etc/fstab entries failed to mount"
+# A fresh /run every boot; /var/run and /var/lock are symlinks into it
+mkdir -p /run/lock
+: > /run/utmp
+exit 0

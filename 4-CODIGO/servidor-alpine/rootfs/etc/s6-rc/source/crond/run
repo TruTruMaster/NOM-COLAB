@@ -1,0 +1,4 @@
+#!/bin/sh
+# busybox crond: /etc/crontabs/root (daily NOM-COLAB backup)
+exec 2>&1
+exec crond -f -d 8

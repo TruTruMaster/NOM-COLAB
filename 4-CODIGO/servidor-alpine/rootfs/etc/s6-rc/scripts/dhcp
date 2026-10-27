@@ -1,0 +1,11 @@
+#!/bin/sh
+# dhcp <interface>: busybox udhcpc in the foreground. Waits for the interface
+# (driver may load later with the stock kernel); s6 restarts it on exit.
+exec 2>&1
+i=$1
+if ! [ -e "/sys/class/net/$i" ]; then
+  echo "dhcp: $i not present yet"
+  exec sleep 5
+fi
+ip link set "$i" up
+exec udhcpc -f -R -i "$i" -x hostname:"$(hostname)" -s /usr/share/udhcpc/default.script

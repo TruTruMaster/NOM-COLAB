@@ -1,0 +1,7 @@
+#!/bin/sh
+# Static sites in /srv/www and reverse proxies; config in /etc/nginx
+exec 2>&1
+mkdir -p /run/nginx /var/lib/nginx/tmp /var/log/nginx
+chown nginx:nginx /run/nginx /var/lib/nginx/tmp
+nginx -t -q || exit 1
+exec nginx -g "daemon off;"

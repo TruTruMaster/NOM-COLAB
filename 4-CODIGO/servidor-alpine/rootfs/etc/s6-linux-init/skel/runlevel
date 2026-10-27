@@ -1,0 +1,5 @@
+#!/bin/sh -e
+# Called by rc.init at boot and by `telinit <bundle>`: bring that bundle up,
+# everything else down.
+test "$#" -gt 0 || { echo 'runlevel: fatal: too few arguments' 1>&2 ; exit 100 ; }
+exec s6-rc -v2 -up change "$1"

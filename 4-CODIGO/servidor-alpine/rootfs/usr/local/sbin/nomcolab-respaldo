@@ -1,0 +1,6 @@
+#!/bin/sh
+# Daily backup of the NOM-COLAB data (cron 03:30): keeps the newest 14.
+D=/srv/nomcolab
+mkdir -p "$D/respaldos"
+tar -czf "$D/respaldos/datos-$(date +%Y-%m-%d_%H%M).tar.gz" -C "$D" datos
+ls -1t "$D"/respaldos/datos-*.tar.gz | tail -n +15 | xargs -r rm -f

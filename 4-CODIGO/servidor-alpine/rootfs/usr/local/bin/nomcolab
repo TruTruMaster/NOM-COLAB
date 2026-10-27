@@ -1,0 +1,38 @@
+#!/bin/sh
+# nomcolab (servidor Alpine): prende y apaga NOM-COLAB en este servidor.
+#   nomcolab up        arranca el servicio y publica https://<equipo>.<tailnet>.ts.net
+#   nomcolab down      quita la publicación, apaga el servicio y hace un respaldo
+#   nomcolab estado    servicio, publicación, RAM, datos y último respaldo
+#   nomcolab reiniciar
+#   nomcolab log
+# (Las órdenes que cambian algo piden doas.)
+D=/srv/nomcolab
+as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else doas "$@"; fi; }
+
+estado() {
+  echo "Servicio:  $(s6-svstat /run/service/nomcolab 2>/dev/null || echo apagado)"
+  code=$(wget -q -S -O /dev/null http://127.0.0.1:8080/api/red/info 2>&1 | awk '/HTTP\//{print $2; exit}')
+  echo "Responde:  ${code:-no} (http://127.0.0.1:8080)"
+  echo "Funnel:    $(tailscale funnel status 2>/dev/null | grep -m1 -o 'https://[^ ]*' || echo 'apagado')"
+  pid=$(s6-svstat -p /run/service/nomcolab 2>/dev/null)
+  [ -n "$pid" ] && [ "$pid" != -1 ] && echo "RAM:       $(awk '/VmRSS/{print $2/1024 " MB"}' /proc/"$pid"/status 2>/dev/null)"
+  echo "Datos:     $(du -sh "$D/datos" 2>/dev/null | cut -f1)"
+  echo "Respaldo:  $(ls -1t "$D"/respaldos/datos-*.tar.gz 2>/dev/null | head -n1 || echo ninguno)"
+}
+
+case "$1" in
+  up)
+    as_root s6-rc -u change nomcolab-app || exit 1
+    i=0; until wget -q -O /dev/null http://127.0.0.1:8080/api/red/info; do
+      i=$((i + 1)); [ $i -gt 90 ] && { echo "No respondió en 90 s: nomcolab log"; exit 1; }; sleep 1
+    done
+    as_root tailscale funnel --bg 8080 && estado ;;
+  down)
+    as_root tailscale funnel reset 2>/dev/null
+    as_root s6-rc -d change nomcolab
+    as_root /usr/local/sbin/nomcolab-respaldo && echo "Apagado y respaldado." ;;
+  reiniciar) as_root s6-svc -r /run/service/nomcolab ;;
+  log) exec tail -n 80 -f /var/log/nomcolab/current ;;
+  ""|estado) estado ;;
+  *) sed -n '2,8p' "$0"; exit 1 ;;
+esac

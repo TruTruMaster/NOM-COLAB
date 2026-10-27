@@ -1,0 +1,6 @@
+#!/bin/sh
+# busybox ntpd; the RTC is set from system time by the kernel (RTC_SYSTOHC)
+exec 2>&1
+# no default route yet (DHCP still running): wait instead of failing every second
+ip route show default | grep -q . || { sleep 10; exit 1; }
+exec ntpd -n -p 0.pool.ntp.org -p 1.pool.ntp.org -p 2.pool.ntp.org

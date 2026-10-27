@@ -1,0 +1,25 @@
+#!/bin/sh
+# Laptop-as-server power settings. Values from /etc/servidor-alpine.conf.
+. /etc/servidor-alpine.conf
+
+for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/energy_performance_preference; do
+  [ -w "$f" ] && echo "${CPU_EPP:-balance_power}" 2>/dev/null > "$f"
+done
+
+# Runtime power management for idle PCI devices, except network (02xxxx) and
+# USB (0c03xx) controllers: an Ethernet NIC that sleeps can miss link changes.
+for d in /sys/bus/pci/devices/*; do
+  case $(cat "$d/class" 2>/dev/null) in 0x02*|0x0c03*) continue ;; esac
+  [ -w "$d/power/control" ] && echo auto 2>/dev/null > "$d/power/control"
+done
+for f in /sys/class/scsi_host/host*/link_power_management_policy; do
+  [ -w "$f" ] && echo med_power_with_dipm 2>/dev/null > "$f"
+done
+
+# Battery charge limits, where the laptop exposes them (ThinkPad, recent Dell):
+# a laptop plugged in 24/7 at 100% wears and swells its battery.
+for b in /sys/class/power_supply/BAT*; do
+  [ -w "$b/charge_control_start_threshold" ] && echo "${BATTERY_CHARGE_START:-40}" 2>/dev/null > "$b/charge_control_start_threshold"
+  [ -w "$b/charge_control_end_threshold" ] && echo "${BATTERY_CHARGE_END:-80}" 2>/dev/null > "$b/charge_control_end_threshold"
+done
+exit 0
