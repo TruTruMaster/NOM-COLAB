@@ -7,7 +7,7 @@
 #   4. finds the microSD card and writes it (asks before erasing)
 #
 #   sh pi5.sh          all of the above (safe to run again: reuses what is done)
-#   sh pi5.sh find     after the Pi boots: find its address on your network
+#   sh pi5.sh find     after the Pi boots: find it and make `ssh pi5` work
 set -eu
 HERE=$(dirname "$(readlink -f "$0")")
 cd "$HERE"
@@ -19,18 +19,59 @@ q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }   # sh single
 [ "$(id -u)" != 0 ] || die "run it as your normal user (it uses sudo only where needed): sh pi5.sh"
 
 # ------------------------------------------------------------------ find the Pi
+# Finds the Pi (Tailscale first, then the local network), checks it really is
+# yours by its SSH host key, and writes a "Host pi5" entry so `ssh pi5` works.
 if [ "${1:-}" = find ]; then
-  net=$(ip -4 route show default | awk '{ print $5; exit }')
-  cidr=$(ip -4 -o addr show "$net" | awk '{ print $4; exit }')
-  [ -n "$cidr" ] || die "no network found"
-  base=${cidr%.*}
-  say "looking for a Raspberry Pi on $cidr ($net)"
-  i=1; while [ $i -le 254 ]; do ping -c1 -W1 "$base.$i" >/dev/null 2>&1 & i=$((i + 1)); done; wait
-  # Raspberry Pi Ltd / Foundation network card prefixes
-  found=$(ip neigh show dev "$net" | grep -iE 'lladdr (2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e)' | awk '{ print $1 }')
-  [ -n "$found" ] || die "no Raspberry Pi answered (is it on the same network, with the cable in?)"
-  user=$(sed -n "s/^ADMIN_USER='\(.*\)'$/\1/p" config.env 2>/dev/null)
-  for a in $found; do echo "   ssh ${user:-admin}@$a"; done
+  [ -f config.env ] || die "no config.env here: run sh pi5.sh first"
+  name=$(sed -n "s/^SERVER_NAME='\(.*\)'$/\1/p" config.env); name=${name:-pi5}
+  user=$(sed -n "s/^ADMIN_USER='\(.*\)'$/\1/p" config.env); user=${user:-$(id -un)}
+  blob=""; [ -f pi5-hostkey.pub ] && blob=$(cut -d' ' -f2 pi5-hostkey.pub)
+  is_mine() { # is_mine <ip>: it answers SSH with the host key make-sd.sh created
+    if [ -z "$blob" ]; then ssh-keyscan -T 3 "$1" >/dev/null 2>&1; return; fi
+    ssh-keyscan -T 3 -t ed25519 "$1" 2>/dev/null | grep -qF "$blob"
+  }
+  ip=""
+  if command -v tailscale >/dev/null 2>&1; then
+    t=$(tailscale ip -4 "$name" 2>/dev/null | head -n1 || true)
+    if [ -n "$t" ] && is_mine "$t"; then ip=$t; echo "   found $name on Tailscale: $ip (works from anywhere)"; fi
+  fi
+  if [ -z "$ip" ]; then
+    net=$(ip -4 route show default | awk '{ print $5; exit }')
+    cidr=$(ip -4 -o addr show "$net" | awk '{ print $4; exit }')
+    [ -n "$cidr" ] || die "this laptop has no network"
+    base=${cidr%.*}
+    say "looking for the Pi on your network ($base.0/24)"
+    i=1; while [ $i -le 254 ]; do ping -c1 -W1 "$base.$i" >/dev/null 2>&1 & i=$((i + 1)); done; wait
+    # Raspberry Pi network-card prefixes first, then (if we know its key) every device that answered
+    pis=$(ip neigh show dev "$net" | grep -iE 'lladdr (2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e)' | awk '{ print $1 }')
+    rest=""; [ -n "$blob" ] && rest=$(ip neigh show dev "$net" | awk '/lladdr/ { print $1 }')
+    for c in $pis $rest; do
+      if is_mine "$c"; then ip=$c; break; fi
+    done
+    [ -n "$ip" ] || die "the Pi did not answer. Is the card in the Pi, the network cable in, and was it powered on a minute ago?"
+    echo "   found the Pi at $ip"
+  fi
+
+  # ~/.ssh/config: our block first (first match wins in ssh), everything else kept
+  mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+  touch "$HOME/.ssh/config"
+  {
+    printf '# >>> %s (written by pi5.sh find)\nHost %s\n    HostName %s\n    User %s\n    HostKeyAlias %s\n# <<< %s\n\n' \
+      "$name" "$name" "$ip" "$user" "$name" "$name"
+    awk -v n="$name" '
+      $0 == "# >>> " n " (written by pi5.sh find)" { skip = 1; next }
+      skip && $0 == "# <<< " n { skip = 0; blank = 1; next }
+      skip { next }
+      blank && $0 == "" { blank = 0; next }
+      { blank = 0; print }' "$HOME/.ssh/config"
+  } > "$HOME/.ssh/config.new"
+  mv "$HOME/.ssh/config.new" "$HOME/.ssh/config"; chmod 600 "$HOME/.ssh/config"
+  # Pre-trust the key make-sd.sh recorded, so the first `ssh pi5` asks nothing
+  if [ -n "$blob" ]; then
+    ssh-keygen -R "$name" >/dev/null 2>&1 || true
+    echo "$name $(cut -d' ' -f1,2 pi5-hostkey.pub)" >> "$HOME/.ssh/known_hosts"
+  fi
+  printf '\n   Now just:  ssh %s\n' "$name"
   exit 0
 fi
 
@@ -142,20 +183,21 @@ else
 fi
 sudo sh ./make-sd.sh "$dev"
 
-name=$(id -un)
 cat <<EOF
 
-All done. Put the card in the Pi 5, plug the network cable, then power.
-In about 30 seconds, from this laptop:
+All done. Now:
+  1. Take the card out of the laptop and put it in the Pi 5.
+  2. Plug the network cable into the Pi, then the power.
+  3. Wait one minute, then here on the laptop:
+       sh pi5.sh find        finds the Pi and sets up the name
+       ssh pi5
 EOF
 if grep -q "^TS_AUTHKEY=''" config.env; then
   cat <<EOF
-  sh pi5.sh find                 shows the Pi's address, then: ssh $name@<address>
-  doas tailscale up --qr         (on the Pi) joins Tailscale: open the link it prints
+  4. On the Pi, join Tailscale (open the link it prints):
+       doas tailscale up --qr
 EOF
-else
-  echo "  ssh pi5                        (over Tailscale)"
 fi
 cat <<EOF
-  doas tailscale funnel --bg 80  (on the Pi) publishes the site on https://pi5.<your-tailnet>.ts.net
+  Publish the site (on the Pi):  doas tailscale funnel --bg 80
 EOF

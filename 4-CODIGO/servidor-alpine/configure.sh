@@ -57,7 +57,7 @@ set_password root
 
 # ------------------------------------------------------------------ ssh, doas
 echo "AllowUsers $ADMIN_USER" >> /etc/ssh/sshd_config
-[ -f /etc/ssh/ssh_host_ed25519_key ] || ssh-keygen -q -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key
+[ -f /etc/ssh/ssh_host_ed25519_key ] || ssh-keygen -q -t ed25519 -N "" -C "root@$SERVER_NAME" -f /etc/ssh/ssh_host_ed25519_key
 chmod 600 /etc/doas.d/wheel.conf
 
 # ------------------------------------------------------------------ network

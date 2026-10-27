@@ -21,3 +21,6 @@ tokensito
 # servidor-alpine: la configuración real lleva contraseñas (el ejemplo sí se sube)
 4-CODIGO/servidor-alpine/config.env
 !4-CODIGO/servidor-alpine/config.example.env
+
+# servidor-alpine: llave pública de la Pi que guarda make-sd.sh (local)
+4-CODIGO/servidor-alpine/pi5-hostkey.pub

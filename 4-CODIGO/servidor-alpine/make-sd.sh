@@ -44,9 +44,15 @@ printf '%s\n' "$SSH_KEYS" | sed 's/^[[:space:]]*//' | grep -E '^(ssh-|ecdsa-|sk-
 
 echo "This ERASES everything on $DEV:"
 lsblk -o NAME,SIZE,MODEL,TRAN,FSTYPE,LABEL,MOUNTPOINTS "$DEV" 2>/dev/null || lsblk "$DEV"
-printf 'Is this the microSD card for the Pi? Type yes to erase it: '
-read -r answer
-[ "$answer" = yes ] || die "cancelled, nothing was changed"
+# Keep asking: a key pressed earlier (e.g. while the kernel compiled) must not decide this
+while :; do
+  printf 'Is this the microSD card for the Pi? Type yes to erase it, or no: '
+  read -r answer || die "cancelled, nothing was changed"
+  case "$answer" in
+    yes) break ;;
+    no|n|NO) die "cancelled, nothing was changed" ;;
+  esac
+done
 
 part() { case "$DEV" in *[0-9]) echo "${DEV}p$1" ;; *) echo "${DEV}$1" ;; esac; }
 P1=$(part 1) P2=$(part 2)
@@ -212,6 +218,9 @@ EOF
 sync
 
 fp=$(chroot "$R" ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub)
+# `pi5.sh find` recognises the Pi by this key, and pre-trusts it for `ssh pi5`
+cp "$R/etc/ssh/ssh_host_ed25519_key.pub" "$HERE/pi5-hostkey.pub"
+if [ -n "${SUDO_USER:-}" ]; then chown "$SUDO_USER" "$HERE/pi5-hostkey.pub"; fi
 cleanup
 trap - EXIT
 cat <<EOF
