@@ -44,9 +44,9 @@ printf '%s\n' "$SSH_KEYS" | sed 's/^[[:space:]]*//' | grep -E '^(ssh-|ecdsa-|sk-
 
 echo "This ERASES everything on $DEV:"
 lsblk -o NAME,SIZE,MODEL,TRAN,FSTYPE,LABEL,MOUNTPOINTS "$DEV" 2>/dev/null || lsblk "$DEV"
-printf 'Type the device name (%s) to continue: ' "$DEV"
+printf 'Is this the microSD card for the Pi? Type yes to erase it: '
 read -r answer
-[ "$answer" = "$DEV" ] || die "cancelled"
+[ "$answer" = yes ] || die "cancelled, nothing was changed"
 
 part() { case "$DEV" in *[0-9]) echo "${DEV}p$1" ;; *) echo "${DEV}$1" ;; esac; }
 P1=$(part 1) P2=$(part 2)
@@ -128,19 +128,20 @@ if [ "${TIMEZONE:-UTC}" != UTC ]; then
   echo "$TIMEZONE" > "$R/etc/timezone"
 fi
 
+q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }   # sh single-quote
 cat > "$R/etc/servidor-alpine.conf" <<EOF
 # Written by make-sd.sh on $(date +%Y-%m-%d). Read by the s6 scripts and kernel-min.
-SERVER_NAME="$SERVER_NAME"
-ADMIN_USER="$ADMIN_USER"
-WIFI_SSID="$WIFI_SSID"
-WIFI_COUNTRY="$WIFI_COUNTRY"
-TS_ACCEPT_DNS="$TS_ACCEPT_DNS"
-CPU_GOVERNOR="$CPU_GOVERNOR"
-USB="$USB"
-KERNEL_BRANCH="$KERNEL_BRANCH"
-ROOT_UUID="$ROOT_UUID"
-ROOT_PARTUUID="$ROOT_PARTUUID"
-BOOT_UUID="$BOOT_UUID"
+SERVER_NAME=$(q "$SERVER_NAME")
+ADMIN_USER=$(q "$ADMIN_USER")
+WIFI_SSID=$(q "$WIFI_SSID")
+WIFI_COUNTRY=$(q "$WIFI_COUNTRY")
+TS_ACCEPT_DNS=$(q "$TS_ACCEPT_DNS")
+CPU_GOVERNOR=$(q "$CPU_GOVERNOR")
+USB=$(q "$USB")
+KERNEL_BRANCH=$(q "$KERNEL_BRANCH")
+ROOT_UUID='$ROOT_UUID'
+ROOT_PARTUUID='$ROOT_PARTUUID'
+BOOT_UUID='$BOOT_UUID'
 EOF
 
 INST=$R/root/.install

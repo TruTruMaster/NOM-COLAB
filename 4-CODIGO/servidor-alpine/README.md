@@ -35,45 +35,46 @@ Pi 5 bootloader (EEPROM) -> config.txt [all] os_prefix=a/
                logs:     /var/log/{sshd,tailscaled,nginx,net,system,syslogd}
 ```
 
-## Commands, in order (all on your laptop)
+## Copy-paste, on your laptop (Linux)
 
-Debian/Ubuntu laptop (Fedora: `dnf install gcc-aarch64-linux-gnu qemu-user-static ...`):
-
-```sh
-sudo apt install git make gcc-aarch64-linux-gnu bison flex bc libssl-dev libelf-dev \
-                 wget qemu-user-static fdisk dosfstools e2fsprogs
-git clone -b claude/peaceful-turing-e2zegt https://github.com/TruTruMaster/NOM-COLAB
-cd NOM-COLAB/4-CODIGO/servidor-alpine
-
-cp config.example.env config.env
-cat ~/.ssh/id_ed25519.pub          # no key yet? ssh-keygen -t ed25519
-nano config.env                    # paste the key in SSH_KEYS; set SITE_DIR, TIMEZONE,
-                                   # TS_AUTHKEY (optional), Wi-Fi only if no cable
-
-./kernel/build-kernel.sh           # ~10 min: downloads Raspberry Pi's kernel, builds the stripped one
-
-lsblk                              # find the microSD card: /dev/sdX or /dev/mmcblk0
-sudo ./make-sd.sh /dev/sdX         # ERASES the card; asks you to type its name,
-                                   # then passwords for admin and root (doas / serial console only)
-```
-
-Put the card in the Pi 5, plug in Ethernet, then power. About 30 seconds later:
+Put the microSD card in the laptop (or a USB card reader), open a terminal and paste:
 
 ```sh
-ssh admin@<pi's IP>                # your router lists it as "pi5"
-ssh admin@pi5                      # over Tailscale, once it joined (TS_AUTHKEY)
+command -v git >/dev/null || sudo apt-get install -y git || sudo dnf install -y git || sudo pacman -S --noconfirm git
+git clone -b claude/peaceful-turing-e2zegt https://github.com/TruTruMaster/NOM-COLAB ~/pi5-server
+cd ~/pi5-server/4-CODIGO/servidor-alpine && sh pi5.sh
 ```
 
-No `TS_AUTHKEY`? Over the LAN SSH: `doas tailscale up --qr` and open the link.
+`pi5.sh` finds what it needs by itself (your Linux's package manager, your SSH
+key, user name and time zone, the microSD card) and only asks:
 
-**Publish the site** (Tailscale gives it HTTPS at `https://pi5.<your-tailnet>.ts.net`):
+1. a **Tailscale auth key** (optional; make it at
+   https://login.tailscale.com/admin/settings/keys, or press Enter),
+2. the **folder of your website** (or Enter for a placeholder page),
+3. a **Wi-Fi name** only if the Pi will have no network cable (Enter = cable),
+4. `yes` before erasing the card, and two **passwords** (for `doas` on the Pi and
+   the serial console; SSH never asks for them).
+
+It builds the kernel (~10 min) and writes the card. Then: card in the Pi, network
+cable, power. Half a minute later, from the laptop:
+
+```sh
+ssh pi5                            # with the Tailscale key
+sh pi5.sh find                     # without it: prints "ssh <you>@<the Pi's address>"
+```
+
+On the Pi (once, if you skipped the Tailscale key): `doas tailscale up --qr`.
+Publish the site (HTTPS at `https://pi5.<your-tailnet>.ts.net`):
 
 ```sh
 doas tailscale funnel --bg 80      # public internet
 doas tailscale serve --bg 80       # or: only your own devices
 ```
 
-**Update the site** from the laptop: `scp -r mysite/* admin@pi5:/srv/www/default/`
+Update the site later, from the laptop: `scp -r <your site folder>/* pi5:/srv/www/default/`
+
+Everything `pi5.sh` decided is in `config.env` (every option explained in
+`config.example.env`). Change it and run `sh pi5.sh` again to rebuild and rewrite a card.
 
 ## Everyday use (on the Pi)
 
@@ -94,9 +95,9 @@ old slot boots.
 
 ```sh
 doas kernel-min build      # on the Pi (~20 min); or build on the laptop and:
-                           #   scp -r kernel/build/out admin@pi5:/tmp/k && ssh admin@pi5 doas kernel-min install /tmp/k
+                           #   scp -r kernel/build/out pi5:/tmp/k && ssh pi5 doas kernel-min install /tmp/k
 doas kernel-min trial      # reboots once into the new slot
-ssh admin@pi5; uname -r    # back in? then:
+ssh pi5; uname -r          # back in? then:
 doas kernel-min confirm    # make it the default
 doas kernel-min status     # slots and what boots next
 ```
@@ -117,7 +118,8 @@ removes the stock rescue kernel and its modules.
 
 | Path | What |
 |---|---|
-| `config.example.env` | the only file you edit (copy to `config.env`, which git ignores) |
+| `pi5.sh` | the one command: tools, `config.env`, kernel, microSD; `pi5.sh find` locates the Pi |
+| `config.example.env` | every setting explained; `pi5.sh` writes `config.env` (git ignores it) |
 | `kernel/build-kernel.sh` | builds the kernel (cross on the laptop, native on the Pi) into `kernel/build/out/` |
 | `kernel/common.config` | what SSH, Tailscale, nftables and the s6 userland need |
 | `kernel/pi5.config` | the Pi 5 hardware, taken from its device tree and Raspberry Pi's `bcm2712_defconfig` |
