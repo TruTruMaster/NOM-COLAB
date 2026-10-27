@@ -600,19 +600,18 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   (sección de roles de la base), `DISENO-UI.md` (ya no habla del selector de modo ni de la
   minibarra; agrega miniaturas y solo lectura), diagrama de paquetes (Spring Boot 4.1, dónde corre).
 
-## 50. La laptop como servidor dedicado: Alpine mínimo + s6 + kernel propio
-- Nuevo `4-CODIGO/servidor-alpine/` (en inglés, a pedido): instala Alpine 3.24 sin OpenRC ni
-  gestor de arranque. `s6-linux-init` es el PID 1, `s6-rc` levanta 21 servicios con dependencias
-  (sshd, tailscaled, DHCP, firewall nftables, mdevd, ntpd, crond, syslog, watchdog, nginx,
-  NOM-COLAB…) y `s6-log` guarda registros rotados en `/var/log/<servicio>`.
-- Kernel monolítico 6.18 LTS solo con el hardware de la laptop (i7-10610U), con microcódigo,
-  firmware de i915/Wi-Fi y la línea de arranque dentro de un solo `linux.efi`; se prueba una vez
-  con `kernel-min build` (BootNext) y se confirma con `kernel-min confirm`, con vuelta atrás.
-- `0-prepare.sh` respalda los datos de NOM-COLAB, las llaves SSH y la identidad de Tailscale (la
-  dirección `nomcolab.tailfd65f2.ts.net` se conserva); `1-install.sh` instala desde la USB de Alpine.
-- Probado aquí: compilación del kernel (7.0, 8.3 MB con firmware), arranque UEFI en QEMU con NVMe
-  y e1000e, scripts reales bajo s6 e inicio de sesión por SSH; el árbol s6-rc se valida con
-  `test/check-s6-tree.py`. Sin probar aquí (sin acceso a los repositorios de Alpine): apk,
-  s6-rc-compile, mdevd, tailscaled y nginx en Alpine.
-- Respuesta sobre juegos (UHD 620): 60 fps estables solo en juegos ligeros o antiguos; Debian en
-  arranque dual (`ROOT_SIZE`) o en un chroot dentro del servidor.
+## 50. Servidor en una Raspberry Pi 5: Alpine mínimo + s6 + kernel propio
+- Nuevo `4-CODIGO/servidor-alpine/` (en inglés, a pedido): `make-sd.sh` prepara desde la laptop
+  una microSD para la Raspberry Pi 5 con Alpine 3.24 sin OpenRC ni initramfs. `s6-linux-init` es
+  el PID 1, `s6-rc` levanta los servicios con dependencias (sshd solo con la llave de la laptop,
+  tailscaled, DHCP, firewall nftables, mdevd, ntpd, crond, syslog, watchdog, nginx para páginas
+  estáticas) y `s6-log` guarda registros rotados en `/var/log/<servicio>`.
+- Kernel del árbol de Raspberry Pi armado desde `allnoconfig` solo con el hardware de la Pi 5
+  (BCM2712, Ethernet por RP1, microSD, ventilador, watchdog, RTC), sin módulos: un solo
+  `kernel_2712.img` de 10 MB con páginas de 16K. Ranuras a/ b/ en la partición de arranque: un
+  kernel nuevo se prueba una vez con `tryboot` (`kernel-min trial`) y se confirma; s/ guarda el
+  kernel de Alpine como rescate.
+- Probado aquí: compilación del kernel para la Pi 5 (fuente linux-raspi 7.0 de Ubuntu), todos
+  los dispositivos activos del device tree con su controlador incluido, variante con Wi-Fi y USB,
+  shellcheck, `nft -c` y `test/check-s6-tree.py`. Sin probar aquí: el arranque real en la Pi y
+  `make-sd.sh` completo (sin acceso a los repositorios de Alpine).

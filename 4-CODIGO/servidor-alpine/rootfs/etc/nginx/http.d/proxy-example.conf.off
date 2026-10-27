@@ -1,4 +1,4 @@
-# Example: another site, by host name, proxied to an app on this box.
+# Example: a second site by host name, or a proxy to an app on this box.
 # Rename to .conf, adjust, then: nginx -t && svc restart nginx
 server {
   listen 80;
@@ -11,7 +11,7 @@ server {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    # Server-sent events / websockets (NOM-COLAB uses SSE)
+    # Server-sent events / websockets
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
     proxy_buffering off;

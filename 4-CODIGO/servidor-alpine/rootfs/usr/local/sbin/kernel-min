@@ -1,139 +1,115 @@
 #!/bin/sh
-# kernel-min - build and boot the stripped kernel safely (A/B with rollback).
+# kernel-min - update the stripped Raspberry Pi 5 kernel safely (A/B slots).
 #
-#   kernel-min build     build for this machine, then `install` it as a trial
-#   kernel-min install [linux.efi]
-#                        copy to the ESP as \EFI\minimal\linux-new.efi and boot it
-#                        ONCE on the next reboot (EFI BootNext). If it hangs or
-#                        panics, the next boot is the previous kernel again.
-#   kernel-min confirm   after a good trial boot (you could log in over SSH):
-#                        make it the default; the old one becomes "previous"
-#   kernel-min rollback  boot "previous" once on the next reboot
-#   kernel-min status    boot entries, files, running kernel
-#   kernel-min drop-stock  remove Alpine's stock kernel, initramfs and firmware
-#                        (only once the stripped kernel is confirmed)
+#   kernel-min status        slots, running kernel, what boots next
+#   kernel-min build         build on the Pi (~20 min), then `install`
+#   kernel-min install [DIR] put a built kernel (default /var/cache/kernel-min/out)
+#                            into the free slot (a/ or b/) and aim [tryboot] at it
+#   kernel-min trial         reboot ONCE into that slot. If it hangs or panics,
+#                            power-cycle: the default slot boots again
+#   kernel-min confirm       after a good trial (you are back in over SSH):
+#                            make the running slot the default
+#   kernel-min rollback [s]  make the other slot (or s/ = stock) the default
+#   kernel-min drop-stock    delete the stock rescue slot s/ and its packages
 set -eu
 . /etc/servidor-alpine.conf
 SHARE=/usr/local/share/servidor-alpine
-WORK=${WORK:-/var/cache/kernel-min}
-ESP=/boot
-DIR=$ESP/EFI/minimal
-L_MAIN="Alpine minimal"
-L_PREV="Alpine minimal (previous)"
-L_TRIAL="Alpine minimal (trial)"
-L_STOCK="Alpine stock (rescue)"
+OUT=/var/cache/kernel-min/out
+B=/boot
+CFG=$B/config.txt
 
 die() { echo "kernel-min: $*" >&2; exit 1; }
-[ "$(id -u)" = 0 ] || die "run it as root: doas kernel-min $*"
+[ "$(id -u)" = 0 ] || exec doas "$0" "$@"
+mountpoint -q "$B" || mount "$B" || die "cannot mount the boot partition on $B"
 
-mountpoint -q "$ESP" || mount "$ESP" || die "cannot mount the ESP on $ESP"
-mountpoint -q /sys/firmware/efi/efivars || mount -t efivarfs efivarfs /sys/firmware/efi/efivars
-
-# ESP partition -> disk + partition number, for efibootmgr
-esp_dev=$(awk -v m="$ESP" '$2 == m { print $1 }' /proc/mounts | tail -n1)
-esp_name=$(basename "$(readlink -f "$esp_dev")")
-ESP_PART=$(cat "/sys/class/block/$esp_name/partition")
-ESP_DISK=/dev/$(basename "$(readlink -f "/sys/class/block/$esp_name/..")")
-
-entry() { # entry <label>: boot number of the entry with exactly this label
-  efibootmgr | awk -v L="$1" '/^Boot[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]/ {
-    lab = $0; sub(/^Boot[0-9A-Fa-f]+[* ] /, "", lab); sub(/\t.*/, "", lab)
-    if (lab == L) print substr($0, 5, 4) }' | head -n1
+# os_prefix of a config.txt section: prefix_of <all|tryboot>
+prefix_of() { awk -v s="[$1]" '/^\[/ { in_s = ($0 == s) } in_s && /^os_prefix=/ { sub(/^os_prefix=/, ""); sub(/\/$/, ""); print; exit }' "$CFG"; }
+set_prefix() { # set_prefix <all|tryboot> <slot>: rewrite atomically (FAT: write copy, then rename)
+  awk -v s="[$1]" -v v="$2" '/^\[/ { in_s = ($0 == s) } in_s && /^os_prefix=/ { $0 = "os_prefix=" v "/" } { print }' "$CFG" > "$CFG.new"
+  sync; mv "$CFG.new" "$CFG"; sync
 }
-order() { efibootmgr | awk '/^BootOrder:/ { print $2 }'; }
-create() { # create <label> <file under \EFI\minimal>: entry with no extra arguments
-  old=$(order)
-  efibootmgr -q -c -d "$ESP_DISK" -p "$ESP_PART" -L "$1" -l "\\EFI\\minimal\\$2"
-  [ -n "$old" ] && efibootmgr -q -o "$old"   # efibootmgr puts new entries first: undo that
-  entry "$1"
-}
-delete() { n=$(entry "$1"); [ -z "$n" ] || efibootmgr -q -b "$n" -B; }
-ensure() { n=$(entry "$1"); [ -n "$n" ] || n=$(create "$1" "$2"); echo "$n"; }
-put_first() { # put_first <num>...: these first, then the rest in their old order
-  efibootmgr -q -o "$(order | awk -v first="$*" 'BEGIN { RS = ","; n = split(first, f, " ")
-    for (i = 1; i <= n; i++) { out = out (out ? "," : "") f[i]; skip[f[i]] = 1 } }
-    { gsub(/\n/, "") } $0 != "" && !($0 in skip) { out = out "," $0 } END { print out }')"
+running() { sed -n 's/.*kmin\.slot=\([a-z]\).*/\1/p' /proc/cmdline; }
+cmdline() { echo "root=PARTUUID=$ROOT_PARTUUID rootfstype=ext4 ro rootwait=20 init=/sbin/init console=ttyAMA10,115200 loglevel=4 kmin.slot=$1"; }
+
+cmd_status() {
+  echo "running:  $(uname -r), slot $(running)"
+  echo "default:  [all] os_prefix=$(prefix_of all)/"
+  echo "trial:    [tryboot] os_prefix=$(prefix_of tryboot)/"
+  for s in a b s; do
+    [ -d "$B/$s" ] && echo "slot $s/:  $(cat "$B/$s/version" 2>/dev/null || echo 'Alpine stock') $(ls -l "$B/$s/kernel_2712.img" | awk '{ print $5 " bytes" }')"
+  done
+  return 0
 }
 
 cmd_install() {
-  img=${1:-$WORK/out/linux.efi}
-  [ -f "$img" ] || die "no kernel image $img (run: kernel-min build)"
-  mkdir -p "$DIR"
-  cp "$img" "$DIR/linux-new.efi.tmp" && sync && mv "$DIR/linux-new.efi.tmp" "$DIR/linux-new.efi"
-  n=$(ensure "$L_TRIAL" linux-new.efi)
-  # keep the trial entry last in BootOrder so it never becomes the default
-  efibootmgr -q -o "$(order | awk -v n="$n" 'BEGIN { RS = "," } { gsub(/\n/, "") }
-    $0 != "" && $0 != n { out = out $0 "," } END { print out n }')"
-  efibootmgr -q -n "$n"
-  echo "kernel-min: trial kernel installed as Boot$n, it boots ONCE on the next reboot."
-  echo "  doas reboot           then, once you are back in over SSH:"
-  echo "  doas kernel-min confirm"
-  echo "If it does not come back within ~2 min, power-cycle it: the previous kernel boots."
+  src=${1:-$OUT}
+  [ -f "$src/kernel_2712.img" ] || die "no kernel in $src (kernel-min build)"
+  def=$(prefix_of all)
+  case "$def" in a) free=b ;; *) free=a ;; esac
+  [ "$(running)" != "$free" ] || die "slot $free/ is the one running; confirm or roll back first"
+  rm -rf "${B:?}/$free"
+  mkdir -p "$B/$free/overlays"
+  cp "$src/kernel_2712.img" "$src"/bcm2712*.dtb "$src/version" "$B/$free/"
+  cp "$src"/overlays/*.dtbo "$B/$free/overlays/"
+  cmdline "$free" > "$B/$free/cmdline.txt"
+  [ -x "$src/rpi-tryboot" ] && install -m 755 "$src/rpi-tryboot" /usr/local/sbin/rpi-tryboot
+  set_prefix tryboot "$free"
+  sync
+  echo "kernel-min: $(cat "$src/version") is in slot $free/. Next:"
+  echo "  doas kernel-min trial      (boots it once; power-cycle if it does not come back)"
+}
+
+cmd_trial() {
+  t=$(prefix_of tryboot)
+  [ -f "$B/$t/kernel_2712.img" ] || die "slot $t/ is empty: kernel-min install first"
+  [ -x /usr/local/sbin/rpi-tryboot ] || die "missing /usr/local/sbin/rpi-tryboot"
+  mkdir -p /var/lib/kernel-min
+  : > /var/lib/kernel-min/tryboot      # rc.shutdown.final reboots with "0 tryboot"
+  echo "kernel-min: rebooting once into slot $t/ ..."
+  exec reboot
 }
 
 cmd_confirm() {
-  cur=$(efibootmgr | awk '/^BootCurrent:/ { print $2 }')
-  trial=$(entry "$L_TRIAL")
-  if [ -z "$trial" ] || [ "$cur" != "$trial" ]; then
-    die "not running the trial kernel (BootCurrent=$cur, trial=${trial:-none}): nothing to confirm"
-  fi
-  [ -f "$DIR/linux.efi" ] && mv "$DIR/linux.efi" "$DIR/linux-prev.efi"
-  mv "$DIR/linux-new.efi" "$DIR/linux.efi"
-  delete "$L_TRIAL"
-  main=$(ensure "$L_MAIN" linux.efi)
-  prev=""
-  [ -f "$DIR/linux-prev.efi" ] && prev=$(ensure "$L_PREV" linux-prev.efi)
-  # shellcheck disable=SC2086
-  put_first "$main" $prev
-  # Firmware fallback path, used by laptops that ignore boot entries; only if
-  # nothing else (another OS) put its own loader there.
-  fb=$ESP/EFI/BOOT
-  if ! [ -f "$fb/BOOTX64.EFI" ] || [ -f "$fb/.servidor-alpine" ]; then
-    mkdir -p "$fb" && cp "$DIR/linux.efi" "$fb/BOOTX64.EFI" && : > "$fb/.servidor-alpine"
-  fi
-  sync
-  echo "kernel-min: $(uname -r) is now the default (Boot$main)${prev:+, previous kept as Boot$prev}."
+  r=$(running); def=$(prefix_of all)
+  [ -n "$r" ] || die "cannot tell which slot is running (no kmin.slot= in /proc/cmdline)"
+  [ "$r" != "$def" ] || { echo "kernel-min: slot $r/ is already the default"; return 0; }
+  set_prefix all "$r"
+  set_prefix tryboot "$def"
+  echo "kernel-min: slot $r/ ($(uname -r)) is now the default; slot $def/ kept as the way back."
 }
 
 cmd_rollback() {
-  n=$(entry "$L_PREV"); [ -n "$n" ] || n=$(entry "$L_STOCK")
-  [ -n "$n" ] || die "no previous or stock kernel entry"
-  efibootmgr -q -n "$n"
-  echo "kernel-min: Boot$n boots once on the next reboot (doas reboot)."
-}
-
-cmd_status() {
-  echo "running:   $(uname -r)  $(uname -v)"
-  echo "cmdline:   $(cat /proc/cmdline)"
-  echo "ESP:       $ESP_DISK partition $ESP_PART on $ESP"
-  ls -l "$DIR" 2>/dev/null | sed 1d
-  efibootmgr
+  def=$(prefix_of all)
+  to=${1:-}
+  if [ -z "$to" ]; then case "$def" in a) to=b ;; b) to=a ;; *) to=a ;; esac; fi
+  [ -f "$B/$to/kernel_2712.img" ] || die "slot $to/ has no kernel"
+  set_prefix all "$to"
+  echo "kernel-min: slot $to/ is the default from the next boot (doas reboot)."
 }
 
 cmd_drop_stock() {
-  [ "$(entry "$L_MAIN")" = "$(efibootmgr | awk '/^BootCurrent:/ { print $2 }')" ] \
-    || die "boot and confirm the stripped kernel first (kernel-min status)"
-  delete "$L_STOCK"
+  [ "$(running)" != s ] || die "running the stock kernel; boot a stripped slot first"
+  [ "$(prefix_of all)" != s ] || die "the stock slot is the default; kernel-min rollback a"
+  rm -rf "${B:?}/s" "$B"/vmlinuz-rpi "$B"/initramfs-rpi "$B"/config-rpi "$B"/System.map-rpi
   pkgs=""
-  for p in linux-lts mkinitfs kmod linux-firmware-none linux-firmware-intel linux-firmware-other; do
+  for p in linux-rpi mkinitfs linux-firmware-none linux-firmware-brcm linux-firmware-cypress; do
     if apk info -e "$p" >/dev/null; then pkgs="$pkgs $p"; fi
   done
+  sed -i '/^linux-rpi=/d' /etc/apk/world
   # shellcheck disable=SC2086
   [ -z "$pkgs" ] || apk del -q $pkgs
-  rm -f "$ESP"/vmlinuz-lts "$ESP"/initramfs-lts "$ESP"/config-lts "$ESP"/System.map-lts
-  rm -rf /lib/modules/*-lts
+  rm -rf /lib/modules/*-rpi*
   sync
-  echo "kernel-min: stock kernel removed. Rescue from now on: 'Alpine minimal (previous)' or a USB stick."
+  echo "kernel-min: stock kernel removed. Rescue from now on: the other slot, or the card in another computer."
 }
 
 case "${1:-status}" in
-  build)
-    "$SHARE/kernel/build-kernel.sh"
-    cmd_install ;;
-  install) shift; cmd_install "$@" ;;
-  confirm) cmd_confirm ;;
-  rollback) cmd_rollback ;;
   status) cmd_status ;;
+  build) "$SHARE/kernel/build-kernel.sh"; cmd_install ;;
+  install) shift; cmd_install "$@" ;;
+  trial) cmd_trial ;;
+  confirm) cmd_confirm ;;
+  rollback) shift; cmd_rollback "$@" ;;
   drop-stock) cmd_drop_stock ;;
-  *) sed -n '2,17p' "$0"; exit 1 ;;
+  *) sed -n '2,15p' "$0"; exit 1 ;;
 esac

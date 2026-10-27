@@ -31,6 +31,8 @@ if [ $((rc & 2)) -ne 0 ]; then
 fi
 mount -o remount,rw / || exit 1
 mount -a || echo "fs: some /etc/fstab entries failed to mount"
+# A trial boot (kernel-min trial) is one-shot: clear its flag on every boot
+rm -f /var/lib/kernel-min/tryboot
 # A fresh /run every boot; /var/run and /var/lock are symlinks into it
 mkdir -p /run/lock
 : > /run/utmp

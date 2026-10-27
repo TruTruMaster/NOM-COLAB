@@ -8,8 +8,7 @@
 
 define LAN4 = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 }
 define LAN6 = { fe80::/10, fc00::/7 }
-define LAN_TCP = { 22, 80, 8080 }      # ssh, nginx, NOM-COLAB
-define LAN_UDP = { 47474 }             # NOM-COLAB LAN discovery
+define LAN_TCP = { 22, 80 }            # ssh, nginx
 
 table inet host
 delete table inet host
@@ -26,8 +25,6 @@ table inet host {
     udp sport 67 udp dport 68 accept comment "DHCP replies"
     ip saddr $LAN4 tcp dport $LAN_TCP accept
     ip6 saddr $LAN6 tcp dport $LAN_TCP accept
-    ip saddr $LAN4 udp dport $LAN_UDP accept
-    ip6 saddr $LAN6 udp dport $LAN_UDP accept
   }
   chain forward {
     type filter hook forward priority filter; policy drop;

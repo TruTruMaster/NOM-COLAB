@@ -1,7 +1,7 @@
 #!/bin/sh
-# Hardware watchdog: if this process stops petting it (kernel hang), the
-# chipset reboots the machine after 60 s. A clean stop disarms it.
+# BCM2712 hardware watchdog: if this process stops petting it (kernel hang),
+# the SoC reboots after 15 s (its maximum). A clean stop disarms it.
 exec 2>&1
-modprobe -q iTCO_wdt 2>/dev/null
+modprobe -q bcm2835_wdt 2>/dev/null
 if ! [ -c /dev/watchdog ]; then echo "watchdog: no /dev/watchdog, idling"; exec sleep 2147483647; fi
-exec watchdog -F -T 60 -t 10 /dev/watchdog
+exec watchdog -F -T 15 -t 5 /dev/watchdog

@@ -1,2 +1,5 @@
 #!/bin/sh -e
-# Nothing to do after the filesystems are unmounted.
+# Very last step: services are stopped, disks unmounted, / is read-only.
+# `kernel-min trial` left a flag: reboot with "0 tryboot" so the Pi firmware
+# boots the [tryboot] kernel slot once (busybox reboot cannot pass that).
+if [ -e /var/lib/kernel-min/tryboot ]; then exec /usr/local/sbin/rpi-tryboot; fi

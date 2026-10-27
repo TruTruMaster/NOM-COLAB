@@ -48,7 +48,7 @@ for name in sorted(os.listdir(src)):
 # configure.sh writes "default" at install time; emulate the fullest variant
 if "default" not in services:
     services["default"] = "bundle"
-    default_contents = ["base", "wifi", "web", "nomcolab-app"]
+    default_contents = ["base", "wifi", "web"]
 else:
     default_contents = names("default", "contents.d")
 

@@ -5,7 +5,7 @@
 #   svc start|stop <name>    bring a service (and what it needs) up / down
 #   svc restart <name>       restart a longrun (s6 keeps supervising it)
 #   svc log <name> [lines]   follow /var/log/<name>/current (sshd, tailscaled,
-#                            nginx, nomcolab, net, system, syslogd)
+#                            nginx, net, system, syslogd)
 #   svc enable|disable <name>  add/remove from the boot bundle "default"
 #   svc reload               recompile /etc/s6-rc/source and switch live
 #   svc boot                 messages of the last boot (catch-all log)
