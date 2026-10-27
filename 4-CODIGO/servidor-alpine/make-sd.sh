@@ -58,7 +58,7 @@ part() { case "$DEV" in *[0-9]) echo "${DEV}p$1" ;; *) echo "${DEV}$1" ;; esac; 
 P1=$(part 1) P2=$(part 2)
 R=$(mktemp -d)
 cleanup() {
-  for m in "$R/dev" "$R/sys" "$R/proc" "$R/boot" "$R"; do mountpoint -q "$m" && umount -l "$m"; done
+  if mountpoint -q "$R"; then umount -R "$R" 2>/dev/null || umount -R -l "$R"; fi
   rm -f "$keys"
 }
 trap cleanup EXIT
@@ -81,11 +81,15 @@ ROOT_UUID=$(blkid -s UUID -o value "$P2")
 BOOT_UUID=$(blkid -s UUID -o value "$P1")
 ROOT_PARTUUID=$DISKID-02
 mount "$P2" "$R"
+mount --make-private "$R"
 mkdir -p "$R/boot" "$R/proc" "$R/sys" "$R/dev"
 mount -o umask=0077 "$P1" "$R/boot"
+# The chroot gets its own proc, sysfs and devtmpfs mounts, never binds of the
+# laptop's /sys and /dev: unmounting such a bind also unmounts the laptop's
+# own /dev/pts (then sudo fails with "unable to allocate pty")
 mount -t proc proc "$R/proc"
-mount --rbind /sys "$R/sys"
-mount --rbind /dev "$R/dev"
+mount -t sysfs sysfs "$R/sys"
+mount -t devtmpfs devtmpfs "$R/dev"
 
 # ------------------------------------------------------------------ Alpine aarch64
 step "installing Alpine $BRANCH (aarch64)"

@@ -28,16 +28,19 @@ case "$DEV" in *[0-9]) P1=${DEV}p1 P2=${DEV}p2 ;; *) P1=${DEV}1 P2=${DEV}2 ;; es
 for p in "$P1" "$P2"; do umount "$p" 2>/dev/null || true; done
 R=$(mktemp -d)
 cleanup() {
-  for m in "$R/dev" "$R/sys" "$R/proc" "$R/boot" "$R"; do mountpoint -q "$m" && umount -l "$m"; done
+  if mountpoint -q "$R"; then umount -R "$R" 2>/dev/null || umount -R -l "$R"; fi
   rmdir "$R" 2>/dev/null || true
 }
 trap cleanup EXIT
 mount "$P2" "$R"
+mount --make-private "$R"
 [ -f "$R/etc/servidor-alpine.conf" ] || die "$P2 is not a card made by make-sd.sh"
 mount "$P1" "$R/boot"
+# Own proc, sysfs and devtmpfs mounts, never binds of the laptop's /sys and
+# /dev (unmounting those also unmounts the laptop's /dev/pts)
 mount -t proc proc "$R/proc"
-mount --rbind /sys "$R/sys"
-mount --rbind /dev "$R/dev"
+mount -t sysfs sysfs "$R/sys"
+mount -t devtmpfs devtmpfs "$R/dev"
 echo "card: $DEV"
 
 # Service scripts and tools (never the files configure.sh personalised)
