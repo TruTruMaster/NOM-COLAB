@@ -1,0 +1,117 @@
+#!/bin/sh
+# check-sd.sh [/dev/<sdcard>] - run with sudo on the laptop, card inserted.
+# Mounts the card READ-ONLY, checks everything make-sd.sh puts there, unmounts.
+# Changes nothing on the card.
+#   sudo sh check-sd.sh            (finds the card itself)
+HERE=$(dirname "$(readlink -f "$0")")
+die() { echo "check-sd: $*" >&2; exit 1; }
+[ "$(id -u)" = 0 ] || die "run it with sudo: sudo sh $0"
+
+DEV=${1:-}
+if [ -z "$DEV" ] && [ -z "${CHECK_ROOT:-}" ]; then
+  rootdisk=$(lsblk -no PKNAME "$(findmnt -no SOURCE /)" 2>/dev/null || true)
+  DEV=$(lsblk -dpno NAME,RM,TRAN,TYPE | awk -v r="/dev/$rootdisk" \
+    '$1 != r && $NF == "disk" && ($2 == 1 || $3 == "usb" || $3 == "mmc" || $1 ~ /mmcblk/) { print $1 }')
+  [ -n "$DEV" ] || die "no microSD card found in this laptop"
+  [ "$(echo "$DEV" | wc -l)" = 1 ] || die "several removable disks ($(echo "$DEV" | tr '\n' ' ')): sudo sh $0 /dev/<the card>"
+fi
+
+# The helpers below run through check(); shellcheck cannot see that
+# shellcheck disable=SC2317
+ok=0 bad=0
+pass() { ok=$((ok + 1)); printf '  ok    %s\n' "$*"; }
+fail() { bad=$((bad + 1)); printf '  FAIL  %s\n' "$*"; }
+check() { # check <description> <test command...>
+  d=$1; shift
+  if "$@" >/dev/null 2>&1; then pass "$d"; else fail "$d"; fi
+}
+has() { [ -e "$1" ] || [ -L "$1" ]; }                 # exists (symlinks not followed: they point into the card)
+bigger() { [ -f "$1" ] && [ "$(wc -c < "$1")" -gt "$2" ]; }
+contains() { grep -q -- "$2" "$1"; }
+in_group() { awk -F: -v g="$1" -v u="$2" '$1 == g { n = split($4, m, ","); for (i = 1; i <= n; i++) if (m[i] == u) f = 1 } END { exit !f }' "$R/etc/group"; }
+has_password() { awk -F: -v u="$1" '$1 == u { f = 1; ok = ($2 ~ /^[$]/) } END { exit !(f && ok) }' "$R/etc/shadow"; }
+sshd_locked_down() {
+  c=$R/etc/ssh/sshd_config
+  grep -q '^PasswordAuthentication no' "$c" && grep -q '^PermitRootLogin no' "$c" && grep -qx "AllowUsers $1" "$c"
+}
+in_bin() { for dir in bin sbin usr/bin usr/sbin; do has "$R/$dir/$1" && return 0; done; return 1; }
+
+# ------------------------------------------------------------------ mount read-only
+if [ -n "${CHECK_ROOT:-}" ]; then       # testing: already-unpacked folders
+  R=$CHECK_ROOT B=${CHECK_BOOT:?} P1=boot P2=root
+else
+  case "$DEV" in *[0-9]) P1=${DEV}p1 P2=${DEV}p2 ;; *) P1=${DEV}1 P2=${DEV}2 ;; esac
+  for p in "$P1" "$P2"; do umount "$p" 2>/dev/null; done
+  B=$(mktemp -d) R=$(mktemp -d)
+  trap 'umount "$B" "$R" 2>/dev/null; rmdir "$B" "$R" 2>/dev/null' EXIT
+  mount -o ro "$P1" "$B" || die "cannot mount $P1"
+  mount -o ro "$P2" "$R" || die "cannot mount $P2"
+  echo "card: $DEV  ($(lsblk -dno SIZE,MODEL "$DEV" | tr -s ' '))"
+fi
+
+# shellcheck disable=SC1091
+. "$R/etc/servidor-alpine.conf" 2>/dev/null || true
+user=${ADMIN_USER:-}
+
+echo
+echo "boot partition ($P1):"
+check "config.txt boots slot a/"                    contains "$B/config.txt" '^os_prefix=a/'
+check "config.txt has the [tryboot] section"         contains "$B/config.txt" '^\[tryboot\]'
+check "config.txt turns the fan on"                  contains "$B/config.txt" 'cooling_fan=on'
+check "a/kernel_2712.img (stripped kernel, $(cat "$B/a/version" 2>/dev/null))" bigger "$B/a/kernel_2712.img" 5000000
+check "a/bcm2712-rpi-5-b.dtb"                        has "$B/a/bcm2712-rpi-5-b.dtb"
+check "a/bcm2712d0-rpi-5-b.dtb"                      has "$B/a/bcm2712d0-rpi-5-b.dtb"
+check "a/overlays/disable-wifi-pi5.dtbo"             has "$B/a/overlays/disable-wifi-pi5.dtbo"
+check "a/overlays/disable-bt-pi5.dtbo"               has "$B/a/overlays/disable-bt-pi5.dtbo"
+check "a/cmdline.txt points at this card's root ($ROOT_PARTUUID)" contains "$B/a/cmdline.txt" "root=PARTUUID=${ROOT_PARTUUID:-none} "
+check "s/ stock rescue kernel + initramfs"           bigger "$B/s/initramfs_2712" 1000000
+check "s/cmdline.txt points at this card's root"    contains "$B/s/cmdline.txt" "root=UUID=${ROOT_UUID:-none} "
+if [ -z "${CHECK_ROOT:-}" ]; then
+  check "partition 2 really has PARTUUID $ROOT_PARTUUID" test "$(blkid -s PARTUUID -o value "$P2")" = "$ROOT_PARTUUID"
+  check "partition 2 really has UUID $ROOT_UUID"         test "$(blkid -s UUID -o value "$P2")" = "$ROOT_UUID"
+fi
+
+echo
+echo "system ($P2):"
+check "Alpine $(cat "$R/etc/alpine-release" 2>/dev/null) (aarch64)" contains "$R/etc/apk/arch" aarch64
+check "/sbin/init is s6-linux-init"                  test "$(readlink "$R/sbin/init")" = /etc/s6-linux-init/current/bin/init
+check "s6-linux-init built (bin/init, scripts/rc.init)" has "$R/etc/s6-linux-init/current/scripts/rc.init"
+check "s6-rc database compiled"                      has "$R/etc/s6-rc/compiled/resolve.cdb"
+check "boot bundle has base + web"                   test -e "$R/etc/s6-rc/source/default/contents.d/base" -a -e "$R/etc/s6-rc/source/default/contents.d/web"
+for b in busybox s6-svscan s6-rc s6-linux-init mdevd e2fsck nft sshd tailscaled tailscale nginx doas; do
+  check "program $b"                                 in_bin "$b"
+done
+check "rpi-tryboot, svc, kernel-min"                 test -x "$R/usr/local/sbin/rpi-tryboot" -a -x "$R/usr/local/sbin/svc" -a -x "$R/usr/local/sbin/kernel-min"
+check "stock kernel modules (rescue slot)"           sh -c "ls -d '$R'/lib/modules/*rpi* '$R'/usr/lib/modules/*rpi* 2>/dev/null | grep -q ."
+check "hostname is ${SERVER_NAME:-?}"                test "$(cat "$R/etc/hostname")" = "${SERVER_NAME:-x}"
+check "fstab mounts this card's root and boot"       sh -c "grep -q 'UUID=$ROOT_UUID ' '$R/etc/fstab' && grep -q 'UUID=$BOOT_UUID ' '$R/etc/fstab'"
+check "firewall rules (/etc/nftables.nft)"           contains "$R/etc/nftables.nft" 'table inet host'
+check "website (/srv/www/default/index.html)"        has "$R/srv/www/default/index.html"
+
+echo
+echo "access:"
+uid=$(awk -F: -v u="$user" '$1 == u { print $3 }' "$R/etc/passwd")
+home=$(awk -F: -v u="$user" '$1 == u { print $6 }' "$R/etc/passwd")
+check "user '$user' exists"                          test -n "$uid"
+check "'$user' is in wheel (doas)"                   in_group wheel "$user"
+check "'$user' has a password (for doas)"            has_password "$user"
+laptop_home=$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)
+key=$(cut -d' ' -f2 "$laptop_home/.ssh/id_ed25519.pub" 2>/dev/null)
+[ -n "$key" ] || key=$(sed -n "s/^SSH_KEYS='[^ ]* \([^ ]*\).*/\1/p" "$HERE/config.env" 2>/dev/null)
+check "your laptop's SSH key is in authorized_keys"  contains "$R$home/.ssh/authorized_keys" "${key:-no-key-found}"
+check "authorized_keys belongs to '$user', mode 600" test "$(stat -c '%u %a' "$R$home/.ssh/authorized_keys")" = "$uid 600"
+check "sshd: keys only, no root, AllowUsers $user"   sshd_locked_down "$user"
+check "SSH host key"                                 has "$R/etc/ssh/ssh_host_ed25519_key"
+check "/etc files owned by root (doas needs it)"     sh -c "! find '$R/etc' -xdev ! -user 0 | grep -q ."
+check "doas rule for wheel (root-owned, 600)"        test "$(stat -c '%u %a' "$R/etc/doas.d/wheel.conf")" = "0 600"
+if [ -n "${WIFI_SSID:-}" ]; then
+  check "Wi-Fi '$WIFI_SSID' configured"              has "$R/etc/wpa_supplicant/wpa_supplicant.conf"
+fi
+if [ -s "$R/etc/tailscale/authkey" ]; then pass "Tailscale auth key ready (joins on first boot)"
+else echo "  --    no Tailscale key on the card: after the first boot run 'doas tailscale up --qr' on the Pi"; fi
+
+echo
+if [ "$bad" = 0 ]; then echo "check-sd: all $ok checks passed. The card is complete."
+else echo "check-sd: $bad of $((ok + bad)) checks FAILED (send me this output)"; fi
+[ -n "${CHECK_ROOT:-}" ] || echo "check-sd: card unmounted, you can remove it."
+exit "$bad"
