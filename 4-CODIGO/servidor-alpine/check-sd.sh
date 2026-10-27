@@ -117,6 +117,14 @@ fi
 if [ -s "$R/etc/tailscale/authkey" ]; then pass "Tailscale auth key ready (joins on first boot)"
 else echo "  --    no Tailscale key on the card: after the first boot run 'doas tailscale up --qr' on the Pi"; fi
 
+if [ -f "$B/boot-report.txt" ]; then
+  echo
+  echo "=== the Pi's last boot report (written by the Pi 60 s after it booted):"
+  cat "$B/boot-report.txt"
+else
+  echo "  --    no boot report on the card yet (the Pi has not run a minute with this version)"
+fi
+
 echo
 if [ "$bad" = 0 ]; then echo "check-sd: all $ok checks passed. The card is complete."
 else echo "check-sd: $bad of $((ok + bad)) checks FAILED (send me this output)"; fi

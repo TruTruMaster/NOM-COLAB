@@ -36,19 +36,44 @@ if [ "${1:-}" = find ]; then
     if [ -n "$t" ] && is_mine "$t"; then ip=$t; echo "   found $name on Tailscale: $ip (works from anywhere)"; fi
   fi
   if [ -z "$ip" ]; then
-    net=$(ip -4 route show default | awk '{ print $5; exit }')
-    cidr=$(ip -4 -o addr show "$net" | awk '{ print $4; exit }')
-    [ -n "$cidr" ] || die "this laptop has no network"
-    base=${cidr%.*}
-    say "looking for the Pi on your network ($base.0/24)"
-    i=1; while [ $i -le 254 ]; do ping -c1 -W1 "$base.$i" >/dev/null 2>&1 & i=$((i + 1)); done; wait
-    # Raspberry Pi network-card prefixes first, then (if we know its key) every device that answered
-    pis=$(ip neigh show dev "$net" | grep -iE 'lladdr (2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e)' | awk '{ print $1 }')
-    rest=""; [ -n "$blob" ] && rest=$(ip neigh show dev "$net" | awk '/lladdr/ { print $1 }')
+    # The laptop's real LAN interface (not Tailscale, VPNs or containers)
+    net=$(ip -4 route show default | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") print $(i + 1) }' \
+      | grep -vE '^(tailscale|tun|wg|docker|br-|virbr|veth)' | head -n1)
+    [ -n "$net" ] || die "this laptop has no network"
+    if ! command -v arp-scan >/dev/null 2>&1; then
+      echo "   installing arp-scan (lists every device on the network)"
+      if command -v apt-get >/dev/null; then sudo apt-get install -y -qq arp-scan
+      elif command -v dnf >/dev/null; then sudo dnf install -y -q arp-scan
+      elif command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm arp-scan; fi
+    fi
+    say "every device on your network ($net, $(ip -4 -o addr show "$net" | awk '{ print $4; exit }')):"
+    scan=$(mktemp)
+    if command -v arp-scan >/dev/null 2>&1; then
+      # ARP reaches every device on the network, even ones that ignore ping
+      sudo arp-scan --localnet --interface "$net" --plain --retry 3 2>/dev/null | sort -t. -k4 -n -u > "$scan"
+    else
+      base=$(ip -4 -o addr show "$net" | awk '{ print $4; exit }'); base=${base%.*}
+      i=1; while [ $i -le 254 ]; do ping -c1 -W1 "$base.$i" >/dev/null 2>&1 & i=$((i + 1)); done; wait
+      ip neigh show dev "$net" | awk '/lladdr/ { print $1 "\t" $3 "\t" }' > "$scan"
+    fi
+    pimac='^(2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e)'
+    while IFS='	' read -r a m v; do
+      tag=""; echo "$m" | grep -qiE "$pimac" && tag="   <-- Raspberry Pi"
+      printf '   %-16s %-18s %s%s\n' "$a" "$m" "$v" "$tag"
+    done < "$scan"
+    echo "   ($(wc -l < "$scan") devices)"
+    pis=$(awk -F'\t' -v re="$pimac" 'tolower($2) ~ re { print $1 }' "$scan")
+    rest=""; [ -n "$blob" ] && rest=$(cut -f1 "$scan")
+    rm -f "$scan"
     for c in $pis $rest; do
       if is_mine "$c"; then ip=$c; break; fi
     done
-    [ -n "$ip" ] || die "the Pi did not answer. Is the card in the Pi, the network cable in, and was it powered on a minute ago?"
+    if [ -z "$ip" ]; then
+      if [ -n "$pis" ]; then
+        die "a Raspberry Pi is there ($pis) but it does not answer SSH yet: wait a minute and run sh pi5.sh find again"
+      fi
+      die "no Raspberry Pi on the network: it did not get an address. Unplug its power, put the card in the laptop and run: sudo sh check-sd.sh"
+    fi
     echo "   found the Pi at $ip"
   fi
 

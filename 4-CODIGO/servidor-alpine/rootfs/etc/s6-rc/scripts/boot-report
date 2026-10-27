@@ -1,0 +1,26 @@
+#!/bin/sh
+# One minute after boot, write what happened to /boot/boot-report.txt (the
+# card's FAT partition): readable on the laptop with `sudo sh check-sd.sh`
+# even if the Pi never reached the network. Then idle until the next boot.
+exec 2>&1
+sleep 60
+r=/boot/boot-report.txt
+{
+  echo "=== boot report, $(date), up $(cut -d' ' -f1 /proc/uptime) s"
+  uname -a
+  echo "cmdline: $(cat /proc/cmdline)"
+  echo
+  echo "--- services up (s6-rc)"; s6-rc -a list 2>&1 | tr '\n' ' '; echo
+  echo "--- longruns"; for s in /run/service/*; do printf '%-22s %s\n' "${s##*/}" "$(s6-svstat "$s" 2>&1)"; done
+  echo; echo "--- network"; ip addr; ip route; cat /etc/resolv.conf 2>&1
+  echo; echo "--- boot messages (catch-all log)"; tail -n 60 /run/uncaught-logs/current 2>&1
+  for l in net sshd tailscaled system; do
+    echo; echo "--- /var/log/$l"; tail -n 15 "/var/log/$l/current" 2>&1
+  done
+  echo; echo "--- kernel: errors, network, SD card"
+  dmesg 2>&1 | grep -iE 'error|fail|warn|macb|eth0|mmc|rp1|pcie|fan|thermal|under-voltage' | tail -n 60
+} > "$r.new" 2>&1
+mv "$r.new" "$r"
+sync
+echo "boot-report: written to $r"
+exec sleep 2147483647

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Login on the HDMI screen + USB keyboard (rescue kernel); idles where there is no tty1
+if ! [ -c /dev/tty1 ]; then exec sleep 2147483647; fi
+exec getty 38400 tty1 linux

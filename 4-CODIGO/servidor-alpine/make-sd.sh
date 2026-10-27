@@ -182,7 +182,7 @@ if [ "${STOCK_KERNEL:-yes}" = yes ] && [ -f "$B/vmlinuz-rpi" ]; then
     cp "$d5" "$B/s/"
     if [ -n "$d0" ]; then cp "$d0" "$B/s/"; else cp "$d5" "$B/s/bcm2712d0-rpi-5-b.dtb"; fi
     if [ -n "$ov" ]; then cp "$(dirname "$ov")"/disable-wifi-pi5.dtbo "$(dirname "$ov")"/disable-bt-pi5.dtbo "$B/s/overlays/"; fi
-    echo "root=UUID=$ROOT_UUID rootfstype=ext4 ro modules=sd-mod,mmc_block,ext4 init=/sbin/init console=ttyAMA10,115200 kmin.slot=s" > "$B/s/cmdline.txt"
+    echo "root=UUID=$ROOT_UUID rootfstype=ext4 ro modules=sd-mod,mmc_block,ext4 init=/sbin/init console=ttyAMA10,115200 console=tty1 kmin.slot=s" > "$B/s/cmdline.txt"
     stock=yes
   else
     echo "   WARNING: Alpine's linux-rpi has no Pi 5 device tree here: no stock rescue slot"
