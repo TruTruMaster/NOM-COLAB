@@ -102,7 +102,14 @@ check "your laptop's SSH key is in authorized_keys"  contains "$R$home/.ssh/auth
 check "authorized_keys belongs to '$user', mode 600" test "$(stat -c '%u %a' "$R$home/.ssh/authorized_keys")" = "$uid 600"
 check "sshd: keys only, no root, AllowUsers $user"   sshd_locked_down "$user"
 check "SSH host key"                                 has "$R/etc/ssh/ssh_host_ed25519_key"
-check "/etc files owned by root (doas needs it)"     sh -c "! find '$R/etc' -xdev ! -user 0 | grep -q ."
+# Everything in /etc belongs to root, except the catch-all log folder that
+# s6-linux-init-maker gives to its logger user on purpose
+nonroot=$(find "$R/etc" -xdev ! -user 0 -printf '%U %P\n' 2>/dev/null \
+  | awk -v pw="$R/etc/passwd" 'BEGIN { FS = ":"; while ((getline l < pw) > 0) { split(l, f, ":"); n[f[3]] = f[1] } FS = " " }
+      { u = $1; sub(/^[0-9]+ /, ""); print $0 " (owner " (u in n ? n[u] : "uid " u) ")" }' \
+  | grep -v '^s6-linux-init/current/run-image/uncaught-logs (')
+if [ -z "$nonroot" ]; then pass "/etc files owned by root (doas needs it)"
+else fail "/etc files not owned by root:"; echo "$nonroot" | head -n 15 | sed 's|^|          /etc/|'; fi
 check "doas rule for wheel (root-owned, 600)"        test "$(stat -c '%u %a' "$R/etc/doas.d/wheel.conf")" = "0 600"
 if [ -n "${WIFI_SSID:-}" ]; then
   check "Wi-Fi '$WIFI_SSID' configured"              has "$R/etc/wpa_supplicant/wpa_supplicant.conf"
