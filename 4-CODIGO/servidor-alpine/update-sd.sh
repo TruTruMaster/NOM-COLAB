@@ -61,6 +61,21 @@ chroot "$R" /bin/sh -e -c '
   echo "   s6-rc database recompiled (${new##*/})"
 '
 
+# Ethernet without EEE (kernel/eee-off-pi5-overlay.dts), for every kernel slot
+for s in a b s; do
+  if [ -f "$R/boot/$s/kernel_2712.img" ]; then
+    mkdir -p "$R/boot/$s/overlays"; cp "$HERE/kernel/eee-off-pi5.dtbo" "$R/boot/$s/overlays/"
+  fi
+done
+if ! grep -q '^dtoverlay=eee-off-pi5' "$R/boot/config.txt"; then
+  # after the last setting of the [all] section
+  awk 'NR == FNR { if (/^\[/) all = ($0 == "[all]"); else if (all && /^[^#[:space:]]/) last = FNR; next }
+       { print } FNR == last { print "dtoverlay=eee-off-pi5" }
+       END { if (!last) print "dtoverlay=eee-off-pi5" }' "$R/boot/config.txt" "$R/boot/config.txt" > "$R/boot/config.txt.new"
+  mv "$R/boot/config.txt.new" "$R/boot/config.txt"
+  echo "   Ethernet: EEE off (the link kept dropping with it)"
+fi
+
 # The rescue slot shows its console on an HDMI screen as well
 if [ -f "$R/boot/s/cmdline.txt" ] && ! grep -q 'console=tty1' "$R/boot/s/cmdline.txt"; then
   sed -i 's/$/ console=tty1/' "$R/boot/s/cmdline.txt"

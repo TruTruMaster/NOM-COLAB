@@ -148,6 +148,7 @@ cp "$dtb/bcm2712-rpi-5-b.dtb" "$out/"
 # Pi 5 boards with the D0 stepping (2 GB, 16 GB and newer 4/8 GB) load this name
 cp "$dtb/$d0" "$out/bcm2712d0-rpi-5-b.dtb"
 cp arch/arm64/boot/dts/overlays/disable-wifi-pi5.dtbo arch/arm64/boot/dts/overlays/disable-bt-pi5.dtbo "$out/overlays/"
+cp "$HERE/eee-off-pi5.dtbo" "$out/overlays/"
 "${CROSS}gcc" -Os -static -nostdlib -fno-pie -no-pie -fno-stack-protector \
   -o "$out/rpi-tryboot" "$HERE/rpi-tryboot.c"
 "${CROSS}strip" "$out/rpi-tryboot" 2>/dev/null || true

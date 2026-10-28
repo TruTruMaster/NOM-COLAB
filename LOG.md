@@ -615,3 +615,12 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   los dispositivos activos del device tree con su controlador incluido, variante con Wi-Fi y USB,
   shellcheck, `nft -c` y `test/check-s6-tree.py`. Sin probar aquí: el arranque real en la Pi y
   `make-sd.sh` completo (sin acceso a los repositorios de Alpine).
+- Primer arranque real en la Pi 5: el kernel propio, s6 y todos los servicios arrancan, pero el
+  Ethernet no consiguió dirección. El enlace se caía 1 s después de cada "Link is Up": el driver
+  macb de rpi-6.18 activa el modo de bajo consumo EEE 1 s después de levantar el enlace. El
+  overlay `kernel/eee-off-pi5-overlay.dts` hace que el PHY no ofrezca EEE; `update-sd.sh` lo
+  agrega a una tarjeta ya hecha. El reporte de arranque ahora muestra paquetes recibidos y
+  enviados, cambios de enlace y si EEE quedó apagado.
+- `make-sd.sh` y `update-sd.sh` montaban `/dev` y `/sys` de la laptop con `--rbind` y los
+  desmontaban con `umount -l`: eso también desmontaba el `/dev/pts` de la laptop y `sudo` dejaba
+  de funcionar hasta reiniciar. Ahora el chroot usa montajes propios de proc, sysfs y devtmpfs.

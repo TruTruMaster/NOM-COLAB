@@ -24,3 +24,4 @@ tokensito
 
 # servidor-alpine: llave pública de la Pi que guarda make-sd.sh (local)
 4-CODIGO/servidor-alpine/pi5-hostkey.pub
+4-CODIGO/servidor-alpine/pi5-mac

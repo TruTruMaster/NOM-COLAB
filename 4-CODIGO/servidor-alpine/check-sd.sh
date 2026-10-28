@@ -63,6 +63,8 @@ check "a/bcm2712-rpi-5-b.dtb"                        has "$B/a/bcm2712-rpi-5-b.d
 check "a/bcm2712d0-rpi-5-b.dtb"                      has "$B/a/bcm2712d0-rpi-5-b.dtb"
 check "a/overlays/disable-wifi-pi5.dtbo"             has "$B/a/overlays/disable-wifi-pi5.dtbo"
 check "a/overlays/disable-bt-pi5.dtbo"               has "$B/a/overlays/disable-bt-pi5.dtbo"
+check "Ethernet EEE off (eee-off-pi5 in config.txt and a/overlays)" \
+  sh -c "grep -q '^dtoverlay=eee-off-pi5' '$B/config.txt' && test -f '$B/a/overlays/eee-off-pi5.dtbo'"
 check "a/cmdline.txt points at this card's root ($ROOT_PARTUUID)" contains "$B/a/cmdline.txt" "root=PARTUUID=${ROOT_PARTUUID:-none} "
 check "s/ stock rescue kernel + initramfs"           bigger "$B/s/initramfs_2712" 1000000
 check "s/cmdline.txt points at this card's root"    contains "$B/s/cmdline.txt" "root=UUID=${ROOT_UUID:-none} "
@@ -121,6 +123,12 @@ if [ -f "$B/boot-report.txt" ]; then
   echo
   echo "=== the Pi's last boot report (written by the Pi 60 s after it booted):"
   cat "$B/boot-report.txt"
+  # `pi5.sh find` marks this address in the list of devices on the network
+  mac=$(awk '/^[0-9]+: eth0:/ { e = 1 } e && /link\/ether/ { print $2; exit }' "$B/boot-report.txt")
+  if [ -n "$mac" ] && [ -z "${CHECK_ROOT:-}" ]; then
+    echo "$mac" > "$HERE/pi5-mac"
+    if [ -n "${SUDO_USER:-}" ]; then chown "$SUDO_USER" "$HERE/pi5-mac"; fi
+  fi
 else
   echo "  --    no boot report on the card yet (the Pi has not run a minute with this version)"
 fi

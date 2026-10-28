@@ -13,6 +13,12 @@ r=/boot/boot-report.txt
   echo "--- services up (s6-rc)"; s6-rc -a list 2>&1 | tr '\n' ' '; echo
   echo "--- longruns"; for s in /run/service/*; do printf '%-22s %s\n' "${s##*/}" "$(s6-svstat "$s" 2>&1)"; done
   echo; echo "--- network"; ip addr; ip route; cat /etc/resolv.conf 2>&1
+  st=/sys/class/net/eth0/statistics
+  echo "eth0 packets: received $(cat $st/rx_packets 2>&1) (errors $(cat $st/rx_errors 2>&1), dropped $(cat $st/rx_dropped 2>&1))," \
+    "sent $(cat $st/tx_packets 2>&1) (errors $(cat $st/tx_errors 2>&1), dropped $(cat $st/tx_dropped 2>&1))"
+  echo "eth0 link changes since boot: $(cat /sys/class/net/eth0/carrier_changes 2>&1)"
+  if [ -n "$(find /sys/firmware/devicetree/base -name eee-broken-1000t 2>/dev/null)" ]; then echo "Ethernet EEE: off (overlay applied)"
+  else echo "Ethernet EEE: allowed (eee-off-pi5 overlay not applied)"; fi
   echo; echo "--- boot messages (catch-all log)"; tail -n 60 /run/uncaught-logs/current 2>&1
   for l in net sshd tailscaled system; do
     echo; echo "--- /var/log/$l"; tail -n 15 "/var/log/$l/current" 2>&1

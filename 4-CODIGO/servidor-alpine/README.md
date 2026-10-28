@@ -19,7 +19,9 @@ laptop; the Pi never needs a screen or keyboard.
 - **Website**: nginx serving `/srv/www/default` (static files).
 - **Speed / power**: 16K memory pages and fake-NUMA (Raspberry Pi's own Pi 5
   tuning), `schedutil` CPU governor, BBR + fq networking, `mq-deadline` for the
-  SD card. Wi-Fi, Bluetooth, audio, HDMI and camera stay off. The official fan
+  SD card. Wi-Fi, Bluetooth, audio, HDMI and camera stay off. Ethernet runs
+  without EEE (`kernel/eee-off-pi5-overlay.dts`): with it, the link dropped 1 s
+  after every link-up on the first real boot. The official fan
   follows the kernel's temperature curve. Root is written at most once a minute
   to spare the SD card. The hardware watchdog reboots it if the kernel hangs.
 

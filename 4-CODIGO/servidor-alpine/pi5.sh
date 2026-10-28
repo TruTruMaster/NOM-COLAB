@@ -56,7 +56,10 @@ if [ "${1:-}" = find ]; then
       i=1; while [ $i -le 254 ]; do ping -c1 -W1 "$base.$i" >/dev/null 2>&1 & i=$((i + 1)); done; wait
       ip neigh show dev "$net" | awk '/lladdr/ { print $1 "\t" $3 "\t" }' > "$scan"
     fi
-    pimac='^(2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e)'
+    pimac='^(2c:cf:67|d8:3a:dd|dc:a6:32|e4:5f:01|28:cd:c1|b8:27:eb|88:a2:9e'
+    # The Pi's own address, saved by check-sd.sh from its boot report
+    [ -s "$HERE/pi5-mac" ] && pimac="$pimac|$(tr -d ' \n' < "$HERE/pi5-mac")"
+    pimac="$pimac)"
     while IFS='	' read -r a m v; do
       tag=""; echo "$m" | grep -qiE "$pimac" && tag="   <-- Raspberry Pi"
       printf '   %-16s %-18s %s%s\n' "$a" "$m" "$v" "$tag"

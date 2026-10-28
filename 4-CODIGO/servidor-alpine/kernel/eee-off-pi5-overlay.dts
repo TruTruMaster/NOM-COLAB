@@ -1,0 +1,24 @@
+// eee-off-pi5: the Pi 5's Ethernet PHY stops offering Energy Efficient
+// Ethernet (802.3az) to the router.
+//
+// With EEE negotiated, the rpi-6.18 macb driver puts the link into low-power
+// idle 1 s after it comes up. On the first boot of this server the link went
+// down 1 s after every "Link is Up" and no DHCP answer ever arrived. Without
+// EEE the driver never enters that state. Applies to every kernel slot.
+//
+// kernel/eee-off-pi5.dtbo is this file compiled; after editing, rebuild it with
+//   dtc -@ -I dts -O dtb -o kernel/eee-off-pi5.dtbo kernel/eee-off-pi5-overlay.dts
+/dts-v1/;
+/plugin/;
+
+/{
+	compatible = "brcm,bcm2712";
+
+	fragment@0 {
+		target = <&phy1>;
+		__overlay__ {
+			eee-broken-100tx;
+			eee-broken-1000t;
+		};
+	};
+};

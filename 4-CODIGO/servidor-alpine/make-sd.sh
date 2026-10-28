@@ -171,7 +171,7 @@ cmdline() { # cmdline <slot>
 }
 mkdir -p "$B/a/overlays"
 cp "$OUT/kernel_2712.img" "$OUT/bcm2712-rpi-5-b.dtb" "$OUT/bcm2712d0-rpi-5-b.dtb" "$OUT/version" "$B/a/"
-cp "$OUT"/overlays/*.dtbo "$B/a/overlays/"
+cp "$OUT"/overlays/*.dtbo "$HERE/kernel/eee-off-pi5.dtbo" "$B/a/overlays/"
 cmdline a > "$B/a/cmdline.txt"
 
 stock=no
@@ -186,6 +186,7 @@ if [ "${STOCK_KERNEL:-yes}" = yes ] && [ -f "$B/vmlinuz-rpi" ]; then
     cp "$d5" "$B/s/"
     if [ -n "$d0" ]; then cp "$d0" "$B/s/"; else cp "$d5" "$B/s/bcm2712d0-rpi-5-b.dtb"; fi
     if [ -n "$ov" ]; then cp "$(dirname "$ov")"/disable-wifi-pi5.dtbo "$(dirname "$ov")"/disable-bt-pi5.dtbo "$B/s/overlays/"; fi
+    cp "$HERE/kernel/eee-off-pi5.dtbo" "$B/s/overlays/"
     echo "root=UUID=$ROOT_UUID rootfstype=ext4 ro modules=sd-mod,mmc_block,ext4 init=/sbin/init console=ttyAMA10,115200 console=tty1 kmin.slot=s" > "$B/s/cmdline.txt"
     stock=yes
   else
@@ -213,6 +214,8 @@ camera_auto_detect=0
 display_auto_detect=0
 dtparam=audio=off
 dtparam=cooling_fan=on
+# Ethernet without EEE: with it the link kept dropping (kernel/eee-off-pi5-overlay.dts)
+dtoverlay=eee-off-pi5
 $radios
 
 # One-time trial boot of a new kernel (kernel-min trial)
