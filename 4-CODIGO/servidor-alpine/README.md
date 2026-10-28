@@ -75,6 +75,30 @@ doas tailscale serve --bg 80       # or: only your own devices
 
 Update the site later, from the laptop: `scp -r <your site folder>/* pi5:/srv/www/default/`
 
+### Your own domain (Cloudflare Tunnel)
+
+Funnel only serves `*.ts.net` names. For a domain of your own (a free one from
+[EU.org](https://nic.eu.org) works, e.g. `vefose.eu.org`), Cloudflare's free plan
+holds its DNS and a Cloudflare Tunnel carries the visits to the Pi. The tunnel is
+an outgoing connection: no port opens at home and your IP stays hidden.
+
+1. Cloudflare dashboard: **Add a domain**, type the domain, Free plan. It shows two
+   nameservers (`<name>.ns.cloudflare.com`).
+2. Registrar (EU.org: the domain request form): put those two nameservers as
+   Name1 and Name2, IPs empty (no glue: they are outside your domain). EU.org
+   reviews requests by hand; Cloudflare shows the domain **Active** once it is delegated.
+3. Cloudflare: **Zero Trust > Networks > Tunnels > Create a tunnel > Cloudflared**,
+   copy the token, and in **Public hostname** send the domain to `http://localhost:80`.
+4. On the Pi: `doas cloudflare-tunnel <token>` (downloads `cloudflared`, starts the
+   `cloudflared` service). `doas cloudflare-tunnel status` shows the connection.
+
+### Updating the running Pi
+
+`sh pi5.sh push` sends this folder's service scripts and tools to the Pi over SSH,
+switches the running system to them and starts any new service (`apply-on-pi.sh`
+does the Pi side). Users, keys, Tailscale and the site are left alone. With the
+card in the laptop instead: `sudo sh update-sd.sh`.
+
 Everything `pi5.sh` decided is in `config.env` (every option explained in
 `config.example.env`). Change it and run `sh pi5.sh` again to rebuild and rewrite a card.
 
@@ -87,6 +111,7 @@ Everything `pi5.sh` decided is in `config.env` (every option explained in
 | Package updates | `doas apk upgrade` |
 | Temperature, fan, CPU speed | `cat /sys/class/thermal/thermal_zone0/temp` · `cat /sys/class/hwmon/hwmon*/fan1_input` · `cat /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq` |
 | Firewall | edit `/etc/nftables.nft`, then `doas nft -f /etc/nftables.nft` |
+| Own domain | `doas cloudflare-tunnel <token>` · `doas cloudflare-tunnel status` · `doas cloudflare-tunnel off` |
 
 ### Kernel updates, with automatic way back
 
@@ -120,7 +145,9 @@ removes the stock rescue kernel and its modules.
 
 | Path | What |
 |---|---|
-| `pi5.sh` | the one command: tools, `config.env`, kernel, microSD; `pi5.sh find` locates the Pi |
+| `pi5.sh` | the one command: tools, `config.env`, kernel, microSD; `pi5.sh find` locates the Pi; `pi5.sh push` updates it over SSH |
+| `apply-on-pi.sh` | the Pi side of `pi5.sh push` |
+| `update-sd.sh`, `check-sd.sh` | update / check a written card from the laptop (`check-sd.sh` copies the Pi's logs to `pi5-logs/`) |
 | `config.example.env` | every setting explained; `pi5.sh` writes `config.env` (git ignores it) |
 | `kernel/build-kernel.sh` | builds the kernel (cross on the laptop, native on the Pi) into `kernel/build/out/` |
 | `kernel/common.config` | what SSH, Tailscale, nftables and the s6 userland need |
@@ -133,7 +160,7 @@ removes the stock rescue kernel and its modules.
 | `rootfs/etc/s6-linux-init/skel/` | `rc.init`, `runlevel`, `rc.shutdown`, `rc.shutdown.final` (tryboot hook) |
 | `rootfs/etc/s6-rc/source/` | one directory per service (`type`, `run`/`up`, `dependencies.d/`, loggers) |
 | `rootfs/etc/s6-rc/scripts/` | the scripts the services run |
-| `rootfs/usr/local/sbin/` | `svc` (services), `kernel-min` (kernel slots) |
+| `rootfs/usr/local/sbin/` | `svc` (services), `kernel-min` (kernel slots), `cloudflare-tunnel` (own domain) |
 | `rootfs/etc/` | `nftables.nft`, `mdev.conf`, `sysctl.d/`, `ssh/sshd_config`, `doas.d/`, `nginx/` |
 | `test/check-s6-tree.py` | offline checks of the s6-rc service tree |
 

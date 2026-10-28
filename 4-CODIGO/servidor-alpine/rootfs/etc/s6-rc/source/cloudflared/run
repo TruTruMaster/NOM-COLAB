@@ -1,0 +1,12 @@
+#!/bin/sh
+# Cloudflare Tunnel: serves the site on your own domain through Cloudflare, with
+# no port open at home. Idle until set up with: doas cloudflare-tunnel <token>
+exec 2>&1
+if ! [ -s /etc/cloudflared/token ] || ! [ -x /usr/local/bin/cloudflared ]; then
+  echo "cloudflared: not set up (doas cloudflare-tunnel <token>), idle"
+  exec sleep 2147483647
+fi
+# The token goes in the environment, not the command line (ps shows that to everyone)
+TUNNEL_TOKEN=$(cat /etc/cloudflared/token)
+export TUNNEL_TOKEN
+exec s6-setuidgid cloudflared /usr/local/bin/cloudflared tunnel --no-autoupdate run

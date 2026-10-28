@@ -8,6 +8,8 @@
 #
 #   sh pi5.sh          all of the above (safe to run again: reuses what is done)
 #   sh pi5.sh find     after the Pi boots: find it and make `ssh pi5` work
+#   sh pi5.sh push     update the running Pi over SSH with this folder's service
+#                      scripts and tools (like update-sd.sh, card stays in the Pi)
 set -eu
 HERE=$(dirname "$(readlink -f "$0")")
 cd "$HERE"
@@ -17,6 +19,24 @@ ask() { printf '%s' "$1" >&2; read -r REPLY || REPLY=""; }
 q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }   # sh single-quote
 
 [ "$(id -u)" != 0 ] || die "run it as your normal user (it uses sudo only where needed): sh pi5.sh"
+
+# ------------------------------------------------------------------ update the running Pi
+if [ "${1:-}" = push ]; then
+  pkg=$(mktemp)
+  trap 'rm -f "$pkg"' EXIT
+  tar -C "$HERE" --owner=0 --group=0 --exclude=kernel/build -czf "$pkg" \
+    rootfs/etc/s6-rc/source rootfs/etc/s6-rc/scripts rootfs/etc/s6-linux-init/skel rootfs/usr/local/sbin \
+    kernel configure.sh config.example.env README.md apply-on-pi.sh
+  say "sending the update to pi5"
+  scp -q "$pkg" pi5:/tmp/servidor-alpine.tgz || die "cannot reach pi5: run sh pi5.sh find"
+  say "applying it (doas asks for your password on the Pi)"
+  # shellcheck disable=SC2016  # expanded on the Pi
+  ssh -t pi5 'doas sh -c "rm -rf /tmp/servidor-alpine && mkdir /tmp/servidor-alpine &&
+    tar -C /tmp/servidor-alpine -xzf /tmp/servidor-alpine.tgz &&
+    sh /tmp/servidor-alpine/apply-on-pi.sh /tmp/servidor-alpine;
+    rm -rf /tmp/servidor-alpine /tmp/servidor-alpine.tgz"'
+  exit
+fi
 
 # ------------------------------------------------------------------ find the Pi
 # Finds the Pi (Tailscale first, then the local network), checks it really is

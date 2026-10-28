@@ -643,3 +643,10 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   vuelve a lo que sí arrancó: los overlays van en la carpeta compartida `/overlays/` (donde el
   kernel de Alpine ya pone los suyos), más `eee-off-pi5.dtbo`; `update-sd.sh` borra los README.
   El contador de arranques se escribe con `sync` para que cuente aunque se corte la luz enseguida.
+- La Pi arrancó en la red de la laptop (192.168.0.199) y `ssh pi5` funciona: 94 MB de RAM usados
+  de 8 GB, CPU en 1,5 GHz (su mínimo) y 41 °C en reposo.
+- `sh pi5.sh push` actualiza la Pi encendida por SSH (lo mismo que `update-sd.sh`, sin sacar la
+  tarjeta; `apply-on-pi.sh` recompila s6-rc y lo cambia en vivo).
+- Dominio propio: servicio `cloudflared` (inactivo hasta tener token) y `doas cloudflare-tunnel
+  <token>`, que baja el binario oficial de Cloudflare (Alpine 3.24 no lo trae). Funnel solo sirve
+  nombres `*.ts.net`; con un dominio gratis de EU.org, Cloudflare tiene el DNS y el túnel.

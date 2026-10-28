@@ -1,0 +1,68 @@
+#!/bin/sh
+# cloudflare-tunnel: publish the site on your own domain through a Cloudflare
+# Tunnel (outgoing connection: no port opened at home, your IP stays hidden).
+#
+#   doas cloudflare-tunnel <token>   install cloudflared, save the token, connect
+#   doas cloudflare-tunnel status    connected? (service state and last log lines)
+#   doas cloudflare-tunnel off       disconnect and forget the token
+#
+# The token comes from the Cloudflare dashboard: Zero Trust > Networks >
+# Tunnels > Create a tunnel > Cloudflared. Pasting their whole
+# "sudo cloudflared service install <token>" line works too.
+set -eu
+BIN=/usr/local/bin/cloudflared
+DIR=/etc/cloudflared
+SVC=/run/service/cloudflared
+die() { echo "cloudflare-tunnel: $*" >&2; exit 1; }
+[ "$(id -u)" = 0 ] || exec doas "$0" "$@"
+
+status() {
+  echo "cloudflared: $($BIN --version 2>/dev/null || echo 'not installed')"
+  if [ -s $DIR/token ]; then echo "token:       saved"; else echo "token:       none"; fi
+  [ -d $SVC ] && echo "service:     $(s6-svstat $SVC)"
+  echo "--- /var/log/cloudflared"
+  tail -n 15 /var/log/cloudflared/current 2>/dev/null || echo "(no log yet)"
+}
+
+case "${1:-status}" in
+  status) status; exit 0 ;;
+  off)
+    rm -f $DIR/token
+    [ -d $SVC ] && s6-svc -r $SVC
+    echo "cloudflare-tunnel: disconnected, token removed"
+    exit 0 ;;
+esac
+
+# The token is the last word, so the dashboard's whole install line works too
+token=$*
+token=${token##* }
+case "$token" in
+  eyJ*) ;;
+  *) die "that is not a tunnel token (it is a long text starting with eyJ)" ;;
+esac
+[ -d $SVC ] || die "this Pi has no cloudflared service yet: on the laptop run sh pi5.sh push"
+
+if ! [ -x $BIN ]; then
+  case "$(uname -m)" in aarch64) arch=arm64 ;; x86_64) arch=amd64 ;; *) die "no cloudflared for $(uname -m)" ;; esac
+  echo "cloudflare-tunnel: downloading cloudflared (Cloudflare's official build)"
+  # busybox wget needs ssl_client for https
+  apk add -q ssl_client || die "apk add ssl_client failed (is the Pi online?)"
+  wget -q -O $BIN.new "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$arch" \
+    || die "download failed"
+  chmod 755 $BIN.new
+  $BIN.new --version >/dev/null 2>&1 || { rm -f $BIN.new; die "the downloaded cloudflared does not run"; }
+  mv $BIN.new $BIN
+fi
+
+# Its own unprivileged user; only that user (and root) can read the token
+getent group cloudflared >/dev/null || addgroup -S cloudflared
+id cloudflared >/dev/null 2>&1 || adduser -S -D -H -h /var/empty -s /sbin/nologin -G cloudflared cloudflared
+mkdir -p $DIR
+chown root:cloudflared $DIR && chmod 750 $DIR
+( umask 027; printf '%s\n' "$token" > $DIR/token )
+chown root:cloudflared $DIR/token
+
+s6-svc -r $SVC
+echo "cloudflare-tunnel: connecting..."
+sleep 8
+status
