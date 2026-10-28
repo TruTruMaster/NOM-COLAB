@@ -653,3 +653,7 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - `vefose.pp.ua` (gratis en NIC.UA) ya delega a Cloudflare. `cloudflare-tunnel setup <dominio>`
   crea el túnel desde la Pi (aprobación única en el navegador, registros DNS automáticos) sin el
   panel Zero Trust, que pide tarjeta aun en su plan gratis; el modo con token sigue disponible.
+- `CLAUDE.md` (raíz) y `4-CODIGO/servidor-alpine/STATE.md`: estado completo para la siguiente
+  sesión: qué corre en la Pi, la cadena vefose.pp.ua → Cloudflare → túnel → nginx, dónde está
+  cada cosa (laptop, tarjeta, NIC.UA, Cloudflare, Tailscale), lecciones aprendidas, pendientes y
+  cómo trabajar con el dueño.
