@@ -61,13 +61,14 @@ chroot "$R" /bin/sh -e -c '
   echo "   s6-rc database recompiled (${new##*/})"
 '
 
-# Ethernet without EEE (kernel/eee-off-pi5-overlay.dts), for every kernel slot
-for s in a b s; do
-  if [ -f "$R/boot/$s/kernel_2712.img" ]; then
-    mkdir -p "$R/boot/$s/overlays"; cp "$HERE/kernel/eee-off-pi5.dtbo" "$R/boot/$s/overlays/"
-    # without this file the firmware ignores $s/overlays/ and uses /overlays/
-    echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$R/boot/$s/overlays/README"
-  fi
+# Ethernet without EEE (kernel/eee-off-pi5-overlay.dts). The firmware reads
+# overlays from the shared /overlays/ folder; a README in <slot>/overlays/ would
+# make it read that folder instead, and with one the Pi left no sign of booting.
+rm -f "$R"/boot/[abs]/overlays/README
+mkdir -p "$R/boot/overlays"
+cp "$HERE/kernel/eee-off-pi5.dtbo" "$R/boot/overlays/"
+for o in "$R"/boot/a/overlays/*.dtbo; do
+  [ -e "$R/boot/overlays/${o##*/}" ] || cp "$o" "$R/boot/overlays/"
 done
 if ! grep -q '^dtoverlay=eee-off-pi5' "$R/boot/config.txt"; then
   # after the last setting of the [all] section

@@ -27,7 +27,7 @@ laptop; the Pi never needs a screen or keyboard.
 
 ```
 Pi 5 bootloader (EEPROM) -> config.txt [all] os_prefix=a/
-   a/kernel_2712.img + a/bcm2712*-rpi-5-b.dtb + a/overlays + a/cmdline.txt
+   a/kernel_2712.img + a/bcm2712*-rpi-5-b.dtb + a/cmdline.txt + overlays/ (shared by all slots)
      └─ s6-linux-init  (PID 1 = s6-svscan, catch-all log, getty on the debug UART)
           └─ rc.init -> s6-rc change default
                oneshots: fs (fsck, rw) · hostname · sysctl · firewall · loopback

@@ -638,3 +638,8 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   el reporte y todos los registros a `pi5-logs/` en la laptop y muestra los registros aunque no
   haya reporte. El reporte se escribe a los 30 s y a los 2 min, con el registro del kernel entero;
   el anterior queda como `boot-report-before-update.txt`.
+- Con el README en `a/overlays/` la Pi no dejó ninguna señal de arrancar: los registros más
+  nuevos de la tarjeta son del arranque anterior (mismos tiempos del kernel al microsegundo). Se
+  vuelve a lo que sí arrancó: los overlays van en la carpeta compartida `/overlays/` (donde el
+  kernel de Alpine ya pone los suyos), más `eee-off-pi5.dtbo`; `update-sd.sh` borra los README.
+  El contador de arranques se escribe con `sync` para que cuente aunque se corte la luz enseguida.

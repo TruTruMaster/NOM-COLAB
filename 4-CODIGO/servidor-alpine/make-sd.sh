@@ -194,9 +194,12 @@ if [ "${STOCK_KERNEL:-yes}" = yes ] && [ -f "$B/vmlinuz-rpi" ]; then
   fi
 fi
 
-# Without a README in <slot>/overlays/ the firmware ignores it and uses /overlays/
-for o in "$B/a/overlays" "$B/s/overlays"; do
-  if [ -d "$o" ]; then echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$o/README"; fi
+# The firmware reads overlays from the shared /overlays/ folder (it would read
+# <slot>/overlays/ only if that held a README; with one, the Pi left no sign of booting).
+# Alpine's stock kernel already put its overlays there; add the missing ones.
+mkdir -p "$B/overlays"
+for o in "$OUT"/overlays/*.dtbo "$HERE/kernel/eee-off-pi5.dtbo"; do
+  [ -e "$B/overlays/${o##*/}" ] || cp "$o" "$B/overlays/"
 done
 
 radios="dtoverlay=disable-wifi-pi5

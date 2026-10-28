@@ -36,7 +36,7 @@ mount -a || echo "fs: some /etc/fstab entries failed to mount"
 n=$(cat /var/lib/servidor-alpine/boots 2>/dev/null)
 case "$n" in ''|*[!0-9]*) n=0 ;; esac
 n=$((n + 1))
-mkdir -p /var/lib/servidor-alpine && echo "$n" > /var/lib/servidor-alpine/boots
+mkdir -p /var/lib/servidor-alpine && echo "$n" > /var/lib/servidor-alpine/boots && sync
 echo "servidor-alpine: boot $n" > /dev/kmsg 2>/dev/null
 # A trial boot (kernel-min trial) is one-shot: clear its flag on every boot
 rm -f /var/lib/kernel-min/tryboot

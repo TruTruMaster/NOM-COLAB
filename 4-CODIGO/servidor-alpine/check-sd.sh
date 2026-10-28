@@ -63,9 +63,8 @@ check "a/bcm2712-rpi-5-b.dtb"                        has "$B/a/bcm2712-rpi-5-b.d
 check "a/bcm2712d0-rpi-5-b.dtb"                      has "$B/a/bcm2712d0-rpi-5-b.dtb"
 check "a/overlays/disable-wifi-pi5.dtbo"             has "$B/a/overlays/disable-wifi-pi5.dtbo"
 check "a/overlays/disable-bt-pi5.dtbo"               has "$B/a/overlays/disable-bt-pi5.dtbo"
-check "Ethernet EEE off (eee-off-pi5 in config.txt and a/overlays)" \
-  sh -c "grep -q '^dtoverlay=eee-off-pi5' '$B/config.txt' && test -f '$B/a/overlays/eee-off-pi5.dtbo'"
-check "a/overlays/README (without it the firmware skips a/overlays)" has "$B/a/overlays/README"
+check "Ethernet EEE off (eee-off-pi5 in config.txt and in /overlays, the folder the firmware reads)" \
+  sh -c "grep -q '^dtoverlay=eee-off-pi5' '$B/config.txt' && test -f '$B/overlays/eee-off-pi5.dtbo' && ! test -e '$B/a/overlays/README'"
 check "a/cmdline.txt points at this card's root ($ROOT_PARTUUID)" contains "$B/a/cmdline.txt" "root=PARTUUID=${ROOT_PARTUUID:-none} "
 check "s/ stock rescue kernel + initramfs"           bigger "$B/s/initramfs_2712" 1000000
 check "s/cmdline.txt points at this card's root"    contains "$B/s/cmdline.txt" "root=UUID=${ROOT_UUID:-none} "
