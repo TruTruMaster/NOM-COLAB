@@ -631,3 +631,10 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
   mientras la laptop usa el router 192.168.0.1 y no ve ninguno de los dos: el cable de la Pi está
   en otra red. `check-sd.sh` ahora compara el router de la Pi con el de la laptop y lo dice; el
   reporte de arranque prueba el router, internet y DNS y lista los equipos que ve la Pi.
+- `update-sd.sh` borraba el reporte de arranque anterior y `check-sd.sh` solo mostraba los
+  registros dentro del reporte: si la Pi no escribía uno nuevo, no quedaba nada que ver. Ahora la
+  Pi cuenta sus arranques (`/var/lib/servidor-alpine/boots`, y marca cada arranque en el registro
+  del kernel), `check-sd.sh` dice cuántas veces arrancó desde la última escritura, copia completos
+  el reporte y todos los registros a `pi5-logs/` en la laptop y muestra los registros aunque no
+  haya reporte. El reporte se escribe a los 30 s y a los 2 min, con el registro del kernel entero;
+  el anterior queda como `boot-report-before-update.txt`.

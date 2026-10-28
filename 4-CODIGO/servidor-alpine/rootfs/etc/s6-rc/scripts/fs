@@ -31,6 +31,13 @@ if [ $((rc & 2)) -ne 0 ]; then
 fi
 mount -o remount,rw / || exit 1
 mount -a || echo "fs: some /etc/fstab entries failed to mount"
+# Count boots: check-sd.sh on the laptop shows whether the Pi booted since the
+# card was last written; the mark separates boots in /var/log/syslogd
+n=$(cat /var/lib/servidor-alpine/boots 2>/dev/null)
+case "$n" in ''|*[!0-9]*) n=0 ;; esac
+n=$((n + 1))
+mkdir -p /var/lib/servidor-alpine && echo "$n" > /var/lib/servidor-alpine/boots
+echo "servidor-alpine: boot $n" > /dev/kmsg 2>/dev/null
 # A trial boot (kernel-min trial) is one-shot: clear its flag on every boot
 rm -f /var/lib/kernel-min/tryboot
 # A fresh /run every boot; /var/run and /var/lock are symlinks into it

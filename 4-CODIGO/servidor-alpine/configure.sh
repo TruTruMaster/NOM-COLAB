@@ -140,5 +140,9 @@ cat > /etc/motd <<EOF
 
 EOF
 
+# check-sd.sh compares the Pi's boot counter with this to tell whether it booted
+mkdir -p /var/lib/servidor-alpine
+echo 0 > /var/lib/servidor-alpine/boots-at-update
+
 rm -rf "$INST"
 echo "   configure.sh done"

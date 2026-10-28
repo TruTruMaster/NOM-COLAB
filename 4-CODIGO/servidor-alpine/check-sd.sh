@@ -120,9 +120,36 @@ fi
 if [ -s "$R/etc/tailscale/authkey" ]; then pass "Tailscale auth key ready (joins on first boot)"
 else echo "  --    no Tailscale key on the card: after the first boot run 'doas tailscale up --qr' on the Pi"; fi
 
+# ------------------------------------------------------------------ what the Pi recorded
+echo
+echo "what the Pi itself recorded:"
+num() { case "$1" in ''|*[!0-9]*) ;; *) echo "$1" ;; esac; }
+boots=$(num "$(cat "$R/var/lib/servidor-alpine/boots" 2>/dev/null)")
+at=$(num "$(cat "$R/var/lib/servidor-alpine/boots-at-update" 2>/dev/null)")
+if [ -n "$boots" ] && [ -n "$at" ]; then
+  echo "  it booted $((boots - at)) time(s) since the card was last written or updated ($boots in total)"
+elif [ -n "$at" ]; then
+  echo "  it has NOT booted since the card was last written or updated (or never got as far as mounting its disk)"
+elif [ -n "$boots" ]; then
+  echo "  it booted $boots time(s) in total"
+else
+  echo "  (no boot counter on this card yet: sudo sh update-sd.sh adds it)"
+fi
+logs=""
+if [ -z "${CHECK_ROOT:-}" ]; then
+  # Complete copies on the laptop: the report and every log the Pi keeps on the card
+  logs=$HERE/pi5-logs
+  rm -rf "$logs"; mkdir -p "$logs"
+  cp -r "$R/var/log" "$logs/" 2>/dev/null
+  cp "$B"/boot-report*.txt "$logs/" 2>/dev/null
+  chmod -R u+rwX "$logs"
+  if [ -n "${SUDO_USER:-}" ]; then chown -R "$SUDO_USER" "$logs"; fi
+  echo "  complete copies of its report and logs (nothing cut): $logs"
+fi
+
 if [ -f "$B/boot-report.txt" ]; then
   echo
-  echo "=== the Pi's last boot report (written by the Pi 60 s after it booted):"
+  echo "=== the Pi's boot report (written 30 s and 2 min after it booted):"
   cat "$B/boot-report.txt"
   # `pi5.sh find` marks this address in the list of devices on the network
   mac=$(awk '/^[0-9]+: eth0:/ { e = 1 } e && /link\/ether/ { print $2; exit }' "$B/boot-report.txt")
@@ -147,7 +174,18 @@ if [ -f "$B/boot-report.txt" ]; then
     echo "network: the Pi got $pi_ip from router $pi_gw, the same router as this laptop."
   fi
 else
-  echo "  --    no boot report on the card yet (the Pi has not run a minute with this version)"
+  echo
+  echo "  no boot report from a boot after the last update (the Pi writes it 30 s after booting)"
+  if [ -f "$B/boot-report-before-update.txt" ] && [ -n "$logs" ]; then
+    echo "  the report from before the update: $logs/boot-report-before-update.txt"
+  fi
+  # The logs stay on the card across boots: newest lines are the latest boot
+  for l in net sshd tailscaled system syslogd; do
+    if [ -f "$R/var/log/$l/current" ]; then
+      n=30; [ $l = syslogd ] && n=80
+      echo; echo "--- the Pi's /var/log/$l (last $n lines)"; tail -n $n "$R/var/log/$l/current"
+    fi
+  done
 fi
 
 echo

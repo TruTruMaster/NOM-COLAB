@@ -1,38 +1,43 @@
 #!/bin/sh
-# One minute after boot, write what happened to /boot/boot-report.txt (the
-# card's FAT partition): readable on the laptop with `sudo sh check-sd.sh`
-# even if the Pi never reached the network. Then idle until the next boot.
+# Writes what happened during this boot to /boot/boot-report.txt (the card's
+# FAT partition), 30 s and again 2 min after boot: readable on the laptop with
+# `sudo sh check-sd.sh` even if the Pi never reached the network. Then idles
+# until the next boot.
 exec 2>&1
-sleep 60
 r=/boot/boot-report.txt
-{
-  echo "=== boot report, $(date), up $(cut -d' ' -f1 /proc/uptime) s"
-  uname -a
-  echo "cmdline: $(cat /proc/cmdline)"
-  echo
-  echo "--- services up (s6-rc)"; s6-rc -a list 2>&1 | tr '\n' ' '; echo
-  echo "--- longruns"; for s in /run/service/*; do printf '%-22s %s\n' "${s##*/}" "$(s6-svstat "$s" 2>&1)"; done
-  echo; echo "--- network"; ip addr; ip route; cat /etc/resolv.conf 2>&1
-  st=/sys/class/net/eth0/statistics
-  echo "eth0 packets: received $(cat $st/rx_packets 2>&1) (errors $(cat $st/rx_errors 2>&1), dropped $(cat $st/rx_dropped 2>&1))," \
-    "sent $(cat $st/tx_packets 2>&1) (errors $(cat $st/tx_errors 2>&1), dropped $(cat $st/tx_dropped 2>&1))"
-  echo "eth0 link changes since boot: $(cat /sys/class/net/eth0/carrier_changes 2>&1)"
-  if [ -n "$(find /sys/firmware/devicetree/base -name eee-broken-1000t 2>/dev/null)" ]; then echo "Ethernet EEE: off (overlay applied)"
-  else echo "Ethernet EEE: allowed (eee-off-pi5 overlay not applied)"; fi
-  yn() { if "$@" >/dev/null 2>&1; then echo yes; else echo no; fi; }
-  gw=$(ip route | awk '/^default/ { print $3; exit }')
-  echo "router ${gw:-none} answers: $( [ -n "$gw" ] && yn ping -c 2 -W 2 "$gw" || echo no)"
-  echo "internet (ping 1.1.1.1): $(yn ping -c 2 -W 2 1.1.1.1)"
-  echo "DNS (controlplane.tailscale.com): $(yn nslookup controlplane.tailscale.com)"
-  echo "devices the Pi has seen on its cable:"; ip neigh 2>&1
-  echo; echo "--- boot messages (catch-all log)"; tail -n 60 /run/uncaught-logs/current 2>&1
-  for l in net sshd tailscaled system; do
-    echo; echo "--- /var/log/$l"; tail -n 15 "/var/log/$l/current" 2>&1
-  done
-  echo; echo "--- kernel: errors, network, SD card"
-  dmesg 2>&1 | grep -iE 'error|fail|warn|macb|eth0|mmc|rp1|pcie|fan|thermal|under-voltage' | tail -n 60
-} > "$r.new" 2>&1
-mv "$r.new" "$r"
-sync
-echo "boot-report: written to $r"
+report() {
+  {
+    echo "=== boot report: boot $(cat /var/lib/servidor-alpine/boots 2>/dev/null || echo '?') of this card, $(date), up $(cut -d' ' -f1 /proc/uptime) s"
+    uname -a
+    echo "cmdline: $(cat /proc/cmdline)"
+    echo
+    echo "--- services up (s6-rc)"; s6-rc -a list 2>&1 | tr '\n' ' '; echo
+    echo "--- longruns"; for s in /run/service/*; do printf '%-22s %s\n' "${s##*/}" "$(s6-svstat "$s" 2>&1)"; done
+    echo; echo "--- network"; ip addr; ip route; cat /etc/resolv.conf 2>&1
+    st=/sys/class/net/eth0/statistics
+    echo "eth0 packets: received $(cat $st/rx_packets 2>&1) (errors $(cat $st/rx_errors 2>&1), dropped $(cat $st/rx_dropped 2>&1))," \
+      "sent $(cat $st/tx_packets 2>&1) (errors $(cat $st/tx_errors 2>&1), dropped $(cat $st/tx_dropped 2>&1))"
+    echo "eth0 link changes since boot: $(cat /sys/class/net/eth0/carrier_changes 2>&1)"
+    if [ -n "$(find /sys/firmware/devicetree/base -name eee-broken-1000t 2>/dev/null)" ]; then echo "Ethernet EEE: off (overlay applied)"
+    else echo "Ethernet EEE: allowed (eee-off-pi5 overlay not applied)"; fi
+    yn() { if "$@" >/dev/null 2>&1; then echo yes; else echo no; fi; }
+    gw=$(ip route | awk '/^default/ { print $3; exit }')
+    echo "router ${gw:-none} answers: $( [ -n "$gw" ] && yn ping -c 2 -W 2 "$gw" || echo no)"
+    echo "internet (ping 1.1.1.1): $(yn ping -c 2 -W 2 1.1.1.1)"
+    echo "DNS (controlplane.tailscale.com): $(yn nslookup controlplane.tailscale.com)"
+    echo "devices the Pi has seen on its cable:"; ip neigh 2>&1
+    echo; echo "--- boot messages (catch-all log)"; cat /run/uncaught-logs/current 2>&1
+    for l in net sshd tailscaled system; do
+      echo; echo "--- /var/log/$l (last 30 lines; all of it stays in /var/log/$l)"; tail -n 30 "/var/log/$l/current" 2>&1
+    done
+    echo; echo "--- kernel messages (complete)"; dmesg 2>&1
+  } > "$r.new" 2>&1
+  mv "$r.new" "$r"
+  sync
+  echo "boot-report: written to $r"
+}
+sleep 30
+report
+sleep 90
+report
 exec sleep 2147483647

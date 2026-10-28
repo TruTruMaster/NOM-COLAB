@@ -90,7 +90,12 @@ if [ -n "$slot" ]; then
   mv "$R/boot/config.txt.new" "$R/boot/config.txt"
   echo "   the card now boots slot $slot/ ($( [ $slot = s ] && echo "Alpine stock kernel, rescue" || echo "stripped kernel"))"
 fi
-rm -f "$R/boot/boot-report.txt"
+# Keep the last report under another name: the next one is from a boot after this update
+if [ -f "$R/boot/boot-report.txt" ]; then mv "$R/boot/boot-report.txt" "$R/boot/boot-report-before-update.txt"; fi
+# check-sd.sh compares the Pi's boot counter with this to tell whether it booted since
+n=$(cat "$R/var/lib/servidor-alpine/boots" 2>/dev/null)
+case "$n" in ''|*[!0-9]*) n=0 ;; esac
+mkdir -p "$R/var/lib/servidor-alpine" && echo "$n" > "$R/var/lib/servidor-alpine/boots-at-update"
 sync
 cleanup
 trap - EXIT
