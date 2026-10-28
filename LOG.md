@@ -650,3 +650,6 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - Dominio propio: servicio `cloudflared` (inactivo hasta tener token) y `doas cloudflare-tunnel
   <token>`, que baja el binario oficial de Cloudflare (Alpine 3.24 no lo trae). Funnel solo sirve
   nombres `*.ts.net`; con un dominio gratis de EU.org, Cloudflare tiene el DNS y el túnel.
+- `vefose.pp.ua` (gratis en NIC.UA) ya delega a Cloudflare. `cloudflare-tunnel setup <dominio>`
+  crea el túnel desde la Pi (aprobación única en el navegador, registros DNS automáticos) sin el
+  panel Zero Trust, que pide tarjeta aun en su plan gratis; el modo con token sigue disponible.

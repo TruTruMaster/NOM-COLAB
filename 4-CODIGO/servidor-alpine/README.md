@@ -87,10 +87,12 @@ an outgoing connection: no port opens at home and your IP stays hidden.
 2. Registrar (EU.org: the domain request form): put those two nameservers as
    Name1 and Name2, IPs empty (no glue: they are outside your domain). EU.org
    reviews requests by hand; Cloudflare shows the domain **Active** once it is delegated.
-3. Cloudflare: **Zero Trust > Networks > Tunnels > Create a tunnel > Cloudflared**,
-   copy the token, and in **Public hostname** send the domain to `http://localhost:80`.
-4. On the Pi: `doas cloudflare-tunnel <token>` (downloads `cloudflared`, starts the
-   `cloudflared` service). `doas cloudflare-tunnel status` shows the connection.
+3. On the Pi: `doas cloudflare-tunnel setup <domain> www.<domain>`. It downloads
+   `cloudflared`, prints a link to open on the laptop (log in, click the domain: done
+   once), then creates the tunnel and its DNS records and starts the `cloudflared`
+   service. No Zero Trust dashboard, which asks for a payment card even on its free
+   plan. `doas cloudflare-tunnel status` shows the connection.
+   (A tunnel made in the Zero Trust dashboard works too: `doas cloudflare-tunnel <token>`.)
 
 ### Updating the running Pi
 
@@ -111,7 +113,7 @@ Everything `pi5.sh` decided is in `config.env` (every option explained in
 | Package updates | `doas apk upgrade` |
 | Temperature, fan, CPU speed | `cat /sys/class/thermal/thermal_zone0/temp` · `cat /sys/class/hwmon/hwmon*/fan1_input` · `cat /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq` |
 | Firewall | edit `/etc/nftables.nft`, then `doas nft -f /etc/nftables.nft` |
-| Own domain | `doas cloudflare-tunnel <token>` · `doas cloudflare-tunnel status` · `doas cloudflare-tunnel off` |
+| Own domain | `doas cloudflare-tunnel setup <domain>` · `doas cloudflare-tunnel status` · `doas cloudflare-tunnel off` |
 
 ### Kernel updates, with automatic way back
 

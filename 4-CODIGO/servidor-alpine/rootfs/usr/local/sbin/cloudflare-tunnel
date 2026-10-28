@@ -2,13 +2,17 @@
 # cloudflare-tunnel: publish the site on your own domain through a Cloudflare
 # Tunnel (outgoing connection: no port opened at home, your IP stays hidden).
 #
-#   doas cloudflare-tunnel <token>   install cloudflared, save the token, connect
+#   doas cloudflare-tunnel setup <domain> [more names]
+#                                    no dashboard needed: you approve once in the
+#                                    browser, the Pi creates the tunnel and the
+#                                    DNS records itself (e.g. vefose.pp.ua www.vefose.pp.ua)
+#   doas cloudflare-tunnel <token>   or: a tunnel made in the Zero Trust dashboard
 #   doas cloudflare-tunnel status    connected? (service state and last log lines)
-#   doas cloudflare-tunnel off       disconnect and forget the token
+#   doas cloudflare-tunnel off       disconnect
 #
-# The token comes from the Cloudflare dashboard: Zero Trust > Networks >
-# Tunnels > Create a tunnel > Cloudflared. Pasting their whole
-# "sudo cloudflared service install <token>" line works too.
+# The domain must already be in your Cloudflare account. A dashboard token comes
+# from Zero Trust > Networks > Tunnels > Create a tunnel > Cloudflared; pasting
+# their whole "sudo cloudflared service install <token>" line works too.
 set -eu
 BIN=/usr/local/bin/cloudflared
 DIR=/etc/cloudflared
@@ -18,51 +22,100 @@ die() { echo "cloudflare-tunnel: $*" >&2; exit 1; }
 
 status() {
   echo "cloudflared: $($BIN --version 2>/dev/null || echo 'not installed')"
-  if [ -s $DIR/token ]; then echo "token:       saved"; else echo "token:       none"; fi
-  [ -d $SVC ] && echo "service:     $(s6-svstat $SVC)"
+  if [ -s $DIR/config.yml ]; then echo "tunnel:      $(sed -n 's/^tunnel: //p' $DIR/config.yml), for $(sed -n 's/^  - hostname: //p' $DIR/config.yml | tr '\n' ' ')"
+  elif [ -s $DIR/token ]; then echo "tunnel:      from a dashboard token"
+  else echo "tunnel:      not set up"; fi
+  if [ -d $SVC ]; then echo "service:     $(s6-svstat $SVC)"; fi
   echo "--- /var/log/cloudflared"
   tail -n 15 /var/log/cloudflared/current 2>/dev/null || echo "(no log yet)"
+}
+
+install_cloudflared() {
+  [ -d $SVC ] || die "this Pi has no cloudflared service yet: on the laptop run sh pi5.sh push"
+  if ! [ -x $BIN ]; then
+    case "$(uname -m)" in aarch64) arch=arm64 ;; x86_64) arch=amd64 ;; *) die "no cloudflared for $(uname -m)" ;; esac
+    echo "cloudflare-tunnel: downloading cloudflared (Cloudflare's official build)"
+    # busybox wget needs ssl_client for https
+    apk add -q ssl_client || die "apk add ssl_client failed (is the Pi online?)"
+    wget -q -O $BIN.new "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$arch" \
+      || die "download failed"
+    chmod 755 $BIN.new
+    $BIN.new --version >/dev/null 2>&1 || { rm -f $BIN.new; die "the downloaded cloudflared does not run"; }
+    mv $BIN.new $BIN
+  fi
+  # Its own unprivileged user; only that user (and root) can read $DIR
+  getent group cloudflared >/dev/null || addgroup -S cloudflared
+  id cloudflared >/dev/null 2>&1 || adduser -S -D -H -h /var/empty -s /sbin/nologin -G cloudflared cloudflared
+  mkdir -p $DIR
+  chown root:cloudflared $DIR && chmod 750 $DIR
+}
+
+connect() {
+  s6-svc -r $SVC
+  echo "cloudflare-tunnel: connecting..."
+  sleep 8
+  status
 }
 
 case "${1:-status}" in
   status) status; exit 0 ;;
   off)
+    rm -f $DIR/token $DIR/config.yml
+    if [ -d $SVC ]; then s6-svc -r $SVC; fi
+    echo "cloudflare-tunnel: disconnected (the tunnel stays in your Cloudflare account; setup reuses it)"
+    exit 0 ;;
+  setup)
+    shift
+    [ $# -ge 1 ] || die "usage: doas cloudflare-tunnel setup <domain> [more names]"
+    install_cloudflared
+    # 1. Approve once: cloudflared prints a link, you open it on the laptop and
+    #    pick the domain. The resulting certificate stays in /root/.cloudflared.
+    if ! [ -s /root/.cloudflared/cert.pem ]; then
+      echo "cloudflare-tunnel: open the link below on your laptop, log in to Cloudflare and click your domain:"
+      $BIN tunnel login || die "the browser approval did not finish; run the same command again"
+    fi
+    # 2. The tunnel: reuse the one made before (its credentials are in $DIR), else create it
+    cred=$(ls $DIR/*.json 2>/dev/null | head -n1 || true)
+    if [ -z "$cred" ]; then
+      name=$(hostname)
+      if ! $BIN tunnel create "$name"; then
+        # A tunnel with this name exists but its credentials are gone: replace it
+        $BIN tunnel delete -f "$name" && $BIN tunnel create "$name" || die "could not create the tunnel"
+      fi
+      new=$(ls -t /root/.cloudflared/*.json | head -n1)
+      mv "$new" $DIR/
+      cred=$DIR/${new##*/}
+    fi
+    id=${cred##*/}; id=${id%.json}
+    # 3. DNS: each name points to the tunnel (replaces any old record for that name)
+    for h in "$@"; do
+      $BIN tunnel route dns --overwrite-dns "$id" "$h" || die "could not create the DNS record for $h"
+    done
+    # 4. What the tunnel serves: every name goes to nginx on this Pi
+    {
+      echo "tunnel: $id"
+      echo "credentials-file: $cred"
+      echo "ingress:"
+      for h in "$@"; do printf '  - hostname: %s\n    service: http://localhost:80\n' "$h"; done
+      echo "  - service: http_status:404"
+    } > $DIR/config.yml.new
+    mv $DIR/config.yml.new $DIR/config.yml
     rm -f $DIR/token
-    [ -d $SVC ] && s6-svc -r $SVC
-    echo "cloudflare-tunnel: disconnected, token removed"
+    chown root:cloudflared $DIR/config.yml "$cred" && chmod 640 $DIR/config.yml "$cred"
+    connect
     exit 0 ;;
 esac
 
-# The token is the last word, so the dashboard's whole install line works too
+# A token from the Zero Trust dashboard. It is the last word, so the dashboard's
+# whole install line works too
 token=$*
 token=${token##* }
 case "$token" in
   eyJ*) ;;
-  *) die "that is not a tunnel token (it is a long text starting with eyJ)" ;;
+  *) die "that is not a tunnel token (it is a long text starting with eyJ); for no dashboard: doas cloudflare-tunnel setup <domain>" ;;
 esac
-[ -d $SVC ] || die "this Pi has no cloudflared service yet: on the laptop run sh pi5.sh push"
-
-if ! [ -x $BIN ]; then
-  case "$(uname -m)" in aarch64) arch=arm64 ;; x86_64) arch=amd64 ;; *) die "no cloudflared for $(uname -m)" ;; esac
-  echo "cloudflare-tunnel: downloading cloudflared (Cloudflare's official build)"
-  # busybox wget needs ssl_client for https
-  apk add -q ssl_client || die "apk add ssl_client failed (is the Pi online?)"
-  wget -q -O $BIN.new "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$arch" \
-    || die "download failed"
-  chmod 755 $BIN.new
-  $BIN.new --version >/dev/null 2>&1 || { rm -f $BIN.new; die "the downloaded cloudflared does not run"; }
-  mv $BIN.new $BIN
-fi
-
-# Its own unprivileged user; only that user (and root) can read the token
-getent group cloudflared >/dev/null || addgroup -S cloudflared
-id cloudflared >/dev/null 2>&1 || adduser -S -D -H -h /var/empty -s /sbin/nologin -G cloudflared cloudflared
-mkdir -p $DIR
-chown root:cloudflared $DIR && chmod 750 $DIR
+install_cloudflared
+rm -f $DIR/config.yml
 ( umask 027; printf '%s\n' "$token" > $DIR/token )
 chown root:cloudflared $DIR/token
-
-s6-svc -r $SVC
-echo "cloudflare-tunnel: connecting..."
-sleep 8
-status
+connect

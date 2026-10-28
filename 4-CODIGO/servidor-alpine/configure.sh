@@ -137,7 +137,7 @@ cat > /etc/motd <<EOF
   doas kernel-min ...  build / try / confirm / roll back the stripped kernel
   tailscale status     tailnet; public site: tailscale funnel status
   site files           /srv/www/default (nginx, port 80)
-  doas cloudflare-tunnel <token>   the site on your own domain
+  doas cloudflare-tunnel setup <domain>   the site on your own domain
 
 EOF
 

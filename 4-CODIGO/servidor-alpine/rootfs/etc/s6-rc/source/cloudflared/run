@@ -1,12 +1,20 @@
 #!/bin/sh
 # Cloudflare Tunnel: serves the site on your own domain through Cloudflare, with
-# no port open at home. Idle until set up with: doas cloudflare-tunnel <token>
+# no port open at home. Idle until set up with: doas cloudflare-tunnel setup <domain>
 exec 2>&1
-if ! [ -s /etc/cloudflared/token ] || ! [ -x /usr/local/bin/cloudflared ]; then
-  echo "cloudflared: not set up (doas cloudflare-tunnel <token>), idle"
+d=/etc/cloudflared
+if ! [ -x /usr/local/bin/cloudflared ]; then
+  echo "cloudflared: not set up (doas cloudflare-tunnel setup <domain>), idle"
   exec sleep 2147483647
+elif [ -s $d/config.yml ]; then
+  # made on the Pi by `cloudflare-tunnel setup`: names and target in config.yml
+  exec s6-setuidgid cloudflared /usr/local/bin/cloudflared tunnel --no-autoupdate --config $d/config.yml run
+elif [ -s $d/token ]; then
+  # made in the dashboard. The token goes in the environment, not the command
+  # line (ps shows that to everyone)
+  TUNNEL_TOKEN=$(cat $d/token)
+  export TUNNEL_TOKEN
+  exec s6-setuidgid cloudflared /usr/local/bin/cloudflared tunnel --no-autoupdate run
 fi
-# The token goes in the environment, not the command line (ps shows that to everyone)
-TUNNEL_TOKEN=$(cat /etc/cloudflared/token)
-export TUNNEL_TOKEN
-exec s6-setuidgid cloudflared /usr/local/bin/cloudflared tunnel --no-autoupdate run
+echo "cloudflared: not set up (doas cloudflare-tunnel setup <domain>), idle"
+exec sleep 2147483647
