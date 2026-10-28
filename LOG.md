@@ -624,3 +624,10 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - `make-sd.sh` y `update-sd.sh` montaban `/dev` y `/sys` de la laptop con `--rbind` y los
   desmontaban con `umount -l`: eso también desmontaba el `/dev/pts` de la laptop y `sudo` dejaba
   de funcionar hasta reiniciar. Ahora el chroot usa montajes propios de proc, sysfs y devtmpfs.
+- El overlay no se cargó en el segundo arranque: el firmware solo lee `<os_prefix>overlays/` si
+  contiene un archivo `README`; si no, usa `/overlays/`. Ahora cada ranura lleva ese README
+  (`build-kernel.sh`, `make-sd.sh`, `update-sd.sh`, `kernel-min`) y `check-sd.sh` lo revisa.
+- En ese arranque la Pi sí obtuvo dirección (192.168.0.100), pero de un equipo en 192.168.0.254,
+  mientras la laptop usa el router 192.168.0.1 y no ve ninguno de los dos: el cable de la Pi está
+  en otra red. `check-sd.sh` ahora compara el router de la Pi con el de la laptop y lo dice; el
+  reporte de arranque prueba el router, internet y DNS y lista los equipos que ve la Pi.

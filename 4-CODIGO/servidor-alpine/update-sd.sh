@@ -65,6 +65,8 @@ chroot "$R" /bin/sh -e -c '
 for s in a b s; do
   if [ -f "$R/boot/$s/kernel_2712.img" ]; then
     mkdir -p "$R/boot/$s/overlays"; cp "$HERE/kernel/eee-off-pi5.dtbo" "$R/boot/$s/overlays/"
+    # without this file the firmware ignores $s/overlays/ and uses /overlays/
+    echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$R/boot/$s/overlays/README"
   fi
 done
 if ! grep -q '^dtoverlay=eee-off-pi5' "$R/boot/config.txt"; then

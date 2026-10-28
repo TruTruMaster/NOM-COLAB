@@ -19,6 +19,12 @@ r=/boot/boot-report.txt
   echo "eth0 link changes since boot: $(cat /sys/class/net/eth0/carrier_changes 2>&1)"
   if [ -n "$(find /sys/firmware/devicetree/base -name eee-broken-1000t 2>/dev/null)" ]; then echo "Ethernet EEE: off (overlay applied)"
   else echo "Ethernet EEE: allowed (eee-off-pi5 overlay not applied)"; fi
+  yn() { if "$@" >/dev/null 2>&1; then echo yes; else echo no; fi; }
+  gw=$(ip route | awk '/^default/ { print $3; exit }')
+  echo "router ${gw:-none} answers: $( [ -n "$gw" ] && yn ping -c 2 -W 2 "$gw" || echo no)"
+  echo "internet (ping 1.1.1.1): $(yn ping -c 2 -W 2 1.1.1.1)"
+  echo "DNS (controlplane.tailscale.com): $(yn nslookup controlplane.tailscale.com)"
+  echo "devices the Pi has seen on its cable:"; ip neigh 2>&1
   echo; echo "--- boot messages (catch-all log)"; tail -n 60 /run/uncaught-logs/current 2>&1
   for l in net sshd tailscaled system; do
     echo; echo "--- /var/log/$l"; tail -n 15 "/var/log/$l/current" 2>&1

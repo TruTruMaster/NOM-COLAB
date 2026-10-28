@@ -75,7 +75,7 @@ if [ "${1:-}" = find ]; then
       if [ -n "$pis" ]; then
         die "a Raspberry Pi is there ($pis) but it does not answer SSH yet: wait a minute and run sh pi5.sh find again"
       fi
-      die "no Raspberry Pi on the network: it did not get an address. Unplug its power, put the card in the laptop and run: sudo sh check-sd.sh"
+      die "the Pi is not on this laptop's network. Unplug its power, put the card in the laptop and run: sudo sh check-sd.sh (it shows which network the Pi got)"
     fi
     echo "   found the Pi at $ip"
   fi

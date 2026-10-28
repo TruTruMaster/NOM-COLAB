@@ -149,6 +149,8 @@ cp "$dtb/bcm2712-rpi-5-b.dtb" "$out/"
 cp "$dtb/$d0" "$out/bcm2712d0-rpi-5-b.dtb"
 cp arch/arm64/boot/dts/overlays/disable-wifi-pi5.dtbo arch/arm64/boot/dts/overlays/disable-bt-pi5.dtbo "$out/overlays/"
 cp "$HERE/eee-off-pi5.dtbo" "$out/overlays/"
+# Without this file the firmware ignores <slot>/overlays/ and uses /overlays/
+echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$out/overlays/README"
 "${CROSS}gcc" -Os -static -nostdlib -fno-pie -no-pie -fno-stack-protector \
   -o "$out/rpi-tryboot" "$HERE/rpi-tryboot.c"
 "${CROSS}strip" "$out/rpi-tryboot" 2>/dev/null || true

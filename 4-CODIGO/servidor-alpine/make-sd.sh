@@ -194,6 +194,11 @@ if [ "${STOCK_KERNEL:-yes}" = yes ] && [ -f "$B/vmlinuz-rpi" ]; then
   fi
 fi
 
+# Without a README in <slot>/overlays/ the firmware ignores it and uses /overlays/
+for o in "$B/a/overlays" "$B/s/overlays"; do
+  if [ -d "$o" ]; then echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$o/README"; fi
+done
+
 radios="dtoverlay=disable-wifi-pi5
 dtoverlay=disable-bt-pi5"
 [ -n "$WIFI_SSID" ] && radios="dtoverlay=disable-bt-pi5"

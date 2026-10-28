@@ -65,6 +65,7 @@ check "a/overlays/disable-wifi-pi5.dtbo"             has "$B/a/overlays/disable-
 check "a/overlays/disable-bt-pi5.dtbo"               has "$B/a/overlays/disable-bt-pi5.dtbo"
 check "Ethernet EEE off (eee-off-pi5 in config.txt and a/overlays)" \
   sh -c "grep -q '^dtoverlay=eee-off-pi5' '$B/config.txt' && test -f '$B/a/overlays/eee-off-pi5.dtbo'"
+check "a/overlays/README (without it the firmware skips a/overlays)" has "$B/a/overlays/README"
 check "a/cmdline.txt points at this card's root ($ROOT_PARTUUID)" contains "$B/a/cmdline.txt" "root=PARTUUID=${ROOT_PARTUUID:-none} "
 check "s/ stock rescue kernel + initramfs"           bigger "$B/s/initramfs_2712" 1000000
 check "s/cmdline.txt points at this card's root"    contains "$B/s/cmdline.txt" "root=UUID=${ROOT_UUID:-none} "
@@ -128,6 +129,22 @@ if [ -f "$B/boot-report.txt" ]; then
   if [ -n "$mac" ] && [ -z "${CHECK_ROOT:-}" ]; then
     echo "$mac" > "$HERE/pi5-mac"
     if [ -n "${SUDO_USER:-}" ]; then chown "$SUDO_USER" "$HERE/pi5-mac"; fi
+  fi
+  # Is the Pi's cable on the same network as this laptop?
+  pi_ip=$(awk '/^ +inet .* scope global eth0/ { sub(/\/.*/, "", $2); print $2; exit }' "$B/boot-report.txt")
+  pi_gw=$(awk '/^default via .* dev eth0/ { print $3; exit }' "$B/boot-report.txt")
+  my_gw=$(ip -4 route show default 2>/dev/null | awk '$0 !~ /tailscale/ { print $3; exit }')
+  echo
+  if [ -z "$pi_ip" ]; then
+    echo "network: the Pi got NO address on its cable."
+  elif [ -z "$my_gw" ]; then
+    echo "network: the Pi got $pi_ip from router ${pi_gw:-none}."
+  elif [ "$pi_gw" != "$my_gw" ]; then
+    echo "network: the Pi got $pi_ip from router ${pi_gw:-none}, but this laptop uses router $my_gw."
+    echo "         The Pi's cable is on ANOTHER network (another router, modem or extender),"
+    echo "         so this laptop cannot reach it. Plug the cable into the router at $my_gw."
+  else
+    echo "network: the Pi got $pi_ip from router $pi_gw, the same router as this laptop."
   fi
 else
   echo "  --    no boot report on the card yet (the Pi has not run a minute with this version)"

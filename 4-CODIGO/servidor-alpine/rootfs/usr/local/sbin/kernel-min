@@ -51,6 +51,8 @@ cmd_install() {
   mkdir -p "$B/$free/overlays"
   cp "$src/kernel_2712.img" "$src"/bcm2712*.dtb "$src/version" "$B/$free/"
   cp "$src"/overlays/*.dtbo "$B/$free/overlays/"
+  # without this file the firmware ignores $free/overlays/ and uses /overlays/
+  echo "Overlays for this kernel slot. The Pi firmware reads <os_prefix>overlays/ only while this README exists; without it, it ignores os_prefix and uses /overlays/." > "$B/$free/overlays/README"
   cmdline "$free" > "$B/$free/cmdline.txt"
   [ -x "$src/rpi-tryboot" ] && install -m 755 "$src/rpi-tryboot" /usr/local/sbin/rpi-tryboot
   set_prefix tryboot "$free"
