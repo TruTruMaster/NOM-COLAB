@@ -690,21 +690,23 @@
       <p class="suave" style="font-weight:650">Los documentos de texto <b>nuevos</b> de este espacio nacen con este formato (por ejemplo, para APA: Times New Roman 12 a doble espacio). Cada documento lo puede cambiar después en Más → Formato del documento.</p>
       <div class="campo"><label>Fuente</label><div class="entrada"><select data-f><option value="">Calibri (la de siempre)</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option ${fb.fuente === f ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div></div>
       <div class="fila"><div class="campo crece"><label>Tamaño (pt)</label><div class="entrada"><input data-t inputmode="decimal" value="${esc(fb.tam || "")}" placeholder="11"></div></div>
+        <div class="campo crece"><label>Primera línea (cm)</label><div class="entrada"><input data-pr inputmode="decimal" value="${esc(fb.primera || "")}" placeholder="0"></div></div>
         <div class="campo crece"><label>Interlineado</label><div class="entrada"><select data-l>${[["", "1.15 (Word)"], [1, "Sencillo"], [1.5, "1.5"], [2, "Doble"]].map(([v, t]) => `<option value="${v}" ${String(fb.interlineado || "") === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></div></div></div>
-      <button type="button" class="btn chico" data-apa>${ico("type", "ico-s")} Usar APA (Times New Roman 12, doble)</button></form>`);
+      <button type="button" class="btn chico" data-apa>${ico("type", "ico-s")} Usar APA (Times New Roman 12, doble, sangría de 1.27 cm)</button></form>`);
     const pie = html(`<div style="display:contents"><button class="btn plano" data-quitar type="button">Sin formato propio</button><span class="crece"></span><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
     const h = hoja({ titulo: "Formato de los documentos de texto", icono: "type", cuerpo, pie });
     const guardar = async (f) => {
       try { const r = await api.put(`/api/espacios/${esp.id}/formato`, f || {}); esp.formatoBase = r.formatoBase; h.cerrar(); aviso(f ? "Los documentos de texto nuevos tendrán este formato" : "Sin formato propio", { tipo: "ok" }); listo && listo(); }
       catch (e) { aviso(e.message, { tipo: "error" }); }
     };
-    $("[data-apa]", cuerpo).onclick = () => { $("[data-f]", cuerpo).value = "Times New Roman"; $("[data-t]", cuerpo).value = 12; $("[data-l]", cuerpo).value = "2"; };
+    $("[data-apa]", cuerpo).onclick = () => { $("[data-f]", cuerpo).value = "Times New Roman"; $("[data-t]", cuerpo).value = 12; $("[data-l]", cuerpo).value = "2"; $("[data-pr]", cuerpo).value = "1.27"; };
     $("[data-no]", pie).onclick = () => h.cerrar();
     $("[data-quitar]", pie).onclick = () => guardar(null);
     $("[data-si]", pie).onclick = () => {
       const t = parseFloat(String($("[data-t]", cuerpo).value).replace(",", "."));
-      const f = { fuente: $("[data-f]", cuerpo).value || null, tam: t > 0 ? t : null, interlineado: +$("[data-l]", cuerpo).value || null };
-      guardar(f.fuente || f.tam || f.interlineado ? f : null);
+      const pr = parseFloat(String($("[data-pr]", cuerpo).value).replace(",", "."));
+      const f = { fuente: $("[data-f]", cuerpo).value || null, tam: t > 0 ? t : null, interlineado: +$("[data-l]", cuerpo).value || null, primera: pr > 0 ? pr : null };
+      guardar(f.fuente || f.tam || f.interlineado || f.primera ? f : null);
     };
   }
 

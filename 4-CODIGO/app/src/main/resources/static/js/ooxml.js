@@ -141,8 +141,21 @@
     const medios = [], rels = [{ id: "rIdEst", tipo: T.estilos, destino: "styles.xml" }, { id: "rIdNum", tipo: T.num, destino: "numbering.xml" }, { id: "rIdConf", tipo: T.conf, destino: "settings.xml" }];
     const ps = NOM.textoRico.parrafosDe(doc);
     let nImg = 0, nLink = 0;
-    const nums = [];   // cada lista numerada nueva reinicia en 1
-    let numActual = null;
+    // 8.2 Listas: una definición (abstractNum) por formato de número o viñeta, y una instancia (num)
+    // por cada lista que empieza (o que empieza en otro número). "continuar" reusa la anterior.
+    const abstractos = new Map(), instancias = [];
+    let numActual = null, numAnterior = null;
+    const FMT_NUM = { "1.": ["decimal", "%1."], "1)": ["decimal", "%1)"], "a.": ["lowerLetter", "%1."], "a)": ["lowerLetter", "%1)"], "A.": ["upperLetter", "%1."], "I.": ["upperRoman", "%1."], "i.": ["lowerRoman", "%1."] };
+    const abstracto = (clave) => { if (!abstractos.has(clave)) abstractos.set(clave, abstractos.size + 10); return abstractos.get(clave); };
+    const nuevaInstancia = (clave, inicio) => { const id = 20 + instancias.length; instancias.push({ id, abs: abstracto(clave), inicio }); return id; };
+    // 8.2 Notas al pie y figuras.
+    const notas = [];
+    let nFigura = 0;
+    const pagDoc = doc.valor("_doc", "pagina") || {};
+    const TAM0 = { carta: [816, 1056], a4: [794, 1123], oficio: [816, 1344], a5: [559, 794], media: [529, 816] }[pagDoc.tam] || [816, 1056];
+    const mg0 = pagDoc.margen || {}, v0 = (v) => (typeof v === "number" ? v : 96);
+    const anchoTexto = Math.round(((pagDoc.orient === "h" ? TAM0[1] : TAM0[0]) - v0(mg0.iz) - v0(mg0.d)) * TWIP);
+    const CMT = 567;   // twips por centímetro
     const rPr = (a) => {
       let r = "";
       if (a.fuente) r += `<w:rFonts w:ascii="${x(a.fuente)}" w:hAnsi="${x(a.fuente)}" w:cs="${x(a.fuente)}"/>`;
@@ -160,27 +173,59 @@
       // Tabuladores y saltos de línea son elementos propios en Word.
       return t.split(/(\t|\u2028)/).filter((z) => z !== "").map((z) => `<w:r>${rPr(a)}${z === "\t" ? "<w:tab/>" : z === "\u2028" ? "<w:br/>" : `<w:t xml:space="preserve">${x(z)}</w:t>`}</w:r>`).join("");
     };
-    const dibujo = (src, wpx, alt) => {
+    const dibujo = (src, wpx, alt, rec, rot) => {
       const im = imagen(src);
       if (!im) return "";
       const n = ++nImg, id = "rIdImg" + n;
       medios.push({ nombre: `word/media/imagen${n}.${im.ext}`, datos: im.bytes });
       rels.push({ id, tipo: T.img, destino: `media/imagen${n}.${im.ext}` });
-      const w = Math.min(wpx || im.w, 624), cx = Math.round(w * EMU), cy = Math.round(w * (im.h / im.w) * EMU);
+      const r = rec || {}, fw = Math.max(0.05, 1 - (+r.iz || 0) - (+r.d || 0)), fh = Math.max(0.05, 1 - (+r.s || 0) - (+r.i || 0));
+      const w = Math.min(wpx || im.w, anchoTexto / TWIP), cx = Math.round(w * EMU), cy = Math.round(w * (im.h / im.w) * (fh / fw) * EMU);
+      const recorte = rec ? `<a:srcRect l="${Math.round((+r.iz || 0) * 100000)}" t="${Math.round((+r.s || 0) * 100000)}" r="${Math.round((+r.d || 0) * 100000)}" b="${Math.round((+r.i || 0) * 100000)}"/>` : "";
+      const giro = +rot ? ` rot="${Math.round(+rot * 60000)}"` : "";
       return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Imagen ${n}" descr="${x(alt || "")}"/>
 <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
 <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="imagen${n}"/><pic:cNvPicPr/></pic:nvPicPr>
-<pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>
+<pic:blipFill><a:blip r:embed="${id}"/>${recorte}<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm${giro}><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>
 </a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
     };
+    const BORDES_TABLA = {
+      todos: ["top", "left", "bottom", "right", "insideH", "insideV"],
+      horizontales: ["top", "bottom", "insideH"],
+      externos: ["top", "left", "bottom", "right"],
+      ninguno: [],
+    };
     const tabla = (b) => {
-      const filas = Math.max(1, b.filasTexto || 3), cols = Math.max(1, b.colsTexto || 3), ancho = Math.floor(9360 / cols);
-      let t = `<w:tbl><w:tblPr><w:tblStyle w:val="TablaNom"/><w:tblW w:w="5000" w:type="pct"/><w:tblLook w:val="04A0" w:firstRow="${b.encabezado ? 1 : 0}" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${`<w:gridCol w:w="${ancho}"/>`.repeat(cols)}</w:tblGrid>`;
+      const filas = Math.max(1, b.filasTexto || 3), cols = Math.max(1, b.colsTexto || 3);
+      const fijos = Array.from({ length: cols }, (_, c) => +b["aw:" + F().colLetra(c)] || 0), suma = fijos.reduce((s2, v) => s2 + v, 0), libres = fijos.filter((v) => !v).length;
+      const anchos = fijos.map((v) => Math.round(((v || (libres ? Math.max(0, 100 - suma) / libres : 0)) / 100) * anchoTexto));
+      const spans = {}, tapadas = {};
+      for (const k in b) {
+        if (!k.startsWith("m:") || !/^\d+x\d+$/.test(String(b[k] || ""))) continue;
+        const p = F().parseRef(k.slice(2)), [w, h] = String(b[k]).split("x").map(Number);
+        if (!p || w * h <= 1) continue;
+        spans[k.slice(2)] = [w, h];
+        for (let f = p.f; f < p.f + h; f++) for (let c = p.c; c < p.c + w; c++) if (c !== p.c || f !== p.f) tapadas[F().ref(c, f)] = { tl: k.slice(2), primeraCol: c === p.c };
+      }
+      const lados = BORDES_TABLA[b.bordes || "todos"] || BORDES_TABLA.todos;
+      const bordes = `<w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"].map((l) => (lados.includes(l) ? `<w:${l} w:val="single" w:sz="4" w:space="0" w:color="8E8E8E"/>` : `<w:${l} w:val="nil"/>`)).join("")}</w:tblBorders>`;
+      let t = `<w:tbl><w:tblPr><w:tblStyle w:val="TablaNom"/><w:tblW w:w="${anchoTexto}" w:type="dxa"/>${bordes}<w:tblLayout w:type="fixed"/><w:tblLook w:val="04A0" w:firstRow="${b.encabezado ? 1 : 0}" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${anchos.map((w) => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>`;
       for (let f = 0; f < filas; f++) {
-        t += "<w:tr>";
+        t += `<w:tr>${b.encabezado && f === 0 ? "<w:trPr><w:tblHeader/></w:trPr>" : ""}`;
         for (let c = 0; c < cols; c++) {
-          const v = String(b["c:" + F().ref(c, f)] || "");
-          t += `<w:tc><w:tcPr><w:tcW w:w="${ancho}" w:type="dxa"/></w:tcPr>${v.split("\n").map((l) => `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${l ? texto(l, b.encabezado && f === 0 ? { b: true } : {}) : ""}</w:p>`).join("")}</w:tc>`;
+          const r = F().ref(c, f), tp = tapadas[r];
+          if (tp && !tp.primeraCol) continue;   // tapada a la derecha: va dentro del gridSpan
+          const sp = tp ? spans[tp.tl] : spans[r];
+          const base = tp ? F().parseRef(tp.tl) : { c, f };
+          const refBase = tp ? tp.tl : r;
+          const ancho = anchos.slice(c, c + (sp ? sp[0] : 1)).reduce((s2, v) => s2 + v, 0);
+          const fondo = hexW(b["r:" + refBase]) || (b.encabezado && f === 0 ? "F2F2F2" : null);
+          const tcPr = `<w:tcW w:w="${ancho}" w:type="dxa"/>${sp && sp[0] > 1 ? `<w:gridSpan w:val="${sp[0]}"/>` : ""}${sp && sp[1] > 1 ? (tp ? '<w:vMerge/>' : '<w:vMerge w:val="restart"/>') : ""}${fondo ? `<w:shd w:val="clear" w:color="auto" w:fill="${fondo}"/>` : ""}`;
+          const a2 = { b: !!b["n:" + refBase] || (b.encabezado && f === 0), i: !!b["i:" + refBase], color: b["k:" + refBase] || null };
+          const jc = ALIN_WORD[b["al:" + refBase]];
+          const v = tp ? "" : String(b["c:" + r] || "");
+          void base;
+          t += `<w:tc><w:tcPr>${tcPr}</w:tcPr>${v.split("\n").map((l) => `<w:p><w:pPr><w:spacing w:after="0"/><w:ind w:firstLine="0"/>${jc ? `<w:jc w:val="${jc}"/>` : ""}</w:pPr>${l ? texto(l, a2) : ""}</w:p>`).join("")}</w:tc>`;
         }
         t += "</w:tr>";
       }
@@ -200,19 +245,37 @@
       let ppr = "";
       if (ESTILO_WORD[pa.estilo]) ppr += `<w:pStyle w:val="${ESTILO_WORD[pa.estilo]}"/>`;
       else if (pa.lista) ppr += '<w:pStyle w:val="ListParagraph"/>';
-      if (pa.lista === "vinetas") ppr += `<w:numPr><w:ilvl w:val="${pa.nivel || 0}"/><w:numId w:val="1"/></w:numPr>`;
-      if (pa.lista === "numeros") {
-        if (!numActual) { numActual = 3 + nums.length; nums.push(numActual); }
-        ppr += `<w:numPr><w:ilvl w:val="${pa.nivel || 0}"/><w:numId w:val="${numActual}"/></w:numPr>`;
-      } else if (!pa.lista || pa.lista !== "numeros") { if (pa.lista !== "vinetas" && pa.lista !== "tareas") numActual = null; }
+      if (pa.lista === "vinetas") {
+        if (!numActual || numActual.tipo !== "v" + (pa.vineta || "")) numActual = { tipo: "v" + (pa.vineta || ""), id: nuevaInstancia("v" + (pa.vineta || "•")) };
+        ppr += `<w:numPr><w:ilvl w:val="${pa.nivel || 0}"/><w:numId w:val="${numActual.id}"/></w:numPr>`;
+      } else if (pa.lista === "numeros") {
+        const clave = "n" + (pa.numfmt || "1.");
+        const inicio = pa.inicio != null && pa.inicio !== "" ? +pa.inicio : null;
+        if (pa.continuar && numAnterior && !numActual) numActual = numAnterior;
+        if (!numActual || numActual.tipo !== clave || inicio != null) numActual = { tipo: clave, id: nuevaInstancia(clave, inicio != null ? inicio : 1) };
+        ppr += `<w:numPr><w:ilvl w:val="${pa.nivel || 0}"/><w:numId w:val="${numActual.id}"/></w:numPr>`;
+      } else if (pa.lista !== "tareas") { if (numActual) numAnterior = numActual; numActual = null; }
+      const cm = (v) => Math.round((+v || 0) * CMT);
       if (pa.lista === "tareas") ppr += `<w:ind w:left="${360 * ((pa.nivel || 0) + 1)}" w:hanging="360"/>`;
-      else if (pa.sangria && !pa.lista) ppr += `<w:ind w:left="${pa.sangria * 720}"/>`;
+      else if (!pa.lista && (pa.sangria || pa.sangiz || pa.sangder || pa.primera != null || pa.francesa)) {
+        const izq = (pa.sangria || 0) * 720 + cm(pa.sangiz) + cm(pa.francesa);
+        ppr += `<w:ind w:left="${izq}"${pa.sangder ? ` w:right="${cm(pa.sangder)}"` : ""}${+pa.francesa ? ` w:hanging="${cm(pa.francesa)}"` : pa.primera != null ? ` w:firstLine="${cm(pa.primera)}"` : ""}/>`;
+      } else if (pa.estilo && pa.estilo !== "cita") ppr += '<w:ind w:firstLine="0"/>';
       if (pa.antes != null || pa.despues != null || pa.interlineado) ppr += `<w:spacing${pa.antes != null ? ` w:before="${Math.round(pa.antes * 20)}"` : ""}${pa.despues != null ? ` w:after="${Math.round(pa.despues * 20)}"` : ""}${pa.interlineado ? ` w:line="${Math.round(pa.interlineado * 240)}" w:lineRule="auto"` : ""}/>`;
       if (ALIN_WORD[pa.alin]) ppr += `<w:jc w:val="${ALIN_WORD[pa.alin]}"/>`;
       let runs = pa.lista === "tareas" ? texto(pa.hecho ? "☑\t" : "☐\t", {}) : "";
+      let despues = "";
       p.tramos.forEach((t) => {
         if (t.e) {
-          if (t.e.tipo === "imagen") runs += dibujo(t.e.src, t.e.w, t.e.alt);
+          if (t.e.tipo === "imagen") {
+            runs += dibujo(t.e.src, t.e.w, t.e.alt, t.e.recorte, t.e.rot);
+            if (t.e.pie) despues += `<w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr>${texto("Figura " + ++nFigura + ". ", { b: true })}${texto(t.e.pie, {})}</w:p>`;
+          } else if (t.e.tipo === "nota") {
+            notas.push(t.e.texto || "");
+            runs += `<w:r><w:rPr><w:rStyle w:val="RefNota"/></w:rPr><w:footnoteReference w:id="${notas.length}"/></w:r>`;
+          } else if (t.e.tipo === "ecuacion" && NOM.ecuaciones) {
+            runs += t.e.bloque ? `<m:oMathPara>${NOM.ecuaciones.omml(t.e.tex || "")}</m:oMathPara>` : NOM.ecuaciones.omml(t.e.tex || "");
+          } else if (t.e.texto != null && t.e.tipo !== "tabla") runs += texto(String(t.e.texto), t.a || {});
           return;
         }
         const a = Object.assign({}, t.a, pa.hecho ? { s: true } : {});
@@ -222,37 +285,90 @@
           runs += `<w:hyperlink r:id="${id}" w:history="1">${texto(t.x, Object.assign({}, a)).replace(/<w:rPr>/g, '<w:rPr><w:rStyle w:val="Hyperlink"/>').replace(/<w:r>(?!<w:rPr>)/g, '<w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>')}</w:hyperlink>`;
         } else runs += texto(t.x, a);
       });
-      return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${runs}</w:p>`;
+      return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${runs}</w:p>${despues}`;
     }).join("\n");
 
-    // Página, encabezado y pie
-    const pag = doc.valor("_doc", "pagina") || {};
-    const TAM = { carta: [816, 1056], a4: [794, 1123], oficio: [816, 1344] }[pag.tam] || [816, 1056];
+    // Página, encabezado y pie (8.2: número donde se elija, "Página 1 de 5", primera página distinta,
+    // logo y marca de agua).
+    const pag = pagDoc;
+    const TAM = TAM0;
     const hor = pag.orient === "h", m = pag.margen || {};
     const mv = (v) => Math.round((typeof v === "number" ? v : 96) * TWIP);
-    const enc = doc.valor("_doc", "encabezado") || "", pie = doc.valor("_doc", "pie") || "", nums2 = doc.valor("_doc", "numeros") !== false;
+    const ep2 = {
+      enc: doc.valor("_doc", "encabezado") || "", pie: doc.valor("_doc", "pie") || "", nums: doc.valor("_doc", "numeros") !== false,
+      pos: doc.valor("_doc", "numPos") || "pie-der", fmt: doc.valor("_doc", "numFmt") || "n", inicio: +doc.valor("_doc", "numInicio") || 1,
+      primera: !!doc.valor("_doc", "primeraDistinta"), encAl: doc.valor("_doc", "encAlin") || "izq", pieAl: doc.valor("_doc", "pieAlin") || "izq",
+      logo: doc.valor("_doc", "encabezadoImg") || null, marca: doc.valor("_doc", "marcaAgua") || "",
+    };
     const extras = [];
     let refs = "";
-    const NSW = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
-    if (enc) {
+    const NSW = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+    const campo = (instr, ej) => `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ${instr} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>${ej}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
+    const numero = () => ({ pagina: texto("Página ", {}) + campo("PAGE", "1"), total: campo("PAGE", "1") + texto(" de ", {}) + campo("NUMPAGES", "1"), "pagina-total": texto("Página ", {}) + campo("PAGE", "1") + texto(" de ", {}) + campo("NUMPAGES", "1") }[ep2.fmt] || campo("PAGE", "1"));
+    /** Un renglón con tres lugares (izquierda, centro y derecha) separados por tabuladores. */
+    const renglon = (zona, txt, al, prefijo) => {
+      const slots = { izq: "", centro: "", der: "" };
+      if (txt) slots[al] += texto(txt, {});
+      const [zn, an] = ep2.pos.split("-");
+      if (ep2.nums && zn === zona) slots[an] += (slots[an] ? '<w:r><w:t xml:space="preserve">  </w:t></w:r>' : "") + numero();
+      const media = Math.round(anchoTexto / 2);
+      return `<w:p><w:pPr><w:pStyle w:val="${zona === "enc" ? "Header" : "Footer"}"/><w:tabs><w:tab w:val="clear" w:pos="4680"/><w:tab w:val="clear" w:pos="9360"/><w:tab w:val="center" w:pos="${media}"/><w:tab w:val="right" w:pos="${anchoTexto}"/></w:tabs></w:pPr>${prefijo || ""}${slots.izq}<w:r><w:tab/></w:r>${slots.centro}<w:r><w:tab/></w:r>${slots.der}</w:p>`;
+    };
+    const relsEnc = [];
+    let logoXml = "", marcaXml = "";
+    if (ep2.logo && ep2.logo.src) {
+      const im = imagen(ep2.logo.src);
+      if (im) {
+        medios.push({ nombre: `word/media/logo.${im.ext}`, datos: im.bytes });
+        relsEnc.push({ id: "rIdLogo", tipo: T.img, destino: `media/logo.${im.ext}` });
+        const alto = Math.min(80, +ep2.logo.alto || 36), cy = Math.round(alto * EMU), cx = Math.round(alto * (im.w / im.h) * EMU);
+        logoXml = `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="114300"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="900" name="Logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="900" name="logo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+      }
+    }
+    if (ep2.marca) {
+      // La marca de agua es una imagen (texto gris girado) detrás del texto, centrada en la hoja.
+      const png = marcaPng(ep2.marca);
+      if (png) {
+        medios.push({ nombre: "word/media/marca.png", datos: png.bytes });
+        relsEnc.push({ id: "rIdMarca", tipo: T.img, destino: "media/marca.png" });
+        const cx = Math.round(png.w * EMU * 0.75), cy = Math.round(png.h * EMU * 0.75);
+        marcaXml = `<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="0" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom="page"><wp:align>center</wp:align></wp:positionV><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="901" name="Marca de agua"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="901" name="marca"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdMarca"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>`;
+      }
+    }
+    const [zonaNum] = ep2.pos.split("-");
+    const hayEnc = ep2.enc || logoXml || marcaXml || (ep2.nums && zonaNum === "enc");
+    const hayPie = ep2.pie || (ep2.nums && zonaNum === "pie");
+    if (hayEnc) {
       rels.push({ id: "rIdEnc", tipo: T.encabezado, destino: "header1.xml" });
-      extras.push({ nombre: "word/header1.xml", datos: XML + `<w:hdr ${NSW}><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t xml:space="preserve">${x(enc)}</w:t></w:r></w:p></w:hdr>` });
+      extras.push({ nombre: "word/header1.xml", datos: XML + `<w:hdr ${NSW}>${renglon("enc", ep2.enc, ep2.encAl, logoXml + marcaXml)}</w:hdr>` });
+      if (relsEnc.length) extras.push({ nombre: "word/_rels/header1.xml.rels", datos: RELS(relsEnc) });
       refs += '<w:headerReference w:type="default" r:id="rIdEnc"/>';
     }
-    if (pie || nums2) {
+    if (hayPie) {
       rels.push({ id: "rIdPie", tipo: T.pie, destino: "footer1.xml" });
-      extras.push({ nombre: "word/footer1.xml", datos: XML + `<w:ftr ${NSW}><w:p><w:pPr><w:pStyle w:val="Footer"/><w:tabs><w:tab w:val="right" w:pos="9360"/></w:tabs></w:pPr>${pie ? `<w:r><w:t xml:space="preserve">${x(pie)}</w:t></w:r>` : ""}${nums2 ? '<w:r><w:tab/></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>' : ""}</w:p></w:ftr>` });
+      extras.push({ nombre: "word/footer1.xml", datos: XML + `<w:ftr ${NSW}>${renglon("pie", ep2.pie, ep2.pieAl)}</w:ftr>` });
       refs += '<w:footerReference w:type="default" r:id="rIdPie"/>';
     }
-    const documento = XML + `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
-<w:body>${cuerpo || "<w:p/>"}<w:sectPr>${refs}<w:pgSz w:w="${(hor ? TAM[1] : TAM[0]) * TWIP}" w:h="${(hor ? TAM[0] : TAM[1]) * TWIP}"${hor ? ' w:orient="landscape"' : ""}/><w:pgMar w:top="${mv(m.s)}" w:right="${mv(m.d)}" w:bottom="${mv(m.i)}" w:left="${mv(m.iz)}" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    if (ep2.primera && (hayEnc || hayPie)) {
+      // Primera página distinta: encabezado y pie vacíos.
+      rels.push({ id: "rIdEnc1", tipo: T.encabezado, destino: "header2.xml" }, { id: "rIdPie1", tipo: T.pie, destino: "footer2.xml" });
+      extras.push({ nombre: "word/header2.xml", datos: XML + `<w:hdr ${NSW}><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr></w:p></w:hdr>` }, { nombre: "word/footer2.xml", datos: XML + `<w:ftr ${NSW}><w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr></w:p></w:ftr>` });
+      refs += '<w:headerReference w:type="first" r:id="rIdEnc1"/><w:footerReference w:type="first" r:id="rIdPie1"/>';
+    }
+    if (notas.length) rels.push({ id: "rIdNotas", tipo: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes", destino: "footnotes.xml" });
+    const notasXml = XML + `<w:footnotes ${NSW}><w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>${notas.map((t, i) => `<w:footnote w:id="${i + 1}"><w:p><w:pPr><w:pStyle w:val="TextoNota"/></w:pPr><w:r><w:rPr><w:rStyle w:val="RefNota"/></w:rPr><w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> ${x(t)}</w:t></w:r></w:p></w:footnote>`).join("")}</w:footnotes>`;
+    const documento = XML + `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+<w:body>${cuerpo || "<w:p/>"}<w:sectPr>${refs}<w:pgSz w:w="${(hor ? TAM[1] : TAM[0]) * TWIP}" w:h="${(hor ? TAM[0] : TAM[1]) * TWIP}"${hor ? ' w:orient="landscape"' : ""}/><w:pgMar w:top="${mv(m.s)}" w:right="${mv(m.d)}" w:bottom="${mv(m.i)}" w:left="${mv(m.iz)}" w:header="720" w:footer="720" w:gutter="0"/>${ep2.inicio > 1 ? `<w:pgNumType w:start="${ep2.inicio}"/>` : ""}${ep2.primera && (hayEnc || hayPie) ? "<w:titlePg/>" : ""}</w:sectPr></w:body></w:document>`;
     const ep = (id, nombre, rpr, ppr, extra) => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${nombre}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/>${extra || ""}${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${rpr ? `<w:rPr>${rpr}</w:rPr>` : ""}</w:style>`;
     // 1.4 El formato base del documento (el del espacio) es el estilo Normal de Word.
     const fb = doc.valor("_doc", "formato") || {};
     const ligera = fb.fuente ? `<w:rFonts w:ascii="${x(fb.fuente)}" w:hAnsi="${x(fb.fuente)}"/>` : '<w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:ascii="Calibri Light" w:hAnsi="Calibri Light"/>';
     const estilos = XML + `<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${x(fb.fuente || "Calibri")}" w:hAnsi="${x(fb.fuente || "Calibri")}" w:eastAsia="${x(fb.fuente || "Calibri")}" w:cs="${x(fb.fuente || "Calibri")}"/><w:sz w:val="${Math.round((+fb.tam || 11) * 2)}"/><w:szCs w:val="${Math.round((+fb.tam || 11) * 2)}"/><w:lang w:val="es-MX"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="${Math.round((+fb.interlineado || 1.15) * 240)}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
-<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/>${+fb.primera ? `<w:pPr><w:ind w:firstLine="${Math.round(+fb.primera * 567)}"/></w:pPr>` : ""}</w:style>
+${ep("Caption", "caption", '<w:i/><w:iCs/><w:sz w:val="18"/><w:szCs w:val="18"/>', '<w:spacing w:after="200" w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/><w:jc w:val="center"/>')}
+${ep("TextoNota", "footnote text", '<w:sz w:val="18"/><w:szCs w:val="18"/>', '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/>')}
+<w:style w:type="character" w:styleId="RefNota"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>
 ${ep("Title", "Title", ligera + '<w:spacing w:val="-10"/><w:kern w:val="28"/><w:sz w:val="56"/><w:szCs w:val="56"/>', '<w:spacing w:after="80" w:line="240" w:lineRule="auto"/><w:contextualSpacing/>')}
 ${ep("Subtitle", "Subtitle", '<w:color w:val="5A5A5A"/><w:spacing w:val="15"/>', "")}
 ${ep("Heading1", "heading 1", ligera + '<w:color w:val="2F5496"/><w:sz w:val="32"/><w:szCs w:val="32"/>', '<w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="0"/><w:outlineLvl w:val="0"/>')}
@@ -270,12 +386,21 @@ ${ep("Footer", "footer", "", '<w:tabs><w:tab w:val="center" w:pos="4680"/><w:tab
 </w:styles>`;
     const nivel = (i, fmt, txt, fuente) => `<w:lvl w:ilvl="${i}"><w:start w:val="1"/><w:numFmt w:val="${fmt}"/><w:lvlText w:val="${txt}"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="${360 * (i + 1)}" w:hanging="360"/></w:pPr>${fuente ? `<w:rPr><w:rFonts w:ascii="${fuente}" w:hAnsi="${fuente}"/></w:rPr>` : ""}</w:lvl>`;
     const vin = ["•", "◦", "▪"], fm = ["decimal", "lowerLetter", "lowerRoman"];
+    const definicion = (clave, id) => {
+      if (clave[0] === "v") {
+        const v0 = clave.slice(1) || "•";
+        return `<w:abstractNum w:abstractNumId="${id}"><w:multiLevelType w:val="hybridMultilevel"/>${Array.from({ length: 9 }, (_, i) => nivel(i, "bullet", i === 0 ? v0 : vin[i % 3], "Calibri")).join("")}</w:abstractNum>`;
+      }
+      const [f0, t0] = FMT_NUM[clave.slice(1)] || FMT_NUM["1."];
+      return `<w:abstractNum w:abstractNumId="${id}"><w:multiLevelType w:val="hybridMultilevel"/>${Array.from({ length: 9 }, (_, i) => (i === 0 ? nivel(0, f0, t0) : nivel(i, fm[i % 3], `%${i + 1}.`))).join("")}</w:abstractNum>`;
+    };
     const numeracion = XML + `<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/>${Array.from({ length: 9 }, (_, i) => nivel(i, "bullet", vin[i % 3], "Calibri")).join("")}</w:abstractNum>
 <w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="hybridMultilevel"/>${Array.from({ length: 9 }, (_, i) => nivel(i, fm[i % 3], `%${i + 1}.`)).join("")}</w:abstractNum>
+${[...abstractos.entries()].map(([k, id]) => definicion(k, id)).join("")}
 <w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>
-${nums.map((n) => `<w:num w:numId="${n}"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>`).join("")}</w:numbering>`;
-    const ajustes = XML + `<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
+${instancias.map((n) => `<w:num w:numId="${n.id}"><w:abstractNumId w:val="${n.abs}"/>${n.inicio != null ? `<w:lvlOverride w:ilvl="0"><w:startOverride w:val="${n.inicio}"/></w:lvlOverride>` : ""}</w:num>`).join("")}</w:numbering>`;
+    const ajustes = XML + `<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/>${notas.length ? '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr>' : ""}<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
     const titulo = doc.valor("_doc", "nombre") || "Documento";
     const nucleo = XML + `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${x(titulo)}</dc:title><dc:creator>NOM-COLAB</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().slice(0, 19)}Z</dcterms:created></cp:coreProperties>`;
     return zip([
@@ -284,8 +409,9 @@ ${nums.map((n) => `<w:num w:numId="${n}"><w:abstractNumId w:val="1"/><w:lvlOverr
 <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
 <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-${enc ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' : ""}
-${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' : ""}`) },
+${extras.filter((e) => /header\d\.xml$/.test(e.nombre)).map((e) => `<Override PartName="/${e.nombre}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>`).join("")}
+${extras.filter((e) => /footer\d\.xml$/.test(e.nombre)).map((e) => `<Override PartName="/${e.nombre}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>`).join("")}
+${notas.length ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' : ""}`) },
       { nombre: "_rels/.rels", datos: RELS([{ tipo: T.doc, destino: "word/document.xml" }, { tipo: T.nucleo, destino: "docProps/core.xml" }]) },
       { nombre: "docProps/core.xml", datos: nucleo },
       { nombre: "word/document.xml", datos: documento },
@@ -294,8 +420,29 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
       { nombre: "word/settings.xml", datos: ajustes },
       { nombre: "word/_rels/document.xml.rels", datos: RELS(rels) },
       ...extras,
+      ...(notas.length ? [{ nombre: "word/footnotes.xml", datos: notasXml }] : []),
       ...medios,
     ]);
+  }
+  /** Marca de agua como imagen PNG (texto gris claro, girado) para Word. */
+  function marcaPng(txt) {
+    try {
+      const cv = document.createElement("canvas"), g = cv.getContext("2d");
+      const tam = 110;
+      g.font = `900 ${tam}px Calibri, Carlito, Arial, sans-serif`;
+      const w = Math.ceil(g.measureText(txt).width) + 40, h = tam + 40;
+      const diag = Math.ceil(Math.sqrt(w * w + h * h));
+      cv.width = diag; cv.height = Math.ceil(diag * 0.75);
+      g.translate(cv.width / 2, cv.height / 2);
+      g.rotate(-Math.PI / 5);
+      g.font = `900 ${tam}px Calibri, Carlito, Arial, sans-serif`;
+      g.fillStyle = "rgba(0, 0, 0, 0.10)";
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(txt, 0, 0);
+      const datos = cv.toDataURL("image/png"), bin = atob(datos.split(",")[1]), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return { bytes, w: cv.width, h: cv.height };
+    } catch (e) { return null; }
   }
 
   // ------------------------------------------------------------ leer .docx (importar de Word)
@@ -332,6 +479,38 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
   const RESALTE_WORD = { yellow: "#FFFF00", green: "#00FF00", cyan: "#00FFFF", magenta: "#FF00FF", blue: "#0000FF", red: "#FF0000", darkBlue: "#000080", darkCyan: "#008080",
     darkGreen: "#008000", darkMagenta: "#800080", darkRed: "#800000", darkYellow: "#808000", darkGray: "#808080", lightGray: "#C0C0C0", black: "#000000" };
 
+  /** Ecuación de Word (OMML) → la notación de NOM-COLAB (\\frac, ^, _, \\sqrt…). */
+  function ommlATex(n) {
+    const hs = (x) => [...(x ? x.childNodes : [])].filter((c) => c.nodeType === 1);
+    const h1 = (x, nombre) => hs(x).find((c) => c.localName === nombre) || null;
+    const todo = (x) => hs(x).map(ommlATex).join("");
+    const g = (x) => { const t = x ? todo(x) : ""; return t.length === 1 ? t : "{" + t + "}"; };
+    if (!n) return "";
+    switch (n.localName) {
+      case "r": return [...n.getElementsByTagNameNS("*", "t")].map((t) => t.textContent).join("");
+      case "f": return `\\frac{${todo(h1(n, "num"))}}{${todo(h1(n, "den"))}}`;
+      case "sSup": return g(h1(n, "e")) + "^" + g(h1(n, "sup"));
+      case "sSub": return g(h1(n, "e")) + "_" + g(h1(n, "sub"));
+      case "sSubSup": return g(h1(n, "e")) + "_" + g(h1(n, "sub")) + "^" + g(h1(n, "sup"));
+      case "rad": { const d = todo(h1(n, "deg")); return d ? `\\sqrt[${d}]{${todo(h1(n, "e"))}}` : `\\sqrt{${todo(h1(n, "e"))}}`; }
+      case "nary": {
+        const pr = h1(n, "naryPr"), chr = pr && h1(pr, "chr"), c = chr ? chr.getAttribute("m:val") || chr.getAttributeNS("*", "val") || "∫" : "∫";
+        const sub = todo(h1(n, "sub")), sup = todo(h1(n, "sup"));
+        return c + (sub ? "_{" + sub + "}" : "") + (sup ? "^{" + sup + "}" : "") + " " + todo(h1(n, "e"));
+      }
+      case "d": {
+        const pr = h1(n, "dPr"), ab = pr && h1(pr, "begChr"), ce = pr && h1(pr, "endChr");
+        const a = ab ? ab.getAttribute("m:val") : "(", b = ce ? ce.getAttribute("m:val") : ")";
+        return (a == null ? "(" : a) + hs(n).filter((c) => c.localName === "e").map(todo).join(",") + (b == null ? ")" : b);
+      }
+      case "func": return "\\" + todo(h1(n, "fName")).trim() + " " + todo(h1(n, "e"));
+      case "acc": return `\\vec{${todo(h1(n, "e"))}}`;
+      case "limLow": return todo(h1(n, "e")) + "_{" + todo(h1(n, "lim")) + "}";
+      case "naryPr": case "dPr": case "fPr": case "radPr": case "sSupPr": case "sSubPr": case "accPr": case "ctrlPr": case "rPr": return "";
+      default: return todo(n);
+    }
+  }
+
   /** .docx → { parrafos: [{ pa, tramos }], pagina, aviso }. */
   async function leerDocx(archivo) {
     if (archivo.size > 30 * 1024 * 1024) throw new Error("El archivo pesa más de 30 MB");
@@ -357,6 +536,16 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
     });
     // numeración: numId → abstract → formato por nivel
     const formatoNum = {};
+    // 8.2 Notas al pie: id → texto.
+    const notasPie = {};
+    const notasTxt = await z.texto("word/footnotes.xml");
+    if (notasTxt) {
+      const dn = P(notasTxt);
+      [...dn.getElementsByTagNameNS(W, "footnote")].forEach((fn) => {
+        const id = fn.getAttributeNS(W, "id") || fn.getAttribute("w:id");
+        if (+id > 0) notasPie[id] = [...fn.getElementsByTagNameNS(W, "t")].map((t) => t.textContent).join("").trim();
+      });
+    }
     const numTxt = await z.texto("word/numbering.xml");
     if (numTxt) {
       const d = P(numTxt), abs = {};
@@ -430,12 +619,18 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
               const ext = c.getElementsByTagNameNS("*", "extent")[0];
               const w = ext ? Math.round(+ext.getAttribute("cx") / EMU) : 320, h = ext ? Math.round(+ext.getAttribute("cy") / EMU) : 0;
               if (src) tramos.push({ e: { tipo: "imagen", src, w, h }, a: {} }); else aproximado = true;
+            } else if (cn === "footnoteReference") {
+              const id = c.getAttributeNS(W, "id") || c.getAttribute("w:id");
+              tramos.push({ e: { tipo: "nota", texto: notasPie[id] || "" }, a: {} });
             } else if (cn === "sym") tramos.push({ x: String.fromCharCode(parseInt(c.getAttributeNS(W, "char") || c.getAttribute("w:char") || "20", 16) & 0xFFF), a });
           }
         } else if (ln === "hyperlink") {
           const rid = r.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || r.getAttribute("r:id");
           const destino = rid && rels[rid];
           await runs(r, Object.assign({}, base, destino && /^(https?:|mailto:)/i.test(destino) ? { enlace: destino } : {}), tramos, parrafo);
+        } else if (ln === "oMath" || ln === "oMathPara") {
+          const t = ommlATex(r).trim();
+          if (t) tramos.push({ e: { tipo: "ecuacion", tex: t, bloque: ln === "oMathPara" || null }, a: {} });
         } else if (["ins", "smartTag", "fldSimple", "customXml", "sdt", "sdtContent", "bdo", "dir"].includes(ln)) await runs(r, base, tramos, parrafo);
       }
     }
@@ -461,8 +656,14 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
       const jc = val(hijo(ppr, "jc"));
       if (jc) { const v = { center: "centro", right: "der", end: "der", both: "just", distribute: "just" }[jc]; if (v) pa.alin = v; }
       const ind = hijo(ppr, "ind");
-      const izq = ind && +(ind.getAttributeNS(W, "left") || ind.getAttribute("w:left") || ind.getAttributeNS(W, "start") || 0);
-      if (izq && !pa.lista && izq >= 360) pa.sangria = Math.min(10, Math.round(izq / 720)) || null;
+      if (ind && !pa.lista) {
+        const gi = (k) => +(ind.getAttributeNS(W, k) || ind.getAttribute("w:" + k) || 0);
+        const izq = gi("left") || gi("start"), der = gi("right") || gi("end"), pri = gi("firstLine"), fr = gi("hanging");
+        const cm = (tw) => Math.round((tw / 567) * 100) / 100;
+        if (fr) { pa.francesa = cm(fr); if (izq - fr > 20) pa.sangiz = cm(izq - fr); }
+        else { if (izq > 20) pa.sangiz = cm(izq); if (pri) pa.primera = cm(pri); }
+        if (der > 20) pa.sangder = cm(der);
+      }
       const sp = hijo(ppr, "spacing");
       if (sp) {
         const g = (k) => sp.getAttributeNS(W, k) || sp.getAttribute("w:" + k);
@@ -485,11 +686,32 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
         } else if (c.localName === "tbl") {
           const filas = hijos(c, "tr"), celdas = {};
           let cols = 0;
+          const abiertas = {};   // columna → celda donde empezó una combinación vertical
           filas.forEach((tr, f) => {
-            const tcs = hijos(tr, "tc");
-            cols = Math.max(cols, tcs.length);
-            tcs.forEach((tc, k) => { const t = hijos(tc, "p").map((p) => p.textContent).join("\n").trim(); if (t) celdas["c:" + F().ref(k, f)] = t; });
+            let k = 0;
+            hijos(tr, "tc").forEach((tc) => {
+              const tcPr = hijo(tc, "tcPr");
+              const span = Math.max(1, +(val(hijo(tcPr, "gridSpan")) || 1));
+              const vm = hijo(tcPr, "vMerge"), vmv = vm ? val(vm) || "continue" : null;
+              const ref = F().ref(k, f);
+              if (vmv === "continue" && abiertas[k]) {
+                const tl = abiertas[k], m = String(celdas["m:" + tl] || "1x1").split("x").map(Number);
+                celdas["m:" + tl] = `${m[0]}x${m[1] + 1}`;
+              } else {
+                const t = hijos(tc, "p").map((p) => p.textContent).join("\n").trim();
+                if (t) celdas["c:" + ref] = t;
+                if (span > 1 || vmv === "restart") celdas["m:" + ref] = `${span}x1`;
+                abiertas[k] = vmv === "restart" ? ref : null;
+                const shd = hijo(tcPr, "shd"), fill = shd && (shd.getAttributeNS(W, "fill") || shd.getAttribute("w:fill"));
+                if (fill && /^[0-9a-f]{6}$/i.test(fill) && fill.toUpperCase() !== "FFFFFF") celdas["r:" + ref] = "#" + fill.toUpperCase();
+                const negritas = [...tc.getElementsByTagNameNS(W, "r")].filter((rr) => rr.textContent.trim());
+                if (negritas.length && negritas.every((rr) => { const rp = hijo(rr, "rPr"); return rp && hijo(rp, "b") && val(hijo(rp, "b")) !== "0"; })) celdas["n:" + ref] = true;
+              }
+              k += span;
+            });
+            cols = Math.max(cols, k);
           });
+          Object.keys(celdas).forEach((x) => { if (x.startsWith("m:") && celdas[x] === "1x1") delete celdas[x]; });
           if (filas.length) parrafos.push({ pa: {}, tramos: [{ e: { tipo: "tabla", filas: filas.length, cols: Math.min(20, cols), celdas } }] });
         } else if (c.localName === "sdt") await bloque(hijo(c, "sdtContent"));
       }

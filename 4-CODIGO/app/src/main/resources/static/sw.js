@@ -9,7 +9,7 @@ const BASE = [
   "fonts/nunito-latin-wght-normal.woff2", "fonts/nunito-latin-ext-wght-normal.woff2",
   "img/icono.svg", "img/icono-192.png", "img/icono-512.png", "img/icono-maskable-512.png",
   "js/nucleo.js", "js/rueda.js", "js/cripto.js", "js/boveda.js", "js/api.js", "js/secuencia.js", "js/crdt.js", "js/local.js",
-  "js/formulas.js", "js/graficas.js", "js/plantillas.js", "js/formatos.js", "js/ooxml.js", "js/vista-cuentas.js", "js/vista-espacios.js",
+  "js/formulas.js", "js/graficas.js", "js/ecuaciones.js", "js/plantillas.js", "js/formatos.js", "js/ooxml.js", "js/vista-cuentas.js", "js/vista-espacios.js",
   "js/vista-dispositivo.js", "js/editor.js", "js/modo-texto.js", "js/modo-hoja.js", "js/lienzo.js", "js/experiencia.js",
   "js/anfitrion.js", "js/app.js", "js/vendor/qrcode.js", "js/qr.js", "js/union.js", "js/cola.js", "js/recibo.js",
   "js/comentarios.js", "js/proyector.js", "js/vendor/jsQR.js",

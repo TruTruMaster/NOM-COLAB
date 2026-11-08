@@ -68,13 +68,31 @@
   const textoDe = (p) => p.tramos.map((t) => t.x || "").join("");
 
   /** HTML de un objeto del texto (imagen, tabla, salto, línea, índice). */
+  /** Notas al pie de la exportación a HTML (se listan al final). */
+  let notasHtml = [];
   function objetoHtml(e, ps) {
-    if (e.tipo === "imagen") return e.src ? `<img src="${NOM.esc(e.src)}" alt="${NOM.esc(e.alt || "")}" style="max-width:100%;width:${+e.w || 320}px">` : "";
+    if (e.tipo === "imagen") return e.src ? `<figure style="margin:0;display:inline-block"><img src="${NOM.esc(e.src)}" alt="${NOM.esc(e.alt || "")}" style="max-width:100%;width:${+e.w || 320}px">${e.pie ? `<figcaption style="font-style:italic;text-align:center">${NOM.esc(e.pie)}</figcaption>` : ""}</figure>` : "";
     if (e.tipo === "tabla") {
-      let h = "<table>";
-      for (let f = 0; f < (e.filasTexto || 3); f++) { h += "<tr>"; for (let c = 0; c < (e.colsTexto || 3); c++) h += `<td>${NOM.esc(e["c:" + F().ref(c, f)] || "")}</td>`; h += "</tr>"; }
+      let h = `<table style="border-collapse:collapse">`;
+      const tapadas = new Set();
+      for (const k in e) if (k.startsWith("m:") && /^\d+x\d+$/.test(String(e[k] || ""))) { const p = F().parseRef(k.slice(2)), [w, hh] = String(e[k]).split("x").map(Number); for (let f = p.f; f < p.f + hh; f++) for (let c = p.c; c < p.c + w; c++) if (c !== p.c || f !== p.f) tapadas.add(F().ref(c, f)); }
+      for (let f = 0; f < (e.filasTexto || 3); f++) {
+        h += "<tr>";
+        for (let c = 0; c < (e.colsTexto || 3); c++) {
+          const r = F().ref(c, f);
+          if (tapadas.has(r)) continue;
+          const m = String(e["m:" + r] || "").split("x").map(Number);
+          const st = [e["r:" + r] ? `background:${e["r:" + r]}` : "", e["n:" + r] || (e.encabezado && f === 0) ? "font-weight:bold" : "", e["i:" + r] ? "font-style:italic" : "", e["k:" + r] ? `color:${e["k:" + r]}` : "",
+            e["al:" + r] ? `text-align:${{ centro: "center", der: "right" }[e["al:" + r]] || "left"}` : "", e.bordes === "ninguno" ? "border:0" : "border:1px solid #8E8E8E", "padding:2pt 5pt"].filter(Boolean).join(";");
+          h += `<td style="${st}"${m[0] > 1 ? ` colspan="${m[0]}"` : ""}${m[1] > 1 ? ` rowspan="${m[1]}"` : ""}>${NOM.esc(e["c:" + r] || "")}</td>`;
+        }
+        h += "</tr>";
+      }
       return h + "</table>";
     }
+    if (e.tipo === "ecuacion") return NOM.ecuaciones ? NOM.ecuaciones.html(e.tex || "", !!e.bloque) : NOM.esc(e.tex || "");
+    if (e.tipo === "nota") { notasHtml.push(e.texto || ""); return `<sup><a href="#nota-${notasHtml.length}" id="ref-${notasHtml.length}">${notasHtml.length}</a></sup>`; }
+    if (e.texto != null) return NOM.esc(String(e.texto));
     if (e.tipo === "salto") return `<div style="break-after:page"></div>`;
     if (e.tipo === "linea") return "<hr>";
     if (e.tipo === "indice") return `<nav><b>Contenido</b>${ps.filter((p) => /^h[1-3]$/.test(p.pa.estilo || "")).map((p) => `<div style="padding-left:${(+p.pa.estilo.slice(1) - 1) * 16}px">${NOM.esc(textoDe(p))}</div>`).join("")}</nav>`;
@@ -82,12 +100,15 @@
   }
   function aHtmlTexto(doc, nombre) {
     const ps = NOM.textoRico.parrafosDe(doc);
+    notasHtml = [];
     let h = "", lista = null;
     const cerrar = () => { if (lista) { h += `</${lista}>`; lista = null; } };
     ps.forEach((p) => {
       const pa = p.pa;
       const cont = p.tramos.map((t) => (t.e ? objetoHtml(t.e, ps) : NOM.textoRico.envolver(t.x, t.a || {}))).join("") || "<br>";
-      const st = [pa.alin ? `text-align:${{ centro: "center", der: "right", just: "justify" }[pa.alin]}` : "", pa.sangria && !pa.lista ? `margin-left:${pa.sangria * 36}pt` : "", pa.interlineado ? `line-height:${pa.interlineado}` : ""].filter(Boolean).join(";");
+      const st = [pa.alin ? `text-align:${{ centro: "center", der: "right", just: "justify" }[pa.alin]}` : "", pa.sangria && !pa.lista ? `margin-left:${pa.sangria * 36}pt` : "", pa.interlineado ? `line-height:${pa.interlineado}` : "",
+        !pa.lista && (+pa.sangiz || +pa.francesa) ? `padding-left:${(+pa.sangiz || 0) + (+pa.francesa || 0)}cm` : "", !pa.lista && +pa.sangder ? `padding-right:${+pa.sangder}cm` : "",
+        !pa.lista && (pa.primera != null || +pa.francesa) ? `text-indent:${(+pa.primera || 0) - (+pa.francesa || 0)}cm` : ""].filter(Boolean).join(";");
       const sa = st ? ` style="${st}"` : "";
       if (pa.lista) {
         const tag = pa.lista === "numeros" ? "ol" : "ul";
@@ -100,6 +121,7 @@
       h += `<${tag}${pa.estilo === "titulo" ? ' class="titulo"' : pa.estilo === "subtitulo" ? ' class="subtitulo"' : ""}${sa}>${cont}</${tag}>\n`;
     });
     cerrar();
+    if (notasHtml.length) h += `<hr><ol class="notas">${notasHtml.map((t, i) => `<li id="nota-${i + 1}">${NOM.esc(t)} <a href="#ref-${i + 1}">↩</a></li>`).join("")}</ol>\n`;
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${NOM.esc(nombre)}</title>
 <style>body{font:11pt/1.15 Calibri,Carlito,"Segoe UI",Arial,sans-serif;max-width:6.5in;margin:1in auto;padding:0 1rem;color:#000}p{margin:0 0 8pt}h1,h2,h3{font-family:"Calibri Light",Carlito,Calibri,sans-serif;font-weight:normal;color:#2F5496;margin:12pt 0 0}h1{font-size:16pt}h2{font-size:13pt}h3{font-size:12pt;color:#1F3763}h1.titulo{font-size:28pt;color:#000}.subtitulo{color:#5A5A5A}blockquote{font-style:italic;color:#404040;text-align:center}pre{font:10pt "Courier New",monospace;background:#F3F3F3;padding:2pt 6pt;white-space:pre-wrap}table{border-collapse:collapse;width:100%}td{border:1px solid #8E8E8E;padding:2pt 5pt;vertical-align:top}a{color:#0563C1}</style>
 </head><body>
@@ -431,6 +453,7 @@ ${formas.join("\n")}
         const ref = "imp" + (i++).toString(36) + Math.random().toString(36).slice(2, 7);
         if (t.e.tipo === "imagen") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: { tipo: "imagen", enTexto: true, src: t.e.src, w: Math.min(t.e.w || 320, 624), h: t.e.h || 0 }, t: 1, n: "importar" }); return { e: { tipo: "imagen", ref } }; }
         if (t.e.tipo === "tabla") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: Object.assign({ tipo: "tabla", enTexto: true, filasTexto: t.e.filas, colsTexto: t.e.cols }, t.e.celdas), t: 1, n: "importar" }); return { e: { tipo: "tabla", ref } }; }
+        if (t.e.tipo === "nota" || t.e.tipo === "ecuacion") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: Object.assign({ enTexto: true }, t.e), t: 1, n: "importar" }); return { e: { tipo: t.e.tipo, ref } }; }
         return { e: { tipo: t.e.tipo } };
       });
       ps.push({ tramos, a: limpio(p.pa) });

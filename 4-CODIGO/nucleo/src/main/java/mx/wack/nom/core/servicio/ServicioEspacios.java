@@ -257,6 +257,12 @@ public class ServicioEspacios {
                 if (li < 1 || li > 3) throw ErrorNom.invalido("El interlineado va de 1 a 3", "interlineado");
                 r.put("interlineado", Math.round(li * 100) / 100.0);
             }
+            // 8.2 Sangría de primera línea en cm (APA: 1.27).
+            if (f.get("primera") instanceof Number n) {
+                double pr = n.doubleValue();
+                if (pr < 0 || pr > 5) throw ErrorNom.invalido("La sangría va de 0 a 5 cm", "primera");
+                if (pr > 0) r.put("primera", Math.round(pr * 100) / 100.0);
+            }
             if (r.isEmpty()) r = null;
         }
         e.formatoBase = r;

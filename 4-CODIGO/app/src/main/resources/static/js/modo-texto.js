@@ -45,11 +45,19 @@
   // sug / sugBorrar: modo sugerencia (7): texto propuesto o propuesto para borrar, con su autor.
   const CAR = ["b", "i", "u", "s", "va", "color", "fondo", "fuente", "tam", "enlace", "sug", "sugBorrar"];
   // dueno: el párrafo es de esa persona (3.5); solo ella y el propietario del espacio lo cambian.
-  const PAR = ["estilo", "alin", "lista", "nivel", "hecho", "sangria", "interlineado", "antes", "despues", "dueno"];
+  // 8.2: sangrías exactas (cm), primera línea o francesa, y opciones de lista (empezar en, continuar,
+  // estilo de viñeta o de número).
+  const PAR = ["estilo", "alin", "lista", "nivel", "hecho", "sangria", "interlineado", "antes", "despues", "dueno",
+    "sangiz", "sangder", "primera", "francesa", "inicio", "continuar", "vineta", "numfmt"];
+  const VINETAS = ["•", "◦", "▪", "–", "➢", "✓", "★", "♦"];
+  const NUMFMTS = [["1.", "1. 2. 3."], ["1)", "1) 2) 3)"], ["a.", "a. b. c."], ["a)", "a) b) c)"], ["A.", "A. B. C."], ["I.", "I. II. III."], ["i.", "i. ii. iii."]];
   /** Quién mira el documento (para los párrafos con dueño): lo llena montar(). */
   const ctx = { yo: null, propietario: false, nombres: new Map(), colores: new Map() };
   const URL_SOLA = /^https?:\/\/[^\s<>"]+$/i;
-  const PAGINAS = { carta: { n: "Carta (21.6 × 27.9 cm)", w: 816, h: 1056 }, a4: { n: "A4 (21 × 29.7 cm)", w: 794, h: 1123 }, oficio: { n: "Oficio (21.6 × 35.6 cm)", w: 816, h: 1344 } };
+  const PAGINAS = { carta: { n: "Carta (21.6 × 27.9 cm)", w: 816, h: 1056 }, a4: { n: "A4 (21 × 29.7 cm)", w: 794, h: 1123 }, oficio: { n: "Oficio (21.6 × 35.6 cm)", w: 816, h: 1344 },
+    a5: { n: "A5 (14.8 × 21 cm)", w: 559, h: 794 }, media: { n: "Media carta (14 × 21.6 cm)", w: 529, h: 816 } };
+  const CM = 37.7953;   // px por centímetro
+  const enCm = (px) => Math.round((px / CM) * 100) / 100;
   const MARGENES = { normal: { n: "Normal (2.5 cm)", v: 96 }, estrecho: { n: "Estrecho (1.27 cm)", v: 48 }, moderado: { n: "Moderado (1.9 cm)", v: 72 }, ancho: { n: "Ancho (5 cm)", v: 192 } };
   const SIMBOLOS = "© ® ™ € £ ¥ ¢ ° ± × ÷ ≠ ≈ ≤ ≥ ∞ √ ∑ π Ω µ α β γ δ θ λ → ← ↑ ↓ ↔ ⇒ • · … — – « » ¿ ¡ § ¶ † ✓ ✗ ★ ☆ ♥ ☐ ☑ ½ ¼ ¾ ² ³".split(" ");
   const GAP = 28;   // separación entre páginas (px)
@@ -148,6 +156,10 @@
       if (d.antes != null && d.antes !== "") r.antes = +d.antes;
       if (d.desp != null && d.desp !== "") r.despues = +d.desp;
       if (d.dueno) r.dueno = d.dueno;
+      ["sangiz", "sangder", "primera", "francesa", "inicio"].forEach((k) => { if (d[k] != null && d[k] !== "" && !isNaN(+d[k])) r[k] = +d[k]; });
+      if (d.continuar === "true") r.continuar = true;
+      if (d.vineta) r.vineta = d.vineta;
+      if (d.numfmt) r.numfmt = d.numfmt;
       return r;
     }
     // HTML ajeno (pegado de Word, Google Docs, la web…)
@@ -247,23 +259,37 @@
     let ini = 0;
     for (let i = 0; i < vis.length; i++) if (vis[i].c === "\n" && !vis[i].e) { ps.push({ k: vis[i].id, ini, fin: i, mark: vis[i] }); ini = i + 1; }
     ps.push({ k: FIN, ini, fin: vis.length, mark: sec.fin });
-    // Numeración de listas: contador por nivel; se reinicia cuando la lista se interrumpe.
-    const cont = [];
+    // Numeración de listas: contador por nivel; se reinicia cuando la lista se interrumpe, salvo
+    // que el párrafo diga "continuar". "inicio" fija el número de ese renglón (8.2).
+    let cont = [], previo = [];
     ps.forEach((p) => {
       const pa = S().attrs(p.mark);
       if (pa.lista === "numeros") {
+        if (!cont.length && pa.continuar && previo.length) cont = previo.slice();
         const nv = pa.nivel || 0;
         cont.length = nv + 1;
-        cont[nv] = (cont[nv] || 0) + 1;
-        p.num = numeral(cont[nv], nv);
-      } else if (pa.lista !== "vinetas" && pa.lista !== "tareas") cont.length = 0;
+        cont[nv] = pa.inicio != null && pa.inicio !== "" && !isNaN(+pa.inicio) ? Math.max(0, +pa.inicio) : (cont[nv] || 0) + 1;
+        p.num = numeral(cont[nv], nv, pa.numfmt);
+      } else if (pa.lista !== "vinetas" && pa.lista !== "tareas") { if (cont.length) previo = cont.slice(); cont = []; }
     });
     return ps;
   }
-  function numeral(n, nivel) {
+  const letras = (n, mayus) => { let s = ""; while (n > 0) { n--; s = String.fromCharCode((mayus ? 65 : 97) + (n % 26)) + s; n = Math.floor(n / 26); } return s; };
+  function romano(n) {
+    const r = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+    let s = "", k = Math.max(1, Math.min(3999, n));
+    for (const [v, l] of r) while (k >= v) { s += l; k -= v; }
+    return s;
+  }
+  function numeral(n, nivel, fmt) {
+    if (fmt) {
+      const sep = fmt.slice(-1), base = fmt.slice(0, -1);
+      const v = base === "a" ? letras(n) : base === "A" ? letras(n, true) : base === "I" ? romano(n).toUpperCase() : base === "i" ? romano(n) : String(n);
+      return v + sep;
+    }
     const t = nivel % 3;
-    if (t === 1) { let s = ""; while (n > 0) { n--; s = String.fromCharCode(97 + (n % 26)) + s; n = Math.floor(n / 26); } return s + "."; }
-    if (t === 2) { const r = [[10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]]; let s = ""; let k = n; for (const [v, l] of r) while (k >= v) { s += l; k -= v; } return s + "."; }
+    if (t === 1) return letras(n) + ".";
+    if (t === 2) return romano(n) + ".";
     return n + ".";
   }
 
@@ -308,6 +334,15 @@
       if (pa.dueno !== ctx.yo && !ctx.propietario) at += ` contenteditable="false"`;
     }
     if (+pa.sangria) { at += ` data-sangria="${+pa.sangria}"`; st += `--sang:${+pa.sangria};`; }
+    // 8.2 Sangrías en cm: izquierda, derecha, de primera línea o francesa (APA).
+    if (+pa.sangiz) { at += ` data-sangiz="${+pa.sangiz}"`; st += `--sangiz:${+pa.sangiz}cm;`; }
+    if (+pa.sangder) { at += ` data-sangder="${+pa.sangder}"`; st += `--sangder:${+pa.sangder}cm;`; }
+    if (pa.primera != null && pa.primera !== "") { at += ` data-primera="${+pa.primera}"`; st += `--primera:${+pa.primera}cm;`; }
+    if (+pa.francesa) { at += ` data-francesa="${+pa.francesa}"`; st += `--francesa:${+pa.francesa}cm;`; }
+    if (pa.lista && pa.inicio != null && pa.inicio !== "") at += ` data-inicio="${+pa.inicio}"`;
+    if (pa.lista && pa.continuar) at += ` data-continuar="true"`;
+    if (pa.lista && pa.vineta) at += ` data-vineta="${esc(pa.vineta)}"`;
+    if (pa.lista && pa.numfmt) at += ` data-numfmt="${esc(pa.numfmt)}"`;
     if (pa.interlineado) { at += ` data-li="${+pa.interlineado}"`; st += `--li:${+pa.interlineado};`; }
     if (pa.antes != null) { at += ` data-antes="${+pa.antes}"`; st += `--antes:${+pa.antes}pt;`; }
     if (pa.despues != null) { at += ` data-desp="${+pa.despues}"`; st += `--desp:${+pa.despues}pt;`; }
@@ -502,7 +537,12 @@
           if (e.tipo === "imagen") {
             const src = (bl && bl.src) || e.src || "";
             const w = (bl && bl.w) || e.w || 320;
-            o.innerHTML = `<img src="${esc(src)}" alt="${esc((bl && bl.alt) || "")}" draggable="false" style="width:${+w}px">${ed.soloLectura ? "" : '<span class="wd-tirador" data-tirador title="Arrastra para cambiar el tamaño"></span>'}`;
+            // 8.2 Recorte, giro, pie de imagen numerado y texto alrededor (cuadrado a la izquierda o derecha).
+            const pie = bl && bl.pie ? `<span class="wd-img-pie"><b>Figura ${numeroFigura(o.dataset.id)}.</b> ${esc(bl.pie)}</span>` : "";
+            o.innerHTML = `<span class="wd-img-caja"><img src="${esc(src)}" alt="${esc((bl && bl.alt) || "")}" draggable="false" style="width:${+w}px"></span>${pie}${ed.soloLectura ? "" : '<span class="wd-tirador" data-tirador title="Arrastra para cambiar el tamaño"></span>'}`;
+            if (bl && (bl.recorte || +bl.rot)) acomodarImagen($(".wd-img-caja", o), +w, bl.recorte, +bl.rot || 0);
+            o.classList.toggle("flota-izq", !!(bl && bl.ajuste === "izq" && !bl.libre));
+            o.classList.toggle("flota-der", !!(bl && bl.ajuste === "der" && !bl.libre));
             // Imagen libre ("delante del texto"): se dibuja encima, desplazada (x, y) desde su párrafo.
             const libre = !!(bl && bl.libre);
             o.classList.toggle("libre", libre);
@@ -511,10 +551,170 @@
             o.style.top = libre ? (+bl.y || 0) + "px" : "";
             o.title = ed.soloLectura ? "" : libre ? "Arrastra para moverla a cualquier lugar" : "Arrastra para moverla a otro lugar del texto";
           } else if (e.tipo === "tabla") pintarTabla(o, bl, e.ref);
+          else if (e.tipo === "nota") { o.innerHTML = `<sup>${numerosNotas().get(o.dataset.id) || "*"}</sup>`; o.title = bl && bl.texto ? "Nota: " + bl.texto : "Nota al pie (toca para escribirla)"; }
+          else if (e.tipo === "ecuacion") { o.innerHTML = NOM.ecuaciones ? NOM.ecuaciones.html((bl && bl.tex) || "", !!(bl && bl.bloque)) : esc((bl && bl.tex) || ""); o.classList.toggle("en-bloque", !!(bl && bl.bloque)); o.title = ed.soloLectura ? "" : "Toca para editar la ecuación"; }
           else if (e.tipo === "salto") o.innerHTML = `<span>Salto de página</span>`;
           else if (e.tipo === "linea") o.innerHTML = `<hr>`;
           else if (e.tipo === "indice") pintarIndice(o);
         });
+      }
+
+      /** 8.2 Notas al pie: su número (en el orden del documento) y su texto. */
+      let cacheNotas = null;
+      function numerosNotas() {
+        if (cacheNotas && cacheNotas.vis === visPintado) return cacheNotas.m;
+        const m = new Map();
+        let n = 0;
+        for (const it of visPintado) if (it.e && it.e.tipo === "nota") m.set(it.id, ++n);
+        cacheNotas = { vis: visPintado, m };
+        return m;
+      }
+      const textoNota = (id) => { const it = sec().item(id), b = it && it.e && it.e.ref ? doc().bloque(it.e.ref) : null; return (b && b.texto) || ""; };
+      /** Inserta un objeto en línea (nota, ecuación, cita, campo) donde está el cursor. */
+      function insertarEnLinea(campos, meta) {
+        if (ed.soloLectura) return null;
+        const ref = NOM.DocCRDT.nuevoId();
+        doc().cambiar(ref, Object.assign({ enTexto: true }, campos), { origen: "comando" });
+        sincronizar();
+        const s = leerSel();
+        let id = null;
+        comando(() => {
+          if (!s.col) borrarRango(s.ini, s.fin);
+          const fin = insertarEn(s.ini, [{ c: OBJ, obj: { tipo: campos.tipo, ref } }], null, meta);
+          id = visPintado[s.ini] ? visPintado[s.ini].id : null;
+          return { sel: [fin, fin] };
+        });
+        return { ref, id };
+      }
+      async function dialogoNota(id) {
+        const selAntes = leerSel();
+        const it = id ? sec().item(id) : null;
+        const ref = it && it.e && it.e.ref;
+        const actual = ref ? doc().valor(ref, "texto") || "" : "";
+        const cuerpoH = html(`<form class="col"><div class="campo"><label>Texto de la nota${it ? ` ${numerosNotas().get(id) || ""}` : ""}</label><div class="entrada"><textarea data-t rows="4" maxlength="2000" placeholder="Por ejemplo: la fuente o una aclaración">${esc(actual)}</textarea></div></div></form>`);
+        const pie = html(`<div style="display:contents">${it && !ed.soloLectura ? `<button class="btn" type="button" data-quitar>Quitar la nota</button>` : ""}<span class="crece"></span><button class="btn" type="button" data-no>Cancelar</button>${ed.soloLectura ? "" : `<button class="btn primario" data-si>Guardar</button>`}</div>`);
+        const h = NOM.hoja({ titulo: "Nota al pie", icono: "superscript", cuerpo: cuerpoH, pie });
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        const q = $("[data-quitar]", pie); if (q) q.onclick = () => { h.cerrar(); quitarObjeto(id); };
+        const si = $("[data-si]", pie);
+        if (si) si.onclick = (e) => {
+          e.preventDefault();
+          const t = $("[data-t]", cuerpoH).value.trim();
+          h.cerrar();
+          if (ref) doc().cambiar(ref, { texto: t });
+          else if (t) { cuerpo.focus({ preventScroll: true }); ponerSel(selAntes.a, selAntes.f); insertarEnLinea({ tipo: "nota", texto: t }); }
+          programarPaginar();
+        };
+      }
+      function dialogoEcuacion(id) {
+        if (!NOM.ecuaciones) return;
+        const selAntes = leerSel();
+        const it = id ? sec().item(id) : null, ref = it && it.e && it.e.ref, E = NOM.ecuaciones;
+        const actual = ref ? doc().valor(ref, "tex") || "" : "", bloque = ref ? !!doc().valor(ref, "bloque") : false;
+        const cuerpoH = html(`<form class="col">
+          <div class="ecu-vista" data-vista></div>
+          <div class="campo"><label>Ecuación</label><div class="entrada"><textarea data-tex rows="2" spellcheck="false" placeholder="x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}">${esc(actual)}</textarea></div></div>
+          <div class="ecu-ayudas">${E.AYUDAS.map(([t, s, n]) => `<button type="button" data-ins="${esc(t)}" data-micro="${esc(n)}" aria-label="${esc(n)}">${esc(s)}</button>`).join("")}</div>
+          <div class="fila" style="flex-wrap:wrap"><span class="suave chico">Ejemplos:</span>${E.EJEMPLOS.map(([n, t]) => `<button type="button" class="btn chico" data-ej="${esc(t)}">${esc(n)}</button>`).join("")}</div>
+          <label class="interruptor"><input type="checkbox" data-bloque ${bloque ? "checked" : ""}> En su propio renglón, centrada</label></form>`);
+        const pie = html(`<div style="display:contents">${it && !ed.soloLectura ? `<button class="btn" type="button" data-quitar>Quitar</button>` : ""}<span class="crece"></span><button class="btn" type="button" data-no>Cancelar</button>${ed.soloLectura ? "" : `<button class="btn primario" data-si>${it ? "Guardar" : "Insertar"}</button>`}</div>`);
+        const h = NOM.hoja({ titulo: "Ecuación", icono: "sigma", cuerpo: cuerpoH, pie, ancha: true });
+        const ta = $("[data-tex]", cuerpoH), vista = $("[data-vista]", cuerpoH);
+        const ver = () => { vista.innerHTML = ta.value.trim() ? E.html(ta.value, true) : `<span class="suave">Escribe la ecuación o usa los botones</span>`; };
+        ver();
+        ta.addEventListener("input", ver);
+        $$("[data-ins]", cuerpoH).forEach((b) => (b.onclick = () => {
+          const t = b.dataset.ins, p = ta.selectionStart, q2 = ta.selectionEnd, elegido = ta.value.slice(p, q2);
+          const ins = t.includes("□") ? t.replace("□", elegido || "□") : t;
+          ta.value = ta.value.slice(0, p) + ins + ta.value.slice(q2);
+          const hueco = ta.value.indexOf("□", p);
+          if (hueco >= 0) { ta.setSelectionRange(hueco, hueco + 1); } else ta.setSelectionRange(p + ins.length, p + ins.length);
+          ta.focus(); ver();
+        }));
+        $$("[data-ej]", cuerpoH).forEach((b) => (b.onclick = () => { ta.value = b.dataset.ej; ver(); }));
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        const q = $("[data-quitar]", pie); if (q) q.onclick = () => { h.cerrar(); quitarObjeto(id); };
+        const si = $("[data-si]", pie);
+        if (si) si.onclick = (e) => {
+          e.preventDefault();
+          const tex = ta.value.replace(/□/g, "").trim(), bl = $("[data-bloque]", cuerpoH).checked || null;
+          h.cerrar();
+          if (!tex) return;
+          if (ref) doc().cambiar(ref, { tex, bloque: bl });
+          else { cuerpo.focus({ preventScroll: true }); ponerSel(selAntes.a, selAntes.f); insertarEnLinea({ tipo: "ecuacion", tex, bloque: bl }); }
+        };
+      }
+
+      /** Número de figura de una imagen con pie (en el orden del documento). */
+      function numeroFigura(id) {
+        let n = 0;
+        for (const it of sec().visibles()) {
+          if (!it.e || it.e.tipo !== "imagen") continue;
+          const b = it.e.ref ? doc().bloque(it.e.ref) : null;
+          if (b && b.pie) n++;
+          if (it.id === id) return Math.max(1, n);
+        }
+        return n || 1;
+      }
+      /** Recorte (fracciones iz, d, s, i) y giro (0, 90, 180, 270) de una imagen de ancho visible W. */
+      function acomodarImagen(caja, W, rec, rot) {
+        const img = $("img", caja);
+        if (!img) return;
+        const hacer = () => {
+          const r = rec || {}, iz = +r.iz || 0, d = +r.d || 0, s = +r.s || 0, i = +r.i || 0;
+          const fw = Math.max(0.05, 1 - iz - d), fh = Math.max(0.05, 1 - s - i);
+          const ratio = (img.naturalHeight || 1) / (img.naturalWidth || 1);
+          const wFull = W / fw, hFull = wFull * ratio, hVis = hFull * fh;
+          const lado = rot === 90 || rot === 270;
+          Object.assign(caja.style, { width: (lado ? hVis : W) + "px", height: (lado ? W : hVis) + "px" });
+          let marco = $(".wd-img-marco", caja);
+          if (!marco) { marco = document.createElement("span"); marco.className = "wd-img-marco"; caja.append(marco); marco.append(img); }
+          Object.assign(marco.style, { width: W + "px", height: hVis + "px", transform: `translate(-50%, -50%) rotate(${rot}deg)` });
+          Object.assign(img.style, { width: wFull + "px", maxWidth: "none", left: -iz * wFull + "px", top: -s * hFull + "px" });
+          if (cuerpo.contains(caja)) programarPaginar();
+        };
+        if (img.complete && img.naturalWidth) hacer(); else img.addEventListener("load", hacer, { once: true });
+      }
+      function dialogoRecorte(id) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref, b = ref ? doc().bloque(ref) : null;
+        if (!b) return;
+        const r = Object.assign({ iz: 0, d: 0, s: 0, i: 0 }, b.recorte || {});
+        const cuerpoH = html(`<form class="col"><div class="wd-recorte-vista"><span class="wd-img-caja"><img src="${esc(b.src)}" alt=""></span></div>
+          ${[["s", "Arriba"], ["i", "Abajo"], ["iz", "Izquierda"], ["d", "Derecha"]].map(([k, t]) => `<div class="lz-desl"><span>${t}</span><input type="range" min="0" max="45" step="1" value="${Math.round(r[k] * 100)}" data-k="${k}"><output>${Math.round(r[k] * 100)}%</output></div>`).join("")}</form>`);
+        const pie = html(`<div style="display:contents"><button class="btn" type="button" data-quitar>Sin recorte</button><span class="crece"></span><button class="btn" type="button" data-no>Cancelar</button><button class="btn primario" data-si>Recortar</button></div>`);
+        const h = NOM.hoja({ titulo: "Recortar imagen", icono: "image", cuerpo: cuerpoH, pie });
+        const caja = $(".wd-img-caja", cuerpoH);
+        const ver = () => { const img = $("img", cuerpoH); if (img) acomodarImagen(caja, 300, r, 0); };
+        ver();
+        $$("[data-k]", cuerpoH).forEach((x) => x.addEventListener("input", () => { r[x.dataset.k] = +x.value / 100; x.nextElementSibling.textContent = x.value + "%"; ver(); }));
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        $("[data-quitar]", pie).onclick = () => { doc().cambiar(ref, { recorte: null }); h.cerrar(); };
+        $("[data-si]", pie).onclick = (e) => { e.preventDefault(); doc().cambiar(ref, { recorte: r.iz || r.d || r.s || r.i ? r : null }); h.cerrar(); };
+      }
+      async function pieDeImagen(id) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref, b = ref ? doc().bloque(ref) : null;
+        if (!b) return;
+        const t = await NOM.pedirTexto("Pie de imagen", { etiqueta: `Se numera solo: “Figura ${numeroFigura(id)}. …”. Vacío para quitarlo.`, valor: b.pie || "", si: "Guardar", max: 300 });
+        if (t == null) return;
+        doc().cambiar(ref, { pie: t || null });
+        $$(".wd-imagen[data-obj]", cuerpo).forEach((x) => llenarObjetos(x.parentNode));
+      }
+      async function textoAlternativo(id) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref, b = ref ? doc().bloque(ref) : null;
+        if (!b) return;
+        const t = await NOM.pedirTexto("Texto alternativo", { etiqueta: "Qué muestra la imagen (lo leen los lectores de pantalla)", valor: b.alt || "", si: "Guardar", max: 300 });
+        if (t != null) doc().cambiar(ref, { alt: t || null });
+      }
+      function girarImagen(id) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref, b = ref ? doc().bloque(ref) : null;
+        if (b) doc().cambiar(ref, { rot: ((+b.rot || 0) + 90) % 360 || null });
+      }
+      function ajusteTexto(id, modo) {
+        const it = sec().item(id), ref = it && it.e && it.e.ref;
+        if (!ref) return;
+        if (modo === "libre") { ajusteImagen(id, true); return; }
+        doc().cambiar(ref, { ajuste: modo === "linea" ? null : modo, libre: null, x: null, y: null }, { origen: "comando" });
+        programarPaginar();
       }
 
       // ------------------------------------------------------------ posiciones (DOM ↔ índice visible)
@@ -815,11 +1015,41 @@
         poner(r.startContainer, r.startOffset);
         return m;
       }
+      /** 8.2 Corte de página dentro de un párrafo: cuántas letras hay antes y cómo se vuelve a poner. */
+      function offsetEnParrafo(el, nodo) {
+        let n = 0;
+        for (const h of hojas(el)) if (nodo.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_PRECEDING) n += largoHoja(h);
+        return n;
+      }
+      function crearCorte(alto) {
+        const c = document.createElement("span");
+        c.className = "wd-corte";
+        c.contentEditable = "false";
+        c.setAttribute("aria-hidden", "true");
+        c.style.height = alto;
+        return c;
+      }
+      function ponerCorte(t, off, alto) {
+        let resto = off;
+        for (const h of hojas(t)) {
+          const L = largoHoja(h);
+          if (h.nodeType === 3 && resto < L) {
+            const i16 = cps(h.nodeValue).slice(0, resto).join("").length;
+            const dos = i16 > 0 ? h.splitText(i16) : h;
+            dos.parentNode.insertBefore(crearCorte(alto), dos);
+            return;
+          }
+          if (h.nodeType === 1 && resto === 0) { h.parentNode.insertBefore(crearCorte(alto), h); return; }
+          resto -= L;
+        }
+      }
       function canonizar(el, p) {
         const h = htmlParrafo(visPintado, p);
         cache.set(p.k, h);
+        const cortes = $$(".wd-corte", el).map((c) => ({ off: offsetEnParrafo(el, c), alto: c.style.height }));
         el.normalize();
         const t = crearEl(h);
+        cortes.forEach((c) => ponerCorte(t, c.off, c.alto));
         if (iguales(el, t) || (el.tagName === t.tagName && mismosHijos(el, t) && el.getAttribute("data-k") === p.k)) { tomarRegistros(); return; }
         const sel = leerSel();
         pintando = true;
@@ -1209,6 +1439,13 @@
         const img = await ed.pedirImagen();
         if (img) insertarImagenSrc(img);
       }
+      /** Columnas lado a lado: una tabla de una fila sin bordes (cada columna se escribe aparte). */
+      function insertarColumnas(n) {
+        const ref = NOM.DocCRDT.nuevoId();
+        doc().cambiar(ref, { tipo: "tabla", enTexto: true, filasTexto: 1, colsTexto: n, bordes: "ninguno" }, { origen: "comando" });
+        insertarBloque({ tipo: "tabla", ref });
+        setTimeout(() => { const c = cuerpo.querySelector(`[data-ref="${ref}"] [data-celda="A1"]`); if (c) c.focus(); }, 30);
+      }
       function insertarTabla(filas, cols) {
         const ref = NOM.DocCRDT.nuevoId();
         doc().cambiar(ref, { tipo: "tabla", enTexto: true, filasTexto: filas, colsTexto: cols }, { origen: "comando" });
@@ -1240,23 +1477,91 @@
         comando(() => { doc().seq(B, { k: "f", a: { enlace: url || null }, r: S().rangos(visPintado.slice(ini, fin)) }, { origen: "comando" }); return { sel: [s.a, s.f] }; });
       }
 
-      // ------------------------------------------------------------ tablas en el texto
+      // ------------------------------------------------------------ tablas en el texto (8.2)
+      // Celdas "c:A1" (texto) con formato por celda: n negrita, i cursiva, k color, r relleno,
+      // al alineación, m combinada ("2x1"). De la tabla: filasTexto, colsTexto, encabezado, bordes
+      // (todos, horizontales, externos, ninguno) y aw:<columna> (ancho en %).
+      const PROPS_TAB = ["c", "n", "i", "k", "r", "al", "m"];
+      const FT = () => NOM.formulas;
+      let celdaActiva = null;     // { ref, celda }
+      let alcanceTab = "celda";   // a qué se aplica el formato: celda, fila, columna o tabla
+      const dimTabla = (b) => ({ filas: Math.min(Math.max(1, b.filasTexto || 3), 200), cols: Math.min(Math.max(1, b.colsTexto || 3), 20) });
+      function combinadasTabla(b) {
+        const spans = {}, cubiertas = new Set();
+        for (const k in b) {
+          if (!k.startsWith("m:") || !/^\d+x\d+$/.test(String(b[k] || ""))) continue;
+          const p = FT().parseRef(k.slice(2)), [w, h] = String(b[k]).split("x").map(Number);
+          if (!p || w * h <= 1) continue;
+          spans[k.slice(2)] = [w, h];
+          for (let f = p.f; f < p.f + h; f++) for (let c = p.c; c < p.c + w; c++) if (c !== p.c || f !== p.f) cubiertas.add(FT().ref(c, f));
+        }
+        return { spans, cubiertas };
+      }
+      function anchosTabla(b, cols) {
+        const a = Array.from({ length: cols }, (_, c) => +b["aw:" + FT().colLetra(c)] || 0);
+        const fijos = a.reduce((s, x) => s + x, 0), libres = a.filter((x) => !x).length;
+        const resto = Math.max(0, 100 - fijos);
+        return a.map((x) => (x || (libres ? resto / libres : 0)));
+      }
       function pintarTabla(o, b, ref) {
         o.dataset.ref = ref;
         if (!b) { o.innerHTML = `<span class="wd-falta">Tabla no disponible</span>`; return; }
-        const filas = Math.min(Math.max(1, b.filasTexto || 3), 200), cols = Math.min(Math.max(1, b.colsTexto || 3), 20);
-        let h = `<table class="wd-tab ${b.encabezado ? "con-cab" : ""}"><tbody>`;
+        const { filas, cols } = dimTabla(b);
+        const { spans, cubiertas } = combinadasTabla(b);
+        const anchos = anchosTabla(b, cols);
+        let h = `<table class="wd-tab ${b.encabezado ? "con-cab" : ""} bordes-${esc(b.bordes || "todos")}"><colgroup>${anchos.map((w) => `<col style="width:${w.toFixed(2)}%">`).join("")}</colgroup><tbody>`;
         for (let f = 0; f < filas; f++) {
           h += "<tr>";
           for (let c = 0; c < cols; c++) {
-            const r = NOM.formulas.ref(c, f);
-            h += `<td><div class="wd-celda" data-celda="${r}" ${ed.soloLectura ? "" : 'contenteditable="true"'} spellcheck="true">${esc(b["c:" + r] || "")}</div></td>`;
+            const r = FT().ref(c, f);
+            if (cubiertas.has(r)) continue;
+            const sp = spans[r], st = [];
+            if (b["r:" + r]) st.push("background-color:" + b["r:" + r]);
+            const ce = [];
+            if (b["n:" + r]) ce.push("font-weight:bold");
+            if (b["i:" + r]) ce.push("font-style:italic");
+            if (b["k:" + r]) ce.push("color:" + b["k:" + r]);
+            if (b["al:" + r]) ce.push("text-align:" + ({ izq: "left", centro: "center", der: "right" }[b["al:" + r]] || "left"));
+            h += `<td${sp ? ` colspan="${sp[0]}" rowspan="${sp[1]}"` : ""}${st.length ? ` style="${esc(st.join(";"))}"` : ""}><div class="wd-celda" data-celda="${r}" ${ed.soloLectura ? "" : 'contenteditable="true"'} spellcheck="true"${ce.length ? ` style="${esc(ce.join(";"))}"` : ""}>${esc(b["c:" + r] || "")}</div></td>`;
           }
           h += "</tr>";
         }
         h += "</tbody></table>";
-        if (!ed.soloLectura) h += `<span class="wd-tab-ctl"><button data-t="fila" title="Agregar fila">${ico("plus", "ico-s")} Fila</button><button data-t="col" title="Agregar columna">${ico("plus", "ico-s")} Columna</button><button data-t="menos-fila" title="Quitar la última fila">${ico("minus", "ico-s")} Fila</button><button data-t="menos-col" title="Quitar la última columna">${ico("minus", "ico-s")} Col.</button><button data-t="borrar" title="Eliminar tabla">${ico("trash-2", "ico-s")}</button></span>`;
+        if (!ed.soloLectura) {
+          const bt = (t, i, tx, micro) => `<button type="button" data-t="${t}" data-micro="${esc(micro || tx)}" aria-label="${esc(tx)}">${ico(i, "ico-s")}${tx && !micro ? " " + esc(tx) : ""}</button>`;
+          h += `<span class="wd-tab-ctl" contenteditable="false">${bt("fila", "between-horizontal-start", "Fila", "Insertar fila")}${bt("col", "between-vertical-start", "Columna", "Insertar columna")}${bt("combinar", "table-cells-merge", "", "Combinar o separar celdas")}<span class="sep"></span>${bt("n", "bold", "", "Negrita")}${bt("i", "italic", "", "Cursiva")}${bt("k", "baseline", "", "Color de letra")}${bt("r", "paint-bucket", "", "Relleno")}${bt("al", "align-center", "", "Alinear")}${bt("bordes", "grid-3x3", "", "Bordes")}${bt("cab", "heading-1", "", "Fila de encabezado")}<span class="sep"></span><select data-t="alcance" aria-label="Aplicar a">${[["celda", "A la celda"], ["fila", "A la fila"], ["columna", "A la columna"], ["tabla", "A toda la tabla"]].map(([v, tx]) => `<option value="${v}" ${alcanceTab === v ? "selected" : ""}>${tx}</option>`).join("")}</select>${bt("borrar", "trash-2", "", "Eliminar fila, columna o tabla")}</span>`;
+        }
         o.innerHTML = h;
+        if (!ed.soloLectura) colocarRedimTabla(o, b, ref, anchos);
+      }
+      /** Tiradores entre columnas para cambiar su ancho (arrastrar con el ratón o el dedo). */
+      function colocarRedimTabla(o, b, ref, anchos) {
+        const tb = $("table", o);
+        if (!tb) return;
+        let acum = 0;
+        anchos.slice(0, -1).forEach((w, c) => {
+          acum += w;
+          const t = html(`<span class="wd-tab-redim" data-redim="${c}" contenteditable="false" style="left:${acum.toFixed(2)}%" aria-hidden="true"></span>`);
+          o.append(t);
+          t.addEventListener("pointerdown", (e) => {
+            e.preventDefault(); e.stopPropagation();
+            t.setPointerCapture(e.pointerId);
+            const ancho = tb.getBoundingClientRect().width / (zoom || 1), x0 = e.clientX, a0 = anchos.slice();
+            let nuevos = a0;
+            t.onpointermove = (ev) => {
+              const d = ((ev.clientX - x0) / (zoom || 1) / ancho) * 100;
+              const izq = Math.max(5, Math.min(a0[c] + a0[c + 1] - 5, a0[c] + d));
+              nuevos = a0.slice(); nuevos[c] = izq; nuevos[c + 1] = a0[c] + a0[c + 1] - izq;
+              $$("col", tb).forEach((col, k) => (col.style.width = nuevos[k].toFixed(2) + "%"));
+            };
+            t.onpointerup = () => {
+              t.onpointermove = t.onpointerup = null;
+              const campos = {};
+              nuevos.forEach((w, k) => (campos["aw:" + FT().colLetra(k)] = Math.round(w * 100) / 100));
+              doc().cambiar(ref, campos);
+            };
+          });
+        });
       }
       const pendCeldas = new Map();
       cuerpo.addEventListener("input", (e) => {
@@ -1270,14 +1575,23 @@
         }, 200));
         pendCeldas.get(k)();
       }, true);
+      cuerpo.addEventListener("focusin", (e) => {
+        const cel = e.target.closest && e.target.closest("[data-celda]");
+        if (!cel) return;
+        celdaActiva = { ref: cel.closest("[data-ref]").dataset.ref, celda: cel.dataset.celda };
+        $$(".wd-tabla.activa", cuerpo).forEach((x) => x.classList.remove("activa"));
+        const o = cel.closest("[data-obj]"); if (o) o.classList.add("activa");
+      });
       cuerpo.addEventListener("keydown", (e) => {
         const cel = e.target.closest && e.target.closest("[data-celda]");
         if (!cel) return;
         e.stopPropagation();
+        const mod = e.ctrlKey || e.metaKey;
+        if (mod && ["b", "i"].includes(e.key.toLowerCase())) { e.preventDefault(); formatoCelda(e.key.toLowerCase() === "b" ? "n" : "i"); return; }
         if (e.key !== "Tab" && !(e.key === "Enter" && !e.shiftKey)) return;
         e.preventDefault();
         const td = cel.closest("td"), tr = td.parentElement, i = [...tr.children].indexOf(td);
-        let sig = e.key === "Enter" ? tr.nextElementSibling && tr.nextElementSibling.children[i]
+        let sig = e.key === "Enter" ? tr.nextElementSibling && tr.nextElementSibling.children[Math.min(i, tr.nextElementSibling.children.length - 1)]
           : e.shiftKey ? (td.previousElementSibling || (tr.previousElementSibling && tr.previousElementSibling.lastElementChild)) : (td.nextElementSibling || (tr.nextElementSibling && tr.nextElementSibling.children[0]));
         if (!sig && e.key === "Tab" && !e.shiftKey) {
           // Tab en la última celda agrega una fila (como en Word).
@@ -1288,16 +1602,105 @@
         }
         if (sig) { const c = sig.querySelector("[data-celda]"); c.focus(); const r = document.createRange(); r.selectNodeContents(c); getSelection().removeAllRanges(); getSelection().addRange(r); }
       }, true);
+      /** Celdas a las que se aplica el formato según el alcance elegido. */
+      function celdasAlcance(b, celda) {
+        const { filas, cols } = dimTabla(b), p = FT().parseRef(celda), l = [];
+        if (alcanceTab === "fila") for (let c = 0; c < cols; c++) l.push(FT().ref(c, p.f));
+        else if (alcanceTab === "columna") for (let f = 0; f < filas; f++) l.push(FT().ref(p.c, f));
+        else if (alcanceTab === "tabla") for (let f = 0; f < filas; f++) for (let c = 0; c < cols; c++) l.push(FT().ref(c, f));
+        else l.push(celda);
+        return l;
+      }
+      function formatoCelda(k, valor) {
+        if (!celdaActiva || ed.soloLectura) return;
+        const b = doc().bloque(celdaActiva.ref);
+        if (!b) return;
+        const l = celdasAlcance(b, celdaActiva.celda), campos = {};
+        const v = valor !== undefined ? valor : !b[k + ":" + celdaActiva.celda];
+        l.forEach((r) => (campos[k + ":" + r] = v == null || v === "" || v === false ? null : v));
+        doc().cambiar(celdaActiva.ref, campos);
+        volverACelda();
+      }
+      function volverACelda() {
+        if (!celdaActiva) return;
+        const a = celdaActiva;
+        setTimeout(() => { const el = cuerpo.querySelector(`[data-ref="${a.ref}"] [data-celda="${a.celda}"]`); if (el) el.focus({ preventScroll: true }); }, 30);
+      }
+      /** Insertar (n > 0) o borrar (n < 0) filas o columnas de una tabla del texto. */
+      function reacomodarTabla(ref, eje, en, n) {
+        const b = doc().bloque(ref);
+        if (!b) return;
+        const { filas, cols } = dimTabla(b);
+        const total = eje === "f" ? filas : cols;
+        if (n < 0 && total + n < 1) { quitarObjeto(cuerpo.querySelector(`[data-ref="${ref}"]`).dataset.id); return; }
+        const nueva = (x) => (x < en ? x : n > 0 ? x + n : x < en - n ? null : x + n);
+        const nuevos = {};
+        for (const k in b) {
+          const i = k.indexOf(":");
+          if (i < 1) continue;
+          const p = k.slice(0, i), r = k.slice(i + 1), v = b[k];
+          if (v == null || v === "" || v === false) continue;
+          if (p === "aw") { const c = FT().colNum(r) - 1, nc = eje === "c" ? nueva(c) : c; if (nc != null) nuevos["aw:" + FT().colLetra(nc)] = v; continue; }
+          if (!PROPS_TAB.includes(p)) continue;
+          const pos = FT().parseRef(r);
+          if (!pos) continue;
+          if (p === "m") {
+            const [w, h] = String(v).split("x").map(Number);
+            const rg = FT().ajustarEstructura("=" + FT().ref(pos.c, pos.f) + ":" + FT().ref(pos.c + w - 1, pos.f + h - 1), { hoja: "", propia: true, eje, en, n });
+            const g = rg.includes("#REF!") ? null : NOM.graficas.rango(rg.slice(1));
+            if (g && (g.c2 - g.c1 + 1) * (g.f2 - g.f1 + 1) > 1) nuevos["m:" + FT().ref(g.c1, g.f1)] = `${g.c2 - g.c1 + 1}x${g.f2 - g.f1 + 1}`;
+            continue;
+          }
+          const nc = eje === "c" ? nueva(pos.c) : pos.c, nf = eje === "f" ? nueva(pos.f) : pos.f;
+          if (nc == null || nf == null) continue;
+          nuevos[p + ":" + FT().ref(nc, nf)] = v;
+        }
+        const campos = {};
+        for (const k in b) { const i = k.indexOf(":"); if (i > 0 && (PROPS_TAB.includes(k.slice(0, i)) || k.startsWith("aw:")) && b[k] != null && b[k] !== "" && !(k in nuevos)) campos[k] = null; }
+        for (const k in nuevos) if (JSON.stringify(nuevos[k]) !== JSON.stringify(b[k] == null ? null : b[k])) campos[k] = nuevos[k];
+        campos[eje === "f" ? "filasTexto" : "colsTexto"] = Math.max(1, Math.min(eje === "f" ? 200 : 20, total + n));
+        // Los anchos en % de las columnas que quedan se reparten de nuevo.
+        if (eje === "c") Object.keys(campos).concat(Object.keys(b)).filter((k) => k.startsWith("aw:")).forEach((k) => (campos[k] = null));
+        doc().cambiar(ref, campos, { meta: { o: "r" } });
+      }
+      function menuTabla(b, t) {
+        if (!celdaActiva) return;
+        const ref = celdaActiva.ref, bl = doc().bloque(ref) || {}, p = FT().parseRef(celdaActiva.celda);
+        const { spans, cubiertas } = combinadasTabla(bl);
+        const { filas, cols } = dimTabla(bl);
+        const colores = (k, titulo, sin) => NOM.paleta(b, { titulo, actual: bl[k + ":" + celdaActiva.celda], sinColor: sin, colores: k === "r" ? ["#F2F2F2", "#D9D9D9", "#DEEAF6", "#E2EFD9", "#FFF2CC", "#FBE4D5", "#EDE2F6", "#4472C4"].concat(NOM.COLORES) : NOM.COLORES, alElegir: (c) => formatoCelda(k, c) });
+        if (t === "fila") NOM.menu(b, [{ titulo: "Insertar fila" }, { texto: "Arriba", icono: "between-horizontal-start", fn: () => reacomodarTabla(ref, "f", p.f, 1) }, { texto: "Abajo", icono: "between-horizontal-end", fn: () => reacomodarTabla(ref, "f", p.f + 1, 1) }]);
+        else if (t === "col") NOM.menu(b, [{ titulo: "Insertar columna" }, { texto: "A la izquierda", icono: "between-vertical-start", fn: () => reacomodarTabla(ref, "c", p.c, 1) }, { texto: "A la derecha", icono: "between-vertical-end", fn: () => reacomodarTabla(ref, "c", p.c + 1, 1) }]);
+        else if (t === "combinar") {
+          const sp = spans[celdaActiva.celda];
+          NOM.menu(b, [{ titulo: "Celdas" },
+            { texto: "Combinar con la de la derecha", icono: "table-cells-merge", off: p.c + (sp ? sp[0] : 1) >= cols, fn: () => { const w = (sp ? sp[0] : 1) + 1, h = sp ? sp[1] : 1; doc().cambiar(ref, { ["m:" + celdaActiva.celda]: `${w}x${h}` }); } },
+            { texto: "Combinar con la de abajo", icono: "table-cells-merge", off: p.f + (sp ? sp[1] : 1) >= filas, fn: () => { const w = sp ? sp[0] : 1, h = (sp ? sp[1] : 1) + 1; doc().cambiar(ref, { ["m:" + celdaActiva.celda]: `${w}x${h}` }); } },
+            { texto: "Separar", icono: "table-cells-split", off: !sp, fn: () => doc().cambiar(ref, { ["m:" + celdaActiva.celda]: null }) },
+            { texto: "Igualar el ancho de las columnas", icono: "columns-3", fn: () => { const c = {}; Object.keys(bl).filter((k) => k.startsWith("aw:")).forEach((k) => (c[k] = null)); if (Object.keys(c).length) doc().cambiar(ref, c); } }].filter((x) => !x.off));
+          void cubiertas;
+        } else if (t === "n" || t === "i") formatoCelda(t);
+        else if (t === "k") colores("k", "Color de letra", "Automático");
+        else if (t === "r") colores("r", "Relleno", "Sin relleno");
+        else if (t === "al") NOM.menu(b, [{ titulo: "Alinear" }, ...[["izq", "Izquierda", "align-left"], ["centro", "Centro", "align-center"], ["der", "Derecha", "align-right"]].map(([v, tx, i]) => ({ texto: tx, icono: i, marcado: (bl["al:" + celdaActiva.celda] || "izq") === v, fn: () => formatoCelda("al", v === "izq" ? null : v) }))]);
+        else if (t === "bordes") NOM.menu(b, [{ titulo: "Bordes de la tabla" }, ...[["todos", "Todos"], ["horizontales", "Solo horizontales"], ["externos", "Solo el contorno"], ["ninguno", "Sin bordes"]].map(([v, tx]) => ({ texto: tx, marcado: (bl.bordes || "todos") === v, fn: () => doc().cambiar(ref, { bordes: v === "todos" ? null : v }) }))]);
+        else if (t === "cab") doc().cambiar(ref, { encabezado: !bl.encabezado || null });
+        else if (t === "borrar") NOM.menu(b, [{ titulo: "Eliminar" },
+          { texto: "Esta fila", icono: "trash-2", fn: () => reacomodarTabla(ref, "f", p.f, -1) },
+          { texto: "Esta columna", icono: "trash-2", fn: () => reacomodarTabla(ref, "c", p.c, -1) },
+          "-", { texto: "Toda la tabla", icono: "trash-2", peligro: true, fn: () => { const o = cuerpo.querySelector(`[data-ref="${ref}"]`); if (o) quitarObjeto(o.dataset.id); celdaActiva = null; } }]);
+      }
+      raiz.addEventListener("pointerdown", (e) => { if (e.target.closest(".wd-tab-ctl button")) e.preventDefault(); }, true);
+      raiz.addEventListener("change", (e) => {
+        const s = e.target.closest && e.target.closest('.wd-tab-ctl [data-t="alcance"]');
+        if (s) { alcanceTab = s.value; volverACelda(); }
+      });
       raiz.addEventListener("click", (e) => {
         const b = e.target.closest(".wd-tab-ctl button");
         if (!b || ed.soloLectura) return;
-        const o = b.closest("[data-obj]"), ref = o.dataset.ref, bl = doc().bloque(ref) || {};
-        const f = bl.filasTexto || 3, c = bl.colsTexto || 3;
-        if (b.dataset.t === "fila") doc().cambiar(ref, { filasTexto: f + 1 });
-        else if (b.dataset.t === "col") doc().cambiar(ref, { colsTexto: Math.min(20, c + 1) });
-        else if (b.dataset.t === "menos-fila" && f > 1) doc().cambiar(ref, { filasTexto: f - 1 });
-        else if (b.dataset.t === "menos-col" && c > 1) doc().cambiar(ref, { colsTexto: c - 1 });
-        else if (b.dataset.t === "borrar") quitarObjeto(o.dataset.id);
+        const o = b.closest("[data-obj]");
+        if (!celdaActiva || celdaActiva.ref !== o.dataset.ref) celdaActiva = { ref: o.dataset.ref, celda: "A1" };
+        menuTabla(b, b.dataset.t);
       });
       function quitarObjeto(id) {
         const it = sec().item(id);
@@ -1461,6 +1864,8 @@
         }
       });
       cuerpo.addEventListener("click", (e) => {
+        const ob = e.target.closest && e.target.closest(".wd-nota[data-obj], .wd-ecuacion[data-obj]");
+        if (ob && cuerpo.contains(ob)) { e.preventDefault(); if (ob.classList.contains("wd-nota")) dialogoNota(ob.dataset.id); else dialogoEcuacion(ob.dataset.id); return; }
         const a = e.target.closest("a[href]");
         if (a && cuerpo.contains(a) && (e.ctrlKey || e.metaKey || ed.soloLectura)) { e.preventDefault(); window.open(a.href, "_blank", "noopener"); return; }
         const ir = e.target.closest("[data-ir]");
@@ -1718,6 +2123,7 @@
         cuerpo.style.fontFamily = fb.fuente ? cssFuente(fb.fuente) : "";
         cuerpo.style.fontSize = fb.tam ? +fb.tam + "pt" : "";
         if (fb.interlineado) cuerpo.style.setProperty("--wd-li", +fb.interlineado); else cuerpo.style.removeProperty("--wd-li");
+        if (+fb.primera) cuerpo.style.setProperty("--wd-primera", +fb.primera + "cm"); else cuerpo.style.removeProperty("--wd-primera");
         cuerpo.classList.toggle("con-fuente", !!fb.fuente);
       }
       function aplicarPagina() {
@@ -1731,7 +2137,49 @@
         hoja.style.setProperty("--md", pg.m.d + "px");
         hoja.style.zoom = zoom;
         raiz.dataset.vista = vista;
+        estiloImpresion(pg);
         programarPaginar();
+      }
+      /** 8.2 Encabezado y pie: lo que se ve en pantalla y lo que se imprime (PDF). */
+      const encPie = () => {
+        const d = doc().valor("_doc", "encabezado") || "", pie = doc().valor("_doc", "pie") || "";
+        return {
+          enc: d, pie, nums: doc().valor("_doc", "numeros") !== false,
+          pos: doc().valor("_doc", "numPos") || "pie-der", fmt: doc().valor("_doc", "numFmt") || "n",
+          inicio: +doc().valor("_doc", "numInicio") || 1, primera: !!doc().valor("_doc", "primeraDistinta"),
+          encAl: doc().valor("_doc", "encAlin") || "izq", pieAl: doc().valor("_doc", "pieAlin") || "izq",
+          logo: doc().valor("_doc", "encabezadoImg") || null, marca: doc().valor("_doc", "marcaAgua") || "",
+        };
+      };
+      const textoNumero = (n, total, fmt) => ({ pagina: `Página ${n}`, total: `${n} de ${total}`, "pagina-total": `Página ${n} de ${total}` }[fmt] || String(n));
+      function estiloImpresion(pg) {
+        let st = document.getElementById("wd-imprimir");
+        if (!st) { st = document.createElement("style"); st.id = "wd-imprimir"; st.setAttribute("data-nom", ""); document.head.append(st); }
+        const e = encPie(), q = (s) => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ") + '"';
+        const fb = formatoBase();
+        const lado = { izq: "left", centro: "center", der: "right" };
+        const cajas = {};
+        if (e.enc) cajas["top-" + lado[e.encAl]] = q(e.enc);
+        if (e.pie) cajas["bottom-" + lado[e.pieAl]] = q(e.pie);
+        if (e.nums) {
+          const [zona, al] = e.pos.split("-"), k = (zona === "enc" ? "top-" : "bottom-") + lado[al];
+          const off = e.inicio - 1, n = off ? `counter(page, decimal)` : "counter(page)";
+          const num = { pagina: `"Página " ${n}`, total: `${n} " de " counter(pages)`, "pagina-total": `"Página " ${n} " de " counter(pages)` }[e.fmt] || n;
+          cajas[k] = cajas[k] ? cajas[k] + ' "   " ' + num : num;
+        }
+        const fuente = fb.fuente ? cssFuente(fb.fuente) : "Calibri, Carlito, sans-serif";
+        const caja = (k, v) => `@${k} { content: ${v}; font-family: ${fuente}; font-size: ${Math.min(12, +fb.tam || 11)}pt; color: #222; vertical-align: middle; }`;
+        st.textContent = `@media print {
+          @page { size: ${pg.w}px ${pg.h}px; margin: ${pg.m.s}px ${pg.m.d}px ${pg.m.i}px ${pg.m.iz}px; ${Object.entries(cajas).map(([k, v]) => caja(k, v)).join(" ")} }
+          ${e.primera ? `@page :first { ${Object.keys(cajas).map((k) => `@${k} { content: none; }`).join(" ")} }` : ""}
+          ${e.inicio > 1 ? `body { counter-reset: page ${e.inicio - 1}; }` : ""}
+          .wd-marca-impresa { display: ${e.marca ? "grid" : "none"} !important; }
+        }`;
+        let m = document.querySelector(".wd-marca-impresa");
+        if (e.marca) {
+          if (!m) { m = document.createElement("div"); m.className = "wd-marca-impresa"; document.body.append(m); }
+          m.textContent = e.marca;
+        } else if (m) m.remove();
       }
       let tPag = null;
       function programarPaginar() { clearTimeout(tPag); tPag = setTimeout(paginar, 120); }
@@ -1739,9 +2187,12 @@
       function paginar() {
         const kids = cuerpo.children;
         for (const el of kids) if (el.dataset.empuje) { el.style.marginTop = ""; delete el.dataset.empuje; }
+        // 8.2 Los cortes de la paginación anterior se quitan (se calculan de nuevo).
+        $$(".wd-corte", cuerpo).forEach((x) => { const p = x.parentNode; x.remove(); if (p) p.normalize(); });
         cuerpo.style.minHeight = "";
         const pg = pagina();
         if (vista !== "paginas") {
+          pintarNotasFinales();
           capaPaginas.innerHTML = "";
           numPaginas = Math.max(1, Math.ceil(cuerpo.offsetHeight / pg.h));
           pintarEstado(); pintarCursores();
@@ -1751,38 +2202,181 @@
         const H = pg.h, paso = H + GAP, util = H - pg.m.s - pg.m.i;
         const tops = [], altos = [];
         for (const el of kids) { tops.push(el.offsetTop); altos.push(el.offsetHeight); }
+        // 8.2 Notas al pie: cuánto mide cada una (para dejarle lugar al final de su página).
+        const anchoTexto = pg.w - pg.m.iz - pg.m.d;
+        const medidor = medirNotas(anchoTexto);
+        const notasPag = {};   // página → [{ id, n, texto, alto }]
+        const reservado = (p) => (notasPag[p] || []).reduce((s, x) => s + x.alto, 0) + ((notasPag[p] || []).length ? 14 : 0);
         let corr = 0, forzar = null;
         for (let i = 0; i < kids.length; i++) {
           const el = kids[i], top = tops[i] + corr, h = altos[i];
-          const pi = Math.floor(top / paso), arriba = pi * paso + pg.m.s, abajo = pi * paso + H - pg.m.i;
+          const pi = Math.floor(top / paso), arriba = pi * paso + pg.m.s;
+          const notasEl = $$(".wd-nota[data-obj]", el);
+          const altoNotasEl = notasEl.reduce((s, o) => s + medidor(o.dataset.id), 0);
+          const abajo = pi * paso + H - pg.m.i - reservado(pi) - (altoNotasEl ? altoNotasEl + (reservado(pi) ? 0 : 14) : 0);
           let destino = null;
           if (forzar != null && top < forzar) destino = forzar;
           else if (top < arriba - 1) destino = arriba;
-          else if (top + h > abajo + 1 && h <= util) destino = (pi + 1) * paso + pg.m.s;
+          else if (top + h > abajo + 1) {
+            // Un párrafo que no cabe se parte (si deja al menos 2 líneas en cada página); si no, pasa completo.
+            const extra = partirParrafo(el, top, paso, H, pg, reservado, notasEl, medidor);
+            if (extra != null) corr += extra;
+            else if (h <= util) destino = (pi + 1) * paso + pg.m.s;
+          }
           forzar = null;
+          let topFinal = top;
           if (destino != null && destino > top) {
             const d = destino - top;
             const base = parseFloat(getComputedStyle(el).marginTop) || 0;
             el.style.marginTop = base + d + "px";
             el.dataset.empuje = d;
             corr += d;
+            topFinal = destino;
           }
-          if (el.querySelector(".wd-salto")) { const t2 = top + (destino != null && destino > top ? destino - top : 0); forzar = (Math.floor(t2 / paso) + 1) * paso + pg.m.s; }
+          // Cada nota va en la página donde quedó su número.
+          if (notasEl.length) {
+            const er = el.getBoundingClientRect(), k = er.height / (el.offsetHeight || 1) || 1;
+            notasEl.forEach((o) => {
+              const y = topFinal + (o.getBoundingClientRect().top - er.top) / k;
+              const p = Math.floor(y / paso);
+              (notasPag[p] = notasPag[p] || []).push({ id: o.dataset.id, n: numerosNotas().get(o.dataset.id), texto: textoNota(o.dataset.id), alto: medidor(o.dataset.id) });
+            });
+          }
+          if (el.querySelector(".wd-salto")) { const t2 = topFinal; forzar = (Math.floor(t2 / paso) + 1) * paso + pg.m.s; }
         }
         tomarRegistros();
         const fin = cuerpo.offsetHeight;
         numPaginas = Math.max(1, Math.ceil((fin + 1) / paso));
         if (forzar != null) numPaginas = Math.max(numPaginas, Math.round((forzar - pg.m.s) / paso) + 1);
         cuerpo.style.minHeight = numPaginas * paso - GAP + "px";
-        const d = doc().valor("_doc", "encabezado") || "", pie = doc().valor("_doc", "pie") || "", nums = doc().valor("_doc", "numeros") !== false;
+        const e = encPie(), fb = formatoBase();
+        const [zonaNum, alNum] = e.pos.split("-");
+        const fila = (zona, texto, al, n, extra) => {
+          const slots = { izq: "", centro: "", der: "" };
+          if (texto) slots[al] += esc(texto);
+          if (e.nums && zonaNum === zona) slots[alNum] += (slots[alNum] ? "&emsp;" : "") + esc(textoNumero(n + e.inicio - 1, numPaginas + e.inicio - 1, e.fmt));
+          return `<div class="wd-${zona === "enc" ? "enc" : "pie"}">${extra || ""}<span class="izq">${slots.izq}</span><span class="centro">${slots.centro}</span><span class="der">${slots.der}</span></div>`;
+        };
+        const logo = e.logo && e.logo.src ? `<img class="wd-logo" src="${esc(e.logo.src)}" alt="" style="height:${Math.min(80, +e.logo.alto || 36)}px">` : "";
+        const estiloEP = `font-family:${esc(fb.fuente ? cssFuente(fb.fuente) : "Calibri, Carlito, sans-serif")};font-size:${Math.min(12, +fb.tam || 11)}pt`;
         let h = "";
         for (let i = 0; i < numPaginas; i++) {
-          h += `<div class="wd-pagina" style="top:${i * paso}px"><div class="wd-enc">${esc(d)}</div><div class="wd-pie"><span>${esc(pie)}</span>${nums ? `<span>${i + 1}</span>` : ""}</div></div>`;
+          const vacia = e.primera && i === 0;
+          const notas = notasPag[i] || [];
+          const bloqueNotas = notas.length ? `<div class="wd-notas" style="left:${pg.m.iz}px;right:${pg.m.d}px;bottom:${pg.m.i}px">${notas.map((x) => `<div class="wd-nota-pie"><sup>${x.n}</sup> ${esc(x.texto)}</div>`).join("")}</div>` : "";
+          h += `<div class="wd-pagina" style="top:${i * paso}px;${estiloEP}">${vacia ? "" : fila("enc", e.enc, e.encAl, i + 1, logo) + fila("pie", e.pie, e.pieAl, i + 1)}${bloqueNotas}${e.marca ? `<div class="wd-marca-agua">${esc(e.marca)}</div>` : ""}</div>`;
         }
+        pintarNotasFinales();
         if (capaPaginas.innerHTML !== h) capaPaginas.innerHTML = h;
         pintarEstado();
         pintarCursores();
         if (seguirCursor) { seguirCursor = false; desplazarAlCursor(); }
+      }
+      /** Mide el alto de cada nota al pie con el ancho del texto (con caché por texto). */
+      const cacheAltos = new Map();
+      function medirNotas(ancho) {
+        let caja = null;
+        return (id) => {
+          const t = textoNota(id), k = ancho + "|" + t;
+          if (cacheAltos.has(k)) return cacheAltos.get(k);
+          if (!caja) { caja = document.createElement("div"); caja.className = "wd-notas"; caja.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${ancho}px`; capaPaginas.append(caja); }
+          caja.innerHTML = `<div class="wd-nota-pie"><sup>9</sup> ${esc(t || " ")}</div>`;
+          const a = caja.offsetHeight + 2;
+          cacheAltos.set(k, a);
+          if (cacheAltos.size > 500) cacheAltos.clear();
+          return a;
+        };
+      }
+      /** Al imprimir, las notas van al final del documento (Chromium no las pone al pie de cada hoja). */
+      function pintarNotasFinales() {
+        let f = $(".wd-notas-finales", hoja);
+        const l = [...numerosNotas().entries()];
+        if (!l.length) { if (f) f.remove(); return; }
+        if (!f) { f = document.createElement("div"); f.className = "wd-notas-finales"; hoja.append(f); }
+        f.innerHTML = `<div class="wd-notas-titulo">Notas</div>` + l.map(([id, n]) => `<p><sup>${n}</sup> ${esc(textoNota(id))}</p>`).join("");
+      }
+      /**
+       * Parte un párrafo que se pasa del final de la página: mete un separador invisible al inicio de
+       * la primera línea que no cabe (ocupa todo el renglón), para que el resto empiece en la página
+       * siguiente. Deja al menos 2 líneas en cada lado. Devuelve cuánto creció el párrafo, o null si
+       * conviene pasarlo completo. El separador no es contenido: no entra al modelo ni se imprime.
+       */
+      function partirParrafo(el, top, paso, H, pg, reservado, notasEl, medidor) {
+        if (vista !== "paginas" || el.querySelector(".wd-obj.bloque, .wd-imagen.libre, .wd-imagen.flota-izq, .wd-imagen.flota-der") || !el.firstChild) return null;
+        let creci = 0;
+        for (let vuelta = 0; vuelta < 40; vuelta++) {
+          const lineas = lineasDe(el);
+          if (lineas.length < 4) return creci || null;
+          { const er0 = el.getBoundingClientRect(), z0 = er0.height / (el.offsetHeight || 1) || 1;
+            notasEl.forEach((o) => { const t = (o.getBoundingClientRect().top - er0.top) / z0; o._linea = lineas.findIndex((l) => t >= l.t - 2 && t < l.b); }); }
+          let k = -1, pag = -1;
+          for (let j = 0; j < lineas.length; j++) {
+            const yT = top + lineas[j].t, yB = top + lineas[j].b, p = Math.floor(yT / paso);
+            const notasAntes = notasEl.filter((o) => o._linea != null && o._linea <= j).reduce((s, o) => s + medidor(o.dataset.id), 0);
+            const limite = p * paso + H - pg.m.i - reservado(p) - (notasAntes ? notasAntes + 14 : 0);
+            if (yB > limite + 1) { k = j; pag = p; break; }
+          }
+          if (k < 0) return creci;
+          const antes = lineas.filter((l, j) => j < k && Math.floor((top + l.t) / paso) === pag).length;
+          if (k > 0 && lineas.length - k < 2 && antes >= 3) k = lineas.length - 2;   // sin línea viuda
+          const enPagina = lineas.filter((l, j) => j < k && Math.floor((top + l.t) / paso) === pag).length;
+          if (enPagina < 2 || lineas.length - k < 2) return creci || null;            // sin línea huérfana
+          const destino = (pag + 1) * paso + pg.m.s, alto = destino - (top + lineas[k].t);
+          if (alto <= 0) return creci || null;
+          const er = el.getBoundingClientRect(), z = er.height / (el.offsetHeight || 1) || 1;
+          const punto = inicioDeLinea(el, er.top + lineas[k].t * z);
+          if (!punto) return creci || null;
+          const corte = document.createElement("span");
+          corte.className = "wd-corte";
+          corte.contentEditable = "false";
+          corte.setAttribute("aria-hidden", "true");
+          corte.style.height = alto + "px";
+          const antesAlto = el.offsetHeight;
+          const rg = document.createRange();
+          rg.setStart(punto.node, punto.off);
+          rg.insertNode(corte);
+          creci += Math.max(0, el.offsetHeight - antesAlto);
+        }
+        return creci;
+      }
+      /** El primer carácter de texto que está en la línea que empieza en y (coordenadas de pantalla).
+          Funciona aunque el párrafo no esté a la vista (no usa caretRangeFromPoint). */
+      function inicioDeLinea(el, y) {
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const r = document.createRange();
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          if (!n.length || (n.parentElement && n.parentElement.closest("[data-obj], .wd-corte"))) continue;
+          r.setStart(n, n.length - 1); r.setEnd(n, n.length);
+          const ult = r.getBoundingClientRect();
+          if (ult.height && ult.top < y - 1) continue;
+          let lo = 0, hi = n.length - 1;
+          while (lo < hi) {
+            const m = (lo + hi) >> 1;
+            r.setStart(n, m); r.setEnd(n, m + 1);
+            const rc = r.getBoundingClientRect();
+            if (rc.height && rc.top >= y - 1) hi = m; else lo = m + 1;
+          }
+          // No partir un par de sustitución (emojis).
+          if (lo > 0 && /[\uDC00-\uDFFF]/.test(n.data[lo])) lo--;
+          return { node: n, off: lo };
+        }
+        return null;
+      }
+      /** Líneas de un párrafo (arriba, abajo e inicio en x), relativas a su borde de arriba y sin zoom. */
+      function lineasDe(el) {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const er = el.getBoundingClientRect(), z = er.height / (el.offsetHeight || 1) || 1;
+        const cortes = $$(".wd-corte", el).map((c) => c.getBoundingClientRect());
+        const rects = [...r.getClientRects()].filter((x) => x.width > 0.5 && x.height > 0.5 && !cortes.some((c) => Math.abs(c.top - x.top) < 1 && Math.abs(c.height - x.height) < 1));
+        rects.sort((a, b) => a.top - b.top || a.left - b.left);
+        const l = [];
+        for (const x of rects) {
+          const u = l[l.length - 1];
+          if (u && x.top < u.b - Math.min(u.b - u.t, x.bottom - x.top) / 2) { u.b = Math.max(u.b, x.bottom); u.t = Math.min(u.t, x.top); u.x = Math.min(u.x, x.left); }
+          else l.push({ t: x.top, b: x.bottom, x: x.left });
+        }
+        return l.map((y) => ({ t: (y.t - er.top) / z, b: (y.b - er.top) / z, x: y.x }));
       }
       function fijarZoom(z) {
         zoom = Math.max(0.5, Math.min(2, z));
@@ -1995,11 +2589,18 @@
         let seq = false;
         lista.forEach((c) => {
           if (c.seq) { if (origen !== "teclado" && origen !== "comando") seq = true; return; }
-          if (c.bloque === "_doc") { if (["pagina", "encabezado", "pie", "numeros", "formato"].some((k) => k in c.campos)) aplicarPagina(); return; }
+          if (c.bloque === "_doc") { if (["pagina", "encabezado", "pie", "numeros", "formato", "numPos", "numFmt", "numInicio", "primeraDistinta", "encAlin", "pieAlin", "encabezadoImg", "marcaAgua"].some((k) => k in c.campos)) aplicarPagina(); return; }
           if (origen === "celda" && c.local) return;
           // Tablas e imágenes del texto: se actualizan en su lugar (sin quitar el foco de una celda).
           $$(`[data-ref="${CSS.escape(c.bloque)}"]`, cuerpo).forEach((o) => {
-            if ("filasTexto" in c.campos || "colsTexto" in c.campos || "encabezado" in c.campos) { pintarTabla(o, doc().bloque(c.bloque), c.bloque); return; }
+            // Forma o formato de la tabla: se repinta y el foco vuelve a la celda donde estaba.
+            if (Object.keys(c.campos).some((k) => /^(filasTexto|colsTexto|encabezado|bordes)$/.test(k) || /^(n|i|k|r|al|m|aw):/.test(k))) {
+              const act = document.activeElement && document.activeElement.closest && document.activeElement.closest("[data-celda]");
+              const enEsta = act && o.contains(act) ? act.dataset.celda : null;
+              pintarTabla(o, doc().bloque(c.bloque), c.bloque);
+              if (enEsta) { const el = $(`[data-celda="${enEsta}"]`, o); if (el) el.focus({ preventScroll: true }); }
+              return;
+            }
             Object.keys(c.campos).filter((k) => k.startsWith("c:")).forEach((k) => {
               const el = $(`[data-celda="${k.slice(2)}"]`, o);
               if (el && document.activeElement !== el) el.textContent = c.campos[k] || "";
@@ -2135,6 +2736,9 @@
           { texto: "Salto de página", icono: "file-plus", atajo: "Ctrl+Enter", fn: () => insertarBloque({ tipo: "salto" }) },
           { texto: "Línea horizontal", icono: "minus", fn: () => insertarBloque({ tipo: "linea" }) },
           { texto: "Índice (tabla de contenido)", icono: "list-tree", fn: () => insertarBloque({ tipo: "indice" }) },
+          { texto: "Ecuación…", icono: "sigma", fn: () => dialogoEcuacion(null) },
+          { texto: "Nota al pie…", icono: "superscript", fn: () => dialogoNota(null) },
+          { texto: "Columnas (dos lado a lado)", icono: "columns-3", fn: () => insertarColumnas(2) },
           { texto: "Fecha de hoy", icono: "calendar", fn: () => insertarTexto(new Date().toLocaleDateString("es-MX", { dateStyle: "long" })) },
           { texto: "Símbolo…", icono: "omega", fn: () => menuSimbolos(b) },
           "-",
@@ -2163,6 +2767,8 @@
           { texto: "Subíndice", icono: "subscript", atajo: "Ctrl+=", fn: () => formato({ va: attrsEnCursor().a.va === "sub" ? null : "sub" }) },
           { texto: "MAYÚSCULAS / minúsculas", icono: "case-sensitive", atajo: "Mayús+F3", fn: cambiarMayusculas },
           { texto: "Borrar formato", icono: "remove-formatting", atajo: "Ctrl+\\", fn: borrarFormato },
+          { texto: "Párrafo (sangrías, espacio)…", icono: "pilcrow", fn: dialogoParrafo },
+          { texto: "Opciones de la lista…", icono: "list-ordered", fn: dialogoLista },
           { titulo: "Documento" },
           { texto: "Buscar y reemplazar", icono: "search", atajo: "Ctrl+H", fn: () => buscar(true) },
           { texto: "Contar palabras", icono: "file-text", fn: dialogoConteo },
@@ -2179,28 +2785,109 @@
       function dialogoPagina() {
         const pg = pagina(), c = doc().valor("_doc", "pagina") || {};
         const mActual = Object.keys(MARGENES).find((k) => MARGENES[k].v === pg.m.s && pg.m.s === pg.m.i && pg.m.iz === pg.m.d && pg.m.s === pg.m.iz) || "personal";
+        const cm = (k) => enCm(pg.m[k]);
         const cuerpoH = html(`<form class="col">
           <div class="campo"><label>Tamaño del papel</label><div class="entrada"><select data-tam>${Object.entries(PAGINAS).map(([k, v]) => `<option value="${k}" ${k === pg.tam ? "selected" : ""}>${v.n}</option>`).join("")}</select></div></div>
           <div class="campo"><label>Orientación</label><div class="segmentado lleno" role="group"><button type="button" data-o="v" aria-pressed="${pg.orient === "v"}">Vertical</button><button type="button" data-o="h" aria-pressed="${pg.orient === "h"}">Horizontal</button></div></div>
-          <div class="campo"><label>Márgenes</label><div class="entrada"><select data-m>${Object.entries(MARGENES).map(([k, v]) => `<option value="${k}" ${k === mActual ? "selected" : ""}>${v.n}</option>`).join("")}${mActual === "personal" ? `<option value="personal" selected>Personalizados</option>` : ""}</select></div></div></form>`);
+          <div class="campo"><label>Márgenes</label><div class="entrada"><select data-m>${Object.entries(MARGENES).map(([k, v]) => `<option value="${k}" ${k === mActual ? "selected" : ""}>${v.n}</option>`).join("")}<option value="personal" ${mActual === "personal" ? "selected" : ""}>Personalizados…</option></select></div></div>
+          <div class="fila" data-pers ${mActual === "personal" ? "" : "hidden"} style="flex-wrap:wrap">${[["s", "Arriba"], ["i", "Abajo"], ["iz", "Izquierda"], ["d", "Derecha"]].map(([k, t]) => `<div class="campo" style="flex:1;min-width:110px"><label>${t} (cm)</label><div class="entrada"><input data-mc="${k}" inputmode="decimal" value="${cm(k)}"></div></div>`).join("")}</div></form>`);
         let orient = pg.orient;
         $$("[data-o]", cuerpoH).forEach((b) => (b.onclick = () => { orient = b.dataset.o; $$("[data-o]", cuerpoH).forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
+        $("[data-m]", cuerpoH).onchange = (e) => { $("[data-pers]", cuerpoH).hidden = e.target.value !== "personal"; };
         const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Aplicar</button></div>`);
         const h = NOM.hoja({ titulo: "Configurar página", icono: "file-cog", cuerpo: cuerpoH, pie });
         $("[data-no]", pie).onclick = () => h.cerrar();
-        $("[data-si]", pie).onclick = () => {
-          const mk = $("[data-m]", cuerpoH).value, v = MARGENES[mk] ? MARGENES[mk].v : null;
-          doc().cambiar("_doc", { pagina: Object.assign({}, c, { tam: $("[data-tam]", cuerpoH).value, orient, margen: v ? { s: v, i: v, iz: v, d: v } : c.margen }) });
+        $("[data-si]", pie).onclick = (ev) => {
+          ev.preventDefault();
+          const mk = $("[data-m]", cuerpoH).value;
+          let margen = MARGENES[mk] ? { s: MARGENES[mk].v, i: MARGENES[mk].v, iz: MARGENES[mk].v, d: MARGENES[mk].v } : null;
+          if (!margen) {
+            margen = {};
+            for (const k of ["s", "i", "iz", "d"]) {
+              const v = parseFloat(String($(`[data-mc="${k}"]`, cuerpoH).value).replace(",", "."));
+              if (!(v >= 0 && v <= 8)) return aviso("Los márgenes van de 0 a 8 cm", { tipo: "aviso" });
+              margen[k] = Math.round(v * CM);
+            }
+          }
+          doc().cambiar("_doc", { pagina: Object.assign({}, c, { tam: $("[data-tam]", cuerpoH).value, orient, margen }) });
           aplicarPagina();
+          h.cerrar();
+        };
+      }
+      /** 8.2 Párrafo: alineación, sangrías (cm), primera línea o francesa, espacio e interlineado. */
+      function dialogoParrafo() {
+        if (ed.soloLectura) return;
+        const ps = parrafosDeSel(), pa = S().attrs(ps[0].mark);
+        const especial = +pa.francesa ? "francesa" : pa.primera != null && pa.primera !== "" ? "primera" : "ninguna";
+        const cuerpoH = html(`<form class="col">
+          <div class="campo"><label>Alineación</label><div class="entrada"><select data-al>${[["", "Izquierda"], ["centro", "Centro"], ["der", "Derecha"], ["just", "Justificado"]].map(([v, t]) => `<option value="${v}" ${(pa.alin || "") === v ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+          <div class="fila"><div class="campo crece"><label>Sangría izquierda (cm)</label><div class="entrada"><input data-iz inputmode="decimal" value="${esc(pa.sangiz || 0)}"></div></div>
+            <div class="campo crece"><label>Derecha (cm)</label><div class="entrada"><input data-der inputmode="decimal" value="${esc(pa.sangder || 0)}"></div></div></div>
+          <div class="fila"><div class="campo crece"><label>Especial</label><div class="entrada"><select data-esp><option value="ninguna">Ninguna</option><option value="primera" ${especial === "primera" ? "selected" : ""}>Primera línea</option><option value="francesa" ${especial === "francesa" ? "selected" : ""}>Francesa (referencias APA)</option></select></div></div>
+            <div class="campo crece"><label>En (cm)</label><div class="entrada"><input data-esp-cm inputmode="decimal" value="${esc(+pa.francesa || +pa.primera || 1.27)}"></div></div></div>
+          <div class="fila"><div class="campo crece"><label>Espacio antes (pt)</label><div class="entrada"><input data-antes inputmode="decimal" value="${esc(pa.antes != null ? pa.antes : 0)}"></div></div>
+            <div class="campo crece"><label>Después (pt)</label><div class="entrada"><input data-desp inputmode="decimal" value="${esc(pa.despues != null ? pa.despues : 8)}"></div></div></div>
+          <div class="campo"><label>Interlineado</label><div class="entrada"><select data-li>${[["", "1.15 (Word)"], [1, "Sencillo"], [1.5, "1.5 líneas"], [2, "Doble"], [2.5, "2.5"], [3, "Triple"]].map(([v, t]) => `<option value="${v}" ${String(pa.interlineado || "") === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+          <div class="fila" style="flex-wrap:wrap"><span class="suave chico">Rápido:</span><button type="button" class="btn chico" data-apa>Párrafo APA (1.27 cm, doble)</button><button type="button" class="btn chico" data-ref>Referencia APA (francesa)</button></div></form>`);
+        const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Aplicar</button></div>`);
+        const h = NOM.hoja({ titulo: "Párrafo", icono: "pilcrow", cuerpo: cuerpoH, pie });
+        const num = (sel, def) => { const v = parseFloat(String($(sel, cuerpoH).value).replace(",", ".")); return isNaN(v) ? def : v; };
+        $("[data-apa]", cuerpoH).onclick = () => { $("[data-esp]", cuerpoH).value = "primera"; $("[data-esp-cm]", cuerpoH).value = "1.27"; $("[data-li]", cuerpoH).value = "2"; $("[data-antes]", cuerpoH).value = "0"; $("[data-desp]", cuerpoH).value = "0"; };
+        $("[data-ref]", cuerpoH).onclick = () => { $("[data-esp]", cuerpoH).value = "francesa"; $("[data-esp-cm]", cuerpoH).value = "1.27"; $("[data-li]", cuerpoH).value = "2"; $("[data-antes]", cuerpoH).value = "0"; $("[data-desp]", cuerpoH).value = "0"; };
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        $("[data-si]", pie).onclick = (ev) => {
+          ev.preventDefault();
+          const esp = $("[data-esp]", cuerpoH).value, ecm = Math.max(0, Math.min(10, num("[data-esp-cm]", 1.27)));
+          const iz = Math.max(0, Math.min(15, num("[data-iz]", 0))), der = Math.max(0, Math.min(15, num("[data-der]", 0)));
+          const antes = Math.max(0, Math.min(200, num("[data-antes]", 0))), desp = Math.max(0, Math.min(200, num("[data-desp]", 8)));
+          formatoParrafo({ alin: $("[data-al]", cuerpoH).value || null, sangiz: iz || null, sangder: der || null, primera: esp === "primera" ? ecm : null, francesa: esp === "francesa" ? ecm : null,
+            antes: antes || null, despues: desp === 8 ? null : desp, interlineado: +$("[data-li]", cuerpoH).value || null }, ps);
+          h.cerrar();
+        };
+      }
+      /** 8.2 Lista: viñeta o formato de número, empezar en y continuar la numeración. */
+      /** Los renglones de la misma lista (seguidos y del mismo tipo) que los elegidos. */
+      function parrafosDeLista(ps) {
+        const tipo = S().attrs(ps[0].mark).lista, todos = psPintado;
+        let i0 = todos.findIndex((p) => p.k === ps[0].k), i1 = todos.findIndex((p) => p.k === ps[ps.length - 1].k);
+        if (i0 < 0 || i1 < 0) return ps;
+        while (i0 > 0 && S().attrs(todos[i0 - 1].mark).lista === tipo) i0--;
+        while (i1 < todos.length - 1 && S().attrs(todos[i1 + 1].mark).lista === tipo) i1++;
+        return todos.slice(i0, i1 + 1);
+      }
+      function dialogoLista() {
+        if (ed.soloLectura) return;
+        const sel = parrafosDeSel(), pa = S().attrs(sel[0].mark);
+        const ps = pa.lista ? parrafosDeLista(sel) : sel;
+        if (pa.lista !== "vinetas" && pa.lista !== "numeros") return aviso("Pon el cursor en una lista con viñetas o numerada", { tipo: "info" });
+        const num = pa.lista === "numeros";
+        const cuerpoH = html(`<form class="col">
+          ${num ? `<div class="campo"><label>Formato</label><div class="segmentado" role="group" style="flex-wrap:wrap">${NUMFMTS.map(([v, t]) => `<button type="button" data-fmt="${esc(v)}" aria-pressed="${(pa.numfmt || "") === v || (!pa.numfmt && v === "1.")}">${esc(t)}</button>`).join("")}</div></div>
+            <div class="fila"><div class="campo crece"><label>Empezar en</label><div class="entrada"><input data-ini inputmode="numeric" value="${esc(pa.inicio != null ? pa.inicio : "")}" placeholder="Automático"></div></div></div>
+            <label class="interruptor"><input type="checkbox" data-cont ${pa.continuar ? "checked" : ""}> Continuar la numeración de la lista anterior</label>`
+          : `<div class="campo"><label>Viñeta</label><div class="segmentado" role="group" style="flex-wrap:wrap">${VINETAS.map((v) => `<button type="button" data-vin="${esc(v)}" aria-pressed="${(pa.vineta || "•") === v}" style="min-width:44px;font-size:18px">${esc(v)}</button>`).join("")}</div></div>`}</form>`);
+        let fmt = pa.numfmt || "1.", vin = pa.vineta || "•";
+        $$("[data-fmt]", cuerpoH).forEach((b) => (b.onclick = () => { fmt = b.dataset.fmt; $$("[data-fmt]", cuerpoH).forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
+        $$("[data-vin]", cuerpoH).forEach((b) => (b.onclick = () => { vin = b.dataset.vin; $$("[data-vin]", cuerpoH).forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
+        const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Aplicar</button></div>`);
+        const h = NOM.hoja({ titulo: num ? "Lista numerada" : "Lista con viñetas", icono: num ? "list-ordered" : "list", cuerpo: cuerpoH, pie });
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        $("[data-si]", pie).onclick = (ev) => {
+          ev.preventDefault();
+          if (!num) { formatoParrafo((p) => (p.lista === "vinetas" ? { vineta: vin === "•" ? null : vin } : null), ps); h.cerrar(); return; }
+          const ini = String($("[data-ini]", cuerpoH).value).trim(), cont = $("[data-cont]", cuerpoH).checked;
+          // El formato va en toda la lista; "empezar en" y "continuar", en el primer renglón elegido.
+          formatoParrafo((p, x) => (p.lista !== "numeros" ? null : Object.assign({ numfmt: fmt === "1." ? null : fmt }, x.k === sel[0].k ? { inicio: ini !== "" && !isNaN(+ini) ? Math.max(0, +ini) : null, continuar: cont || null } : {})), ps);
           h.cerrar();
         };
       }
       function dialogoFormato() {
         const fb = formatoBase(), esp = (ed.espacio && ed.espacio.formatoBase) || null;
         const cuerpoH = html(`<form class="col">
-          <p class="suave" style="font-weight:650">El texto sin formato propio usa esta fuente, este tamaño y este interlineado (como el estilo Normal de Word).</p>
+          <p class="suave" style="font-weight:650">El texto sin formato propio usa esta fuente, este tamaño, este interlineado y esta sangría de primera línea (como el estilo Normal de Word). Para APA: Times New Roman 12, doble y 1.27 cm.</p>
           <div class="campo"><label>Fuente</label><div class="entrada"><select data-f><option value="">Calibri (la de siempre)</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option ${fb.fuente === f ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div></div>
           <div class="fila"><div class="campo crece"><label>Tamaño (pt)</label><div class="entrada"><input data-t inputmode="decimal" value="${esc(fb.tam || "")}" placeholder="11"></div></div>
+            <div class="campo crece"><label>Primera línea (cm)</label><div class="entrada"><input data-pr inputmode="decimal" value="${esc(fb.primera || "")}" placeholder="0"></div></div>
             <div class="campo crece"><label>Interlineado</label><div class="entrada"><select data-l>${[["", "1.15 (Word)"], [1, "Sencillo"], [1.5, "1.5"], [2, "Doble"]].map(([v, t]) => `<option value="${v}" ${String(fb.interlineado || "") === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></div></div></div>
           ${esp ? `<button type="button" class="btn chico" data-espacio>${ico("layout-grid", "ico-s")} Usar el formato del espacio (${esc([esp.fuente, esp.tam && esp.tam + " pt", esp.interlineado && "interlineado " + esp.interlineado].filter(Boolean).join(", "))})</button>` : ""}</form>`);
         const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Aplicar</button></div>`);
@@ -2210,20 +2897,40 @@
         const be = $("[data-espacio]", cuerpoH); if (be) be.onclick = () => fijar(Object.assign({}, esp));
         $("[data-si]", pie).onclick = () => {
           const t = parseFloat(String($("[data-t]", cuerpoH).value).replace(",", "."));
-          const f = { fuente: $("[data-f]", cuerpoH).value || null, tam: t >= 6 && t <= 72 ? t : null, interlineado: +$("[data-l]", cuerpoH).value || null };
-          fijar(f.fuente || f.tam || f.interlineado ? f : null);
+          const pr = parseFloat(String($("[data-pr]", cuerpoH).value).replace(",", "."));
+          const f = { fuente: $("[data-f]", cuerpoH).value || null, tam: t >= 6 && t <= 72 ? t : null, interlineado: +$("[data-l]", cuerpoH).value || null, primera: pr > 0 && pr <= 5 ? pr : null };
+          fijar(f.fuente || f.tam || f.interlineado || f.primera ? f : null);
         };
       }
       function dialogoEncabezado() {
+        const e = encPie();
+        const al = (n, v) => `<select data-${n}>${[["izq", "Izquierda"], ["centro", "Centro"], ["der", "Derecha"]].map(([k, t]) => `<option value="${k}" ${v === k ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+        let logo = e.logo;
         const cuerpoH = html(`<form class="col">
-          <div class="campo"><label for="wd-enc">Encabezado (arriba de cada página)</label><div class="entrada"><input id="wd-enc" maxlength="200" value="${esc(doc().valor("_doc", "encabezado") || "")}"></div></div>
-          <div class="campo"><label for="wd-pie">Pie de página</label><div class="entrada"><input id="wd-pie" maxlength="200" value="${esc(doc().valor("_doc", "pie") || "")}"></div></div>
-          <label class="interruptor"><input type="checkbox" data-num ${doc().valor("_doc", "numeros") !== false ? "checked" : ""}> Números de página</label></form>`);
+          <div class="fila"><div class="campo crece"><label for="wd-enc">Encabezado (arriba de cada página)</label><div class="entrada"><input id="wd-enc" maxlength="200" value="${esc(e.enc)}" placeholder="Por ejemplo: el título corto (APA)"></div></div>
+            <div class="campo"><label>Lugar</label><div class="entrada">${al("encal", e.encAl)}</div></div></div>
+          <div class="fila" style="align-items:center;flex-wrap:wrap"><button type="button" class="btn chico" data-logo>${ico("image", "ico-s")} ${logo ? "Cambiar el logo" : "Poner un logo"}</button>${logo ? `<button type="button" class="btn chico" data-sinlogo>${ico("x", "ico-s")} Quitar el logo</button>` : ""}<span class="suave chico">Imagen pequeña a la izquierda del encabezado (escuela, empresa).</span></div>
+          <div class="fila"><div class="campo crece"><label for="wd-pie">Pie de página</label><div class="entrada"><input id="wd-pie" maxlength="200" value="${esc(e.pie)}"></div></div>
+            <div class="campo"><label>Lugar</label><div class="entrada">${al("pieal", e.pieAl)}</div></div></div>
+          <label class="interruptor"><input type="checkbox" data-num ${e.nums ? "checked" : ""}> Números de página</label>
+          <div class="fila" data-opnum style="flex-wrap:wrap"><div class="campo crece"><label>Dónde</label><div class="entrada"><select data-pos>${[["enc-der", "Arriba a la derecha (APA)"], ["enc-centro", "Arriba al centro"], ["enc-izq", "Arriba a la izquierda"], ["pie-der", "Abajo a la derecha"], ["pie-centro", "Abajo al centro"], ["pie-izq", "Abajo a la izquierda"]].map(([k, t]) => `<option value="${k}" ${e.pos === k ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+            <div class="campo crece"><label>Cómo</label><div class="entrada"><select data-fmt>${[["n", "1"], ["pagina", "Página 1"], ["total", "1 de 5"], ["pagina-total", "Página 1 de 5"]].map(([k, t]) => `<option value="${k}" ${e.fmt === k ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+            <div class="campo" style="width:110px"><label>Empezar en</label><div class="entrada"><input data-ini inputmode="numeric" value="${e.inicio}"></div></div></div>
+          <label class="interruptor"><input type="checkbox" data-primera ${e.primera ? "checked" : ""}> Primera página distinta (la portada va sin encabezado, pie ni número)</label>
+          <div class="campo"><label for="wd-marca">Marca de agua (opcional)</label><div class="entrada"><input id="wd-marca" maxlength="40" value="${esc(e.marca)}" placeholder="Por ejemplo: BORRADOR o CONFIDENCIAL"></div></div></form>`);
         const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
         const h = NOM.hoja({ titulo: "Encabezado y pie de página", icono: "panel-top", cuerpo: cuerpoH, pie });
+        const verNum = () => { $("[data-opnum]", cuerpoH).hidden = !$("[data-num]", cuerpoH).checked; };
+        verNum(); $("[data-num]", cuerpoH).onchange = verNum;
+        $("[data-logo]", cuerpoH).onclick = async () => { const img = await ed.pedirImagen(); if (img) { logo = { src: img.src, alto: 36 }; aviso("Logo listo: se guarda al tocar Guardar", { tipo: "ok", ms: 2000 }); } };
+        const sl = $("[data-sinlogo]", cuerpoH); if (sl) sl.onclick = () => { logo = null; sl.remove(); };
         $("[data-no]", pie).onclick = () => h.cerrar();
-        $("[data-si]", pie).onclick = () => {
-          doc().cambiar("_doc", { encabezado: $("#wd-enc", cuerpoH).value.trim(), pie: $("#wd-pie", cuerpoH).value.trim(), numeros: $("[data-num]", cuerpoH).checked });
+        $("[data-si]", pie).onclick = (ev) => {
+          ev.preventDefault();
+          const ini = Math.max(1, Math.min(9999, parseInt($("[data-ini]", cuerpoH).value, 10) || 1));
+          doc().cambiar("_doc", { encabezado: $("#wd-enc", cuerpoH).value.trim(), pie: $("#wd-pie", cuerpoH).value.trim(), numeros: $("[data-num]", cuerpoH).checked,
+            numPos: $("[data-pos]", cuerpoH).value, numFmt: $("[data-fmt]", cuerpoH).value, numInicio: ini === 1 ? null : ini, primeraDistinta: $("[data-primera]", cuerpoH).checked || null,
+            encAlin: $("[data-encal]", cuerpoH).value, pieAlin: $("[data-pieal]", cuerpoH).value, encabezadoImg: logo, marcaAgua: $("#wd-marca", cuerpoH).value.trim() || null });
           aplicarPagina();
           h.cerrar();
         };
@@ -2246,6 +2953,7 @@
               if (t.e) {
                 if (t.e.tipo === "imagen") toks.push({ c: OBJ, img: t.e.src, w: t.e.w, h: t.e.h, a: t.a });
                 else if (t.e.tipo === "tabla") { const ref = NOM.DocCRDT.nuevoId(); doc().cambiar(ref, Object.assign({ tipo: "tabla", enTexto: true }, t.e.celdas, { filasTexto: t.e.filas, colsTexto: t.e.cols }), { origen: "comando" }); toks.push({ c: OBJ, obj: { tipo: "tabla", ref } }); }
+                else if (t.e.tipo === "nota" || t.e.tipo === "ecuacion") { const ref = NOM.DocCRDT.nuevoId(); doc().cambiar(ref, Object.assign({ enTexto: true }, t.e), { origen: "comando" }); toks.push({ c: OBJ, obj: { tipo: t.e.tipo, ref } }); }
                 else toks.push({ c: OBJ, obj: { tipo: t.e.tipo } });
               } else cps(t.x).forEach((c) => toks.push({ c, a: t.a || {} }));
             });
@@ -2352,6 +3060,13 @@
           { texto: "Alinear", icono: "align-center", off: libre, sub: [
             { texto: "Izquierda", icono: "align-left", fn: alin(null) }, { texto: "Centro", icono: "align-center", fn: alin("centro") }, { texto: "Derecha", icono: "align-right", fn: alin("der") }] },
           { texto: "Más", icono: "more-horizontal", sub: [
+            { texto: "Recortar…", icono: "scissors", fn: () => dialogoRecorte(id) },
+            { texto: "Girar 90°", icono: "rotate-cw", mantener: true, fn: () => girarImagen(id) },
+            { texto: "Pie de imagen…", corto: "Pie…", icono: "type", fn: () => pieDeImagen(id) },
+            { texto: "Texto alternativo…", corto: "Alt…", icono: "eye", fn: () => textoAlternativo(id) },
+            { texto: "Texto alrededor", corto: "Ajuste", icono: "wrap-text", sub: [
+              { texto: "En línea", icono: "text-cursor-input", fn: () => ajusteTexto(id, "linea") }, { texto: "Cuadrado a la izquierda", corto: "Izquierda", icono: "align-left", fn: () => ajusteTexto(id, "izq") },
+              { texto: "Cuadrado a la derecha", corto: "Derecha", icono: "align-right", fn: () => ajusteTexto(id, "der") }, { texto: "Libre (delante del texto)", corto: "Libre", icono: "move", fn: () => ajusteTexto(id, "libre") }] },
             { texto: "Cortar", icono: "scissors", fn: () => { seleccionarImagen(o); document.execCommand("cut"); } },
             { texto: "Descargar", icono: "download", off: !img, fn: () => { const l = document.createElement("a"); l.href = img.src; l.download = "imagen"; l.click(); } }] },
         ];

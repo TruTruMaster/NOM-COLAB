@@ -840,3 +840,72 @@
 .ayuda-op small { color: var(--tinta-suave); font-weight: 650; }
 .ayuda-op.on, .ayuda-op:hover { background: var(--m-hoja-tenue); }
 .muestra-cf { display: inline-grid; place-items: center; min-width: 64px; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--borde); font-weight: 750; }
+
+/* ---------------------------------------------------------------- 8.2 texto: sangrías en cm, primera línea y francesa */
+.wd-cuerpo > * { padding-left: calc(var(--sang, 0) * 36pt + var(--sangiz, 0cm) + var(--francesa, 0cm)); padding-right: var(--sangder, 0cm); text-indent: calc(var(--primera, var(--wd-primera, 0cm)) - var(--francesa, 0cm)); }
+.wd-cuerpo > :is(h1, h2, h3, [data-estilo], [data-obj-bloque]) { text-indent: calc(var(--primera, 0cm) - var(--francesa, 0cm)); }
+.wd-cuerpo > [data-lista] { text-indent: 0; padding-left: calc(18pt + var(--n) * 18pt + var(--sang, 0) * 36pt + var(--sangiz, 0cm)); }
+.wd-cuerpo > [data-lista="vinetas"][data-vineta]::before { content: attr(data-vineta); }
+.wd-cuerpo > :has(> .wd-obj.bloque:only-child) { text-indent: 0; }
+/* 8.2 encabezado y pie: tres lugares (izquierda, centro, derecha), logo y marca de agua */
+.wd-enc, .wd-pie { display: flex; align-items: center; gap: 10px; font: inherit; color: #333; }
+.wd-enc > span, .wd-pie > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wd-enc > .izq, .wd-pie > .izq { text-align: left; }
+.wd-enc > .centro, .wd-pie > .centro { text-align: center; }
+.wd-enc > .der, .wd-pie > .der { text-align: right; }
+.wd-enc { top: calc(var(--ms) / 2 - 12px); }
+.wd-pie { bottom: calc(var(--mi) / 2 - 12px); justify-content: initial; }
+.wd-logo { flex: none; width: auto; max-width: 160px; object-fit: contain; }
+.wd-enc:has(.wd-logo) { top: calc(var(--ms) / 2 - 24px); }
+.wd-marca-agua { position: absolute; inset: 0; display: grid; place-items: center; font: 900 88px/1 Calibri, Carlito, sans-serif; color: rgba(0, 0, 0, .07); transform: rotate(-35deg); letter-spacing: .04em; white-space: nowrap; overflow: hidden; pointer-events: none; }
+.wd-marca-impresa { display: none; }
+@media print {
+  .wd-marca-impresa { position: fixed; inset: 0; place-items: center; font: 900 88px/1 Calibri, Carlito, sans-serif; color: rgba(0, 0, 0, .08); transform: rotate(-35deg); pointer-events: none; z-index: 0; }
+}
+/* 8.2 tablas del texto: bordes, barra táctil, ancho de columnas */
+.wd-tabla { position: relative; }
+.wd-tab.bordes-horizontales td { border-left: 0; border-right: 0; }
+.wd-tab.bordes-externos td { border: 0; }
+.wd-tab.bordes-externos { outline: 1px solid #8E8E8E; outline-offset: -1px; }
+.wd-tab.bordes-ninguno td { border: 0; }
+.wd-tab.bordes-ninguno td:focus-within { box-shadow: inset 0 0 0 1px rgba(68, 114, 196, .35); }
+.wd-tab.con-cab tr:first-child td { background-color: #F2F2F2; }
+.wd-tab-ctl { align-items: center; }
+.wd-tab-ctl .sep { width: 1px; height: 18px; background: #ccc; margin: 0 2px; }
+.wd-tab-ctl select { font: 700 11px/1.6 Nunito, sans-serif; border: 1px solid #ccc; border-radius: 8px; padding: 2px 4px; background: #fafafa; color: #444; }
+.wd-tabla:not(:focus-within):not(.activa) .wd-tab-ctl { display: none; }
+.wd-tabla.activa .wd-tab-ctl { display: flex; flex-wrap: wrap; }
+.wd-tab-redim { position: absolute; top: 0; width: 9px; margin-left: -4px; height: calc(100% - 30px); cursor: col-resize; z-index: 2; touch-action: none; }
+.wd-tab-redim:hover { background: rgba(68, 114, 196, .25); }
+@media (pointer: coarse) { .wd-tab-ctl button { padding: 6px 10px; font-size: 12px; } .wd-tab-redim { width: 18px; margin-left: -9px; } }
+@media print { .wd-tab-redim { display: none !important; } }
+/* 8.2 imágenes del texto: recorte, giro, pie y texto alrededor */
+.wd-img-caja { display: inline-block; position: relative; overflow: hidden; vertical-align: bottom; max-width: 100%; }
+.wd-img-marco { position: absolute; left: 50%; top: 50%; overflow: hidden; }
+.wd-img-marco img { position: absolute; max-width: none; }
+.wd-img-pie { display: block; line-height: 1.3; font-size: .88em; font-style: italic; text-align: center; padding-top: 4px; white-space: normal; }
+.wd-img-pie b { font-style: normal; }
+.wd-imagen.flota-izq { float: left; margin: 2px 14px 6px 0; }
+.wd-imagen.flota-der { float: right; margin: 2px 0 6px 14px; }
+.wd-recorte-vista { display: grid; place-items: center; padding: 10px; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 16px 16px; border-radius: 10px; min-height: 120px; }
+/* 8.2 paginación: corte de párrafo entre páginas, notas al pie y ecuaciones */
+.wd-corte { display: inline-block; width: 100%; vertical-align: top; pointer-events: none; user-select: none; }
+.wd-notas { position: absolute; font-size: 9pt; line-height: 1.25; color: #222; border-top: 1px solid #999; padding-top: 4px; }
+.wd-notas .wd-nota-pie { margin: 0 0 2px; text-align: left; white-space: normal; }
+.wd-nota[data-obj] { cursor: pointer; color: #1F4E9E; }
+.wd-nota[data-obj] sup { font-size: .7em; line-height: 0; padding: 0 1px; }
+.wd-ecuacion[data-obj] { cursor: pointer; display: inline-block; padding: 0 2px; border-radius: 4px; }
+.wd-ecuacion[data-obj]:hover { background: rgba(68, 114, 196, .10); }
+.wd-ecuacion.en-bloque { display: block; text-align: center; margin: 6px 0; }
+.wd-ecuacion math { font-size: 1.1em; }
+.wd-notas-finales { display: none; }
+.ecu-vista { min-height: 70px; display: grid; place-items: center; padding: 12px; border-radius: 12px; background: var(--sup-hundida); font-size: 22px; overflow-x: auto; }
+.ecu-ayudas { display: flex; flex-wrap: wrap; gap: 4px; }
+.ecu-ayudas button { min-width: 40px; height: 34px; border-radius: 8px; border: 1px solid var(--borde); background: var(--sup-2); font: 650 15px var(--fuente); color: var(--tinta); cursor: pointer; }
+.ecu-ayudas button:hover { background: var(--acento-tenue); }
+@media print {
+  .wd-corte { display: none !important; }
+  .wd-notas-finales { display: block; margin-top: 18pt; border-top: 1px solid #999; padding-top: 6pt; font-size: 9pt; }
+  .wd-notas-finales .wd-notas-titulo { font-weight: bold; margin-bottom: 4pt; }
+  .wd-notas-finales p { margin: 0 0 3pt; }
+}

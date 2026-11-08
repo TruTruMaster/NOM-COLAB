@@ -232,20 +232,21 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
 - [x] Exportar a .xlsx todo lo nuevo e **importar .xlsx**.
 
 ### 8.2 Texto
-- [ ] Párrafo: sangría de primera línea y francesa, sangrías en cm, espacio antes y después.
-- [ ] Encabezado y pie: lugar del número de página (arriba o abajo, izquierda, centro o derecha),
+- [x] Párrafo: sangría de primera línea y francesa, sangrías en cm, espacio antes y después.
+- [x] Encabezado y pie: lugar del número de página (arriba o abajo, izquierda, centro o derecha),
   "Página 1 de 5", primera página distinta y la misma letra del documento.
-- [ ] Márgenes personalizados en cm.
-- [ ] Listas: continuar la numeración, empezar en un número, y estilos de viñeta y número.
-- [ ] Tablas: insertar y eliminar filas y columnas en cualquier lugar, combinar celdas, formato
+- [x] Márgenes personalizados en cm.
+- [x] Listas: continuar la numeración, empezar en un número, y estilos de viñeta y número.
+- [x] Tablas: insertar y eliminar filas y columnas en cualquier lugar, combinar celdas, formato
   por celda (negrita, cursiva, color, relleno, alineación), bordes, fila de encabezado y ancho de
   columnas.
-- [ ] Imágenes: recortar, girar, pie de imagen numerado ("Figura 1."), texto alternativo y texto
+- [x] Imágenes: recortar, girar, pie de imagen numerado ("Figura 1."), texto alternativo y texto
   alrededor.
-- [ ] Notas al pie.
-- [ ] Ecuaciones.
-- [ ] Un párrafo largo se parte entre dos páginas en vez de saltar completo.
-- [ ] Marca de agua y columnas.
+- [x] Notas al pie.
+- [x] Ecuaciones.
+- [x] Un párrafo largo se parte entre dos páginas en vez de saltar completo.
+- [x] Marca de agua y columnas (columnas lado a lado como bloque, en Insertar; no es texto que corre de
+  una columna a otra como en un periódico).
 
 ### 8.3 Presentación
 - [ ] Texto con formato dentro de los cuadros y figuras (negrita en una palabra, viñetas y
