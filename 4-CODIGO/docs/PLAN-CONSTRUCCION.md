@@ -20,7 +20,7 @@ demás después.
 4. **Se prueba en local (puerto 8099), no en Azure.** Para editar CSS/JS sin recompilar:
    `SPRING_WEB_RESOURCES_STATIC_LOCATIONS=file:<repo>/4-CODIGO/app/src/main/resources/static/`.
 5. **Si cambia algo de la interfaz**, recompilar el APK y subir `versionName`/`versionCode` en
-   `android/app/build.gradle.kts` (hoy 0.9.0 / 11).
+   `android/app/build.gradle.kts` (hoy 0.10.0 / 12).
 6. **Pruebas**: agregar casos a `pruebas/seguridad.py` cuando la tarea toque permisos (hoy 76/76;
    tienen que seguir pasando).
 7. **Commits**: en español, a nombre de trutrumaster, sin menciones a quien ayudó a escribirlos

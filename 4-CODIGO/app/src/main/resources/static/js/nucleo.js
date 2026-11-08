@@ -61,10 +61,10 @@
   const quitar = (k) => { try { localStorage.removeItem(k); } catch (e) { /* almacenamiento no disponible */ } };
 
   const MODOS = {
-    TEXTO: { nombre: "Texto", icono: "file-text", micro: "Documento de texto: párrafos, títulos y listas." },
-    HOJA: { nombre: "Hoja", icono: "sheet", micro: "Hoja de cálculo con fórmulas como =SUMA(A1:A5)." },
-    PRESENTACION: { nombre: "Presentación", icono: "presentation", micro: "Diapositivas con animaciones para exponer." },
-    DIAGRAMA: { nombre: "Diagrama", icono: "workflow", micro: "Organizador gráfico: figuras unidas con flechas." },
+    TEXTO: { nombre: "Texto", plural: "Textos", icono: "file-text", micro: "Documento de texto: párrafos, títulos y listas." },
+    HOJA: { nombre: "Hoja", plural: "Hojas", icono: "sheet", micro: "Hoja de cálculo con fórmulas como =SUMA(A1:A5)." },
+    PRESENTACION: { nombre: "Presentación", plural: "Presentaciones", icono: "presentation", micro: "Diapositivas con animaciones para exponer." },
+    DIAGRAMA: { nombre: "Diagrama", plural: "Diagramas", icono: "workflow", micro: "Organizador gráfico: figuras unidas con flechas." },
   };
 
   /** Miniatura de una tarjeta de documento: una hoja de papel con la forma de cada tipo
@@ -186,6 +186,8 @@
 
   // ------------------------------------------------------------ menú contextual
   let menuActual = null;
+  /** Cómo se llama la sección de lo guardado aquí: en la app es "Este teléfono" (también comparte sin Internet). */
+  function etiquetaEquipo() { return NOM.api && NOM.api.empaquetada ? "Este teléfono" : "Guardado en este equipo"; }
   function menu(ancla, items) {
     cerrarMenu();
     const m = html(`<div class="menu" role="menu"></div>`);
@@ -277,6 +279,16 @@
   // ------------------------------------------------------------ preferencias visuales
   let tTema = null, ultimoToque = { x: innerWidth / 2, y: 0, t: 0 };
   document.addEventListener("pointerdown", (e) => { ultimoToque = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+  /** Tamaño de la letra de este equipo (se guarda aquí, no en la cuenta: cada pantalla es distinta).
+      En la app lo hace Android (agranda todo el texto); en el navegador, la hoja de estilos. */
+  const LETRAS = { normal: 100, grande: 115, "muy-grande": 130 };
+  function aplicarLetra(v) {
+    v = LETRAS[v] ? v : "normal";
+    guardar("nom.letra", v);
+    if (window.NomAndroid && window.NomAndroid.tamanoLetra) { window.NomAndroid.tamanoLetra(LETRAS[v]); delete document.documentElement.dataset.letra; }
+    else if (v === "normal") delete document.documentElement.dataset.letra;
+    else document.documentElement.dataset.letra = v;
+  }
   function aplicarPreferencias(p) {
     p = p || {};
     const raiz = document.documentElement;
@@ -333,7 +345,8 @@
     ? { en: "en esta app (en este teléfono)", aqui: "esta app", borrar: "desinstalas la app o borras sus datos", sinEspacio: "Ya no queda espacio en el teléfono para la app" }
     : { en: "en este navegador", aqui: "este navegador", borrar: "borras la caché o los datos del navegador", sinEspacio: "El navegador ya no tiene espacio" });
 
-  Object.assign(NOM, {
+  try { aplicarLetra(leer("nom.letra", "normal")); } catch (e) { /* sin almacenamiento */ }
+  Object.assign(NOM, { aplicarLetra, etiquetaEquipo,
     enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
     leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,

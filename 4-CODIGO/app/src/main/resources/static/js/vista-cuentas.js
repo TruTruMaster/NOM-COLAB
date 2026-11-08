@@ -21,7 +21,7 @@
     return new Promise((listo) => {
       const cuerpo = html(`<div class="col" style="align-items:center;text-align:center">
         <span class="modo-insignia" style="width:56px;height:56px;border-radius:18px;background:var(--acento-tenue);color:var(--acento-tinta)">${ico("key-round", "ico-l")}</span>
-        <p style="font-weight:650">Si algún día olvidas tu contraseña, con este código pones una nueva. <b>Guárdalo</b> (foto, papel o archivo): solo se muestra ahora y nadie más lo tiene, ni quien instaló el servidor.</p>
+        <p style="font-weight:650">Si algún día olvidas tu contraseña, con este código pones una nueva. <b>Guárdalo</b> (foto, papel o archivo): solo se muestra ahora y nadie más lo tiene, ni quien administra NOM-COLAB.</p>
         <b class="qr-codigo" style="font-size:24px;letter-spacing:.08em">${esc(codigo)}</b>
         <div class="fila"><button class="btn chico" data-copiar>${ico("copy", "ico-s")} Copiar</button><button class="btn chico" data-bajar>${ico("download", "ico-s")} Guardar archivo</button></div></div>`);
       const pie = html(`<div style="display:contents"><span class="crece"></span><button class="btn primario" data-ok>Ya lo guardé</button></div>`);
@@ -37,7 +37,7 @@
     const cuerpo = html(`<form class="col" novalidate>
       <p class="suave" style="font-weight:650">Usa el código que te dio NOM-COLAB al crear la cuenta (o el último que generaste en Ajustes).</p>
       <div class="alerta" data-alerta hidden role="alert"></div>
-      <div class="campo"><label for="rn">Usuario</label><div class="entrada">${ico("users")}<input id="rn" name="nombre" autocomplete="username" autocapitalize="none" value="${esc(nombre || "")}"></div></div>
+      <div class="campo"><label for="rn">Usuario</label><div class="entrada">${ico("user")}<input id="rn" name="nombre" autocomplete="username" autocapitalize="none" value="${esc(nombre || "")}"></div></div>
       <div class="campo"><label for="rk">Código de recuperación</label><div class="entrada">${ico("key-round")}<input id="rk" name="codigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH-JKMN-PQRS"></div></div>
       <div class="campo"><label for="rp">Contraseña nueva</label><div class="entrada">${ico("lock")}<input id="rp" name="nueva" type="password" autocomplete="new-password" minlength="8"></div></div>
     </form>`);
@@ -120,12 +120,12 @@
           <div class="marca"><svg class="logo"><use href="#logo"/></svg><div>NOM-COLAB<small>WACK · We carry the flame</small></div></div>
           <div>
             <h1>Todo tu equipo, en una sola app.</h1>
-            <p class="lema">Texto, hojas de cálculo, presentaciones y diagramas en tiempo real: en tu red local aunque falle el Internet, o en línea desde cualquier lugar.</p>
+            <p class="lema">Escriban, calculen y presenten juntos, al mismo tiempo. Con Internet o sin él: basta con estar en el mismo Wi-Fi.</p>
           </div>
           <div class="valores">
             <div class="valor clay"><span class="modo-insignia modo-TEXTO">${ico("layers")}</span><div><b>Cuatro tipos, una app</b><span>Texto, hojas, presentaciones y diagramas</span></div></div>
-            <div class="valor clay"><span class="modo-insignia modo-HOJA">${ico("wifi")}</span><div><b>Funciona en tu red</b><span>Colabora aunque falle el Internet</span></div></div>
-            <div class="valor clay"><span class="modo-insignia modo-DIAGRAMA">${ico("users")}</span><div><b>En tiempo real</b><span>Hasta 5 personas en el mismo espacio</span></div></div>
+            <div class="valor clay"><span class="modo-insignia modo-HOJA">${ico("wifi")}</span><div><b>Funciona sin Internet</b><span>En el mismo Wi-Fi, o con un teléfono que comparte</span></div></div>
+            <div class="valor clay"><span class="modo-insignia modo-DIAGRAMA">${ico("users")}</span><div><b>Al mismo tiempo</b><span>Hasta 5 personas en el mismo espacio</span></div></div>
           </div>
           <div class="flotantes" aria-hidden="true" data-flotantes>
             <div class="flot flot-texto modo-TEXTO" style="--p:1.5"><div class="flot-flota"><div class="flot-cuerpo">
@@ -184,8 +184,8 @@
       } else if (api.empaquetada) {
         const srv = api.servidor().replace(/^https?:\/\//, "");
         const internet = /azurewebsites\.net/.test(srv);
-        const s = html(`<p class="servidor-pie">${ico(internet ? "globe" : "wifi", "ico-s")}<span>Conectado a <b>${internet ? "NOM-COLAB en Internet" : "tu red · " + esc(srv)}</b></span>
-          <button type="button" data-micro="Cambiar de servidor|Si tu equipo usa NOM-COLAB en su propia red (aunque no haya Internet), elige aquí ese equipo.">Cambiar</button></p>`);
+        const s = html(`<p class="servidor-pie">${ico(internet ? "globe" : "wifi", "ico-s")}<span>Trabajas en <b>${internet ? "NOM-COLAB en Internet" : "un equipo del Wi-Fi · " + esc(srv)}</b></span>
+          <button type="button" data-micro="Cambiar dónde trabajas|Si tu equipo usa NOM-COLAB en otro lugar (en Internet, o en una computadora o teléfono del mismo Wi-Fi), elígelo aquí.">Cambiar</button></p>`);
         $("button", s).onclick = () => pintarServidor(tarjeta, render);
         f.append(s);
       }
@@ -250,16 +250,16 @@
 
     function formEntrar() {
       const f = html(`<form class="col" novalidate>
-        ${cabecera("Bienvenido de vuelta", "Entra para ver tus espacios de trabajo.")}
+        ${cabecera("Hola de nuevo", "Entra para ver tus espacios y documentos.")}
         <div class="alerta" data-alerta hidden role="alert"></div>
         <div class="campo"><label for="u">Usuario</label>
-          <div class="entrada">${ico("users")}<input id="u" name="nombre" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(opc.nombre || NOM.leer("nom.ultimoNombre", ""))}"></div></div>
+          <div class="entrada">${ico("user")}<input id="u" name="nombre" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(opc.nombre || NOM.leer("nom.ultimoNombre", ""))}"></div></div>
         ${campoContrasena("c", "current-password").replace('id="c"', 'id="c" name="contrasena"')}
         <button class="btn primario ancho" type="submit">Entrar ${ico("arrow-right")}</button>
         <p class="suave chico" style="text-align:center">¿Primera vez? <a href="#" data-ir2="registro">Crea tu cuenta en un minuto</a> · <a href="#" data-olvide>¿Olvidaste tu contraseña?</a></p>
-        <button type="button" class="btn ancho" data-codigo>${ico("qr-code")} Tengo un código del salón</button>
+        <button type="button" class="btn ancho" data-codigo>${ico("qr-code")} Tengo un código de invitación</button>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} <span class="btn-sub">Usar sin cuenta<small>Tus documentos se quedan solo ${NOM.aqui().en}</small></span></button>
       </form>`);
       enlazarComunes(f);
       $("[data-ir2]", f).onclick = (e) => { e.preventDefault(); modo = "registro"; render(); };
@@ -281,16 +281,16 @@
         ${cabecera("Crea tu cuenta", "Solo necesitas un nombre de usuario y una contraseña.")}
         <div class="alerta" data-alerta hidden role="alert"></div>
         <div class="campo"><label for="ru">Nombre de usuario</label>
-          <div class="entrada">${ico("users")}<input id="ru" name="nombre" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="24" required></div>
-          <div class="ayuda">De 3 a 24 caracteres, sin espacios. Así te verán tus compañeros.</div></div>
+          <div class="entrada">${ico("user")}<input id="ru" name="nombre" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="24" required></div>
+          <div class="ayuda">De 3 a 24 letras o números, sin espacios. Así te verán los demás.</div></div>
         ${campoContrasena("rc", "new-password").replace('id="rc"', 'id="rc" name="contrasena"')}
         <div class="fila"><div class="medidor crece" data-medidor data-n="0"><i></i><i></i><i></i><i></i></div><span class="chico suave" data-fuerza style="min-width:70px;text-align:right;font-weight:750"></span></div>
-        <div class="campo"><label for="re">Empresa u organización <span class="suave" style="font-weight:600">(opcional)</span></label>
+        <div class="campo"><label for="re">Escuela, empresa o grupo <span class="suave" style="font-weight:600">(opcional)</span></label>
           <div class="entrada">${ico("door-open")}<input id="re" name="empresa" autocomplete="organization" maxlength="80" placeholder="Ej. CECyT 11 Wilfredo Massieu"></div></div>
         <button class="btn primario ancho" type="submit">Crear cuenta ${ico("sparkles")}</button>
-        <p class="suave chico" style="text-align:center">Tu contraseña se guarda cifrada; nadie puede leerla, ni quien instaló el servidor.</p>
+        <p class="suave chico" style="text-align:center">Tu contraseña se guarda protegida: nadie puede verla, ni quien administra NOM-COLAB.</p>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} <span class="btn-sub">Usar sin cuenta<small>Tus documentos se quedan solo ${NOM.aqui().en}</small></span></button>
       </form>`);
       enlazarComunes(f);
       f.contrasena.addEventListener("input", () => {
@@ -303,7 +303,7 @@
         const nombre = f.nombre.value.trim(), contrasena = f.contrasena.value, empresa = f.empresa.value.trim();
         if (!nombre) return mostrarError(f, { campo: "nombre", message: "Escribe un nombre de usuario" });
         if (!/^[\p{L}\p{N}._-]{3,24}$/u.test(nombre)) return mostrarError(f, { campo: "nombre", message: "Usa de 3 a 24 letras, números, punto, guion o guion bajo, sin espacios" });
-        if (contrasena.length < 8) return mostrarError(f, { campo: "contrasena", message: "La contraseña necesita al menos 8 caracteres" });
+        if (contrasena.length < 8) return mostrarError(f, { campo: "contrasena", message: "La contraseña necesita al menos 8 letras, números o signos" });
         enviando(f, async () => {
           const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa }, { ms: ESPERA_BD });
           // El código de recuperación solo se ve ahora: primero se guarda, después se entra.
@@ -331,23 +331,27 @@
   function pintarServidor(tarjeta, listo) {
     tarjeta.innerHTML = "";
     const f = html(`<form class="col">
-      <div><h2>Conecta con tu red</h2><p class="suave" style="font-weight:650;margin-top:4px">Escribe la dirección del equipo que tiene NOM-COLAB abierto, búscalo en tu Wi-Fi o usa la versión en Internet: <b>nomcolab-wack.azurewebsites.net</b>.</p></div>
+      <div><h2>¿Dónde trabaja tu equipo?</h2><p class="suave" style="font-weight:650;margin-top:4px">Si te dieron un código QR, escanéalo y listo. Si no, elige una opción.</p></div>
       <div class="alerta" data-alerta hidden></div>
-      <div class="campo"><label for="srv">Dirección del servidor</label>
-        <div class="entrada">${ico("server")}<input id="srv" inputmode="url" autocapitalize="none" placeholder="192.168.1.20:8080" value="${esc(api.servidor().replace(/^https?:\/\//, ""))}"></div></div>
+      <button type="button" class="btn primario ancho" data-escanear>${ico("qr-code")} Escanear el código QR</button>
+      <button type="button" class="btn ancho" data-internet>${ico("cloud")} <span class="btn-sub">Usar NOM-COLAB en Internet<small>Desde cualquier lugar, con datos o Wi-Fi</small></span></button>
+      ${window.NomAndroid && window.NomAndroid.buscarServidores ? `<button type="button" class="btn ancho" data-buscar>${ico("radio")} <span class="btn-sub">Buscar en este Wi-Fi<small>Una computadora o un teléfono que ya comparte</small></span></button>` : ""}
       <div class="lista" data-encontrados></div>
-      <div class="fila">
-        ${window.NomAndroid && window.NomAndroid.buscarServidores ? `<button type="button" class="btn crece" data-buscar>${ico("radio")} Buscar en la red</button>` : ""}
-        <button class="btn primario crece" type="submit">Conectar</button>
-      </div>
-      <button type="button" class="btn ancho" data-escanear>${ico("qr-code")} Escanear el QR de un espacio</button>
+      <details><summary class="etiqueta" style="cursor:pointer">Escribir la dirección a mano</summary>
+        <div class="col" style="margin-top:10px">
+          <div class="campo"><label for="srv">Dirección que te dieron</label>
+            <div class="entrada">${ico("server")}<input id="srv" inputmode="url" autocapitalize="none" placeholder="192.168.1.20:8080" value="${esc(api.servidor().replace(/^https?:\/\//, ""))}"></div></div>
+          <button class="btn crece" type="submit">Conectar</button>
+        </div>
+      </details>
       <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
-        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
-      <p class="suave chico" style="text-align:center">Sin servidor puedes crear y editar documentos en este teléfono; no se comparten hasta que los subas a un espacio.</p>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} <span class="btn-sub">Usar sin cuenta<small>Tus documentos se quedan solo ${NOM.aqui().en}</small></span></button>
+      <p class="suave chico" style="text-align:center">Sin cuenta puedes crear y editar documentos en este teléfono; nadie más los ve hasta que los subas a un espacio.</p>
     </form>`);
     f.querySelector("[data-sin-cuenta]").onclick = () => NOM.app.sinCuenta();
     // 2.1 En la app: el QR trae la dirección del servidor y el código; el espacio se abre aquí, en la app.
     f.querySelector("[data-escanear]").onclick = () => NOM.union && NOM.union.escanear();
+    f.querySelector("[data-internet]").onclick = () => probar("https://nomcolab-wack.azurewebsites.net");
     // El teléfono también puede ser el servidor de la red (Android 8+).
     const propio = NOM.anfitrion && NOM.anfitrion.opcion(listo);
     if (propio) f.querySelector("[data-alerta]").before(propio);
@@ -364,7 +368,7 @@
       } catch (e) {
         api.fijarServidor(anterior);
         alerta.className = "alerta error"; alerta.hidden = false;
-        alerta.innerHTML = `${ico("wifi-off")}<span>No encontramos NOM-COLAB en esa dirección. Revisa que estés en la misma red Wi-Fi.</span>`;
+        alerta.innerHTML = `${ico("wifi-off")}<span>No encontramos NOM-COLAB en esa dirección. Revisa que estés en el mismo Wi-Fi que el equipo que comparte (o que tengas Internet, si es la versión en línea).</span>`;
       }
     }
     f.onsubmit = (e) => { e.preventDefault(); if (f.srv.value.trim()) probar(f.srv.value.trim()); };

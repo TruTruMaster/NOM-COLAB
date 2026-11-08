@@ -41,7 +41,7 @@
   /* tinta (contraste AA medido sobre --fondo) */
   --tinta: #2B2A33;          /* 12.8:1 */
   --tinta-2: #4A4854;
-  --tinta-suave: #6B6875;    /* 4.9:1 */
+  --tinta-suave: #5E5B68;    /* 6:1 sobre --fondo, 5.5:1 sobre los campos */
 
   /* acento único: se reserva para LA acción principal de cada pantalla */
   --acento: #5B5BD6;         /* 5.4:1 con blanco */
@@ -116,7 +116,7 @@
   --borde-fuerte: rgba(236, 235, 243, .16);
   --tinta: #ECEBF3;
   --tinta-2: #C9C7D6;
-  --tinta-suave: #9C99AC;
+  --tinta-suave: #A9A6B8;
   --acento: #7C7CF0;
   --acento-claro: #9B9BFF;
   --acento-tenue: #2A2A52;
@@ -384,7 +384,7 @@ kbd {
 }
 .marca { display: flex; align-items: center; gap: 10px; padding: var(--e2) var(--e2) var(--e4); font-weight: 900; font-size: 19px; letter-spacing: -.02em; }
 .marca .logo { width: 34px; height: 34px; }
-.marca small { display: block; font-size: 11px; font-weight: 700; color: var(--tinta-suave); letter-spacing: .02em; }
+.marca small { display: block; font-size: 12px; font-weight: 700; color: var(--tinta-suave); letter-spacing: .02em; }
 .riel-item {
   display: flex; align-items: center; gap: var(--e3);
   min-height: 44px; padding: 0 var(--e3); border-radius: var(--r-m);
@@ -647,8 +647,8 @@ kbd {
     var(--fondo-2);
 }
 .bienvenida-arte h1 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 900; letter-spacing: -.03em; max-width: 14ch; }
-.bienvenida-arte .lema { font-size: 18px; color: var(--tinta-2); max-width: 36ch; margin-top: var(--e4); font-weight: 600; }
-.valores { display: grid; gap: var(--e3); max-width: 420px; }
+.bienvenida-arte .lema { font-size: 18px; color: var(--tinta-2); max-width: min(36ch, calc(100% - 250px)); margin-top: var(--e4); font-weight: 600; }
+.valores { display: grid; gap: var(--e3); max-width: min(420px, calc(100% - 250px)); }
 .valor { display: flex; gap: var(--e3); align-items: center; padding: var(--e3) var(--e4); }
 .valor .modo-insignia { width: 44px; height: 44px; border-radius: 15px; }
 .valor b { display: block; }
@@ -1001,3 +1001,42 @@ kbd { font-family: var(--fuente); font-weight: 800; }
   .pasos-lista::-webkit-scrollbar { display: none; }
   .pasos-item { scroll-snap-align: start; }
 }
+
+/* ================================================================== Facilidad de uso (noviembre 2026)
+   Ver docs/GUIA-FACIL-DE-USAR.md: botones de al menos 44 px al tocar, sin atajos de teclado en
+   pantallas táctiles, una sola puerta para compartir y nombres visibles junto a los íconos. */
+.btn.primario-suave { background: var(--acento-tenue); color: var(--acento-tinta); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acento) 30%, transparent); }
+.btn.primario-suave:hover { background: color-mix(in srgb, var(--acento) 18%, var(--sup)); }
+.compartir-codigo { display: flex; align-items: center; gap: 14px; padding: 14px 16px; flex-wrap: wrap; }
+.compartir-codigo .modo-insignia { background: var(--acento-tenue); color: var(--acento-tinta); width: 44px; height: 44px; border-radius: 14px; flex: none; }
+.compartir-codigo .crece { min-width: 200px; }
+.compartir-codigo b { display: block; font-size: 16px; }
+.compartir-codigo small { display: block; color: var(--tinta-suave); font-weight: 650; margin-top: 2px; }
+.filtros-modo { max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+.filtros-modo::-webkit-scrollbar { display: none; }
+.filtros-modo button { white-space: nowrap; }
+.btn-sub { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.btn-sub small { font-size: 13px; font-weight: 650; color: var(--tinta-suave); }
+@media (pointer: coarse) {
+  .icono-btn { min-width: 44px; min-height: 44px; }
+  .btn { min-height: 44px; }
+  .btn.chico { min-height: 40px; }
+  .menu [role=menuitem] { min-height: 44px; }
+  .menu kbd, .rueda kbd, .riel-buscar kbd { display: none; }
+}
+
+/* Tamaño de la letra (Ajustes, por equipo). En la app lo hace Android; aquí, el texto de la interfaz.
+   El contenido de los documentos no cambia: tiene su propio tamaño y el zoom del editor. */
+:root[data-letra="grande"] body { font-size: 17px; }
+:root[data-letra="grande"] .chico, :root[data-letra="grande"] small, :root[data-letra="grande"] .ayuda, :root[data-letra="grande"] .sub { font-size: 15px; }
+:root[data-letra="grande"] .btn, :root[data-letra="grande"] .menu [role=menuitem], :root[data-letra="grande"] .riel-item, :root[data-letra="grande"] .alerta { font-size: 17px; }
+:root[data-letra="grande"] .etiqueta, :root[data-letra="grande"] .campo > label { font-size: 16px; }
+:root[data-letra="grande"] .entrada input, :root[data-letra="grande"] .microtexto { font-size: 17px; }
+:root[data-letra="grande"] .titulo { font-size: 18px; }
+:root[data-letra="muy-grande"] body { font-size: 19px; }
+:root[data-letra="muy-grande"] .chico, :root[data-letra="muy-grande"] small, :root[data-letra="muy-grande"] .ayuda, :root[data-letra="muy-grande"] .sub { font-size: 17px; }
+:root[data-letra="muy-grande"] .btn, :root[data-letra="muy-grande"] .menu [role=menuitem], :root[data-letra="muy-grande"] .riel-item, :root[data-letra="muy-grande"] .alerta { font-size: 19px; }
+:root[data-letra="muy-grande"] .etiqueta, :root[data-letra="muy-grande"] .campo > label { font-size: 18px; }
+:root[data-letra="muy-grande"] .entrada input, :root[data-letra="muy-grande"] .microtexto { font-size: 19px; }
+:root[data-letra="muy-grande"] .titulo { font-size: 20px; }
+@media (pointer: coarse) { .microtexto kbd { display: none; } }

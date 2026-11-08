@@ -283,7 +283,7 @@
       function render() {
         t = tabla();
         if (!t) {
-          rej.innerHTML = `<div class="vacio" style="margin:32px">${ico("sheet")}<h3>Esta página no tiene hoja</h3><p>Tu permiso es de solo lectura.</p></div>`;
+          rej.innerHTML = `<div class="vacio" style="margin:32px">${ico("sheet")}<h3>Esta página no tiene hoja</h3><p>Tu permiso es solo para ver.</p></div>`;
           return;
         }
         const ev = F().evaluador(crudo);

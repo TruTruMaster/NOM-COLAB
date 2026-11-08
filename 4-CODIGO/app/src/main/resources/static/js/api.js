@@ -53,7 +53,7 @@
 
   class ErrorApi extends Error {
     constructor(estado, cuerpo) {
-      super((cuerpo && cuerpo.error) || (estado === 0 ? "No hay conexión con el servidor" : "Error " + estado));
+      super((cuerpo && cuerpo.error) || (estado === 0 ? "Sin conexión: revisa el Wi-Fi o los datos" : "Algo falló (error " + estado + "). Intenta de nuevo."));
       this.estado = estado;
       this.campo = cuerpo && cuerpo.campo;
       this.detalle = cuerpo && cuerpo.detalle;
@@ -66,7 +66,7 @@
   api.pedir = async function (metodo, ruta, cuerpo, opc) {
     opc = opc || {};
     const base = api.servidor();
-    if (empaquetada && !base) throw new ErrorApi(0, { error: "Elige el servidor de tu red" });
+    if (empaquetada && !base) throw new ErrorApi(0, { error: "Primero elige dónde trabaja tu equipo" });
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), opc.ms || 9000);
     const cab = { Accept: "application/json" };

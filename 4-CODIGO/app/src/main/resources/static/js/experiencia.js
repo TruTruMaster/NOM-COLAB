@@ -18,6 +18,8 @@
 
   // ================================================================== hitos (primeros pasos)
   const hitos = () => NOM.leer(clave("hitos"), {});
+  /** ¿Se usa con mouse? Así los consejos nombran el gesto que la persona sí tiene. */
+  const conMouse = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
   /** Marca algo que la persona ya hizo (probar la ruedita, ajustar la app…). */
   NOM.hito = (nombre) => {
     const h = hitos();
@@ -125,7 +127,7 @@
       else if (espacios.length === 1) l.push({ grupo: "Crear", texto: `Nuevo documento en ${espacios[0].nombre}`, icono: "file-plus", fn: nuevoDoc(espacios[0]), claves: "crear documento nuevo" });
       else if (espacios.length) l.push({ grupo: "Crear", texto: "Nuevo documento…", icono: "file-plus", claves: "crear documento nuevo", sub: () => espacios.map((e) => ({ grupo: "¿En qué espacio?", texto: e.nombre, icono: "layout-grid", fn: nuevoDoc(e) })) });
       l.push({ grupo: "Crear", texto: "Nuevo espacio", icono: "plus", fn: () => NOM.vistaEspacios.nuevoEspacio(), claves: "crear espacio equipo proyecto" });
-      l.push({ grupo: "Crear", texto: "Unirse a un espacio", icono: "radio", fn: () => NOM.vistaEspacios.unirse(), claves: "red compartir buscar" });
+      l.push({ grupo: "Crear", texto: "Unirse a un espacio", icono: "qr-code", fn: () => NOM.vistaEspacios.unirse(), claves: "codigo qr invitacion entrar wifi buscar" });
       l.push({ grupo: "Crear", texto: "Unirse con código QR", icono: "qr-code", fn: () => NOM.union.escanear(), claves: "qr camara codigo salon escanear" });
       if (esp && esp.permiso === "PROPIETARIO") l.push({ grupo: "Crear", texto: `Invitar a ${esp.nombre} con código QR`, icono: "qr-code", fn: () => NOM.union.invitar(esp), claves: "qr invitar salon alumnos apodo" });
       if (esp && esp.id && !ed) l.push({ grupo: "Crear", texto: `Exportar todo ${esp.nombre} (.zip)`, icono: "archive", fn: async () => NOM.vistaEspacios.exportarTodo(await api().get(`/api/espacios/${esp.id}`)), claves: "descargar office zip respaldo" });
@@ -143,8 +145,8 @@
     espacios.forEach((e) => l.push({ grupo: "Espacios", texto: e.nombre, sub2: `${e.documentos} documento${e.documentos === 1 ? "" : "s"} · ${e.miembros} persona${e.miembros === 1 ? "" : "s"}`, icono: "layout-grid", color: e.color, fn: () => (location.hash = "#/espacio/" + e.id), oculto: espacios.length > 5 }));
 
     l.push({ grupo: "Ir a", texto: "Inicio", icono: "house", fn: () => (location.hash = "#/"), claves: "principal home" });
-    l.push({ grupo: "Ir a", texto: "Archivos en este dispositivo", icono: "hard-drive", fn: () => (location.hash = "#/dispositivo"), claves: "local almacenamiento" });
-    if (NOM.anfitrion && NOM.anfitrion.disponible() && conCuenta()) l.push({ grupo: "Ir a", texto: "Servidor en este teléfono", icono: "smartphone", fn: () => (location.hash = "#/dispositivo"), claves: "anfitrion compartir red wifi punto de acceso" });
+    l.push({ grupo: "Ir a", texto: NOM.etiquetaEquipo(), icono: "hard-drive", fn: () => (location.hash = "#/dispositivo"), claves: "local almacenamiento dispositivo archivos sin internet telefono" });
+    if (NOM.anfitrion && NOM.anfitrion.disponible() && conCuenta()) l.push({ grupo: "Ir a", texto: "Trabajar sin Internet con este teléfono", icono: "smartphone", fn: () => (location.hash = "#/dispositivo"), claves: "anfitrion compartir red wifi punto de acceso" });
 
     const tema = pref.tema || "auto";
     l.push({ grupo: "Apariencia", texto: "Tema oscuro", icono: "moon", marcado: tema === "oscuro", fn: () => cambiarPreferencia({ tema: "oscuro" }, "Tema oscuro"), claves: "noche negro dark" });
@@ -294,7 +296,7 @@
     const el = html(`<div class="bienvenida-momento" role="status" aria-live="polite">
       <div class="bm-tarjeta">
         <span class="avatar g bm-avatar" style="--c:${esc(u.color || "#5B5BD6")}">${esc(NOM.iniciales(u.nombre))}</span>
-        <h2>${nuevo ? `¡Bienvenido a <span style="white-space:nowrap">NOM-COLAB</span>, ${nombre}!` : `¡Qué gusto verte, ${nombre}!`}</h2>
+        <h2>${nuevo ? `¡Hola, ${nombre}! Ya estás en <span style="white-space:nowrap">NOM-COLAB</span>` : `¡Qué gusto verte, ${nombre}!`}</h2>
         <p>${nuevo ? "Tu cuenta está lista. Te mostramos por dónde empezar." : esc(momento)}</p>
       </div></div>`);
     document.body.append(el);
@@ -313,10 +315,10 @@
     const recientes = NOM.leer(api().clave("recientes"), []);
     const propio = espacios.find((e) => e.permiso === "PROPIETARIO") || espacios[0];
     const pasos = [
-      { id: "espacio", t: "Crea tu primer espacio", d: "Reúne los documentos de un equipo o proyecto.", ok: espacios.length > 0, fn: () => NOM.vistaEspacios.nuevoEspacio(), icono: "layout-grid" },
+      { id: "espacio", t: "Crea tu primer espacio", d: "Como una carpeta compartida para tu equipo.", ok: espacios.length > 0, fn: () => NOM.vistaEspacios.nuevoEspacio(), icono: "layout-grid" },
       { id: "documento", t: "Escribe tu primer documento", d: "Texto, hoja, presentación o diagrama.", ok: espacios.some((e) => e.documentos > 0) || recientes.length > 0, fn: () => (propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "file-plus" },
-      { id: "rueda", t: "Prueba la ruedita", d: "Mantén presionado medio segundo sobre lo que quieras cambiar.", ok: !!h.rueda, fn: () => (recientes[0] ? (location.hash = "#/doc/" + recientes[0].id) : propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "circle-dot" },
-      { id: "equipo", t: "Invita a tu equipo", d: "Comparte el espacio en tu red o con su usuario.", ok: espacios.some((e) => e.miembros > 1 || e.conexion), fn: () => (propio ? NOM.vistaEspacios.accesos(propio) : NOM.vistaEspacios.unirse()), icono: "users" },
+      { id: "rueda", t: "Prueba la ruedita", d: (conMouse() ? "Clic derecho (o mantén presionado)" : "Mantén presionado medio segundo") + " sobre lo que quieras cambiar.", ok: !!h.rueda, fn: () => (recientes[0] ? (location.hash = "#/doc/" + recientes[0].id) : propio ? NOM.vistaEspacios.nuevoDocumento(propio) : NOM.vistaEspacios.nuevoEspacio()), icono: "circle-dot" },
+      { id: "equipo", t: "Invita a tu equipo", d: "Dales un código o un QR para que entren.", ok: espacios.some((e) => e.miembros > 1 || e.conexion), fn: () => (propio ? NOM.vistaEspacios.accesos(propio) : NOM.vistaEspacios.unirse()), icono: "users" },
       { id: "ajustes", t: "Hazla tuya", d: "Tema, guardado automático y movimiento.", ok: !!h.preferencias, fn: () => NOM.vistaEspacios.preferencias(), icono: "palette" },
     ];
     const hechos = pasos.filter((p) => p.ok).length;
@@ -341,11 +343,12 @@
   };
 
   // ================================================================== consejo de la ruedita en el editor
+  // Con mouse se dice "clic derecho"; con el dedo, "mantén presionado" (el gesto que esa persona sí tiene).
   const CONSEJOS = {
-    TEXTO: "Mantén presionado sobre el texto: sale la ruedita con negrita, color, estilos y más.",
-    HOJA: "Mantén presionada una celda: sale la ruedita con formato, fórmulas y más.",
-    PRESENTACION: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",
-    DIAGRAMA: "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás.",
+    TEXTO: () => (conMouse() ? "Haz clic derecho sobre el texto" : "Mantén presionado sobre el texto") + ": sale la ruedita con negrita, color, estilos y más.",
+    HOJA: () => (conMouse() ? "Haz clic derecho en una celda" : "Mantén presionada una celda") + ": sale la ruedita con formato, fórmulas y más.",
+    PRESENTACION: () => (conMouse() ? "Haz clic derecho en una figura: sale su ruedita. Para elegir varias, usa Mayús + clic." : "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás."),
+    DIAGRAMA: () => (conMouse() ? "Haz clic derecho en una figura: sale su ruedita. Para elegir varias, usa Mayús + clic." : "Mantén presionada una figura: sale su ruedita. Para elegir varias, sostén una y toca las demás."),
   };
   NOM.alAbrirEditor = (ed, tipo) => {
     if (!ed || ed.soloLectura || !CONSEJOS[tipo]) return;
@@ -353,7 +356,7 @@
     if (hitos()[k] || hitos().rueda) return;
     setTimeout(() => {
       if (!ed.vista || !ed.vista.isConnected) return;
-      const el = html(`<div class="consejo" role="status">${ico("circle-dot")}<span>${esc(CONSEJOS[tipo])}</span><button class="btn chico" type="button">Entendido</button></div>`);
+      const el = html(`<div class="consejo" role="status">${ico("circle-dot")}<span>${esc(CONSEJOS[tipo]())}</span><button class="btn chico" type="button">Entendido</button></div>`);
       ed.vista.append(el);
       const quitar = () => { if (!el.isConnected) return; NOM.hito(k); el.classList.add("saliendo"); setTimeout(() => el.remove(), 260); document.removeEventListener("nom:hito", alHito); };
       const alHito = (e) => { if (e.detail === "rueda") quitar(); };

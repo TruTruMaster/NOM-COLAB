@@ -58,7 +58,7 @@ public class ServicioSincronia {
 
     static String normalizar(String url) {
         String u = url == null ? "" : url.trim().replaceAll("/+$", "");
-        if (u.isEmpty()) throw ErrorNom.invalido("Escribe la dirección del otro servidor", "servidor");
+        if (u.isEmpty()) throw ErrorNom.invalido("Escribe la dirección del otro NOM-COLAB", "servidor");
         if (!u.matches("(?i)^https?://.*")) {
             String host = u.split("[/:]")[0].toLowerCase(Locale.ROOT);
             boolean red = host.matches("\\d+(\\.\\d+){3}") || host.equals("localhost") || !host.contains(".") || host.endsWith(".local");
@@ -75,12 +75,12 @@ public class ServicioSincronia {
         espacios.exigir(e, u, Permiso.PROPIETARIO);
         String base = normalizar(servidor);
         if (usuario == null || usuario.isBlank() || contrasena == null || contrasena.isEmpty())
-            throw ErrorNom.invalido("Escribe tu usuario y tu contraseña del otro servidor", "usuario");
+            throw ErrorNom.invalido("Escribe tu usuario y tu contraseña de allá", "usuario");
         try {
             Object info = pedir("GET", base + "/api/red/info", null, null);
             if (!(info instanceof Map<?, ?> mi) || !(mi.get("nom") instanceof Number nom) || nom.intValue() != 1)
-                throw ErrorNom.invalido("En esa dirección no hay un servidor de NOM-COLAB", "servidor");
-            if (String.valueOf(mi.get("servidor")).equals(nodo.id())) throw ErrorNom.invalido("Esa dirección es este mismo servidor", "servidor");
+                throw ErrorNom.invalido("En esa dirección no hay un NOM-COLAB", "servidor");
+            if (String.valueOf(mi.get("servidor")).equals(nodo.id())) throw ErrorNom.invalido("Esa dirección es este mismo NOM-COLAB", "servidor");
             Map<String, Object> ses = (Map<String, Object>) pedir("POST", base + "/api/cuentas/sesion", null, Map.of("nombre", usuario.trim(), "contrasena", contrasena));
             String token = String.valueOf(ses.get("token"));
             // Un espacio con el mismo nombre (si ya existe y lo puedo editar) o uno nuevo.
@@ -98,9 +98,9 @@ public class ServicioSincronia {
             e.sincronia = s;
             espacios.guardar(e);
         } catch (ErrorRemoto ex) {
-            throw ErrorNom.invalido(ex.codigo == 401 || ex.codigo == 423 ? "El otro servidor no aceptó tu usuario o contraseña: " + ex.getMessage() : "El otro servidor respondió: " + ex.getMessage(), ex.codigo == 401 ? "contrasena" : null);
+            throw ErrorNom.invalido(ex.codigo == 401 || ex.codigo == 423 ? "El otro NOM-COLAB no aceptó tu usuario o contraseña: " + ex.getMessage() : "El otro NOM-COLAB respondió: " + ex.getMessage(), ex.codigo == 401 ? "contrasena" : null);
         } catch (IOException ex) {
-            throw ErrorNom.invalido("No se pudo conectar con " + base + " (¿hay Internet o red?)", "servidor");
+            throw ErrorNom.invalido("No se pudo conectar con " + base + " (¿hay Internet o estás en el mismo Wi-Fi?)", "servidor");
         }
         return sincronizarEspacio(e);
     }
@@ -108,7 +108,7 @@ public class ServicioSincronia {
     public Map<String, Object> sincronizar(Usuario u, String espacioId) {
         Espacio e = espacios.requerir(espacioId);
         espacios.exigir(e, u, Permiso.PROPIETARIO);
-        if (e.sincronia == null) throw ErrorNom.invalido("Este espacio no está conectado con otro servidor", null);
+        if (e.sincronia == null) throw ErrorNom.invalido("Este espacio no tiene copia en otro NOM-COLAB", null);
         return sincronizarEspacio(e);
     }
 
@@ -193,10 +193,10 @@ public class ServicioSincronia {
             s.error = null;
         } catch (ErrorRemoto ex) {
             s.estado = ex.codigo == 401 ? "sesion" : "error";
-            s.error = ex.codigo == 401 ? "La sesión en el otro servidor venció: vuelve a conectar el espacio." : ex.getMessage();
+            s.error = ex.codigo == 401 ? "La sesión en el otro NOM-COLAB venció: vuelve a conectar el espacio." : ex.getMessage();
         } catch (IOException ex) {
             s.estado = "sin-red";
-            s.error = "Sin conexión con el otro servidor; se reintenta solo.";
+            s.error = "Sin conexión con el otro NOM-COLAB; se vuelve a intentar solo.";
         }
         espacios.guardar(e);
         r.put("estado", s.estado);

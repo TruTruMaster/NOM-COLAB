@@ -332,7 +332,7 @@
   .editor { grid-template-rows: auto auto 1fr auto; }
   .ed-barra { grid-row: 1; height: 56px; padding: 0 var(--e2); gap: 4px; }
   .ed-nombre { font-size: 16px; max-width: 46vw; padding: 4px 6px; }
-  .ed-espacio { font-size: 11px; padding-left: 6px; margin-top: -2px; }
+  .ed-espacio { font-size: 12px; padding-left: 6px; margin-top: -2px; }
   .ed-herramientas {
     grid-row: 4; order: 9; border-top: 1px solid var(--borde); border-bottom: 0;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); min-height: 60px;
@@ -448,7 +448,7 @@
 /* cursores de las demás personas, como en Google Docs */
 .wd-cursores { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 .wd-otro { position: absolute; width: 2px; margin-left: -1px; background: var(--c); border-radius: 1px; }
-.wd-otro span { position: absolute; bottom: 100%; left: -1px; background: var(--c); color: #fff; font: 800 10px/15px Nunito, sans-serif; padding: 0 6px; border-radius: 4px 4px 4px 0; white-space: nowrap; }
+.wd-otro span { position: absolute; bottom: 100%; left: -1px; background: var(--c); color: #fff; font: 800 11px/16px Nunito, sans-serif; padding: 0 6px; border-radius: 4px 4px 4px 0; white-space: nowrap; }
 .wd-otro-sel { position: absolute; opacity: .2; border-radius: 2px; }
 
 /* esquema (títulos) */
@@ -545,7 +545,7 @@
 .rueda.abierta .rueda-item { opacity: 1; transform: translate(-50%, -50%); }
 .rueda.abierta .rueda-item.activo { transform: translate(-50%, -50%) scale(1.1); transition-delay: 0s; }
 .rueda-item .ico { width: 21px; height: 21px; }
-.rueda-item small { max-width: 64px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rueda-item small { max-width: 66px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rueda-item.activo { color: #fff; }
 .rueda.abierta .rueda-item.off { opacity: .34; }
 .rueda-item:focus-visible { outline: none; }
@@ -708,7 +708,7 @@
 .capa-nombre { display: flex; align-items: center; gap: 6px; min-width: 0; background: none; border: 0; text-align: left; font: inherit; font-weight: 750; font-size: 13px; color: var(--tinta); padding: 6px 4px; cursor: pointer; }
 .chip.chico { height: 22px; padding: 0 8px; font-size: 11.5px; }
 .capa-nombre .chip { background: var(--c, var(--sup-hundida)); color: #fff; }
-.mini-dueno { position: absolute; left: 4px; bottom: 4px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 10px/16px var(--fuente); color: #fff; background: var(--c, #6B6875); padding: 0 5px; border-radius: 4px; }
+.mini-dueno { position: absolute; left: 4px; bottom: 4px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 11px/16px var(--fuente); color: #fff; background: var(--c, #6B6875); padding: 0 5px; border-radius: 4px; }
 .mini-cambio { position: absolute; right: 6px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #F2C200; box-shadow: 0 0 0 2px #fff; }
 .mini-trans { position: absolute; right: 4px; bottom: 4px; color: var(--m-pres-tinta); }
 .pres-notas { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 6; padding: 10px; border-radius: var(--r-m); background: var(--vidrio-fuerte); border: 1px solid var(--vidrio-borde); box-shadow: var(--sombra-flotante); backdrop-filter: var(--vidrio-desenfoque); -webkit-backdrop-filter: var(--vidrio-desenfoque); display: flex; flex-direction: column; gap: 6px; }
@@ -791,7 +791,7 @@
 
 /* ---------------------------------------------------------------- comentarios y sugerencias (7) */
 [data-a=comentarios] { position: relative; }
-[data-a=comentarios].con-cuenta::after { content: attr(data-cuenta); position: absolute; right: 2px; top: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #E0A100; color: #fff; font: 900 10px/16px var(--fuente); }
+[data-a=comentarios].con-cuenta::after { content: attr(data-cuenta); position: absolute; right: 2px; top: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #8A5300; color: #fff; font: 900 11px/16px var(--fuente); }
 .comentarios-cajon .cajon-cuerpo { gap: 10px; }
 .hilo { padding: 10px; border-radius: var(--r-m); background: var(--sup-2); border: 1px solid var(--borde); display: flex; flex-direction: column; gap: 8px; }
 .hilo.enfocado { border-color: #E0A100; box-shadow: 0 0 0 3px rgba(224, 161, 0, .2); }

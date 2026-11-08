@@ -10,7 +10,7 @@
   const NOM = window.NOM;
   const { esc, ico, html, $, $$, aviso, hoja, confirmar } = NOM;
   const api = () => NOM.api;
-  const PERMISO = { EDICION: "Puede editar", LECTURA: "Solo lectura" };
+  const PERMISO = { EDICION: "Puede editar", LECTURA: "Solo puede ver" };
   const PENDIENTE = "nom.unirse.pendiente";
 
   const limpiarCodigo = (t) => String(t || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -43,7 +43,7 @@
     if (!r.tipo || !r.codigo) return aviso("Ese código QR no es de un espacio de NOM-COLAB", { tipo: "error" });
     if (api().empaquetada) {
       if (r.origen && r.origen !== api().servidor()) {
-        if (api().token() && !(await confirmar("Otro servidor", `Ese código es del equipo ${r.origen.replace(/^https?:\/\//, "")}. La app se conectará a él (tu sesión en el servidor actual se cierra en este teléfono; tus documentos ahí no se tocan).`, { si: "Conectar" }))) return;
+        if (api().token() && !(await confirmar("Otro lugar", `Ese código es de ${r.origen.replace(/^https?:\/\//, "")}. La app se conectará ahí (aquí se cierra tu sesión en este teléfono; tus documentos no se tocan).`, { si: "Conectar" }))) return;
         if (api().token()) { try { await NOM.boveda.cerrar(); } catch (e) { /* sin bóveda */ } api().limpiarSesion(); }
         api().fijarServidor(r.origen);
       }
@@ -95,12 +95,12 @@
     const t = $("[data-t]", raiz);
     let info;
     try {
-      if (api().empaquetada && !api().servidor()) throw Object.assign(new Error("Primero conecta la app con el servidor de tu red (o escanea su QR)."), { estado: 0 });
+      if (api().empaquetada && !api().servidor()) throw Object.assign(new Error("Primero elige dónde trabaja tu equipo (o escanea su QR)."), { estado: 0 });
       info = await api().get(`/api/enlaces/${encodeURIComponent(codigo)}`, undefined, { sin401: true });
     } catch (e) {
       t.innerHTML = `<div class="col" style="align-items:center;text-align:center">
         <div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div>
-        <h2>${e.red ? "No hay conexión con el servidor" : "No se puede entrar"}</h2>
+        <h2>${e.red ? "No hay conexión" : "No se puede entrar"}</h2>
         <p class="suave" style="font-weight:650">${esc(e.red ? "Revisa que estés en la misma red Wi-Fi que el equipo que comparte (o conectado a su punto de acceso)." : e.message)}</p>
         <div class="fila" style="flex-wrap:wrap;justify-content:center"><a class="btn" href="#/">Ir al inicio</a>${NOM.qr.hayCamara() ? `<button class="btn primario" data-esc>${ico("qr-code")} Escanear otro</button>` : ""}</div></div>`;
       const b = $("[data-esc]", t); if (b) b.onclick = escanear;
@@ -112,14 +112,14 @@
       <div class="fila" style="gap:14px;align-items:center">
         <span class="icono-espacio grande" style="background:${esc(info.color || "#7AA7FF")}">${esc((info.espacio || "?").trim()[0].toUpperCase())}</span>
         <div class="crece"><span class="etiqueta">Te invitan a</span><h2 style="margin-top:2px">${esc(info.espacio)}</h2>
-          <span class="suave chico" style="font-weight:700">de ${esc(info.propietario)} · ${esc(PERMISO[info.permiso] || info.permiso)} · caduca ${esc(new Date(info.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span></div>
+          <span class="suave chico" style="font-weight:700">de ${esc(info.propietario)} · ${esc(PERMISO[info.permiso] || info.permiso)} · el código sirve hasta el ${esc(new Date(info.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span></div>
       </div>
       <div class="alerta error" data-err hidden></div>
       ${conSesion ? `<button class="btn primario ancho" data-entrar>${ico("log-in")} Entrar como ${esc(u.nombre || "")}</button>
         <p class="suave chico" style="text-align:center">¿No eres tú? <a href="#" data-otra>Usar otra cuenta</a></p>`
       : `${info.invitados ? `<form class="col" data-apodo>
           <div class="campo"><label for="ap">Tu apodo</label><div class="entrada">${ico("users")}<input id="ap" name="apodo" maxlength="16" autocomplete="nickname" placeholder="Así te verán los demás" required></div>
-          <div class="ayuda">Sin registrarte: entras solo a este espacio y desde este dispositivo.</div></div>
+          <div class="ayuda">Sin registrarte: entras solo a este espacio y desde este celular o computadora.</div></div>
           <button class="btn primario ancho">${ico("arrow-right")} Entrar con apodo</button></form>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o con tu cuenta<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>` : ""}
         <div class="fila"><button class="btn crece" data-cuenta="entrar">${ico("log-in")} Iniciar sesión</button><button class="btn crece ${info.invitados ? "" : "primario"}" data-cuenta="registro">${ico("user-plus")} Crear cuenta</button></div>`}
@@ -190,7 +190,7 @@
           <span class="suave chico" style="font-weight:700">${esc(PERMISO[enlace.permiso] || "")}${enlace.invitados ? " · con apodo, sin cuenta" : ""} · hasta ${esc(new Date(enlace.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span>
           ${bs.length > 1 ? `<select class="mini-select" data-base aria-label="Dirección">${bs.map((b) => `<option ${b === base ? "selected" : ""}>${esc(b.replace(/^https?:\/\//, ""))}</option>`).join("")}</select>` : url ? `<span class="chico qr-url">${esc(url)}</span>` : ""}
           ${url ? "" : `<div class="alerta aviso chico">${ico("wifi-off")}<span>${api().lan === false
-            ? "Este servidor no comparte en la red local: abre NOM-COLAB con su dirección pública (la que usan los demás) para que el QR la lleve. El código sí sirve escrito a mano."
+            ? "Para que el QR funcione, abre NOM-COLAB con la dirección que usan los demás (la de Internet). Mientras, el código sí sirve escrito a mano."
             : "Este equipo no está en ninguna red. Conecta el Wi-Fi (o el punto de acceso del teléfono) y vuelve a abrir esto. El código sí sirve escrito a mano."}</span></div>`}
           <div class="fila" style="flex-wrap:wrap">
             ${url ? `<button class="btn chico" data-copiar>${ico("copy", "ico-s")} Copiar</button><button class="btn chico" data-compartir>${ico("share-2", "ico-s")} Compartir</button>` : ""}
@@ -231,33 +231,33 @@
 
   async function invitar(esp) {
     const cuerpo = html(`<div class="col">
-      <p class="suave" style="font-weight:650">Quien escanee el código (o lo escriba) entra a <b>${esc(esp.nombre)}</b> sin pedir acceso. Funciona en la red del salón, sin Internet.</p>
+      <p class="suave" style="font-weight:650">Quien escanee este código (o escriba sus 8 letras) entra a <b>${esc(esp.nombre)}</b> directo, sin pedirte permiso. Funciona aunque no haya Internet, si están en el mismo Wi-Fi.</p>
       <div class="segmentado lleno" role="group" aria-label="Permiso" data-permiso>
         <button type="button" data-p="EDICION" aria-pressed="true">${ico("pencil", "ico-s")} Puede editar</button>
-        <button type="button" data-p="LECTURA" aria-pressed="false">${ico("eye", "ico-s")} Solo leer</button></div>
+        <button type="button" data-p="LECTURA" aria-pressed="false">${ico("eye", "ico-s")} Solo ver</button></div>
       <div class="campo"><label for="qh">El código sirve durante</label><div class="entrada"><select id="qh" data-horas>
         <option value="1">1 hora (una clase)</option><option value="24" selected>1 día</option><option value="168">1 semana</option><option value="720">30 días</option></select></div></div>
-      <label class="lista-item">${ico("users")}<span class="crece"><b>Entrar con apodo, sin cuenta</b><small>Modo salón: cada alumno escribe un apodo y queda ligado a este espacio y a su dispositivo.</small></span>
+      <label class="lista-item">${ico("users")}<span class="crece"><b>Dejar entrar sin cuenta</b><small>Cada quien escribe un apodo y entra solo a este espacio, desde ese celular o esa computadora. Ideal para una clase.</small></span>
         <span class="interruptor"><input type="checkbox" data-invitados><span></span></span></label>
-      <button class="btn primario" data-crear>${ico("qr-code")} Crear código QR</button>
+      <button class="btn primario" data-crear>${ico("qr-code")} Crear el código</button>
       <div data-qr></div>
       <div class="col" data-vigentes></div>
     </div>`);
-    hoja({ titulo: "Invitar con código QR", icono: "qr-code", cuerpo, ancha: true });
+    hoja({ titulo: "Código de invitación", icono: "qr-code", cuerpo, ancha: true });
     let permiso = "EDICION";
     $$("[data-p]", cuerpo).forEach((b) => (b.onclick = () => { permiso = b.dataset.p; $$("[data-p]", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
     const lista = $("[data-vigentes]", cuerpo);
     function pintarLista(d) {
       const ls = (d.enlaces || []).slice(0, 12);
-      lista.innerHTML = ls.length ? `<span class="etiqueta">Códigos de este espacio</span><div class="lista">${ls.map((x) => `
+      lista.innerHTML = ls.length ? `<span class="etiqueta">Códigos que ya creaste</span><div class="lista">${ls.map((x) => `
         <div class="lista-item"><span class="crece"><b style="font-family:var(--mono)">${esc(x.codigo.slice(0, 4))}-${esc(x.codigo.slice(4))}</b>
-          <small>${esc(PERMISO[x.permiso] || "")}${x.invitados ? " · con apodo" : ""} · ${x.estado === "vigente" ? "hasta " + esc(new Date(x.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) : x.estado === "revocado" ? "revocado" : "caducó"} · ${x.usos} ${x.usos === 1 ? "uso" : "usos"}</small></span>
-          ${x.estado === "vigente" ? `<button class="btn chico" data-ver="${esc(x.codigo)}">${ico("qr-code", "ico-s")} Ver</button><button class="btn chico peligro" data-revocar="${esc(x.codigo)}">Revocar</button>` : `<span class="chip">${x.estado === "revocado" ? "Revocado" : "Caducó"}</span>`}
+          <small>${esc(PERMISO[x.permiso] || "")}${x.invitados ? " · con apodo" : ""} · ${x.estado === "vigente" ? "hasta " + esc(new Date(x.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) : x.estado === "revocado" ? "anulado" : "venció"} · ${x.usos} ${x.usos === 1 ? "uso" : "usos"}</small></span>
+          ${x.estado === "vigente" ? `<button class="btn chico" data-ver="${esc(x.codigo)}">${ico("qr-code", "ico-s")} Ver</button><button class="btn chico peligro" data-revocar="${esc(x.codigo)}">Anular</button>` : `<span class="chip">${x.estado === "revocado" ? "Anulado" : "Venció"}</span>`}
         </div>`).join("")}</div>` : "";
       $$("[data-ver]", lista).forEach((b) => (b.onclick = () => tarjetaQr($("[data-qr]", cuerpo), ls.find((x) => x.codigo === b.dataset.ver), d.conexion, esp)));
       $$("[data-revocar]", lista).forEach((b) => (b.onclick = async () => {
-        if (!(await confirmar("Revocar código", "Nadie más podrá entrar con ese código. Quienes ya entraron siguen siendo miembros (quítalos en Compartir).", { si: "Revocar", peligro: true }))) return;
-        try { pintarLista(await api().delete(`/api/espacios/${esp.id}/enlaces/${b.dataset.revocar}`)); $("[data-qr]", cuerpo).innerHTML = ""; aviso("Código revocado", { tipo: "ok" }); } catch (e) { aviso(e.message, { tipo: "error" }); }
+        if (!(await confirmar("Anular el código", "Nadie más podrá entrar con ese código. Quienes ya entraron siguen dentro (si quieres, quítalos en Invitar → Miembros).", { si: "Anular", peligro: true }))) return;
+        try { pintarLista(await api().delete(`/api/espacios/${esp.id}/enlaces/${b.dataset.revocar}`)); $("[data-qr]", cuerpo).innerHTML = ""; aviso("Código anulado", { tipo: "ok" }); } catch (e) { aviso(e.message, { tipo: "error" }); }
       }));
     }
     $("[data-crear]", cuerpo).onclick = async (ev) => {

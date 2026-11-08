@@ -24,7 +24,7 @@
       else {
         raiz.innerHTML = `<div class="contenido"><div class="vacio"><div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div>
           <h3>${esc(e.red ? "No se pudo abrir el documento" : e.message)}</h3>
-          ${e.red ? `<p>No hay conexión con el servidor y este equipo no tiene una copia guardada. Revisa el Wi-Fi y vuelve a intentarlo.</p>` : ""}
+          ${e.red ? `<p>No hay conexión y este equipo no tiene una copia guardada. Revisa el Wi-Fi y vuelve a intentarlo.</p>` : ""}
           <div class="fila" style="justify-content:center;flex-wrap:wrap">${e.red ? `<button class="btn primario" data-reintentar>${ico("refresh-cw")} Volver a intentar</button>` : ""}<a class="btn" href="#/">Ir al inicio</a></div></div></div>`;
         // Vuelve a pasar por la ruta (así el intento nuevo es una pantalla limpia).
         const re = raiz.querySelector("[data-reintentar]");
@@ -80,7 +80,7 @@
           <span class="avatares solo-escritorio" data-presencia></span>
           <span class="estado-sync" data-sync role="status" aria-live="polite"></span>
           <button class="icono-btn solo-escritorio" data-a="paleta" data-micro="Buscar o ir a|Documentos, espacios y acciones.|Ctrl K">${ico("search")}</button>
-          <button class="icono-btn" ${enLocal ? "hidden" : ""} data-a="comentarios" aria-label="Comentarios" data-micro="Comentarios|Comentarios y sugerencias del documento. Funcionan sin Internet, en la red del salón.">${ico("message-square")}</button>
+          <button class="icono-btn" ${enLocal ? "hidden" : ""} data-a="comentarios" aria-label="Comentarios" data-micro="Comentarios|Comentarios y sugerencias del documento. Funcionan aunque no haya Internet.">${ico("message-square")}</button>
           <button class="icono-btn solo-escritorio" ${enLocal ? "hidden" : ""} data-a="historial" data-micro="Historial de versiones|Consulta y restaura versiones anteriores.">${ico("history")}</button>
           <button class="icono-btn" data-a="mas" aria-label="Más opciones" data-micro="Más opciones|Exportar, guardar versión, enfoque y más.">${ico("more-horizontal")}</button>
         </header>
@@ -133,7 +133,7 @@
         { id: "exportar", icono: "download", micro: "Exportar|Guarda una copia en otro formato.", fn: exportar },
       ];
       const items = ed.soloLectura ? [
-        { html: `<span class="ed-lectura-aviso">${ico("eye", "ico-s")} Solo lectura: puedes ver, buscar y descargar</span>` },
+        { html: `<span class="ed-lectura-aviso">${ico("eye", "ico-s")} Solo puedes ver: también buscar y descargar</span>` },
         "->",
         ...deModo.filter((it) => it && it.id === "buscar"),
         ...comunes,
@@ -192,20 +192,20 @@
       if (!s) return;
       const t = {
         ok: [ico("circle-check", "ico-s"), ultimoGuardado ? "Guardado · v" + ultimoGuardado : "Guardado", "ok"],
-        enviando: [`<span class="cargando" style="width:12px;height:12px;border-width:2px"></span>`, "Sincronizando", ""],
-        "sin-red": [ico("cloud-off", "ico-s"), `Sin conexión${n ? " · " + n + " en este equipo" : ""}`, "sin-red"],
+        enviando: [`<span class="cargando" style="width:12px;height:12px;border-width:2px"></span>`, "Guardando…", ""],
+        "sin-red": [ico("cloud-off", "ico-s"), `Sin conexión${n ? " · " + n + (n === 1 ? " cambio guardado aquí" : " cambios guardados aquí") : ""}`, "sin-red"],
         pendiente: [ico("clock", "ico-s"), `${n} por enviar`, "pendiente"],
-        lectura: [ico("eye", "ico-s"), "Solo lectura", "lectura"],
-        lleno: [ico("hard-drive", "ico-s"), `Sin espacio en la nube${n ? " · " + n + " en este equipo" : ""}`, "sin-red"],
+        lectura: [ico("eye", "ico-s"), "Solo ver", "lectura"],
+        lleno: [ico("hard-drive", "ico-s"), `Sin espacio en la nube${n ? " · " + n + (n === 1 ? " cambio guardado aquí" : " cambios guardados aquí") : ""}`, "sin-red"],
         local: [ico("hard-drive", "ico-s"), "Solo en este equipo", "pendiente"],
       }[ed.soloLectura ? "lectura" : ed.local ? "local" : e] || ["", "", ""];
       s.className = "estado-sync " + t[2];
       s.innerHTML = `${t[0]}<span class="solo-escritorio">${t[1]}</span>`;
       s.setAttribute("data-micro", ed.local ? "Solo en este equipo|Se guarda automáticamente " + NOM.aqui().en + ", pero si " + NOM.aqui().borrar + " se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
-        : ed.soloLectura ? "Solo lectura|Tu permiso permite ver, no editar."
+        : ed.soloLectura ? "Solo ver|Tu permiso deja ver el documento, no cambiarlo."
         : e === "lleno" ? "Sin espacio en la nube|El propietario del espacio usó toda su cuota. Tus cambios se quedan en este equipo; liberen versiones viejas en Almacenamiento."
         : e === "sin-red" ? "Sin conexión|Sigue trabajando: tus cambios se guardan en este equipo y se envían solos al volver la red."
-        : "Sincronización|Cada cambio se ve al instante aquí y en menos de 1.5 s en los demás equipos.");
+        : "Guardado|Cada cambio se guarda solo y los demás lo ven en un momento.");
     }
     pintarEstado(sinRed ? "sin-red" : doc.estadoSync, doc.pendientes.length);
     if (sinRed) aviso("Sin conexión: abriste la copia guardada en este equipo. Tus cambios se enviarán al volver la red.", { tipo: "aviso", ms: 6000 });
@@ -255,7 +255,7 @@
           doc.relojDesconexion = null;
           doc.enviadasSinRed = [];
           if (resumen && resumen.length) NOM.reconexion.mostrar(ed, resumen);
-          else aviso("Conexión recuperada. Sincronizando tus cambios…", { tipo: "ok" });
+          else aviso("Volvió la conexión. Enviando tus cambios…", { tipo: "ok" });
         }
         doc.reanudar();
         enviarPresencia();
@@ -291,7 +291,7 @@
       doc.opc.soloLectura = ed.soloLectura;
       vista.classList.toggle("lectura", ed.soloLectura);
       nombre.readOnly = ed.soloLectura;
-      if (antes !== ed.soloLectura) { aviso(ed.soloLectura ? "Ahora tienes permiso de solo lectura" : "Ahora puedes editar", { tipo: "info" }); montar(ed.modo, true); }
+      if (antes !== ed.soloLectura) { aviso(ed.soloLectura ? "Ahora solo puedes ver este documento" : "Ahora puedes editar", { tipo: "info" }); montar(ed.modo, true); }
       if (!ed.soloLectura) doc.reanudar();
       pintarEstado(doc.estadoSync, doc.pendientes.length);
     }
@@ -301,7 +301,7 @@
       const n = doc.pendientes.length;
       cambiarPermiso("LECTURA");
       const pie = html(`<div style="display:contents"><button class="btn" data-no>Descartarlos</button><button class="btn primario" data-si>${ico("download")} Exportar mi copia</button></div>`);
-      const h = hoja({ titulo: "Tus cambios no se aplicaron", cuerpo: `<p style="font-weight:650">Tu permiso cambió a <b>solo lectura</b> mientras trabajabas sin conexión. ${n} cambio(s) quedaron solo en este equipo.</p>`, pie });
+      const h = hoja({ titulo: "Tus cambios no se aplicaron", cuerpo: `<p style="font-weight:650">Tu permiso cambió a <b>solo ver</b> mientras trabajabas sin conexión. ${n} cambio(s) quedaron solo en este equipo.</p>`, pie });
       $("[data-si]", pie).onclick = () => { NOM.formatos.exportar(doc, "nom", (nombre.value || "copia") + " (mi copia)"); doc.descartarCola(); h.cerrar(); };
       $("[data-no]", pie).onclick = () => { doc.descartarCola(); h.cerrar(); };
     }
@@ -367,7 +367,7 @@
       if (e && e.limite) {
         const vencida = e.vencida || Date.now() >= e.limite;
         l.push(`<div class="banda ${vencida ? "aviso" : "info"}">${ico("calendar", "ico-s")}<span class="crece">${vencida
-          ? (ed.esPropietario ? `La entrega cerró el ${esc(fechaLarga(e.limite))}: los demás ya solo pueden leer.` : `La fecha límite pasó (${esc(fechaLarga(e.limite))}): el documento quedó en solo lectura.`)
+          ? (ed.esPropietario ? `La entrega cerró el ${esc(fechaLarga(e.limite))}: los demás ya solo pueden leer.` : `La fecha límite pasó (${esc(fechaLarga(e.limite))}): ya solo se puede ver.`)
           : `Entrega: fecha límite ${esc(fechaLarga(e.limite))}`}</span>
           ${ed.esPropietario ? `<button class="btn chico" data-a="entrega">Cambiar</button>` : ""}${vencida && ed.esPropietario && (e.recibos || []).length ? `<button class="btn chico" data-a="recibos-entrega">${ico("shield-check", "ico-s")} Recibos (${e.recibos.length})</button>` : ""}</div>`);
       }
@@ -398,14 +398,14 @@
         ed.entrega = d.entrega || null;
         if (d.permiso !== ed.permiso) cambiarPermiso(d.permiso);
         pintarAvisos();
-        if (avisar && ed.entrega && ed.entrega.cerrada && !ed.esPropietario) aviso("Se cerró la entrega: el documento quedó en solo lectura", { tipo: "info" });
+        if (avisar && ed.entrega && ed.entrega.cerrada && !ed.esPropietario) aviso("Se cerró la entrega: ya solo puedes ver el documento", { tipo: "info" });
       } catch (e) { /* sin red */ }
     }
     function dialogoEntrega() {
       const actual = ed.entrega && ed.entrega.limite ? new Date(ed.entrega.limite) : new Date(Date.now() + 7 * 86400000);
       const local = new Date(actual.getTime() - actual.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       const cuerpo = html(`<form class="col">
-        <p class="suave" style="font-weight:650">Al llegar la fecha, quien no es el propietario del espacio queda en <b>solo lectura</b> y se guarda una versión final con el <b>recibo de proceso de escritura</b> de cada persona que trabajó en el documento.</p>
+        <p class="suave" style="font-weight:650">Al llegar la fecha, quien no es el propietario del espacio ya solo puede <b>verlo</b> y se guarda una versión final con el <b>recibo de proceso de escritura</b> de cada persona que trabajó en el documento.</p>
         <div class="campo"><label for="fl">Fecha y hora límite</label><div class="entrada">${ico("calendar")}<input id="fl" type="datetime-local" value="${local}" required></div></div></form>`);
       const pie = html(`<div style="display:contents">${ed.entrega && ed.entrega.limite ? `<button class="btn plano peligro" data-quitar type="button">Quitar la entrega</button>` : ""}<span class="crece"></span><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
       const h = hoja({ titulo: "Entrega con fecha límite", icono: "calendar", cuerpo, pie });
@@ -470,7 +470,7 @@
         <div class="fila historial-acciones">
           <button class="btn chico" data-recibo data-micro="Recibo de mi trabajo|Tus sesiones, lo que tecleaste y lo que pegaste, con una huella SHA-256 para probar que es auténtico.">${ico("shield-check", "ico-s")} Recibo de mi trabajo</button>
           <button class="icono-btn chico" data-repeticion aria-label="Repetición" data-micro="Repetición|Mira cómo creció el documento, versión por versión.">${ico("play", "ico-s")}</button>
-          <button class="icono-btn chico" data-verificar aria-label="Verificar un recibo" data-micro="Verificar un recibo|Comprueba que un recibo (.json) lo emitió este servidor y no se cambió.">${ico("circle-check", "ico-s")}</button></div>
+          <button class="icono-btn chico" data-verificar aria-label="Verificar un recibo" data-micro="Verificar un recibo|Comprueba que un recibo (.json) es auténtico y que nadie lo cambió.">${ico("circle-check", "ico-s")}</button></div>
         <div class="cajon-cuerpo" data-versiones><div class="esqueleto" style="height:56px"></div><div class="esqueleto" style="height:56px"></div></div></div>`;
       $$("[data-tab]", lateral).forEach((b) => (b.onclick = () => {
         $$("[data-tab]", lateral).forEach((x) => x.setAttribute("aria-pressed", x === b));
@@ -616,10 +616,10 @@
       { titulo: "Guardado solo en este equipo" },
       descargarOffice,
       { texto: "Descargar copia (.nom)", icono: "download", fn: () => NOM.formatos.exportar(doc, "nom", nombre.value || "documento") },
-      { texto: "Exportar en otro formato…", icono: "file-down", fn: exportar },
+      { texto: "Descargar en otro formato (PDF y más)…", icono: "file-down", fn: exportar },
       ...(api.token() ? [{ texto: "Subir a un espacio", icono: "upload", fn: () => { doc.guardarYa(); NOM.vistaEspacios.subirLocal(docId); } }]
-        : [{ texto: "Crear cuenta para guardarlo en la red", icono: "user-plus", fn: () => { doc.guardarYa(); NOM.app.irACuentas("registro"); } }]),
-      { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl+.", fn: () => enfoque(true) },
+        : [{ texto: "Crear cuenta para compartirlo", icono: "user-plus", fn: () => { doc.guardarYa(); NOM.app.irACuentas("registro"); } }]),
+      { texto: "Modo enfoque (solo tu contenido)", icono: "scan-eye", atajo: "Ctrl+.", fn: () => enfoque(true) },
       { texto: "Preferencias", icono: "settings", fn: () => NOM.vistaEspacios.preferencias() },
       "-",
       { texto: "Eliminar documento", icono: "trash-2", peligro: true, fn: async () => {
@@ -630,10 +630,10 @@
       ...(ed.soloLectura ? [] : [{ texto: "Guardar versión", icono: "save", atajo: "Ctrl+S", fn: guardarVersion }]),
       { texto: "Historial y actividad", icono: "history", fn: historial },
       descargarOffice,
-      { texto: "Exportar en otro formato…", icono: "file-down", fn: exportar },
-      { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl+.", fn: () => enfoque(true) },
+      { texto: "Descargar en otro formato (PDF y más)…", icono: "file-down", fn: exportar },
+      { texto: "Modo enfoque (solo tu contenido)", icono: "scan-eye", atajo: "Ctrl+.", fn: () => enfoque(true) },
       "-",
-      { texto: "Compartir espacio", icono: "share-2", fn: () => NOM.vistaEspacios.accesos(ed.espacio) },
+      { texto: "Invitar o ver miembros", icono: "user-plus", fn: () => NOM.vistaEspacios.accesos(ed.espacio) },
       { texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed) },
       ...(ed.esPropietario ? [
         { titulo: "Como propietario del espacio" },
@@ -653,7 +653,7 @@
       ...(ed.soloLectura || enLocal ? [] : [{ texto: "Guardar versión", icono: "save", atajo: "Ctrl S", fn: guardarVersion, claves: "guardar" }]),
       ...(enLocal ? [] : [{ texto: "Historial y actividad", icono: "history", fn: historial, claves: "versiones restaurar" }]),
       Object.assign({ claves: "exportar office" }, descargarOffice),
-      { texto: "Exportar en otro formato…", icono: "file-down", fn: exportar, claves: "pdf html descargar" },
+      { texto: "Descargar en otro formato (PDF y más)…", icono: "file-down", fn: exportar, claves: "pdf html descargar exportar" },
       { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl .", fn: () => enfoque(true), claves: "concentrar pantalla completa" },
       ...(enLocal ? [] : [{ texto: "Compartir espacio", icono: "share-2", fn: () => NOM.vistaEspacios.accesos(ed.espacio), claves: "invitar accesos" }]),
       ...(enLocal ? [] : [{ texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed), claves: "prueba autoria tecleado pegado hash" }]),

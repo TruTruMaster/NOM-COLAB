@@ -223,6 +223,13 @@ public class MainActivity extends Activity {
     /** Lo que la interfaz web puede pedirle al teléfono (window.NomAndroid). */
     private class Puente {
 
+        /** Letra más grande en la app (Ajustes → Tamaño de la letra). 100 = normal, hasta 140. */
+        @JavascriptInterface
+        public void tamanoLetra(int porciento) {
+            final int p = Math.max(100, Math.min(140, porciento));
+            runOnUiThread(() -> web.getSettings().setTextZoom(p));
+        }
+
         /**
          * CU-15 en Android: escucha 3.5 s los anuncios UDP de los equipos que tienen
          * la "Conexión del proyecto" activa y responde a window.__nomServidores(json).

@@ -5,7 +5,7 @@
   const NOM = window.NOM;
   const { esc, ico, html, $, $$, api, aviso, hoja, confirmar, haceCuanto, bytes, avatar, MODOS } = { ...NOM, api: NOM.api };
 
-  const PERMISOS = { PROPIETARIO: "Propietario", EDICION: "Puede editar", LECTURA: "Solo lectura" };
+  const PERMISOS = { PROPIETARIO: "Propietario", EDICION: "Puede editar", LECTURA: "Solo puede ver" };
   const inicial = (s) => esc((String(s || "?").trim()[0] || "?").toUpperCase());
   function saludo() {
     const h = new Date().getHours();
@@ -26,8 +26,8 @@
       <div class="encabezado">
         <div><h1>${saludo()}, ${esc(u.nombre || "")}</h1>
           <p class="sub">${esc(new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }))}</p></div>
-        <div class="fila solo-escritorio">
-          <button class="btn" data-a="unirse" data-micro="Unirse a un espacio|Busca los espacios que tus compañeros comparten en esta red.">${ico("radio")} Unirse</button>
+        <div class="fila solo-escritorio" data-acciones-inicio>
+          <button class="btn" data-a="unirse" data-micro="Unirse a un espacio|Entra al espacio de otra persona con su código o su QR.">${ico("qr-code")} Tengo un código</button>
           <button class="btn primario" data-a="nuevo">${ico("plus")} Nuevo espacio</button>
         </div>
       </div>
@@ -65,14 +65,19 @@
     NOM.app.fijarEspacios(lista);
     const rej = $("[data-espacios]", cont);
     if (!rej) return;
-    if (NOM.primerosPasos) NOM.primerosPasos($(".encabezado", cont), lista);
-    $("[data-cuantos]", cont).textContent = lista.length + (lista.length === 1 ? " espacio" : " espacios");
+    // Sin espacios, la tarjeta de primeros pasos y los botones de arriba repetirían lo mismo que el
+    // aviso de abajo: se deja un solo lugar con las dos opciones.
+    if (NOM.primerosPasos && lista.length) NOM.primerosPasos($(".encabezado", cont), lista);
+    $("[data-cuantos]", cont).textContent = lista.length ? lista.length + (lista.length === 1 ? " espacio" : " espacios") : "";
+    $("[data-cuantos]", cont).hidden = !lista.length;
     if (!lista.length) {
+      const arriba = $("[data-acciones-inicio]", cont); if (arriba) arriba.hidden = true;
+      NOM.app.fijarFab(null);
       rej.outerHTML = `<div class="vacio">
         <div class="burbuja">${ico("layout-grid")}</div>
         <h3>Aún no tienes espacios</h3>
-        <p style="max-width:42ch">Un espacio reúne los documentos de un equipo o proyecto. Crea uno o únete al de un compañero en esta red.</p>
-        <div class="fila"><button class="btn" data-v="unirse">${ico("radio")} Unirse a uno</button><button class="btn primario" data-v="nuevo">${ico("plus")} Crear mi primer espacio</button></div>
+        <p style="max-width:44ch">Un espacio es como una carpeta compartida: ahí guardan sus documentos tú y tu equipo, clase o proyecto.</p>
+        <div class="fila" style="flex-wrap:wrap;justify-content:center"><button class="btn primario" data-v="nuevo">${ico("plus")} Crear mi primer espacio</button><button class="btn" data-v="unirse">${ico("qr-code")} Tengo un código para entrar</button></div>
       </div>`;
       $("[data-v=unirse]", cont).onclick = unirse;
       $("[data-v=nuevo]", cont).onclick = nuevoEspacio;
@@ -86,7 +91,7 @@
     return `<a class="tarjeta tarjeta-espacio clay" href="#/espacio/${esc(e.id)}">
       <div class="fila-e">
         <span class="icono-espacio" style="background:${esc(e.color)};--c:${esc(e.color)}">${inicial(e.nombre)}</span>
-        <span class="fila">${e.conexion ? `<span class="chip ok" data-micro="Visible en la red|Otros equipos de esta red pueden encontrar el espacio."><span class="punto vivo"></span>En red</span>` : ""}
+        <span class="fila">${e.conexion ? `<span class="chip ok" data-micro="Visible en el Wi-Fi|Quienes estén en el mismo Wi-Fi pueden encontrarlo."><span class="punto vivo"></span>En el Wi-Fi</span>` : ""}
         ${e.solicitudes ? `<span class="chip aviso">${e.solicitudes} solicitud${e.solicitudes > 1 ? "es" : ""}</span>` : ""}</span>
       </div>
       <div><div class="titulo recorta">${esc(e.nombre)}</div><div class="suave chico" style="font-weight:700">${esc(PERMISOS[e.permiso] || "")}${e.permiso !== "PROPIETARIO" ? " · de " + esc(e.propietario) : ""}</div></div>
@@ -104,8 +109,8 @@
     const cuerpo = html(`<form class="col" novalidate>
       <div class="alerta" data-alerta hidden></div>
       <div class="campo"><label for="ne">Nombre del espacio</label>
-        <div class="entrada"><input id="ne" name="nombre" maxlength="60" placeholder="Ej. Academia de Matemáticas" autocomplete="off" autofocus></div>
-        <div class="ayuda">Un espacio agrupa los documentos de un equipo o proyecto.</div></div>
+        <div class="entrada"><input id="ne" name="nombre" maxlength="60" placeholder="Ej. Historia 3B o Equipo de ventas" autocomplete="off" autofocus></div>
+        <div class="ayuda">Como una carpeta compartida para tu equipo, tu clase o un proyecto.</div></div>
     </form>`);
     const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Crear espacio</button></div>`);
     const h = hoja({ titulo: "Nuevo espacio", icono: "plus", cuerpo, pie });
@@ -119,7 +124,7 @@
       try {
         const esp = await api.post("/api/espacios", { nombre });
         h.cerrar(true);
-        preguntarConexion(esp);
+        listoParaInvitar(esp);
       } catch (err) {
         al.className = "alerta error"; al.hidden = false; al.innerHTML = `${ico("triangle-alert")}<span>${esc(err.message)}</span>`;
         $("[data-si]", pie).disabled = false;
@@ -129,23 +134,17 @@
     $("[data-si]", pie).onclick = enviar;
   }
 
-  function preguntarConexion(esp) {
+  /** Recién creado: lo siguiente que la gente quiere hacer es invitar a su equipo (no configurar la red). */
+  function listoParaInvitar(esp) {
     const cuerpo = html(`<div class="col">
       <div class="exito-check">${ico("check")}</div>
-      <p style="text-align:center;font-weight:650">El espacio <b>${esc(esp.nombre)}</b> está listo.<br><span class="suave">¿Quieres que tus compañeros de esta red lo encuentren?</span></p>
-      <div class="alerta info">${ico("wifi")}<span>Al activar la <b>Conexión del proyecto</b>, el espacio se anuncia en tu red local. Solo entran quienes tú autorices.</span></div>
+      <p style="text-align:center;font-weight:650"><b>${esc(esp.nombre)}</b> ya está listo.<br><span class="suave">¿Invitas a tu equipo? Les das un código y entran desde su celular o su computadora.</span></p>
     </div>`);
-    const pie = html(`<div style="display:contents"><button class="btn" data-no>Ahora no</button><button class="btn primario" data-si>${ico("wifi")} Activar conexión</button></div>`);
-    const h = hoja({ titulo: "Conexión del proyecto", cuerpo, pie });
-    $("[data-no]", pie).onclick = () => { h.cerrar(true); location.hash = "#/espacio/" + esp.id; };
-    $("[data-si]", pie).onclick = async () => {
-      try {
-        const c = await api.put(`/api/espacios/${esp.id}/conexion`, { activa: true });
-        h.cerrar(true);
-        location.hash = "#/espacio/" + esp.id;
-        aviso(c.sinRed ? "Activada, pero este equipo no está conectado a ninguna red" : "Visible en la red", { tipo: c.sinRed ? "aviso" : "ok" });
-      } catch (e) { aviso(e.message, { tipo: "error" }); }
-    };
+    const pie = html(`<div style="display:contents"><button class="btn" data-no>Después</button><button class="btn primario" data-si>${ico("user-plus")} Invitar ahora</button></div>`);
+    const h = hoja({ titulo: "Espacio creado", cuerpo, pie });
+    const ir = () => { location.hash = "#/espacio/" + esp.id; };
+    $("[data-no]", pie).onclick = () => { h.cerrar(true); ir(); };
+    $("[data-si]", pie).onclick = () => { h.cerrar(true); ir(); setTimeout(() => accesos(esp), 350); };
   }
 
   // ================================================================== Conexión del proyecto (CU-14)
@@ -156,30 +155,30 @@
     const cuerpo = html(`<div class="col">
       <div class="lista-item" style="padding:14px">
         <span class="modo-insignia" style="background:var(--ok-tenue);color:var(--ok)">${ico("wifi")}</span>
-        <span class="crece"><b>Visible en la red local</b><small>Se anuncia a los equipos de esta red para que puedan pedir acceso</small></span>
-        <label class="interruptor"><input type="checkbox" ${c.activa ? "checked" : ""} aria-label="Conexión del proyecto"><span></span></label>
+        <span class="crece"><b>Que lo encuentren en el mismo Wi-Fi</b><small>Quien busque espacios desde ese Wi-Fi lo verá y te podrá pedir entrar</small></span>
+        <label class="interruptor"><input type="checkbox" ${c.activa ? "checked" : ""} aria-label="Que lo encuentren en el mismo Wi-Fi"><span></span></label>
       </div>
       <div data-detalle></div>
     </div>`);
     const det = $("[data-detalle]", cuerpo);
     const pintar = (c) => {
       det.innerHTML = c.sinRed
-        ? `<div class="alerta aviso">${ico("wifi-off")}<span>Este equipo no está conectado a ninguna red. No habrá descubrimiento hasta que te conectes a una.</span></div>`
+        ? `<div class="alerta aviso">${ico("wifi-off")}<span>Este equipo no está conectado a ningún Wi-Fi. Conéctalo para que los demás lo encuentren.</span></div>`
         : c.activa
-          ? `<p class="etiqueta">Tus compañeros entran desde</p>
+          ? `<p class="etiqueta">Si no lo encuentran, que escriban esta dirección en su navegador</p>
              <div class="lista">${c.direcciones.map((ip) => `<div class="lista-item">${ico("link")}<span class="crece"><b style="font-family:var(--mono)">http://${esc(ip)}:${c.puerto}</b><small>Equipo ${esc(c.equipo)}</small></span><button class="icono-btn" data-qrdir="http://${esc(ip)}:${c.puerto}" aria-label="Código QR" data-micro="Código QR|Quien lo escanea abre NOM-COLAB de este equipo.">${ico("qr-code")}</button><button class="icono-btn" data-copiar="http://${esc(ip)}:${c.puerto}" aria-label="Copiar" data-micro="Copiar dirección|Pégala en el navegador o en la app de tu compañero.">${ico("copy")}</button></div>`).join("")}</div>
-             <p class="suave chico">La app Android también los encuentra con “Buscar en la red”. Para que entren directo al espacio, sin pedir acceso, usa <b>Invitar con QR</b>.</p>`
-          : `<div class="alerta info">${ico("lock")}<span>El espacio solo existe en este equipo. Los miembros que ya tienen acceso pueden seguir entrando con la dirección del servidor.</span></div>`;
+             <p class="suave chico">Lo más fácil para que entren directo, sin pedir permiso: <b>Compartir → Crear código de invitación</b>.</p>`
+          : `<div class="alerta info">${ico("lock")}<span>No aparece al buscar. Quienes ya son miembros, o tienen un código de invitación, sí pueden entrar.</span></div>`;
       $$("[data-copiar]", det).forEach((b) => (b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copiar); aviso("Dirección copiada", { tipo: "ok" }); }));
       $$("[data-qrdir]", det).forEach((b) => (b.onclick = () => NOM.anfitrion.qrDireccion(b.dataset.qrdir)));
     };
     pintar(c);
-    hoja({ titulo: "Conexión del proyecto", cuerpo });
+    hoja({ titulo: "Visible en el mismo Wi-Fi", icono: "wifi", cuerpo });
     $("input", cuerpo).onchange = async (e) => {
       try {
         const r = await api.put(`/api/espacios/${esp.id}/conexion`, { activa: e.target.checked });
         pintar(r);
-        aviso(r.activa ? "El espacio ya es visible en la red" : "El espacio dejó de anunciarse", { tipo: "ok" });
+        aviso(r.activa ? "Listo: ya lo encuentran en el mismo Wi-Fi" : "Ya no aparece al buscar en el Wi-Fi", { tipo: "ok" });
         alCambiar && alCambiar();
       } catch (err) { e.target.checked = !e.target.checked; aviso(err.message, { tipo: "error" }); }
     };
@@ -189,30 +188,30 @@
   function unirse() {
     if (!api.lan) {
       const c0 = html(`<div class="col">
-        <div class="alerta info">${ico("cloud")}<span>Estás en la versión en línea: no hace falta buscar en la red. Pide al propietario que te comparta el espacio desde <b>Compartir</b> con tu nombre de usuario <b>${esc((api.usuario() || {}).nombre || "")}</b>, o que te dé su código QR.</span></div>
+        <p style="font-weight:650">Pídele a quien creó el espacio <b>su código de invitación</b> (un QR o 8 letras). También te puede agregar con tu nombre de usuario: <b>${esc((api.usuario() || {}).nombre || "")}</b>.</p>
         <div class="fila"><button class="btn primario crece" data-qr>${ico("qr-code")} Escanear código QR</button><button class="btn crece" data-codigo>${ico("keyboard")} Escribir código</button></div></div>`);
-      const h0 = hoja({ titulo: "Unirse a un espacio", icono: "radio", cuerpo: c0 });
+      const h0 = hoja({ titulo: "Entrar a un espacio", icono: "qr-code", cuerpo: c0 });
       $("[data-qr]", c0).onclick = () => { h0.cerrar(true); NOM.union.escanear(); };
-      $("[data-codigo]", c0).onclick = async () => { const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio el propietario", ph: "ABCD-2345", si: "Entrar", max: 12 }); if (c) { h0.cerrar(true); NOM.union.usar(c); } };
+      $("[data-codigo]", c0).onclick = async () => { const c = await NOM.pedirTexto("Escribe el código", { etiqueta: "Las 8 letras y números que te dieron", ph: "ABCD-2345", si: "Entrar", max: 12 }); if (c) { h0.cerrar(true); NOM.union.usar(c); } };
       return;
     }
     const cuerpo = html(`<div class="col">
       <div class="fila union-rapida">
         <button class="btn primario crece" type="button" data-qr>${ico("qr-code")} Escanear código QR</button>
         <button class="btn crece" type="button" data-codigo>${ico("keyboard")} Escribir código</button></div>
-      <div class="fila-e"><span class="etiqueta">Espacios en tu red</span><span class="chip" data-buscando><span class="cargando" style="width:12px;height:12px;border-width:2px"></span> Buscando…</span></div>
+      <div class="fila-e"><span class="etiqueta">Espacios en este Wi-Fi</span><span class="chip" data-buscando><span class="cargando" style="width:12px;height:12px;border-width:2px"></span> Buscando…</span></div>
       <div class="lista" data-lista></div>
-      <details style="margin-top:4px"><summary class="etiqueta" style="cursor:pointer">¿No aparece? Escribe la dirección</summary>
+      <details style="margin-top:4px"><summary class="etiqueta" style="cursor:pointer">¿No aparece? Escribe la dirección que te dieron</summary>
         <form class="fila" style="margin-top:10px" data-manual>
           <div class="entrada crece">${ico("server")}<input name="dir" placeholder="192.168.1.20:8080" inputmode="url" autocapitalize="none"></div>
           <button class="btn">Abrir</button>
         </form>
       </details>
     </div>`);
-    const h = hoja({ titulo: "Unirse a un espacio", icono: "radio", cuerpo, alCerrar: () => clearInterval(t) });
+    const h = hoja({ titulo: "Entrar a un espacio", icono: "qr-code", cuerpo, alCerrar: () => clearInterval(t) });
     $("[data-qr]", cuerpo).onclick = () => { h.cerrar(true); NOM.union.escanear(); };
     $("[data-codigo]", cuerpo).onclick = async () => {
-      const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio el propietario (8 letras y números)", ph: "ABCD-2345", si: "Entrar", max: 12 });
+      const c = await NOM.pedirTexto("Escribe el código", { etiqueta: "Las 8 letras y números que te dieron", ph: "ABCD-2345", si: "Entrar", max: 12 });
       if (c) { h.cerrar(true); NOM.union.usar(c); }
     };
     const lista = $("[data-lista]", cuerpo);
@@ -225,7 +224,7 @@
         $("[data-buscando]", cuerpo).innerHTML = `${ico("refresh-cw", "ico-s")} Actualizado`;
         if (!items.length) {
           lista.innerHTML = `<div class="vacio" style="padding:28px 16px"><div class="burbuja">${ico("radio")}</div><h3>No se encontraron espacios</h3>
-            <p>Pide al propietario que active la <b>Conexión del proyecto</b>, o escribe la dirección abajo.${r.sinRed ? "<br><b>Este equipo no está conectado a una red.</b>" : ""}</p></div>`;
+            <p>Lo más fácil: pide su <b>código de invitación</b> y usa los botones de arriba.${r.sinRed ? "<br><b>Este equipo no está conectado a ningún Wi-Fi.</b>" : ""}</p></div>`;
           if (primera) $("details", cuerpo).open = true;
         } else {
           lista.innerHTML = "";
@@ -233,7 +232,7 @@
             const ya = mios.has(e.id);
             const it = html(`<button class="lista-item" style="text-align:left;width:100%">
               <span class="icono-espacio" style="width:40px;height:40px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:900;background:${esc(e.color || "#7AA7FF")}">${inicial(e.nombre)}</span>
-              <span class="crece"><b>${esc(e.nombre)}</b><small>de ${esc(e.propietario)} · ${e.local ? "este servidor" : "equipo " + esc(e.equipo)}</small></span>
+              <span class="crece"><b>${esc(e.nombre)}</b><small>de ${esc(e.propietario)}${e.local ? "" : " · en " + esc(e.equipo)}</small></span>
               ${ya ? `<span class="chip ok">Ya eres miembro</span>` : `<span class="chip acento">Entrar</span>`}
             </button>`);
             it.onclick = () => elegir(e, h);
@@ -280,7 +279,8 @@
   // ================================================================== Accesos (A5)
   async function accesos(esp) {
     const cuerpo = html(`<div class="col"><div class="esqueleto" style="height:180px"></div></div>`);
-    const h = hoja({ titulo: "Compartir “" + esp.nombre + "”", icono: "share-2", cuerpo, ancha: true });
+    const esDueno = esp.permiso === "PROPIETARIO" || esp.miPermiso === "PROPIETARIO";
+    const h = hoja({ titulo: (esDueno ? "Invitar a “" : "Miembros de “") + esp.nombre + "”", icono: esDueno ? "user-plus" : "users", cuerpo, ancha: true });
     let datos;
     async function cargar() {
       try { datos = await api.get(`/api/espacios/${esp.id}/accesos`); pintar(); }
@@ -289,22 +289,29 @@
     function pintar() {
       const dueno = datos.miPermiso === "PROPIETARIO";
       cuerpo.innerHTML = `
+        ${dueno ? `<div class="compartir-codigo clay">
+          <span class="modo-insignia">${ico("qr-code")}</span>
+          <span class="crece"><b>Invitar con un código</b><small>Lo más fácil: escanean un QR o escriben 8 letras y entran desde su celular o computadora.</small></span>
+          <button class="btn primario" type="button" data-codigo-inv>${ico("qr-code")} Crear código</button>
+        </div>` : ""}
         ${dueno ? `<form class="col" data-agregar novalidate>
-          <span class="etiqueta">Invitar a alguien</span>
+          <span class="etiqueta">O agrega a alguien que ya tiene cuenta</span>
           <div class="fila" style="flex-wrap:wrap">
             <div class="entrada crece" style="min-width:200px">${ico("user-plus")}<input name="usuario" placeholder="Nombre de usuario" autocapitalize="none" autocomplete="off"></div>
             <div class="segmentado" role="group" aria-label="Permiso">
-              <button type="button" data-p="EDICION" aria-pressed="true" data-micro="Puede editar|Crea y modifica documentos.">${ico("pencil", "ico-s")} Editar</button>
-              <button type="button" data-p="LECTURA" aria-pressed="false" data-micro="Solo lectura|Ve los documentos sin cambiarlos.">${ico("eye", "ico-s")} Leer</button>
+              <button type="button" data-p="EDICION" aria-pressed="true" data-micro="Puede editar|Crea y cambia documentos.">${ico("pencil", "ico-s")} Puede editar</button>
+              <button type="button" data-p="LECTURA" aria-pressed="false" data-micro="Solo puede ver|Abre los documentos sin cambiarlos.">${ico("eye", "ico-s")} Solo ver</button>
             </div>
-            <button class="btn primario">Dar acceso</button>
+            <button class="btn">Agregar</button>
           </div>
           <div class="alerta error" data-alerta hidden></div>
-        </form>` : `<div class="alerta info">${ico("info")}<span>Solo el propietario puede cambiar los accesos.</span></div>`}
+        </form>` : `<div class="alerta info">${ico("info")}<span>Solo el propietario del espacio puede invitar o cambiar quién entra.</span></div>`}
+        ${dueno && api.lan ? `<label class="lista-item" style="padding:12px 14px">${ico("wifi")}<span class="crece"><b>Que lo encuentren en el mismo Wi-Fi</b><small>Aparece al buscar espacios desde ese Wi-Fi; quien lo vea te pide entrar</small></span>
+          <span class="interruptor"><input type="checkbox" data-wifi ${datos.conexion || esp.conexion ? "checked" : ""}><span></span></span></label>` : ""}
         ${dueno && datos.solicitudes.length ? `<div class="col"><span class="etiqueta">Quieren entrar (${datos.solicitudes.length})</span><div class="lista">${datos.solicitudes.map((s) => `
           <div class="lista-item">${avatar(s)}<span class="crece"><b>${esc(s.nombre)}</b><small>${esc(s.empresa || "")} ${esc(haceCuanto(s.fecha))}</small></span>
-            <button class="btn chico" data-aceptar="${esc(s.nombre)}" data-p="LECTURA">Leer</button>
-            <button class="btn chico primario" data-aceptar="${esc(s.nombre)}" data-p="EDICION">Editar</button>
+            <button class="btn chico" data-aceptar="${esc(s.nombre)}" data-p="LECTURA">Solo ver</button>
+            <button class="btn chico primario" data-aceptar="${esc(s.nombre)}" data-p="EDICION">Puede editar</button>
             <button class="icono-btn" data-rechazar="${esc(s.id)}" aria-label="Rechazar" data-micro="Rechazar solicitud">${ico("x")}</button>
           </div>`).join("")}</div></div>` : ""}
         <div class="col"><span class="etiqueta">Miembros (${datos.miembros.length})</span><div class="lista">${datos.miembros.map((m) => `
@@ -312,7 +319,7 @@
             ${m.permiso === "PROPIETARIO" ? `<span class="chip acento">${ico("crown", "ico-s")} Propietario</span>`
               : dueno ? `<select class="mini-select" data-cambiar="${esc(m.nombre)}" aria-label="Permiso de ${esc(m.nombre)}" style="height:36px;border-radius:12px;border:1px solid var(--borde);background:var(--sup-2);padding:0 8px;font-weight:700">
                   <option value="EDICION" ${m.permiso === "EDICION" ? "selected" : ""}>Puede editar</option>
-                  <option value="LECTURA" ${m.permiso === "LECTURA" ? "selected" : ""}>Solo lectura</option>
+                  <option value="LECTURA" ${m.permiso === "LECTURA" ? "selected" : ""}>Solo puede ver</option>
                   <option value="NINGUNO">Quitar acceso</option></select>`
               : `<span class="chip">${esc(PERMISOS[m.permiso])}</span>`}
           </div>`).join("")}</div></div>`;
@@ -329,6 +336,13 @@
           catch (err) { al.hidden = false; al.innerHTML = `${ico("triangle-alert")}<span>${esc(err.message)}</span>`; }
         };
       }
+      const ci = $("[data-codigo-inv]", cuerpo); if (ci) ci.onclick = () => NOM.union.invitar(esp);
+      const wf = $("[data-wifi]", cuerpo);
+      if (wf) wf.onchange = async () => {
+        try { const r = await api.put(`/api/espacios/${esp.id}/conexion`, { activa: wf.checked }); esp.conexion = r.activa; datos.conexion = r.activa;
+          aviso(r.sinRed ? "Este equipo no está conectado a ningún Wi-Fi" : r.activa ? "Listo: ya lo encuentran en el mismo Wi-Fi" : "Ya no aparece al buscar en el Wi-Fi", { tipo: r.sinRed ? "aviso" : "ok" }); }
+        catch (err) { wf.checked = !wf.checked; aviso(err.message, { tipo: "error" }); }
+      };
       $$("[data-aceptar]", cuerpo).forEach((b) => (b.onclick = () => cambiar(b.dataset.aceptar, b.dataset.p)));
       $$("[data-rechazar]", cuerpo).forEach((b) => (b.onclick = async () => { datos = await api.delete(`/api/espacios/${esp.id}/solicitudes/${b.dataset.rechazar}`); pintar(); }));
       $$("[data-cambiar]", cuerpo).forEach((s) => (s.onchange = async () => {
@@ -457,15 +471,19 @@
     if (!cont) return;
     const docs = NOM.local.lista();
     const sueltos = conCuenta ? NOM.local.sinCuenta() : [];
+    // Con cuenta, lo normal es trabajar en espacios: esta sección solo aparece si ya hay algo aquí
+    // (así quien recién llega ve dos opciones, no cuatro).
+    if (conCuenta && !docs.length && !sueltos.length) { cont.innerHTML = ""; cont.hidden = true; return; }
+    cont.hidden = false;
     cont.innerHTML = `
       <div class="fila-e"><h2>${conCuenta ? "En este equipo" : "Tus documentos en este equipo"}</h2>
         <div class="fila"><button class="btn chico" data-importar-local>${ico("upload", "ico-s")} Importar</button>
         <button class="btn chico ${conCuenta ? "" : "primario"}" data-nuevo-local>${ico("plus", "ico-s")} Nuevo documento</button></div></div>
-      ${conCuenta ? `<p class="suave chico" style="font-weight:650;margin:-6px 0 14px">${ico("lock", "ico-s")} Solo en este dispositivo y cifrados con tu contraseña: no ocupan espacio en la nube. Para colaborar, guárdalos en un espacio.</p>` : ""}
+      ${conCuenta ? `<p class="suave chico" style="font-weight:650;margin:-6px 0 14px">${ico("lock", "ico-s")} Solo en este equipo y protegidos con tu contraseña. Nadie más los ve: para trabajarlos en equipo, pásalos a un espacio.</p>` : ""}
       ${sueltos.length ? `<div class="alerta info" style="margin-bottom:12px">${ico("info")}<span class="crece">Hay ${sueltos.length} documento(s) creados sin cuenta ${NOM.aqui().en}, sin cifrar.</span><button class="btn chico" data-mover-local>Pasarlos a mi cuenta</button></div>` : ""}
       ${docs.length ? `<div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${docs.map(tarjetaLocal).join("")}</div>`
         : `<div class="vacio"><div class="burbuja">${ico("file-text")}</div><h3>Aún no tienes documentos</h3>
-            <p style="max-width:44ch">Texto, hoja de cálculo, presentación o diagrama: todo en el mismo lienzo.</p>
+            <p style="max-width:44ch">Puede ser un texto, una hoja de cálculo, una presentación o un diagrama.</p>
             <button class="btn primario" data-nuevo-local>${ico("plus")} Crear documento</button></div>`}`;
     $$("[data-nuevo-local]", cont).forEach((b) => (b.onclick = () => nuevoDocumento(null)));
     const mover = $("[data-mover-local]", cont);
@@ -483,7 +501,7 @@
       NOM.menu(b, [
         { texto: "Abrir", icono: "folder-open", fn: () => (location.hash = "#/local/" + id) },
         { texto: "Descargar copia (.nom)", icono: "download", fn: () => { const doc = NOM.local.abrirEnMemoria(id); if (doc) NOM.formatos.exportar(doc, "nom", d.nombre); } },
-        ...(api.token() ? [{ texto: "Guardar en un espacio (nube o red)", icono: "upload", fn: () => subirLocal(id, () => seccionLocal(cont, conCuenta)) }] : []),
+        ...(api.token() ? [{ texto: "Pasar a un espacio (para trabajarlo en equipo)", icono: "upload", fn: () => subirLocal(id, () => seccionLocal(cont, conCuenta)) }] : []),
         "-",
         { texto: "Eliminar", icono: "trash-2", peligro: true, fn: async () => {
           if (!(await confirmar("Eliminar documento", `“${d.nombre}” se borrará de este equipo y no se puede recuperar.`, { si: "Eliminar", peligro: true }))) return;
@@ -507,7 +525,7 @@
     $("[data-locales]", cont).after(html(`<section class="seccion"><div class="fila-e"><h2>Espacios de trabajo</h2></div>
       <div class="vacio espacios-sin-cuenta"><div class="burbuja">${ico("users")}</div>
         <h3>Trabaja con tu equipo en tiempo real</h3>
-        <p style="max-width:44ch">Un espacio reúne los documentos de un equipo y los guarda en el servidor: los editan juntos, desde la computadora o el celular, y no se pierden si cambias de equipo. Para tener espacios necesitas una cuenta (es gratis).</p>
+        <p style="max-width:44ch">Un espacio reúne los documentos de un equipo: los editan juntos, desde la computadora o el celular, y no se pierden si cambias de equipo. Para tener espacios necesitas una cuenta (es gratis).</p>
         <div class="fila"><button class="btn" data-v="entrar">${ico("log-in")} Ya tengo cuenta</button><button class="btn primario" data-v="registro">${ico("user-plus")} Crear cuenta</button></div></div></section>`));
     $("[data-v=entrar]", cont).onclick = () => NOM.app.irACuentas("entrar");
     $("[data-v=registro]", cont).onclick = () => NOM.app.irACuentas("registro");
@@ -519,7 +537,7 @@
     try { espacios = await api.get("/api/espacios"); } catch (e) { /* se usa la lista en memoria */ }
     const editables = espacios.filter((e) => e.permiso !== "LECTURA");
     if (!editables.length) return aviso("Primero crea un espacio (o pide permiso de edición en uno) para subir el documento.", { tipo: "info", ms: 5000 });
-    const cuerpo = html(`<div class="col"><p class="suave" style="font-weight:650">Elige el espacio. Al subirlo quedará guardado en el servidor y se quitará la copia de este equipo.</p>
+    const cuerpo = html(`<div class="col"><p class="suave" style="font-weight:650">Elige el espacio. Al subirlo quedará guardado en ese espacio y se quitará de este equipo.</p>
       <div class="lista">${editables.map((e) => `<button class="lista-item" data-esp="${esc(e.id)}" style="text-align:left;width:100%"><span class="icono-espacio" style="width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;background:${esc(e.color)}">${inicial(e.nombre)}</span><span class="crece"><b>${esc(e.nombre)}</b><small>${esc(PERMISOS[e.permiso])}</small></span>${ico("chevron-right")}</button>`).join("")}</div></div>`);
     const h = hoja({ titulo: "Subir a un espacio", icono: "upload", cuerpo });
     $$("[data-esp]", cuerpo).forEach((b) => (b.onclick = async () => {
@@ -539,7 +557,13 @@
     try { d = await api.get(`/api/espacios/${id}`); NOM.guardar(api.clave("cache.esp." + id), d); }
     catch (e) {
       d = NOM.leer(api.clave("cache.esp." + id), null);
-      if (!d) { cont.innerHTML = `<div class="vacio"><div class="burbuja">${ico("triangle-alert")}</div><h3>${esc(e.message)}</h3><a class="btn" href="#/">Volver al inicio</a></div>`; return; }
+      if (!d) {
+        cont.innerHTML = `<div class="vacio"><div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div><h3>${esc(e.red ? "No se pudo abrir el espacio" : e.message)}</h3>
+          ${e.red ? `<p>No hay conexión y este equipo no tiene una copia guardada. Revisa el Wi-Fi y vuelve a intentarlo.</p>` : ""}
+          <div class="fila" style="justify-content:center;flex-wrap:wrap">${e.red ? `<button class="btn primario" data-reintentar>${ico("refresh-cw")} Volver a intentar</button>` : ""}<a class="btn" href="#/">Ir al inicio</a></div></div>`;
+        const re = $("[data-reintentar]", cont); if (re) re.onclick = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
+        return;
+      }
       aviso("Sin conexión: mostramos la última copia guardada", { tipo: "aviso" });
     }
     NOM.app.fijarTitulo(d.nombre);
@@ -556,17 +580,15 @@
             </div></div>
         </div>
         <div class="fila" style="flex-wrap:wrap">
-          <button class="btn" data-a="compartir" data-micro="Compartir|Invita personas y elige si pueden editar o solo leer.">${ico("share-2")} <span class="solo-escritorio">Compartir</span></button>
-          ${dueno && api.lan ? `<button class="btn" data-a="conexion" data-micro="Conexión del proyecto|Haz visible el espacio a otros equipos de tu red local.">${ico("wifi")} <span class="solo-escritorio">Conexión</span></button>` : ""}
-          ${dueno ? `<button class="btn" data-a="qr" data-micro="Invitar con código QR|Los demás entran escaneándolo o escribiendo el código, sin Internet. Puede dejar entrar con apodo.">${ico("qr-code")} <span class="solo-escritorio">Invitar con QR</span></button>` : ""}
-          <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Almacenamiento, formato, exportar todo y copia en otro servidor.">${ico("more-horizontal")}</button>
+          <button class="btn ${dueno ? "primario-suave" : ""}" data-a="compartir" data-micro="Compartir|Invita con un código o QR, y elige quién puede editar o solo ver.">${ico(dueno ? "user-plus" : "users")} ${dueno ? "Invitar" : "Miembros"}</button>
+          <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Espacio usado, descargar todo y otras opciones.">${ico("more-horizontal")} Más</button>
           ${edita ? `<button class="btn primario solo-escritorio" data-a="nuevo">${ico("plus")} Nuevo documento</button>` : ""}
         </div>
       </div>
       <div class="fila-e" style="flex-wrap:wrap;margin-bottom:16px">
-        <div class="segmentado" role="group" aria-label="Filtrar por modo" data-filtros>
+        <div class="segmentado filtros-modo" role="group" aria-label="Mostrar solo un tipo de documento" data-filtros>
           <button aria-pressed="true" data-f="TODOS">Todos</button>
-          ${Object.keys(MODOS).map((m) => `<button aria-pressed="false" data-f="${m}" class="modo-${m}" data-micro="${esc(MODOS[m].nombre)}|Mostrar solo documentos que se abren en este modo.">${ico(MODOS[m].icono, "ico-s")}<span class="solo-escritorio">${esc(MODOS[m].nombre)}</span></button>`).join("")}
+          ${Object.keys(MODOS).map((m) => `<button aria-pressed="false" data-f="${m}" class="modo-${m}">${ico(MODOS[m].icono, "ico-s")}<span>${esc(MODOS[m].plural || MODOS[m].nombre)}</span></button>`).join("")}
         </div>
         <div class="entrada" style="min-height:42px;width:min(320px,100%)">${ico("search")}<input placeholder="Buscar documento" data-buscar aria-label="Buscar documento"></div>
       </div>
@@ -574,10 +596,10 @@
 
     const pintarRed = (activa) => {
       $("[data-chip-red]", cont).innerHTML = !api.lan
-        ? `<span class="chip ok" data-micro="En línea|Está en el servidor en Internet: lo abres desde cualquier dispositivo con tu cuenta.">${ico("cloud", "ico-s")} En línea</span>`
+        ? `<span class="chip ok" data-micro="En Internet|Lo abres desde cualquier celular o computadora con tu cuenta.">${ico("cloud", "ico-s")} En Internet</span>`
         : activa
-        ? `<span class="chip ok" data-micro="Visible en la red|Los equipos de esta red pueden encontrar el espacio y pedir acceso."><span class="punto vivo"></span>Visible en la red</span>`
-        : `<span class="chip">${ico("lock", "ico-s")} Solo en este equipo</span>`;
+        ? `<span class="chip ok" data-micro="Visible en el Wi-Fi|Quienes estén en el mismo Wi-Fi pueden encontrarlo y pedirte entrar."><span class="punto vivo"></span>Visible en el Wi-Fi</span>`
+        : "";
     };
     const pintarConectados = (us) => { const c = $("[data-conectados]", cont); if (c) c.innerHTML = (us || []).slice(0, 5).map((u) => avatar(u)).join(""); };
     pintarRed(d.conexion);
@@ -587,9 +609,11 @@
       const cont2 = $("[data-docs]", cont);
       if (!cont2) return;
       const docs = d.lista.filter((x) => (filtro === "TODOS" || x.modo === filtro) && (!busqueda || x.nombre.toLowerCase().includes(busqueda)));
+      // Con el espacio vacío, el botón de abajo ya dice "Crear documento": el "+" flotante sobraría.
+      NOM.app.fijarFab(edita && d.lista.length ? () => nuevoDocumento(d) : null);
       if (!d.lista.length) {
         cont2.innerHTML = `<div class="vacio"><div class="burbuja">${ico("file-text")}</div><h3>Este espacio está vacío</h3>
-          <p>${edita ? "Crea el primer documento: texto, hoja, presentación o diagrama, todo en el mismo lienzo." : "Cuando alguien cree un documento aparecerá aquí."}</p>
+          <p>${edita ? "Crea el primer documento: un texto, una hoja de cálculo, una presentación o un diagrama." : "Cuando alguien cree un documento, aparecerá aquí."}</p>
           ${edita ? `<button class="btn primario" data-v="nuevo">${ico("plus")} Crear documento</button>` : ""}</div>`;
         const b = $("[data-v=nuevo]", cont2); if (b) b.onclick = () => nuevoDocumento(d);
         return;
@@ -611,7 +635,7 @@
           ...(dueno ? [{ texto: doc.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: doc.protegido ? "lock-open" : "lock", fn: () => proteger(doc, !doc.protegido) }] : []),
           "-",
           { texto: "Eliminar", icono: "trash-2", peligro: true, fn: async () => {
-            if (doc.protegido) return aviso("Está protegido contra el borrado. " + (dueno ? "Quita la protección primero." : "Solo el propietario puede quitar la protección."), { tipo: "aviso", ms: 4500 });
+            if (doc.protegido) return aviso("Está protegido contra el borrado. " + (dueno ? "Quita la protección primero." : "Solo el propietario del espacio puede quitar la protección."), { tipo: "aviso", ms: 4500 });
             if (!(await confirmar("Eliminar documento", `“${doc.nombre}” y todo su historial se eliminarán para todos los miembros.`, { si: "Eliminar", peligro: true }))) return;
             try { await api.delete(`/api/documentos/${doc.id}`); aviso("Documento eliminado", { tipo: "ok" }); } catch (err) { aviso(err.message, { tipo: "error" }); }
           } },
@@ -623,19 +647,17 @@
     $$("[data-f]", cont).forEach((b) => (b.onclick = () => { filtro = b.dataset.f; $$("[data-f]", cont).forEach((x) => x.setAttribute("aria-pressed", x === b)); pintarDocs(); }));
     $("[data-buscar]", cont).oninput = (e) => { busqueda = e.target.value.trim().toLowerCase(); pintarDocs(); };
     $("[data-a=compartir]", cont).onclick = () => accesos(d);
-    const bc = $("[data-a=conexion]", cont); if (bc) bc.onclick = () => conexion(d, recargar);
-    const bq = $("[data-a=qr]", cont); if (bq) bq.onclick = () => NOM.union.invitar(d);
     $("[data-a=mas-espacio]", cont).onclick = (e) => NOM.menu(e.currentTarget, [
-      { texto: "Almacenamiento", icono: "hard-drive", fn: () => almacenamiento(d) },
-      { texto: "Exportar todo (.zip con archivos de Office)", icono: "archive", fn: () => exportarTodo(d) },
+      { texto: "Descargar todo (Word, Excel y PowerPoint)", icono: "archive", fn: () => exportarTodo(d) },
+      { texto: "Cuánto espacio ocupa", icono: "hard-drive", fn: () => almacenamiento(d) },
       ...(dueno ? [
         "-",
-        { texto: "Formato de los documentos de texto…", icono: "type", fn: () => formatoEspacio(d, recargar) },
-        { texto: d.sincronia ? "Copia en otro servidor…" : "Sincronizar con otro servidor…", icono: "refresh-cw", fn: () => sincronia(d, recargar) },
+        { texto: "Letra de los textos nuevos…", icono: "type", fn: () => formatoEspacio(d, recargar) },
+        ...(api.lan ? [{ texto: "Visible en el mismo Wi-Fi…", icono: "wifi", fn: () => conexion(d, recargar) }] : []),
+        { texto: d.sincronia ? "Copia en otro NOM-COLAB…" : "Guardar una copia en otro NOM-COLAB…", icono: "refresh-cw", fn: () => sincronia(d, recargar) },
       ] : []),
     ]);
     const bn = $("[data-a=nuevo]", cont); if (bn) bn.onclick = () => nuevoDocumento(d);
-    NOM.app.fijarFab(edita ? () => nuevoDocumento(d) : null);
 
     async function recargar() {
       try { const n = await api.get(`/api/espacios/${id}`); d = n; pintarRed(d.conexion); pintarConectados(d.conectados); pintarDocs(); } catch (e) { /* se reintenta con el siguiente evento */ }
@@ -690,17 +712,17 @@
   function sincronia(esp, listo) {
     const s = esp.sincronia;
     const cuerpo = html(`<div class="col">
-      <p class="suave" style="font-weight:650">Por ejemplo, el teléfono del salón (que trabajó sin Internet) con NOM-COLAB en la nube. Cuando haya red, los documentos de este espacio se copian en los dos sentidos cada 5 minutos: nada se borra y los permisos de cada servidor no cambian.</p>
+      <p class="suave" style="font-weight:650">Por ejemplo, el teléfono del salón (que trabajó sin Internet) con NOM-COLAB en Internet. Cuando haya conexión, los documentos de este espacio se copian en los dos lugares cada 5 minutos: nada se borra y los permisos de cada lugar no cambian.</p>
       ${s ? `<div class="lista-item">${ico(s.estado === "ok" ? "cloud" : "cloud-off")}<span class="crece"><b>${esc((s.servidor || "").replace(/^https?:\/\//, ""))}</b><small>como ${esc(s.usuario || "")} · ${s.ultima ? "última copia " + esc(haceCuanto(s.ultima)) : "aún sin copiar"} · ${s.documentos} documento(s)${s.error ? " · " + esc(s.error) : ""}</small></span></div>` : ""}
       <form class="col" data-f ${s && s.estado !== "sesion" ? "hidden" : ""}>
-        <div class="campo"><label for="ss">Otro servidor</label><div class="entrada">${ico("server")}<input id="ss" name="servidor" placeholder="nomcolab-wack.azurewebsites.net o 192.168.1.20:8080" value="${esc(s ? s.servidor : "")}" autocapitalize="none"></div></div>
+        <div class="campo"><label for="ss">Dirección del otro NOM-COLAB</label><div class="entrada">${ico("server")}<input id="ss" name="servidor" placeholder="nomcolab-wack.azurewebsites.net o 192.168.1.20:8080" value="${esc(s ? s.servidor : "")}" autocapitalize="none"></div></div>
         <div class="fila"><div class="campo crece"><label for="su">Tu usuario allá</label><div class="entrada"><input id="su" name="usuario" autocapitalize="none" value="${esc(s ? s.usuario : (api.usuario() || {}).nombre || "")}"></div></div>
           <div class="campo crece"><label for="sc">Contraseña allá</label><div class="entrada"><input id="sc" name="contrasena" type="password" autocomplete="off"></div></div></div>
         <div class="alerta error" data-err hidden></div>
         <button class="btn primario">${ico("refresh-cw")} Conectar y copiar</button></form>
       <div data-res></div></div>`);
     const pie = s ? html(`<div style="display:contents"><button class="btn plano peligro" data-quitar>Desconectar</button><span class="crece"></span><button class="btn" data-cambiar>Cambiar cuenta</button><button class="btn primario" data-ahora>${ico("refresh-cw", "ico-s")} Copiar ahora</button></div>`) : null;
-    const h = hoja({ titulo: "Copia en otro servidor", icono: "refresh-cw", cuerpo, pie, ancha: true });
+    const h = hoja({ titulo: "Copia en otro NOM-COLAB", icono: "refresh-cw", cuerpo, pie, ancha: true });
     const res = $("[data-res]", cuerpo), f = $("[data-f]", cuerpo);
     const mostrar = (r) => { res.innerHTML = `<div class="alerta ${r.estado === "ok" ? "ok" : "aviso"}">${ico(r.estado === "ok" ? "circle-check" : "triangle-alert")}<span>${r.estado === "ok" ? `Listo: se enviaron ${r.subidas} cambio(s) y llegaron ${r.bajadas}. ${r.nuevosAlla ? r.nuevosAlla + " documento(s) nuevos allá. " : ""}${r.nuevosAqui ? r.nuevosAqui + " documento(s) nuevos aquí." : ""}` : esc(r.error || "No se pudo copiar")}</span></div>`; };
     f.onsubmit = async (e) => {
@@ -755,12 +777,15 @@
       <div class="lista-item" style="padding:14px">${avatar(u, "g")}<span class="crece"><b>${esc(u.nombre)}</b><small>${esc(sinCuenta ? "Preferencias guardadas en este equipo" : u.empresa || "Sin organización")}</small></span></div>
       <div class="campo"><span class="etiqueta">Apariencia</span>
         <div class="segmentado lleno" data-tema>${[["auto", "monitor", "Automático"], ["claro", "sun", "Claro"], ["oscuro", "moon", "Oscuro"]].map(([v, i, t]) => `<button type="button" data-v="${v}" aria-pressed="${p.tema === v}">${ico(i, "ico-s")} ${t}</button>`).join("")}</div></div>
+      <div class="campo"><span class="etiqueta">Tamaño de la letra <span class="suave" style="font-weight:600">(en este equipo)</span></span>
+        <div class="segmentado lleno" data-letra>${[["normal", "Normal", 15], ["grande", "Grande", 17], ["muy-grande", "Muy grande", 19]].map(([v, t, px]) => `<button type="button" data-v="${v}" aria-pressed="${(NOM.leer("nom.letra", "normal")) === v}" style="font-size:${px}px">${t}</button>`).join("")}</div>
+        <div class="ayuda">${api.empaquetada ? "Agranda el texto de toda la app." : "Agranda el texto de las listas, menús y ventanas. Para agrandar todo, usa Ctrl y + en el navegador."}</div></div>
       <div class="campo"><label class="etiqueta" for="pa">Guardar una versión automática cada <b data-va>${p.autoguardadoMin}</b> min</label>
         <input id="pa" type="range" min="1" max="60" value="${p.autoguardadoMin}" style="accent-color:var(--acento)"></div>
       <div class="campo"><label class="etiqueta" for="pv">Conservar <b data-vv>${p.versionesConservar}</b> versiones por documento</label>
         <input id="pv" type="range" min="5" max="200" step="5" value="${p.versionesConservar}" style="accent-color:var(--acento)"></div>
       <div class="lista">
-        <label class="lista-item">${ico("sparkles")}<span class="crece"><b>Calidad visual alta</b><small>Desactívala en equipos con el hardware mínimo</small></span><span class="interruptor"><input type="checkbox" data-calidad ${p.calidad === "alta" ? "checked" : ""}><span></span></span></label>
+        <label class="lista-item">${ico("sparkles")}<span class="crece"><b>Calidad visual alta</b><small>Desactívala si el equipo se siente lento</small></span><span class="interruptor"><input type="checkbox" data-calidad ${p.calidad === "alta" ? "checked" : ""}><span></span></span></label>
         <label class="lista-item">${ico("hand")}<span class="crece"><b>Reducir movimiento</b><small>Quita animaciones y transiciones</small></span><span class="interruptor"><input type="checkbox" data-mov ${p.movimientoReducido ? "checked" : ""}><span></span></span></label>
         <label class="lista-item">${ico("scan-eye")}<span class="crece"><b>Atenuar en modo enfoque</b><small>Resalta solo el párrafo que escribes</small></span><span class="interruptor"><input type="checkbox" data-atenuar ${p.enfoqueAtenuar ? "checked" : ""}><span></span></span></label>
       </div>
@@ -781,6 +806,7 @@
       enfoqueAtenuar: $("[data-atenuar]", cuerpo).checked,
     });
     $$("[data-tema] button", cuerpo).forEach((b) => (b.onclick = () => { $$("[data-tema] button", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); NOM.aplicarPreferencias(leerForm()); }));
+    $$("[data-letra] button", cuerpo).forEach((b) => (b.onclick = () => { $$("[data-letra] button", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); NOM.aplicarLetra(b.dataset.v); }));
     $("#pa", cuerpo).oninput = (e) => ($("[data-va]", cuerpo).textContent = e.target.value);
     const br = $("[data-recuperacion]", cuerpo);
     if (br) br.onclick = async () => {

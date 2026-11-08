@@ -125,7 +125,7 @@
   /** Comentar lo elegido (texto, celda, figura o diapositiva). */
   function nuevo(ed) {
     if (ed.local) return aviso("Los comentarios necesitan un espacio (con cuenta)", { tipo: "info" });
-    if (ed.soloLectura) return aviso("Con permiso de solo lectura no se puede comentar", { tipo: "info" });
+    if (ed.soloLectura) return aviso("Tu permiso es solo para ver: no puedes comentar", { tipo: "info" });
     const m = ed.modoApi && ed.modoApi.comentarios;
     const ancla = m && m.ancla ? m.ancla() : null;
     if (!ancla) return aviso("Elige primero el texto, la celda o la figura que quieres comentar", { tipo: "info", ms: 3200 });

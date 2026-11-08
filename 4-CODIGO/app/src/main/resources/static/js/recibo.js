@@ -89,7 +89,7 @@
     try {
       const r = await api().get(`/api/documentos/${ed.id}/recibo${usuarioId ? "?usuario=" + encodeURIComponent(usuarioId) : ""}`, undefined, { ms: 20000 });
       ver(r);
-    } catch (e) { aviso(e.red ? "El recibo lo emite el servidor: necesitas conexión" : e.message, { tipo: "error" }); }
+    } catch (e) { aviso(e.red ? "Para sacar el recibo necesitas conexión" : e.message, { tipo: "error" }); }
     finally { fin(); }
   }
 
@@ -103,7 +103,7 @@
 
   function verificar() {
     const cuerpo = html(`<div class="col">
-      <p class="suave" style="font-weight:650">Elige el archivo <b>.json</b> del recibo (o pega su contenido). El servidor recalcula la huella y revisa que él lo emitió.</p>
+      <p class="suave" style="font-weight:650">Elige el archivo <b>.json</b> del recibo (o pega su contenido). NOM-COLAB revisa que la huella coincida y que el recibo salió de aquí.</p>
       <button class="btn" data-archivo>${ico("file-up")} Elegir archivo .json</button>
       <textarea data-texto rows="5" placeholder="…o pega aquí el contenido del recibo" style="width:100%;border-radius:12px;border:1px solid var(--borde);background:var(--sup-2);padding:10px;font:500 12px/1.4 var(--mono);color:var(--tinta)"></textarea>
       <div data-resultado></div></div>`);
@@ -121,7 +121,7 @@
       try {
         const v = await api().post("/api/recibos/verificar", r, { sin401: true });
         res.innerHTML = v.valido
-          ? `<div class="alerta ok">${ico("circle-check")}<span><b>Auténtico.</b> Lo emitió ${esc(v.servidor || "este servidor")} el ${esc(fecha(v.emitido))} a las ${esc(hora(v.emitido))} para <b>${esc(v.persona)}</b> en “${esc(v.documento)}”, y nadie lo ha cambiado.</span></div>`
+          ? `<div class="alerta ok">${ico("circle-check")}<span><b>Auténtico.</b> Lo emitió ${esc(v.servidor || "este equipo")} el ${esc(fecha(v.emitido))} a las ${esc(hora(v.emitido))} para <b>${esc(v.persona)}</b> en “${esc(v.documento)}”, y nadie lo ha cambiado.</span></div>`
           : `<div class="alerta error">${ico("triangle-alert")}<span><b>No es válido.</b> ${esc(v.motivo)}</span></div>`;
       } catch (e) { res.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.message)}</span></div>`; }
     }

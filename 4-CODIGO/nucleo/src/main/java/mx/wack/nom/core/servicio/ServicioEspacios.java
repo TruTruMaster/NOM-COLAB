@@ -48,7 +48,7 @@ public class ServicioEspacios {
         if (!p.alMenos(minimo)) {
             throw ErrorNom.prohibido(switch (minimo) {
                 case PROPIETARIO -> "Solo el propietario puede hacer esto";
-                case EDICION -> "Tu permiso es de solo lectura";
+                case EDICION -> "Tu permiso es solo para ver";
                 default -> "No tienes acceso a este espacio";
             });
         }
@@ -290,7 +290,7 @@ public class ServicioEspacios {
         if (e.enlaces == null) e.enlaces = new ArrayList<>();
         // Se olvidan los que ya no sirven desde hace mas de una semana; maximo 30 por espacio.
         e.enlaces.removeIf(x -> !x.vigente(ahora) && ahora - x.caduca > 7L * 86_400_000L);
-        if (e.enlaces.stream().filter(x -> x.vigente(ahora)).count() >= 30) throw ErrorNom.invalido("Hay demasiados enlaces vigentes: revoca alguno", null);
+        if (e.enlaces.stream().filter(x -> x.vigente(ahora)).count() >= 30) throw ErrorNom.invalido("Hay demasiados códigos de invitación vigentes: anula alguno", null);
         Espacio.EnlaceUnion x = new Espacio.EnlaceUnion();
         String c;
         do { c = cuentas.codigo(8); } while (buscarEnlace(c) != null);
@@ -339,8 +339,8 @@ public class ServicioEspacios {
         Object[] r = buscarEnlace(codigo);
         if (r == null) throw new ErrorNom(ErrorNom.NO_EXISTE, "Ese código no existe. Revisa que lo escribiste bien.");
         Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
-        if (x.revocado) throw new ErrorNom(ErrorNom.PROHIBIDO, "El propietario revocó este enlace. Pídele uno nuevo.");
-        if (x.caduca <= System.currentTimeMillis()) throw new ErrorNom(ErrorNom.PROHIBIDO, "Este enlace ya caducó. Pídele uno nuevo al propietario.");
+        if (x.revocado) throw new ErrorNom(ErrorNom.PROHIBIDO, "Este código de invitación ya no sirve: lo anuló quien lo creó. Pídele uno nuevo.");
+        if (x.caduca <= System.currentTimeMillis()) throw new ErrorNom(ErrorNom.PROHIBIDO, "Este código de invitación ya venció. Pide uno nuevo a quien te invitó.");
         return r;
     }
 

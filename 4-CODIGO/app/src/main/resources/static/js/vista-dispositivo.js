@@ -96,7 +96,7 @@
 
     cont.innerHTML = `
       <div class="encabezado">
-        <div><h1>Archivos en este dispositivo</h1>
+        <div><h1>${esc(NOM.etiquetaEquipo())}</h1>
           <p class="sub">Lo que NOM-COLAB guarda en este ${api.empaquetada ? "teléfono" : "navegador"} y cuánto ocupa</p></div>
       </div>
       <section class="clay" style="padding:20px;display:flex;flex-direction:column;gap:12px">
@@ -104,20 +104,20 @@
         <div style="height:12px;border-radius:999px;background:var(--sup-2);border:1px solid var(--borde);overflow:hidden" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Espacio usado">
           <div style="height:100%;width:${Math.max(pct, 1)}%;background:${pct > 80 ? "var(--error)" : "var(--acento)"}"></div></div>
         <div class="fila" style="flex-wrap:wrap;gap:8px">
-          <span class="chip">${ico("file-text", "ico-s")} ${inv.copias.length} ${inv.copias.length === 1 ? "copia" : "copias"} de documentos del servidor</span>
-          <span class="chip">${ico("hard-drive", "ico-s")} ${inv.locales.length} solo en este equipo</span>
-          <span class="chip ${pendientes ? "aviso" : "ok"}">${ico(pendientes ? "cloud-off" : "cloud", "ico-s")} ${pendientes ? pendientes + " cambio(s) sin enviar" : "Todo enviado"}</span>
+          <span class="chip">${ico("file-text", "ico-s")} ${inv.copias.length} ${inv.copias.length === 1 ? "documento listo" : "documentos listos"} para abrir sin Internet</span>
+          <span class="chip">${ico("hard-drive", "ico-s")} ${inv.locales.length} solo aquí</span>
+          <span class="chip ${pendientes ? "aviso" : "ok"}">${ico(pendientes ? "cloud-off" : "cloud", "ico-s")} ${pendientes ? pendientes + (pendientes === 1 ? " cambio por enviar" : " cambios por enviar") : "Todo enviado"}</span>
           <span class="chip">${ico("settings", "ico-s")} ${esc(bytes(inv.otros))} de ajustes y sesión</span>
           ${inv.ajenos ? `<span class="chip" data-micro="Otras cuentas|Copias de otras cuentas que usaron este dispositivo. No se muestran ni se pueden abrir desde tu sesión.">${ico("users", "ico-s")} ${esc(bytes(inv.ajenos))} de otras cuentas</span>` : ""}
         </div>
-        ${cifradoCon ? `<div class="alerta ok">${ico("lock")}<span>Tus documentos en este equipo están <b>cifrados</b> (${esc(cifradoCon)}) con una llave que solo se abre con tu contraseña. Otra cuenta, o alguien sin tu contraseña, no puede leerlos.</span></div>`
-          : conCuenta ? "" : `<div class="alerta aviso">${ico("triangle-alert")}<span>Sin cuenta no hay cifrado: cualquiera que use ${NOM.aqui().aqui} puede abrir estos documentos.</span></div>`}
+        ${cifradoCon ? `<div class="alerta ok">${ico("lock")}<span>Lo guardado aquí está <b>protegido con tu contraseña</b>: otra cuenta, o alguien sin tu contraseña, no puede leerlo. <span class="suave">(Cifrado ${esc(cifradoCon)}.)</span></span></div>`
+          : conCuenta ? "" : `<div class="alerta aviso">${ico("triangle-alert")}<span>Sin cuenta, estos documentos no tienen contraseña: cualquiera que use ${NOM.aqui().aqui} puede abrirlos.</span></div>`}
       </section>
 
       <section class="seccion">
-        <div class="fila-e"><h2>Copias de documentos del servidor</h2>
+        <div class="fila-e"><h2>Para abrir sin Internet</h2>
           ${liberables.length ? `<button class="btn chico" data-a="liberar">${ico("refresh-cw", "ico-s")} Liberar ${esc(bytes(liberables.reduce((n, c) => n + c.bytes, 0)))}</button>` : ""}</div>
-        <p class="suave chico" style="font-weight:650;margin-bottom:12px">El original vive en el servidor${conCuenta ? "" : " (inicia sesión para verlos)"}. Esta copia sirve para abrirlo sin red; si la borras, se vuelve a descargar al abrirlo.</p>
+        <p class="suave chico" style="font-weight:650;margin-bottom:12px">Copias de los documentos de tus espacios${conCuenta ? "" : " (inicia sesión para verlas)"}, para abrirlos aunque no haya conexión. Si borras una, no pasa nada: se vuelve a guardar al abrir el documento.</p>
         <div class="lista">${inv.copias.map((c) => fila(c,
           `${esc(c.espacio || "Espacio")} · ${c.guardado ? "copia de " + esc(haceCuanto(c.guardado)) : "sin copia completa"}${c.pendientes ? ` · <b style="color:var(--aviso)">${c.pendientes} cambio(s) sin enviar</b>` : ""}`,
           `${conCuenta ? `<a class="btn chico" href="#/doc/${esc(c.id)}">Abrir</a>` : ""}
@@ -127,7 +127,7 @@
 
       <section class="seccion">
         <div class="fila-e"><h2>Solo en este equipo</h2></div>
-        <p class="suave chico" style="font-weight:650;margin-bottom:12px">No están en ningún servidor. <b>Es la única copia:</b> si ${NOM.aqui().borrar} se pierden, salvo que los descargues o los guardes en la nube o en un espacio.</p>
+        <p class="suave chico" style="font-weight:650;margin-bottom:12px">Documentos que no están en ningún espacio. <b>Es la única copia:</b> si ${NOM.aqui().borrar}, se pierden. Para no perderlos, descárgalos o pásalos a un espacio.</p>
         <div class="lista">${inv.locales.map((d) => fila(d, `${d.cifrado ? "cifrado · " : "sin cifrar (sin cuenta) · "}modificado ${esc(haceCuanto(d.modificado))}`,
           `<a class="btn chico" href="#/local/${esc(d.id)}">Abrir</a>`)).join("")
           || `<p class="suave chico" style="padding:4px 12px;font-weight:650">No hay documentos solo en este equipo.</p>`}</div>
@@ -137,12 +137,12 @@
     $$("[data-a=quitar]", cont).forEach((b) => (b.onclick = () => {
       const id = b.closest("[data-id]").dataset.id;
       NOM.quitar(api.clave("doc." + id));
-      aviso("Copia quitada. El documento sigue en el servidor.", { tipo: "ok" });
+      aviso("Copia quitada. El documento sigue en su espacio.", { tipo: "ok" });
       pintar(cont);
     }));
     const lib = $("[data-a=liberar]", cont);
     if (lib) lib.onclick = async () => {
-      if (!(await confirmar("Liberar espacio", `Se quitan ${liberables.length} copia(s) que ya están en el servidor. Los cambios sin enviar no se tocan.`, { si: "Liberar" }))) return;
+      if (!(await confirmar("Liberar espacio", `Se quitan ${liberables.length} copia(s) de documentos que ya están en sus espacios. Los cambios sin enviar no se tocan.`, { si: "Liberar" }))) return;
       liberables.forEach((c) => NOM.quitar(api.clave("doc." + c.id)));
       aviso("Espacio liberado", { tipo: "ok" });
       pintar(cont);

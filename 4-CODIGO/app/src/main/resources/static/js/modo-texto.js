@@ -2293,7 +2293,7 @@
         { id: "borrar-formato", icono: "remove-formatting", micro: "Borrar formato||Ctrl+\\", fn: borrarFormato, clase: "solo-escritorio" },
         { id: "buscar", icono: "search", micro: "Buscar y reemplazar||Ctrl+F", fn: () => buscar(false) },
         { id: "sugerir", icono: "pen-line", micro: "Modo sugerencia|Lo que escribas o borres queda propuesto; el equipo lo acepta o lo rechaza.", fn: () => alternarSugerencias(), clase: "solo-escritorio" },
-        { id: "comentar", icono: "message-square", micro: "Comentar|Comenta el texto elegido. Funciona sin Internet, en la red del salón.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed) },
+        { id: "comentar", icono: "message-square", micro: "Comentar|Comenta el texto elegido. Funciona aunque no haya Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed) },
         { id: "mas-texto", icono: "more-vertical", micro: "Más|Tachado, superíndice, configurar página, encabezado y pie, esquema…", fn: (e, b) => menuMas(b) },
       ];
       // Doble clic en la brocha: modo fijo.

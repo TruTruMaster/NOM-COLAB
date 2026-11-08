@@ -27,7 +27,7 @@
     let datos;
     try { datos = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true, ms: 12000 }); }
     catch (e) {
-      return pedirCodigo(e.red ? "No hay conexión con el servidor" : "No se encontró la presentación",
+      return pedirCodigo(e.red ? "No hay conexión" : "No se encontró la presentación",
         e.red ? "Revisa que esta computadora esté en la misma red que el equipo que comparte." : "El código no existe o la presentación ya terminó. Pide el código otra vez.");
     }
     document.title = (datos.documento && datos.documento.nombre ? datos.documento.nombre + " · " : "") + "Proyector · NOM-COLAB";

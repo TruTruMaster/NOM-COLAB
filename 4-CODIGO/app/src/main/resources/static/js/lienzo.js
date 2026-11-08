@@ -252,7 +252,7 @@
     const duenoPagina = (p) => doc().valor("_doc", "dueno:" + p) || null;
     /** 3.5 y 5.4: ¿puedo cambiar este bloque? El propietario del espacio siempre puede. */
     function motivoAjeno(b) {
-      if (ed.soloLectura) return "Solo lectura";
+      if (ed.soloLectura) return "Solo puedes ver";
       if (ed.esPropietario || !b) return null;
       if (b.maestro) return "Es parte de la plantilla del maestro";
       if (b.dueno && b.dueno !== yo()) return "Es de " + ed.nombreDe(b.dueno);
@@ -1690,7 +1690,7 @@
           ${url && !NOM.api.empaquetada ? `<button class="btn chico" data-abrir>${ico("monitor", "ico-s")} Abrir en otra ventana</button>` : ""}</div>`;
         const ab = $("[data-abrir]", caja); if (ab) ab.onclick = () => window.open(url, "nom-proyector", "noopener");
         avisarProyector();
-      }).catch((e) => { caja.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.red ? "Para proyectar en otra pantalla hace falta el servidor" : e.message)}</span></div>`; });
+      }).catch((e) => { caja.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.red ? "Para proyectar en otra pantalla hace falta conexión" : e.message)}</span></div>`; });
     }
   }
 

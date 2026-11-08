@@ -154,7 +154,7 @@
       await put("datos", k, s);
     } catch (e) {
       console.error("No se pudo guardar cifrado", k, e);
-      if (!persistir.avisado) { persistir.avisado = true; NOM.aviso && NOM.aviso("No hay espacio para guardar en este equipo. Libera espacio en “Este dispositivo”.", { tipo: "error", ms: 7000 }); }
+      if (!persistir.avisado) { persistir.avisado = true; NOM.aviso && NOM.aviso("No hay espacio para guardar en este equipo. Libera espacio en “" + NOM.etiquetaEquipo() + "”.", { tipo: "error", ms: 7000 }); }
     }
   }
   async function vaciar() {

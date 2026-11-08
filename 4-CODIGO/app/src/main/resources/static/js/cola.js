@@ -54,9 +54,16 @@
   function arrancar() {
     setTimeout(() => vaciar().catch(() => {}), 2500);
     api().alCambiarRed((ok) => { if (ok) setTimeout(() => vaciar().catch(() => {}), 800); });
-    // 6.1 El service worker solo existe en contextos seguros (https o localhost).
-    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && window.isSecureContext) {
-      addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Sin service worker:", e && e.message)));
+    // 6.1 El service worker solo existe en contextos seguros (https o localhost); en la app no hace falta
+    // (la página ya viene dentro). Se registra un rato después de abrir: en Firefox, la primera vez que
+    // un sitio guarda cosas, las peticiones pueden esperar varios segundos, y eso no debe pasar justo al
+    // entrar. Lo que guarda sirve para la siguiente visita, así que no hay prisa.
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && window.isSecureContext && !api().empaquetada) {
+      const registrar = () => navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Sin service worker:", e && e.message));
+      navigator.serviceWorker.getRegistration().then((r) => {
+        if (r) return registrar();   // ya estaba: solo se actualiza
+        setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(registrar, { timeout: 10000 }) : registrar()), 20000);
+      }).catch(() => {});
     }
   }
 
