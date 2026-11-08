@@ -101,7 +101,9 @@
       if (enTexto) { r += c; continue; }
       if (c === ";") { r += ","; continue; }
       const m = /^[A-Za-zÁÉÍÓÚÑáéíóúñ_][A-Za-z0-9ÁÉÍÓÚÑáéíóúñ_.]*(?=\s*\()/.exec(s.slice(i));
-      if (m) { const n = m[0].toUpperCase(); r += EN[n] || n; i += m[0].length - 1; continue; }
+      if (m) { const n = m[0].toUpperCase(), es = (F().ALIAS || {})[n] || n; r += (F().INGLES || {})[es] || EN[n] || n; i += m[0].length - 1; continue; }
+      const b = /^(VERDADERO|FALSO)(?![A-Za-z0-9_.(])/i.exec(s.slice(i));
+      if (b && !/[A-Za-z0-9_.]/.test(s[i - 1] || "")) { r += b[1].toUpperCase() === "VERDADERO" ? "TRUE" : "FALSE"; i += b[0].length - 1; continue; }
       r += c;
     }
     return r;
@@ -520,69 +522,338 @@ ${pie || nums2 ? '<Override PartName="/word/footer1.xml" ContentType="applicatio
   }
 
   // ------------------------------------------------------------ Excel (.xlsx)
+  const px2ancho = (px) => Math.max(1, Math.round(((px - 5) / 7) * 100) / 100);
+  const argb = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? "FF" + c.slice(1).toUpperCase() : null);
+  const NUMFMT_BASE = { General: 0, "0": 1, "0.00": 2, "#,##0": 3, "#,##0.00": 4, "0%": 9, "0.00%": 10, "@": 49 };
+  /** Rango de celdas de una gráfica, en partes para Excel: etiquetas, nombres y series (como graficas.datos). */
+  function partesGrafica(t, ev, r) {
+    const num = (v) => F().esNum(v);
+    const val = (c, f) => ev.valor(c, f);
+    const conEtiquetas = (() => { for (let f = r.f1; f <= r.f2; f++) if (r.c2 > r.c1 && !num(val(r.c1, f)) && val(r.c1, f) !== "") return true; return false; })();
+    const c0 = conEtiquetas ? r.c1 + 1 : r.c1;
+    let conNombres = false;
+    if (r.f2 > r.f1) for (let c = c0; c <= r.c2; c++) { const v = val(c, r.f1); if (v !== "" && !num(v)) conNombres = true; }
+    const f0 = conNombres ? r.f1 + 1 : r.f1;
+    const series = [];
+    for (let c = c0; c <= r.c2; c++) {
+      let alguno = false;
+      for (let f = f0; f <= r.f2; f++) if (num(val(c, f))) alguno = true;
+      if (alguno) series.push({ c, nombre: conNombres ? F().formatear(val(c, r.f1)) : "Serie " + (series.length + 1), valores: Array.from({ length: r.f2 - f0 + 1 }, (_, k) => (num(val(c, f0 + k)) ? +val(c, f0 + k) : null)) });
+    }
+    const etiquetas = Array.from({ length: r.f2 - f0 + 1 }, (_, k) => (conEtiquetas ? F().formatear(val(r.c1, f0 + k)) : String(k + 1)));
+    return { conEtiquetas, conNombres, f0, series, etiquetas };
+  }
+  /** XML de una gráfica nativa de Excel (barras, líneas, área, dispersión o pastel). */
+  function graficaXlsx(g, hoja, t, ev) {
+    const r = NOM.graficas.rango(g.rango);
+    if (!r) return null;
+    const pg = partesGrafica(t, ev, r);
+    if (!pg.series.length) return null;
+    const H = F().prefijoHoja(hoja).replace(/!$/, "");
+    const abs = (c1, f1, c2, f2) => `${H}!$${F().colLetra(c1)}$${f1 + 1}:$${F().colLetra(c2)}$${f2 + 1}`;
+    const col = (NOM.graficas.PALETAS[g.colores] || NOM.graficas.PALETAS.clasica).c;
+    const n = pg.etiquetas.length;
+    const cache = (vals) => `<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${vals.length}"/>${vals.map((v, i) => (v == null ? "" : `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`)).join("")}</c:numCache>`;
+    const cat = pg.conEtiquetas
+      ? `<c:cat><c:strRef><c:f>${x(abs(r.c1, pg.f0, r.c1, r.f2))}</c:f><c:strCache><c:ptCount val="${n}"/>${pg.etiquetas.map((e, i) => `<c:pt idx="${i}"><c:v>${x(e)}</c:v></c:pt>`).join("")}</c:strCache></c:strRef></c:cat>` : "";
+    const tx = (s) => (pg.conNombres ? `<c:tx><c:strRef><c:f>${x(abs(s.c, r.f1, s.c, r.f1))}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${x(s.nombre)}</c:v></c:pt></c:strCache></c:strRef></c:tx>` : `<c:tx><c:v>${x(s.nombre)}</c:v></c:tx>`);
+    const relleno = (i) => `<c:spPr><a:solidFill><a:srgbClr val="${col[i % col.length].slice(1)}"/></a:solidFill></c:spPr>`;
+    const linea = (i) => `<c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="${col[i % col.length].slice(1)}"/></a:solidFill></a:ln></c:spPr>`;
+    const vals = (s) => `<c:val><c:numRef><c:f>${x(abs(s.c, pg.f0, s.c, r.f2))}</c:f>${cache(s.valores)}</c:numRef></c:val>`;
+    const ejes = `<c:axId val="1001"/><c:axId val="1002"/>`;
+    const ejeX = (titulo, pos) => `<c:catAx><c:axId val="1001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${pos || "b"}"/>${titulo ? tituloXml(titulo) : ""}<c:numFmt formatCode="General" sourceLinked="1"/><c:tickLblPos val="nextTo"/><c:crossAx val="1002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx>`;
+    const ejeY = (titulo, pos) => `<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${pos || "l"}"/><c:majorGridlines/>${titulo ? tituloXml(titulo) : ""}<c:numFmt formatCode="General" sourceLinked="1"/><c:tickLblPos val="nextTo"/><c:crossAx val="1001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>`;
+    function tituloXml(t0) { return `<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>${x(t0)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>`; }
+    let plot;
+    const clase = g.clase || "barras";
+    if (clase === "pastel") {
+      const s = pg.series[0];
+      plot = `<c:pieChart><c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/>${tx(s)}${pg.etiquetas.map((_, i) => `<c:dPt><c:idx val="${i}"/><c:bubble3D val="0"/>${relleno(i)}</c:dPt>`).join("")}${cat}${vals(s)}</c:ser><c:firstSliceAng val="0"/></c:pieChart>`;
+    } else if (clase === "dispersion") {
+      const xs = pg.series.length > 1 ? pg.series[0] : null, ys = xs ? pg.series.slice(1) : pg.series;
+      plot = `<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>${ys.map((s, i) => `<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${tx(s)}<c:spPr><a:ln w="19050"><a:noFill/></a:ln></c:spPr><c:marker><c:symbol val="circle"/><c:size val="6"/>${relleno(i)}</c:marker>${xs ? `<c:xVal><c:numRef><c:f>${x(abs(xs.c, pg.f0, xs.c, r.f2))}</c:f>${cache(xs.valores)}</c:numRef></c:xVal>` : ""}<c:yVal><c:numRef><c:f>${x(abs(s.c, pg.f0, s.c, r.f2))}</c:f>${cache(s.valores)}</c:numRef></c:yVal><c:smooth val="0"/></c:ser>`).join("")}${ejes}</c:scatterChart>`
+        + `<c:valAx><c:axId val="1001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/>${g.ejeX ? tituloXml(g.ejeX) : ""}<c:numFmt formatCode="General" sourceLinked="1"/><c:tickLblPos val="nextTo"/><c:crossAx val="1002"/><c:crosses val="autoZero"/><c:crossBetween val="midCat"/></c:valAx>${ejeY(g.ejeY)}`;
+    } else {
+      const sers = pg.series.map((s, i) => `<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${tx(s)}${clase === "lineas" ? linea(i) + `<c:marker><c:symbol val="circle"/><c:size val="5"/></c:marker>` : relleno(i)}${cat}${vals(s)}${clase === "lineas" ? `<c:smooth val="0"/>` : ""}</c:ser>`).join("");
+      if (clase === "lineas") plot = `<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>${sers}<c:marker val="1"/>${ejes}</c:lineChart>`;
+      else if (clase === "area") plot = `<c:areaChart><c:grouping val="standard"/><c:varyColors val="0"/>${sers}${ejes}</c:areaChart>`;
+      else plot = `<c:barChart><c:barDir val="${clase === "barras-h" ? "bar" : "col"}"/><c:grouping val="clustered"/><c:varyColors val="0"/>${sers}<c:gapWidth val="80"/>${ejes}</c:barChart>`;
+      plot += ejeX(g.ejeX, clase === "barras-h" ? "l" : "b") + ejeY(g.ejeY, clase === "barras-h" ? "b" : "l");
+    }
+    return XML + `<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:roundedCorners val="0"/><c:chart>${g.titulo ? tituloXml(g.titulo) + `<c:autoTitleDeleted val="0"/>` : `<c:autoTitleDeleted val="1"/>`}<c:plotArea><c:layout/>${plot}</c:plotArea>${pg.series.length > 1 || clase === "pastel" ? `<c:legend><c:legendPos val="${clase === "pastel" ? "r" : "b"}"/><c:overlay val="0"/></c:legend>` : ""}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+  }
+  const OPS_CF = { ">": "greaterThan", "<": "lessThan", ">=": "greaterThanOrEqual", "<=": "lessThanOrEqual", "=": "equal", "<>": "notEqual", entre: "between" };
+  const valorCf = (v) => { const n = F().calcularLiteral(String(v == null ? "" : v).trim()); return F().esNum(n) ? String(+n) : `"${String(v == null ? "" : v).replace(/"/g, '""')}"`; };
+
   function xlsx(doc) {
-    const tablas = doc.vivos().filter((b) => b.tipo === "tabla");
+    const tablas = F().hojasDe(doc);
     if (!tablas.length) throw new Error("Este documento no tiene ninguna tabla");
-    const pags = doc.paginas();
-    tablas.sort((a, b) => pags.indexOf(a.pagina) - pags.indexOf(b.pagina) || (a.orden || 0) - (b.orden || 0));
     const nombres = [];
-    // Formato de celda (negrita, cursiva, subrayado, color): cada combinación es una fuente y un estilo.
-    const fuentes = ["<font><sz val=\"11\"/><name val=\"Calibri\"/></font>"], estilosCelda = { "": 0 };
-    const estiloDe = (t, ref) => {
-      const k = [t["n:" + ref] ? "b" : "", t["i:" + ref] ? "i" : "", t["u:" + ref] ? "u" : "", t["k:" + ref] || ""].join("|");
-      if (k === "|||") return 0;
-      if (estilosCelda[k] == null) {
-        const [b, i, u, c] = k.split("|");
-        const rgb = /^#[0-9a-f]{6}$/i.test(c) ? "FF" + c.slice(1).toUpperCase() : null;
-        fuentes.push(`<font>${b ? "<b/>" : ""}${i ? "<i/>" : ""}${u ? "<u/>" : ""}<sz val="11"/>${rgb ? `<color rgb="${rgb}"/>` : ""}<name val="Calibri"/></font>`);
-        estilosCelda[k] = fuentes.length - 1;
-      }
-      return estilosCelda[k];
-    };
+    // Estilos: cada combinación de letra, relleno, borde, número y alineación es un "xf".
+    const fuentes = ['<font><sz val="11"/><name val="Calibri"/></font>'], rellenos = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'];
+    const bordes = ["<border><left/><right/><top/><bottom/><diagonal/></border>"], numFmts = [], xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'];
+    const idx = { fuente: { "": 0 }, relleno: { "": 0 }, borde: { "": 0 }, num: {}, xf: { "": 0 } };
+    const dxfs = [];
+    const registrar = (tipo, clave, lista, xml) => { if (idx[tipo][clave] == null) { lista.push(xml); idx[tipo][clave] = lista.length - 1; } return idx[tipo][clave]; };
+    function numId(cod) {
+      if (!cod || cod === "General") return 0;
+      const cx = cod.replace(/aaaa/g, "yyyy").replace(/aa/g, "yy");
+      if (NUMFMT_BASE[cx] != null) return NUMFMT_BASE[cx];
+      if (idx.num[cx] == null) { const id = 164 + numFmts.length; numFmts.push(`<numFmt numFmtId="${id}" formatCode="${x(cx)}"/>`); idx.num[cx] = id; }
+      return idx.num[cx];
+    }
+    function estilo(t, ref, esFecha) {
+      const b = !!t["n:" + ref], i = !!t["i:" + ref], u = !!t["u:" + ref], k = argb(t["k:" + ref]), tl = +t["tl:" + ref] || 0;
+      const kf = [b, i, u, k, tl].join("|");
+      const fid = kf === "false|false|false|null|0" ? 0 : registrar("fuente", kf, fuentes, `<font>${b ? "<b/>" : ""}${i ? "<i/>" : ""}${u ? "<u/>" : ""}<sz val="${tl ? Math.round(tl * 1.0476 * 2) / 2 : 11}"/>${k ? `<color rgb="${k}"/>` : ""}<name val="Calibri"/></font>`);
+      const r = argb(t["r:" + ref]);
+      const rid = r ? registrar("relleno", r, rellenos, `<fill><patternFill patternType="solid"><fgColor rgb="${r}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
+      const bd = String(t["bd:" + ref] || "").split("").sort().join("");
+      const lado = (l, si) => (si ? `<${l} style="thin"><color auto="1"/></${l}>` : `<${l}/>`);
+      const bid = bd ? registrar("borde", bd, bordes, `<border>${lado("left", bd.includes("i"))}${lado("right", bd.includes("d"))}${lado("top", bd.includes("a"))}${lado("bottom", bd.includes("b"))}<diagonal/></border>`) : 0;
+      const nid = numId(t["f:" + ref] || (esFecha ? "dd/mm/yyyy" : null));
+      const al = t["al:" + ref], aj = !!t["aj:" + ref], m = !!t["m:" + ref];
+      const alin = al || aj || m ? `<alignment${al ? ` horizontal="${{ izq: "left", centro: "center", der: "right" }[al] || "general"}"` : ""}${m ? ' vertical="center"' : ""}${aj ? ' wrapText="1"' : ""}/>` : "";
+      const kx = [fid, rid, bid, nid, alin].join("|");
+      if (kx === "0|0|0|0|") return 0;
+      return registrar("xf", kx, xfs, `<xf numFmtId="${nid}" fontId="${fid}" fillId="${rid}" borderId="${bid}" xfId="0"${fid ? ' applyFont="1"' : ""}${rid ? ' applyFill="1"' : ""}${bid ? ' applyBorder="1"' : ""}${nid ? ' applyNumberFormat="1"' : ""}${alin ? ' applyAlignment="1">' + alin + "</xf>" : "/>"}`);
+    }
+    function dxf(rg) {
+      const k = argb(rg.color), f = argb(rg.fondo);
+      dxfs.push(`<dxf>${k || rg.negrita ? `<font>${rg.negrita ? "<b/>" : ""}${k ? `<color rgb="${k}"/>` : ""}</font>` : ""}${f ? `<fill><patternFill><bgColor rgb="${f}"/></patternFill></fill>` : ""}</dxf>`);
+      return dxfs.length - 1;
+    }
+    const graficasArch = [], dibujos = [], relsHojas = [];
+    let prioridad = 1;
     const hojas = tablas.map((t, i) => {
-      let n = String(t.nombre || doc.valor("_doc", "hojas") && doc.valor("_doc", "hojas")[t.pagina] || `Hoja ${i + 1}`).replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || `Hoja ${i + 1}`;
-      while (nombres.includes(n)) n = (n.slice(0, 28) + " " + (i + 1));
+      let n = F().nombreDeHoja(doc, t).replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || `Hoja${i + 1}`;
+      while (nombres.includes(n)) n = n.slice(0, 28) + " " + (i + 1);
       nombres.push(n);
-      const ev = F().evaluador((c, f) => t["c:" + F().ref(c, f)]);
+      const ev = F().evaluadorDeTabla(doc, t);
       const porFila = {};
+      const celdasCon = new Set();
       Object.keys(t).forEach((k) => {
-        if (!k.startsWith("c:") || t[k] === "" || t[k] == null) return;
-        const r = F().parseRef(k.slice(2)); if (!r) return;
-        (porFila[r.f] = porFila[r.f] || []).push({ c: r.c, ref: k.slice(2), crudo: String(t[k]) });
+        const i2 = k.indexOf(":");
+        if (i2 < 1) return;
+        const p = k.slice(0, i2), ref = k.slice(i2 + 1);
+        if (!["c", "n", "i", "u", "k", "f", "r", "al", "aj", "bd", "tl", "m"].includes(p) || !/^[A-Z]{1,3}\d+$/.test(ref)) return;
+        if (t[k] === "" || t[k] == null || t[k] === false) return;
+        celdasCon.add(ref);
       });
+      celdasCon.forEach((ref) => { const r = F().parseRef(ref); (porFila[r.f] = porFila[r.f] || []).push({ c: r.c, ref }); });
+      const altoDe = (f) => +t["ah:" + (f + 1)] || 0;
+      Object.keys(t).forEach((k) => { if (k.startsWith("ah:") && t[k]) { const f = +k.slice(3) - 1; porFila[f] = porFila[f] || []; } });
       const filas = Object.keys(porFila).map(Number).sort((a, b) => a - b).map((f) => {
         const celdas = porFila[f].sort((a, b) => a.c - b.c).map((c) => {
-          const e = estiloDe(t, c.ref), s = e ? ` s="${e}"` : "";
-          if (c.crudo.startsWith("=")) {
-            const v = ev.valor(c.c, f);
-            const val = typeof v === "number" ? `<v>${v}</v>` : typeof v === "boolean" ? `<v>${v ? 1 : 0}</v>` : "";
-            const tipo = typeof v === "string" ? ' t="str"' : typeof v === "boolean" ? ' t="b"' : "";
-            return `<c r="${c.ref}"${s}${tipo}><f>${x(formulaExcel(c.crudo))}</f>${typeof v === "string" ? `<v>${x(v)}</v>` : val}</c>`;
+          const crudo = t["c:" + c.ref] == null ? "" : String(t["c:" + c.ref]);
+          if (crudo.startsWith("=")) {
+            const v = ev.valor(c.c, f), sx = estilo(t, c.ref, v instanceof F().FechaF), s = sx ? ` s="${sx}"` : "";
+            const val = F().esNum(v) ? `<v>${+v}</v>` : typeof v === "boolean" ? `<v>${v ? 1 : 0}</v>` : v instanceof F().ErrorF ? `<v>${x(v.codigo)}</v>` : `<v>${x(v)}</v>`;
+            const tipo = typeof v === "boolean" ? ' t="b"' : v instanceof F().ErrorF ? ' t="e"' : F().esNum(v) ? "" : ' t="str"';
+            return `<c r="${c.ref}"${s}${tipo}><f>${x(formulaExcel(crudo))}</f>${val}</c>`;
           }
-          const n = /^-?\d+([.,]\d+)?$/.test(c.crudo.trim()) ? parseFloat(c.crudo.replace(",", ".")) : null;
-          return n != null ? `<c r="${c.ref}"${s}><v>${n}</v></c>` : `<c r="${c.ref}"${s} t="inlineStr"><is><t xml:space="preserve">${x(c.crudo)}</t></is></c>`;
+          const lit = crudo === "" ? "" : F().calcularLiteral(crudo.trim());
+          const sx = estilo(t, c.ref, lit instanceof F().FechaF), s = sx ? ` s="${sx}"` : "";
+          if (crudo === "") return `<c r="${c.ref}"${s}/>`;
+          if (t["f:" + c.ref] === "@") return `<c r="${c.ref}"${s} t="inlineStr"><is><t xml:space="preserve">${x(crudo)}</t></is></c>`;
+          return F().esNum(lit) ? `<c r="${c.ref}"${s}><v>${+lit}</v></c>` : `<c r="${c.ref}"${s} t="inlineStr"><is><t xml:space="preserve">${x(crudo)}</t></is></c>`;
         }).join("");
-        return `<row r="${f + 1}">${celdas}</row>`;
+        const h = altoDe(f);
+        return `<row r="${f + 1}"${h ? ` ht="${Math.round(h * 0.75 * 100) / 100}" customHeight="1"` : ""}>${celdas}</row>`;
       }).join("");
-      return XML + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="26" width="14" customWidth="1"/></cols><sheetData>${filas}</sheetData></worksheet>`;
+      const ncols = Math.max(t.cols || 10, 1);
+      const cols = Array.from({ length: ncols }, (_, c) => `<col min="${c + 1}" max="${c + 1}" width="${px2ancho(+t["aw:" + F().colLetra(c)] || 120)}" customWidth="1"/>`).join("");
+      const ff = +t.fijasF || 0, fc = +t.fijasC || 0;
+      const vista = ff || fc ? `<sheetView workbookViewId="0"${i === 0 ? ' tabSelected="1"' : ""}><pane${fc ? ` xSplit="${fc}"` : ""}${ff ? ` ySplit="${ff}"` : ""} topLeftCell="${F().ref(fc, ff)}" activePane="${ff && fc ? "bottomRight" : ff ? "bottomLeft" : "topRight"}" state="frozen"/></sheetView>` : `<sheetView workbookViewId="0"${i === 0 ? ' tabSelected="1"' : ""}/>`;
+      const combinadas = Object.keys(t).filter((k) => k.startsWith("m:") && /^\d+x\d+$/.test(String(t[k] || ""))).map((k) => {
+        const r = F().parseRef(k.slice(2)), [w, h] = String(t[k]).split("x").map(Number);
+        return w * h > 1 ? `<mergeCell ref="${F().ref(r.c, r.f)}:${F().ref(r.c + w - 1, r.f + h - 1)}"/>` : "";
+      }).filter(Boolean);
+      const reglas = Object.keys(t).filter((k) => k.startsWith("cf:") && t[k] && t[k].rango).map((k) => {
+        const rg = t[k], primero = rg.rango.split(":")[0], d = dxf(rg);
+        let regla;
+        if (OPS_CF[rg.op]) regla = `<cfRule type="cellIs" dxfId="${d}" priority="${prioridad++}" operator="${OPS_CF[rg.op]}"><formula>${x(valorCf(rg.v1))}</formula>${rg.op === "entre" ? `<formula>${x(valorCf(rg.v2))}</formula>` : ""}</cfRule>`;
+        else if (rg.op === "contiene") regla = `<cfRule type="containsText" dxfId="${d}" priority="${prioridad++}" operator="containsText" text="${x(rg.v1 || "")}"><formula>${x(`NOT(ISERROR(SEARCH("${String(rg.v1 || "").replace(/"/g, '""')}",${primero})))`)}</formula></cfRule>`;
+        else if (rg.op === "vacia") regla = `<cfRule type="containsBlanks" dxfId="${d}" priority="${prioridad++}"><formula>${x(`LEN(TRIM(${primero}))=0`)}</formula></cfRule>`;
+        else if (rg.op === "novacia") regla = `<cfRule type="notContainsBlanks" dxfId="${d}" priority="${prioridad++}"><formula>${x(`LEN(TRIM(${primero}))>0`)}</formula></cfRule>`;
+        return regla ? `<conditionalFormatting sqref="${x(rg.rango)}">${regla}</conditionalFormatting>` : "";
+      }).join("");
+      const validaciones = Object.keys(t).filter((k) => k.startsWith("dv:") && t[k] && t[k].rango).map((k) => {
+        const v = t[k], msg = v.mensaje ? ` showErrorMessage="1" error="${x(v.mensaje)}"` : ' showErrorMessage="1"';
+        if (v.tipo === "lista") return `<dataValidation type="list" allowBlank="1"${msg} sqref="${x(v.rango)}"><formula1>${x('"' + (v.valores || []).join(",").slice(0, 250) + '"')}</formula1></dataValidation>`;
+        if (v.tipo === "numero") {
+          const a = v.min !== "" && v.min != null, b = v.max !== "" && v.max != null;
+          if (!a && !b) return "";
+          const op = a && b ? "between" : a ? "greaterThanOrEqual" : "lessThanOrEqual";
+          return `<dataValidation type="decimal" operator="${op}" allowBlank="1"${msg} sqref="${x(v.rango)}"><formula1>${x(String(a ? v.min : v.max))}</formula1>${a && b ? `<formula2>${x(String(v.max))}</formula2>` : ""}</dataValidation>`;
+        }
+        return "";
+      }).filter(Boolean);
+      // Gráficas de esta hoja: un dibujo con una gráfica nativa por cada una.
+      const gs = doc.vivos().filter((g) => g.tipo === "grafica" && g.hoja === t.id);
+      let dibujo = "";
+      if (gs.length) {
+        const nd = dibujos.length + 1, anclas = [], relsDibujo = [];
+        let fila0 = 1;
+        const colIni = Math.min(ncols + 1, 20);
+        gs.forEach((g) => {
+          const xmlG = graficaXlsx(g, n, t, ev);
+          if (!xmlG) return;
+          graficasArch.push(xmlG);
+          const ng = graficasArch.length, rid = "rIdG" + ng;
+          relsDibujo.push({ id: rid, tipo: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart", destino: `../charts/chart${ng}.xml` });
+          anclas.push(`<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>${colIni}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fila0}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${colIni + 8}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fila0 + 16}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${ng + 1}" name="Gráfica ${ng}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${rid}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`);
+          fila0 += 18;
+        });
+        if (anclas.length) {
+          dibujos.push({ n: nd, xml: XML + `<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anclas.join("")}</xdr:wsDr>`, rels: relsDibujo });
+          relsHojas[i] = [{ id: "rIdD1", tipo: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing", destino: `../drawings/drawing${nd}.xml` }];
+          dibujo = `<drawing r:id="rIdD1"/>`;
+        }
+      }
+      return XML + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews>${vista}</sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${filas}</sheetData>${combinadas.length ? `<mergeCells count="${combinadas.length}">${combinadas.join("")}</mergeCells>` : ""}${reglas}${validaciones.length ? `<dataValidations count="${validaciones.length}">${validaciones.join("")}</dataValidations>` : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${dibujo}</worksheet>`;
     });
     const libro = XML + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${nombres.map((n, i) => `<sheet name="${x(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`;
-    const estilos = XML + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fuentes.length}">${fuentes.join("")}</fonts>
-<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${fuentes.length}">${fuentes.map((_, i) => `<xf numFmtId="0" fontId="${i}" fillId="0" borderId="0" xfId="0"${i ? ' applyFont="1"' : ""}/>`).join("")}</cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    const estilos = XML + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${numFmts.length ? `<numFmts count="${numFmts.length}">${numFmts.join("")}</numFmts>` : ""}<fonts count="${fuentes.length}">${fuentes.join("")}</fonts>
+<fills count="${rellenos.length}">${rellenos.join("")}</fills><borders count="${bordes.length}">${bordes.join("")}</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join("")}</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>${dxfs.length ? `<dxfs count="${dxfs.length}">${dxfs.join("")}</dxfs>` : ""}</styleSheet>`;
     const relsLibro = [...hojas.map((_, i) => ({ id: "rId" + (i + 1), tipo: T.hoja, destino: `worksheets/hoja${i + 1}.xml` })),
       { id: "rIdEst", tipo: T.estilos, destino: "styles.xml" }];
     return zip([
       { nombre: "[Content_Types].xml", datos: CT(`<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-${hojas.map((_, i) => `<Override PartName="/xl/worksheets/hoja${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}`) },
+${hojas.map((_, i) => `<Override PartName="/xl/worksheets/hoja${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}
+${dibujos.map((d) => `<Override PartName="/xl/drawings/drawing${d.n}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`).join("")}
+${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`).join("")}`) },
       { nombre: "_rels/.rels", datos: RELS([{ tipo: T.doc, destino: "xl/workbook.xml" }]) },
       { nombre: "xl/workbook.xml", datos: libro },
       { nombre: "xl/styles.xml", datos: estilos },
       { nombre: "xl/_rels/workbook.xml.rels", datos: RELS(relsLibro) },
       ...hojas.map((h, i) => ({ nombre: `xl/worksheets/hoja${i + 1}.xml`, datos: h })),
+      ...relsHojas.map((r, i) => (r ? { nombre: `xl/worksheets/_rels/hoja${i + 1}.xml.rels`, datos: RELS(r) } : null)).filter(Boolean),
+      ...dibujos.flatMap((d) => [{ nombre: `xl/drawings/drawing${d.n}.xml`, datos: d.xml }, { nombre: `xl/drawings/_rels/drawing${d.n}.xml.rels`, datos: RELS(d.rels) }]),
+      ...graficasArch.map((g, i) => ({ nombre: `xl/charts/chart${i + 1}.xml`, datos: g })),
     ]);
+  }
+
+  // ------------------------------------------------------------ importar Excel (.xlsx)
+  const FMT_EXCEL = { 1: "0", 2: "0.00", 3: "#,##0", 4: "#,##0.00", 5: "$#,##0", 6: "$#,##0", 7: "$#,##0.00", 8: "$#,##0.00", 9: "0%", 10: "0.00%",
+    14: "dd/mm/yyyy", 15: "d-mmm-yy", 16: "d-mmm", 17: "mmm-yy", 18: "h:mm AM/PM", 19: "h:mm:ss AM/PM", 20: "hh:mm", 21: "hh:mm:ss", 22: "dd/mm/yyyy hh:mm", 37: "#,##0", 38: "#,##0", 39: "#,##0.00", 40: "#,##0.00", 49: "@" };
+  /** .xlsx → { hojas: [{ nombre, campos }], aviso }: cada hoja con sus celdas, formato, combinadas, anchos y filas fijas. */
+  async function leerXlsx(archivo) {
+    if (archivo.size > 30 * 1024 * 1024) throw new Error("El archivo pesa más de 30 MB");
+    const z = await abrirZip(await archivo.arrayBuffer());
+    const P = (t) => new DOMParser().parseFromString(t, "application/xml");
+    const libro = await z.texto("xl/workbook.xml");
+    if (!libro) throw new Error("El archivo no parece un libro de Excel (.xlsx)");
+    const hijos = (n, nombre) => [...(n ? n.childNodes : [])].filter((c) => c.nodeType === 1 && (!nombre || c.localName === nombre));
+    const hijo = (n, nombre) => hijos(n, nombre)[0] || null;
+    const todos = (n, nombre) => (n ? [...n.getElementsByTagNameNS("*", nombre)] : []);
+    const at = (n, a) => (n ? n.getAttribute(a) : null);
+    const rels = P(await z.texto("xl/_rels/workbook.xml.rels") || "<Relationships/>");
+    const destino = {};
+    todos(rels, "Relationship").forEach((r) => (destino[at(r, "Id")] = at(r, "Target")));
+    // Textos compartidos.
+    const sst = await z.texto("xl/sharedStrings.xml");
+    const textos = sst ? todos(P(sst), "si").map((si) => todos(si, "t").map((t) => t.textContent).join("")) : [];
+    // Estilos.
+    const est = P(await z.texto("xl/styles.xml") || "<styleSheet/>");
+    const fmts = Object.assign({}, FMT_EXCEL);
+    todos(est, "numFmt").forEach((n) => (fmts[+at(n, "numFmtId")] = at(n, "formatCode")));
+    const color = (n) => { const rgb = at(n, "rgb"); return rgb && /^[0-9A-F]{8}$/i.test(rgb) ? "#" + rgb.slice(2).toUpperCase() : null; };
+    const fuentes = todos(hijo(est.documentElement, "fonts"), "font").map((f) => ({ b: !!hijo(f, "b") && at(hijo(f, "b"), "val") !== "0", i: !!hijo(f, "i") && at(hijo(f, "i"), "val") !== "0", u: !!hijo(f, "u") && at(hijo(f, "u"), "val") !== "none", k: hijo(f, "color") ? color(hijo(f, "color")) : null, sz: hijo(f, "sz") ? +at(hijo(f, "sz"), "val") : 11 }));
+    const rellenos = todos(hijo(est.documentElement, "fills"), "fill").map((f) => { const p = hijo(f, "patternFill"); return p && at(p, "patternType") === "solid" && hijo(p, "fgColor") ? color(hijo(p, "fgColor")) : null; });
+    const bordes = todos(hijo(est.documentElement, "borders"), "border").map((b) => ["top", "bottom", "left", "right"].map((l, k) => (hijo(b, l) && at(hijo(b, l), "style") ? "abid"[k] : "")).join(""));
+    const xfs = todos(hijo(est.documentElement, "cellXfs"), "xf").map((xf) => {
+      const al = hijo(xf, "alignment");
+      return { num: +at(xf, "numFmtId") || 0, fuente: fuentes[+at(xf, "fontId") || 0] || {}, relleno: rellenos[+at(xf, "fillId") || 0] || null, borde: bordes[+at(xf, "borderId") || 0] || "", al: al ? { left: "izq", center: "centro", centerContinuous: "centro", right: "der" }[at(al, "horizontal")] || null : null, aj: al ? at(al, "wrapText") === "1" : false };
+    });
+    const hojasXml = todos(P(libro), "sheet");
+    let aviso = null;
+    const MAX_F = 5000, MAX_C = 60;
+    const res = [];
+    for (const h of hojasXml.slice(0, 30)) {
+      const nombre = at(h, "name") || "Hoja" + (res.length + 1);
+      let ruta = destino[h.getAttribute("r:id") || h.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id")] || "";
+      ruta = ruta.startsWith("/") ? ruta.slice(1) : "xl/" + ruta.replace(/^\.\//, "");
+      const xmlH = await z.texto(ruta);
+      if (!xmlH) continue;
+      const doc = P(xmlH);
+      const campos = { nombre: nombre.slice(0, 31) };
+      let maxF = 0, maxC = 0;
+      const compartidas = {};
+      todos(doc, "row").forEach((row) => {
+        const ht = +at(row, "ht");
+        const rnum = +at(row, "r");
+        if (at(row, "customHeight") === "1" && ht && rnum && rnum <= MAX_F) campos["ah:" + rnum] = Math.round(ht / 0.75);
+        hijos(row, "c").forEach((c) => {
+          const ref = at(c, "r"), p = F().parseRef(ref || "");
+          if (!p) return;
+          if (p.f >= MAX_F || p.c >= MAX_C) { aviso = `Solo se importaron las primeras ${MAX_F} filas y ${MAX_C} columnas`; return; }
+          const tipo = at(c, "t"), v = hijo(c, "v"), f = hijo(c, "f"), s = xfs[+at(c, "s") || 0];
+          let crudo = "";
+          if (f && (f.textContent || at(f, "t") === "shared")) {
+            let fx = f.textContent;
+            if (at(f, "t") === "shared") {
+              const si = at(f, "si");
+              if (fx) compartidas[si] = { f: "=" + fx, c: p.c, r: p.f };
+              else if (compartidas[si]) fx = F().desplazar(compartidas[si].f, p.c - compartidas[si].c, p.f - compartidas[si].r).slice(1);
+            }
+            crudo = fx ? F().aEspanol("=" + fx.replace(/_xlfn\.|_xlws\./g, "")) : "";
+          } else if (tipo === "s") crudo = textos[+(v ? v.textContent : 0)] || "";
+          else if (tipo === "inlineStr") crudo = todos(c, "t").map((t) => t.textContent).join("");
+          else if (tipo === "b") crudo = v && v.textContent === "1" ? "VERDADERO" : "FALSO";
+          else if (tipo === "str" || tipo === "e") crudo = v ? v.textContent : "";
+          else if (v) crudo = v.textContent;
+          const R = F().ref(p.c, p.f);
+          // Un texto que parece número o fecha se queda como texto (formato @).
+          const esTexto = (tipo === "s" || tipo === "inlineStr") && crudo !== "" && F().esNum(F().calcularLiteral(crudo.trim()));
+          if (crudo !== "") campos["c:" + R] = crudo;
+          if (s) {
+            const cod = esTexto ? "@" : fmts[s.num];
+            if (cod && cod !== "General") campos["f:" + R] = cod.replace(/\[\$-[^\]]*\]/g, "").replace(/;@$/, "");
+            if (s.fuente.b) campos["n:" + R] = true;
+            if (s.fuente.i) campos["i:" + R] = true;
+            if (s.fuente.u) campos["u:" + R] = true;
+            if (s.fuente.k && s.fuente.k !== "#000000") campos["k:" + R] = s.fuente.k;
+            if (s.fuente.sz && Math.abs(s.fuente.sz - 11) > 0.1) campos["tl:" + R] = Math.round((s.fuente.sz / 1.0476) * 2) / 2;
+            if (s.relleno) campos["r:" + R] = s.relleno;
+            if (s.borde) campos["bd:" + R] = s.borde.split("").sort().join("");
+            if (s.al) campos["al:" + R] = s.al;
+            if (s.aj) campos["aj:" + R] = true;
+          }
+          if (crudo !== "" || s) { maxF = Math.max(maxF, p.f + 1); maxC = Math.max(maxC, p.c + 1); }
+        });
+      });
+      todos(doc, "mergeCell").forEach((m) => {
+        const [a, b] = String(at(m, "ref") || "").split(":").map((r) => F().parseRef(r));
+        if (a && b && a.f < MAX_F && a.c < MAX_C) campos["m:" + F().ref(a.c, a.f)] = `${b.c - a.c + 1}x${b.f - a.f + 1}`;
+      });
+      todos(doc, "col").forEach((c) => {
+        const w = +at(c, "width"), min = +at(c, "min"), max = Math.min(+at(c, "max"), MAX_C);
+        if (!w || at(c, "customWidth") !== "1") return;
+        for (let k = min; k <= max && k - min < MAX_C; k++) campos["aw:" + F().colLetra(k - 1)] = Math.round(w * 7 + 5);
+      });
+      const pane = todos(doc, "pane")[0];
+      if (pane && at(pane, "state") === "frozen") { if (+at(pane, "ySplit")) campos.fijasF = +at(pane, "ySplit"); if (+at(pane, "xSplit")) campos.fijasC = +at(pane, "xSplit"); }
+      todos(doc, "dataValidation").forEach((dv, k) => {
+        const sq = String(at(dv, "sqref") || "").split(" ")[0], f1 = hijo(dv, "formula1");
+        if (!sq) return;
+        const rango = sq.includes(":") ? sq : sq + ":" + sq;
+        if (at(dv, "type") === "list" && f1 && /^".*"$/.test(f1.textContent)) campos["dv:x" + k] = { rango, tipo: "lista", valores: f1.textContent.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean) };
+        else if (["decimal", "whole"].includes(at(dv, "type")) && f1) {
+          const f2 = hijo(dv, "formula2"), op = at(dv, "operator") || "between";
+          campos["dv:x" + k] = { rango, tipo: "numero", min: op === "lessThanOrEqual" ? "" : f1.textContent, max: op === "between" && f2 ? f2.textContent : op === "lessThanOrEqual" ? f1.textContent : "" };
+        }
+      });
+      if (todos(doc, "drawing").length) aviso = aviso || "Las gráficas e imágenes del archivo no se importaron (puedes volver a crearlas desde los datos)";
+      campos.filas = Math.max(30, maxF + 5);
+      campos.cols = Math.max(10, Math.min(MAX_C, maxC + 2));
+      res.push({ nombre, campos });
+    }
+    if (!res.length) throw new Error("El libro no tiene hojas que se puedan leer");
+    return { hojas: res, aviso };
   }
 
   // ------------------------------------------------------------ PowerPoint (.pptx)
@@ -712,5 +983,5 @@ ${diapos.map((_, i) => `<Override PartName="/ppt/slides/slide${i + 1}.xml" Conte
 <a:effectStyleLst>${"<a:effectStyle><a:effectLst/></a:effectStyle>".repeat(3)}</a:effectStyleLst><a:bgFillStyleLst>${relleno.repeat(3)}</a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`;
   }
 
-  NOM.ooxml = { zip, docx, xlsx, pptx, formulaExcel, crc32, leerDocx, abrirZip };
+  NOM.ooxml = { zip, docx, xlsx, pptx, formulaExcel, crc32, leerDocx, leerXlsx, abrirZip };
 })();

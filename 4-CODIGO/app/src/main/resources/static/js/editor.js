@@ -316,13 +316,8 @@
       const h = hoja({ titulo: "Este documento se eliminó", cuerpo: `<p style="font-weight:650">Otra persona eliminó el documento. Puedes guardar lo que tienes en pantalla como un documento nuevo del espacio.</p>`, pie });
       $("[data-no]", pie).onclick = () => { h.cerrar(); location.hash = "#/espacio/" + ed.espacio.id; };
       $("[data-si]", pie).onclick = async () => {
-        const ops = [];
-        let i = 0;
-        for (const id in doc.estado.bloques) {
-          if (id !== "_doc" && !doc.vivo(id)) continue;
-          const { id: _x, ...campos } = doc.bloque(id);
-          ops.push({ id: "copia:" + i++, bloque: id, campos, t: 2, n: "copia" });
-        }
+        // Todo, también el texto letra por letra (las secuencias).
+        const ops = NOM.DocCRDT.opsDeEstado(doc.estado, "copia");
         try {
           const d = await api.post(`/api/espacios/${ed.espacio.id}/documentos`, { nombre: (nombre.value || "Documento") + " (recuperado)", modo: ed.modo, ops });
           doc.descartarCola();

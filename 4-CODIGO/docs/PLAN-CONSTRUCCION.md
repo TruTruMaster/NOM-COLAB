@@ -201,6 +201,103 @@ Base: `lienzo.js` ya tiene los campos `bloqueado` y `grupo` (un solo nivel; ver 
 - [x] Almacenamiento atómico con respaldos rotativos (`AlmacenJson`), cuota por usuario y
   recuperar la contraseña (PENDIENTES 3).
 
+## Fase 8. Lo que tienen Word, Excel, PowerPoint y Canva (revisión del 8 de noviembre de 2026)
+
+Sale de comparar los cuatro editores con los programas reales. Primero lo que más se nota.
+
+### 8.0 Base
+- [x] Partir los cambios de más de 380 campos en varias operaciones (el servidor descarta las de
+  más de 400 sin avisar: hoy "Ordenar para todos" y la importación de un CSV grande se pierden).
+- [x] Operaciones de reacomodo (`m.o = "r"`: insertar o borrar filas, ordenar) que la bitácora no
+  cuente como tecleado, y citas con fuente (`m.o = "c"`) que cuenten aparte en el recibo.
+
+### 8.1 Hoja
+- [x] Referencias `$A$1`, `$A1`, `A$1`, a otra hoja (`Hoja2!A1`, `'Mi hoja'!A1`) y a columnas o
+  filas enteras (`A:A`, `1:1`).
+- [x] Copiar y pegar fórmulas ajusta las referencias relativas; Ctrl+D y Ctrl+R; cuadrito de
+  relleno para arrastrar (series de números, fechas, días, meses y "Tema 1, Tema 2").
+- [x] Insertar y eliminar filas y columnas en cualquier lugar, ajustando fórmulas, formatos,
+  gráficas, filas fijas y comentarios.
+- [x] Formato de celda: número (decimales, moneda, porcentaje, fecha, texto), relleno, bordes,
+  alineación, ajustar texto, combinar celdas y tamaño de letra.
+- [x] Ancho de columna y alto de fila (arrastrar el borde; doble clic ajusta; en el celular desde
+  la ruedita).
+- [x] Funciones que faltan (PROMEDIO.SI, CONTAR.SI.CONJUNTO, SUMAR.SI.CONJUNTO, MEDIANA, MODA,
+  DESVEST, JERARQUIA, IZQUIERDA, DERECHA, EXTRAE, AÑO, MES, DIA, AHORA, BUSCARX, INDICE,
+  COINCIDIR, SI.CONJUNTO, TEXTO y más), en español e inglés.
+- [x] Sugerir la función al escribir `=PRO` y mostrar qué datos pide.
+- [x] Hojas: cambiar nombre, eliminar, mover y duplicar.
+- [x] Formato condicional (por ejemplo, en rojo si es menor que 6) y lista desplegable.
+- [x] Gráficas: barras horizontales, dispersión y área; títulos de los ejes y colores.
+- [x] Exportar a .xlsx todo lo nuevo e **importar .xlsx**.
+
+### 8.2 Texto
+- [ ] Párrafo: sangría de primera línea y francesa, sangrías en cm, espacio antes y después.
+- [ ] Encabezado y pie: lugar del número de página (arriba o abajo, izquierda, centro o derecha),
+  "Página 1 de 5", primera página distinta y la misma letra del documento.
+- [ ] Márgenes personalizados en cm.
+- [ ] Listas: continuar la numeración, empezar en un número, y estilos de viñeta y número.
+- [ ] Tablas: insertar y eliminar filas y columnas en cualquier lugar, combinar celdas, formato
+  por celda (negrita, cursiva, color, relleno, alineación), bordes, fila de encabezado y ancho de
+  columnas.
+- [ ] Imágenes: recortar, girar, pie de imagen numerado ("Figura 1."), texto alternativo y texto
+  alrededor.
+- [ ] Notas al pie.
+- [ ] Ecuaciones.
+- [ ] Un párrafo largo se parte entre dos páginas en vez de saltar completo.
+- [ ] Marca de agua y columnas.
+
+### 8.3 Presentación
+- [ ] Texto con formato dentro de los cuadros y figuras (negrita en una palabra, viñetas y
+  numeración, tamaño y color por parte).
+- [ ] Fondo de diapositiva (color, degradado o imagen), temas y diseños de diapositiva.
+- [ ] Insertar tabla y gráfica en la diapositiva.
+- [ ] Tamaño de diapositiva: 16:9, 4:3, carta vertical y horizontal, cartel.
+- [ ] Animaciones: entrada, énfasis y salida; orden que elige la persona; al hacer clic, con la
+  anterior o después; retraso y duración.
+- [ ] Imágenes: recortar, foto dentro de una figura y filtros; los GIF se conservan.
+- [ ] Elementos: íconos para insertar (sin internet).
+- [ ] Exportar cada diapositiva como imagen (PNG).
+- [ ] Puntero láser y pluma al presentar (también en la pantalla del proyector).
+- [ ] Exportar a .pptx lo nuevo (fondos, texto con formato, tablas, notas) e **importar .pptx**.
+
+### 8.4 Diagrama
+- [ ] Flechas con texto, color, grosor, estilo, puntas y forma (recta, codo, curva).
+- [ ] Figuras UML y entidad-relación (clase, actor, caso de uso, entidad, relación…).
+- [ ] Cuadrícula con ajuste.
+- [ ] Diagramas precargados (ciclo, línea del tiempo, organigrama, mapa mental, Venn, espina de
+  pescado, FODA, mapa conceptual, clases, casos de uso y entidad-relación).
+
+### 8.5 Afuera de los editores
+- [ ] Papelera de 30 días: borrar manda a la papelera; restaurar o borrar para siempre.
+- [ ] Hacer una copia, mover a otro espacio y cambiar el nombre desde la lista.
+- [ ] Carpetas dentro del espacio, ordenar por nombre, fecha o tipo, y destacados.
+- [ ] Buscar dentro del contenido de los documentos.
+- [ ] Guardar un documento como plantilla del espacio, y plantillas escolares nuevas.
+- [ ] `@menciones` en los comentarios, con aviso a esa persona.
+- [ ] Enlace para ver un solo documento sin entrar al espacio (se puede revocar).
+
+## Fase 9. Generar sin IA (la app organiza y cita; la persona escribe)
+
+- [ ] Fuentes y citas: formulario (libro, artículo, página web, video…), autollenado por DOI,
+  ISBN o dirección web, cita "(Autor, año)" en el texto y lista de referencias en APA con sangría
+  francesa.
+- [ ] Recibo: columna "citado con fuente" junto a tecleado y pegado.
+- [ ] Panel Investigar: Wikipedia en español, libros y artículos; fichas de trabajo (textual,
+  paráfrasis y resumen) con su referencia.
+- [ ] Armar reporte: portada, índice, secciones con preguntas guía, fichas en su sección y
+  bibliografía.
+- [ ] Biblioteca del espacio: fuentes guardadas en el servidor para investigar sin internet.
+- [ ] Ruta del servidor que lee los datos de una dirección web, con protección (no lee la red
+  local, ni `localhost`, ni los datos internos de la nube) y sus pruebas en `seguridad.py`.
+- [ ] Datos → reporte: de una hoja o un CSV/XLSX, un documento con resumen, frecuencias y
+  gráficas (por ejemplo, una encuesta de Google Forms).
+- [ ] Combinar correspondencia: plantilla con `{{campos}}` + hoja = un documento por fila.
+- [ ] Documento → presentación y documento → mapa mental.
+- [ ] Texto → diagrama (flujo, organigrama, mapa mental, línea del tiempo y ciclo) con acomodo
+  automático.
+- [ ] Tablas de datos públicos desde Wikidata (experimento).
+
 ---
 
 ## Cómo quedó (7 de noviembre de 2026)

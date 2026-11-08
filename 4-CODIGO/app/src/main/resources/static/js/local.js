@@ -76,16 +76,8 @@
     opsDe(id) {
       const e = local.estado(id);
       if (!e) return [];
-      const doc = new NOM.DocCRDT(id, e, { local: true, soloMemoria: true });
-      const ops = [];
-      let i = 0;
-      for (const b in e.bloques) {
-        if (b !== "_doc" && !doc.vivo(b)) continue;
-        const { id: _x, ...campos } = doc.bloque(b);
-        if (b === "_doc") { delete campos.nombre; delete campos.modo; if (!Object.keys(campos).length) continue; }
-        ops.push({ id: "subir:" + i++, bloque: b, campos, t: 2, n: "subir" });
-      }
-      return ops;
+      // Con el texto letra por letra incluido (antes un texto subido llegaba vacío).
+      return NOM.DocCRDT.opsDeEstado(e, "subir");
     },
 
     /** Sube el documento a un espacio; si sale bien, se borra la copia local. */

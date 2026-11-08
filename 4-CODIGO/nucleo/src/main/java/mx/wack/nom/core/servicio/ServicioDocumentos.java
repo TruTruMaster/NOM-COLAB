@@ -448,6 +448,7 @@ public class ServicioDocumentos {
             m.put("borradas", 0);
             m.put("tecleadas", 0);
             m.put("pegadas", 0);
+            m.put("citadas", 0);
             m.put("pegados", new ArrayList<Map<String, Object>>());
             rachas.put(clave, m);
         }
@@ -458,9 +459,10 @@ public class ServicioDocumentos {
         }));
         int escritas = ((Number) m.get("escritas")).intValue(), borradas = ((Number) m.get("borradas")).intValue();
         int tecleadas = ((Number) m.get("tecleadas")).intValue(), pegadas = ((Number) m.get("pegadas")).intValue();
+        int citadas = m.get("citadas") instanceof Number cn ? cn.intValue() : 0;
         for (Operacion op : ops) {
             if (bloques.size() < 12) bloques.add(op.bloque());
-            boolean pego = op.pegada();
+            boolean pego = op.pegada(), cito = op.citada(), reacomodo = op.reacomodo();
             if (pego && op.m().get("g") != null) {
                 String g = String.valueOf(op.m().get("g"));
                 synchronized (vistos) {
@@ -478,7 +480,7 @@ public class ServicioDocumentos {
                 if ("i".equals(k) && op.s().get("x") instanceof String x) {
                     int n = x.codePointCount(0, x.length());
                     escritas += n;
-                    if (pego) pegadas += n; else tecleadas += n;
+                    if (cito) citadas += n; else if (pego) pegadas += n; else tecleadas += n;
                 } else if ("v".equals(k) && Boolean.FALSE.equals(op.s().get("v")) && op.s().get("r") instanceof List<?> r) {
                     for (Object o : r) if (o instanceof List<?> rango && rango.size() == 3 && rango.get(1) instanceof Number a && rango.get(2) instanceof Number b) borradas += (int) (b.longValue() - a.longValue() + 1);
                 } else if ("f".equals(k)) campos.add("formato");
@@ -487,9 +489,10 @@ public class ServicioDocumentos {
             for (var c : op.campos().entrySet()) {
                 if (campos.size() < 12) campos.add(c.getKey());
                 // Celdas: lo escrito tambien se separa en tecleado y pegado (no cuenta como "letras").
-                if (c.getKey().startsWith("c:") && c.getValue() instanceof String v && !v.isEmpty()) {
+                // Lo que solo se reacomoda (insertar filas, ordenar) no se escribió de nuevo: no cuenta.
+                if (!reacomodo && c.getKey().startsWith("c:") && c.getValue() instanceof String v && !v.isEmpty()) {
                     int n = v.codePointCount(0, v.length());
-                    if (pego) pegadas += n; else tecleadas += n;
+                    if (cito) citadas += n; else if (pego) pegadas += n; else tecleadas += n;
                 }
             }
         }
@@ -499,6 +502,7 @@ public class ServicioDocumentos {
         m.put("borradas", borradas);
         m.put("tecleadas", tecleadas);
         m.put("pegadas", pegadas);
+        m.put("citadas", citadas);
     }
 
     /** Escribe a disco las rachas de la bitacora que ya terminaron (o todas). */
@@ -790,14 +794,14 @@ public class ServicioDocumentos {
         List<Map<String, Object>> sesiones = new ArrayList<>();
         List<Map<String, Object>> grandes = new ArrayList<>();
         Map<String, Object> s = null;
-        long tTotalMs = 0, tec = 0, peg = 0, bor = 0, opsN = 0, primera = 0, ultima = 0;
+        long tTotalMs = 0, tec = 0, peg = 0, cit = 0, bor = 0, opsN = 0, primera = 0, ultima = 0;
         String nombre = persona != null ? persona.nombre : null;
         for (Map<String, Object> a : act) {
             long fin = num(a.get("t")), ini = a.get("inicio") != null ? num(a.get("inicio")) : fin;
             if (nombre == null && a.get("usuario") != null) nombre = String.valueOf(a.get("usuario"));
             long dur = Math.max(5_000, fin - ini);
             String disp = String.valueOf(a.getOrDefault("dispositivo", "Navegador"));
-            long t1 = num(a.get("tecleadas")), p1 = num(a.get("pegadas")), b1 = num(a.get("borradas"));
+            long t1 = num(a.get("tecleadas")), p1 = num(a.get("pegadas")), c1 = num(a.get("citadas")), b1 = num(a.get("borradas"));
             // Lineas viejas (antes de separar tecleado y pegado): todo lo escrito cuenta como tecleado.
             if (a.get("tecleadas") == null && a.get("pegadas") == null) t1 = num(a.get("escritas"));
             if (s != null && ini - num(s.get("fin")) <= 15 * 60_000L && disp.equals(s.get("dispositivo"))) {
@@ -811,11 +815,13 @@ public class ServicioDocumentos {
                 s.put("dispositivo", disp);
                 s.put("letrasTecleadas", 0L);
                 s.put("letrasPegadas", 0L);
+                s.put("letrasCitadas", 0L);
                 s.put("letrasBorradas", 0L);
                 sesiones.add(s);
             }
             s.put("letrasTecleadas", num(s.get("letrasTecleadas")) + t1);
             s.put("letrasPegadas", num(s.get("letrasPegadas")) + p1);
+            s.put("letrasCitadas", num(s.get("letrasCitadas")) + c1);
             s.put("letrasBorradas", num(s.get("letrasBorradas")) + b1);
             if (a.get("pegados") instanceof List<?> pl) for (Object o : pl) if (o instanceof Map<?, ?> pm) {
                 Map<String, Object> g = new LinkedHashMap<>();
@@ -823,7 +829,7 @@ public class ServicioDocumentos {
                 g.put("letras", num(pm.get("letras")));
                 grandes.add(g);
             }
-            tTotalMs += dur; tec += t1; peg += p1; bor += b1; opsN += num(a.get("operaciones"));
+            tTotalMs += dur; tec += t1; peg += p1; cit += c1; bor += b1; opsN += num(a.get("operaciones"));
             if (primera == 0) primera = ini;
             ultima = Math.max(ultima, fin);
         }
@@ -834,7 +840,7 @@ public class ServicioDocumentos {
 
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("recibo", "NOM-COLAB · Recibo de proceso de escritura");
-        r.put("formato", 1);
+        r.put("formato", 2);
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("id", d.id);
         doc.put("nombre", d.nombre);
@@ -855,10 +861,13 @@ public class ServicioDocumentos {
         tot.put("minutosActivos", sesiones.stream().mapToLong(x -> num(x.get("minutosActivos"))).sum());
         tot.put("letrasTecleadas", tec);
         tot.put("letrasPegadas", peg);
+        // Fase 9: citas textuales insertadas con su fuente (no son ni tecleado ni pegado sin fuente).
+        tot.put("letrasCitadas", cit);
         tot.put("letrasBorradas", bor);
         tot.put("operaciones", opsN);
         tot.put("pegadosGrandes", (long) grandes.size());
-        tot.put("porcentajeTecleado", tec + peg == 0 ? 100L : Math.round(tec * 100.0 / (tec + peg)));
+        tot.put("porcentajeTecleado", tec + peg + cit == 0 ? 100L : Math.round(tec * 100.0 / (tec + peg + cit)));
+        tot.put("porcentajeCitado", tec + peg + cit == 0 ? 0L : Math.round(cit * 100.0 / (tec + peg + cit)));
         r.put("totales", tot);
         r.put("pegadosGrandes", grandes);
         Map<String, Object> ver = new LinkedHashMap<>();

@@ -445,7 +445,7 @@
           h.cerrar(true);
           location.hash = "#/local/" + d.id;
         } else {
-          const d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre: r.nombre, modo: r.modo, ops: r.ops });
+          const d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre: r.nombre, modo: r.modo, ops: NOM.DocCRDT.partir(r.ops) });
           h.cerrar(true);
           location.hash = "#/doc/" + d.id;
         }

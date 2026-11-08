@@ -345,8 +345,46 @@
     ? { en: "en esta app (en este teléfono)", aqui: "esta app", borrar: "desinstalas la app o borras sus datos", sinEspacio: "Ya no queda espacio en el teléfono para la app" }
     : { en: "en este navegador", aqui: "este navegador", borrar: "borras la caché o los datos del navegador", sinEspacio: "El navegador ya no tiene espacio" });
 
+  // ------------------------------------------------------------ paleta de colores (compartida)
+  // Los mismos colores que Word y Excel (fila de grises, colores del tema y estándar).
+  const COLORES = [
+    "#000000", "#434343", "#666666", "#999999", "#B7B7B7", "#D9D9D9", "#EFEFEF", "#FFFFFF",
+    "#C00000", "#FF0000", "#FFC000", "#FFFF00", "#92D050", "#00B050", "#00B0F0", "#0070C0",
+    "#002060", "#7030A0", "#E06666", "#F6B26B", "#FFD966", "#93C47D", "#6FA8DC", "#8E7CC3",
+    "#F4CCCC", "#FCE5CD", "#FFF2CC", "#D9EAD3", "#CFE2F3", "#D9D2E9", "#C9DAF8", "#EAD1DC",
+  ];
+  /**
+   * Panel de colores junto a un botón. opc: { colores, actual, titulo, sinColor (texto del botón
+   * "sin color"; false para no mostrarlo), alElegir(color | null) }. Funciona con el dedo.
+   */
+  function paleta(ancla, opc) {
+    opc = opc || {};
+    const colores = opc.colores || COLORES;
+    const p = html(`<div class="menu wd-paleta" role="dialog" aria-label="${esc(opc.titulo || "Color")}">
+      ${opc.titulo ? `<div class="menu-titulo">${esc(opc.titulo)}</div>` : ""}
+      ${opc.sinColor === false ? "" : `<button class="wd-sin-color" data-c="">${esc(opc.sinColor || "Automático")}</button>`}
+      <div class="wd-muestras">${colores.map((c) => `<button data-c="${c}" style="background:${c}" aria-label="${c}" ${c === opc.actual ? 'aria-pressed="true"' : ""}></button>`).join("")}</div>
+      <label class="wd-otro-color">${ico("palette", "ico-s")} Otro color <input type="color" value="${esc(/^#[0-9a-f]{6}$/i.test(opc.actual || "") ? opc.actual : "#000000")}"></label></div>`);
+    document.body.append(p);
+    const r = ancla.getBoundingClientRect ? ancla.getBoundingClientRect() : { left: ancla.x, bottom: ancla.y, top: ancla.y };
+    p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left)) + "px";
+    let y = r.bottom + 6;
+    if (y + p.offsetHeight > innerHeight - 8) y = Math.max(8, r.top - p.offsetHeight - 6);
+    p.style.top = y + "px";
+    const cerrar = () => { p.remove(); document.removeEventListener("pointerdown", fuera, true); document.removeEventListener("keydown", tecla, true); };
+    const fuera = (e) => { if (!p.contains(e.target)) cerrar(); };
+    const tecla = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
+    setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
+    document.addEventListener("keydown", tecla, true);
+    const elegir = (c) => { cerrar(); opc.alElegir && opc.alElegir(c || null); };
+    p.addEventListener("pointerdown", (e) => { if (e.target.tagName !== "INPUT") e.preventDefault(); });
+    p.addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (b) elegir(b.dataset.c); });
+    $("input", p).addEventListener("change", (e) => elegir(e.target.value.toUpperCase()));
+    return { cerrar };
+  }
+
   try { aplicarLetra(leer("nom.letra", "normal")); } catch (e) { /* sin almacenamiento */ }
-  Object.assign(NOM, { aplicarLetra, etiquetaEquipo,
+  Object.assign(NOM, { aplicarLetra, etiquetaEquipo, paleta, COLORES,
     enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
     leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,

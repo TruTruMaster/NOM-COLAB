@@ -17,7 +17,9 @@ import java.util.Map;
  * @param n      id del nodo que la genero
  * @param s      operacion de secuencia (opcional)
  * @param m      datos de la bitacora que no cambian el documento (opcional): { o: "p" } si el
- *               texto vino de pegar, con g = id del pegado y gn = cuantas letras tenia.
+ *               texto vino de pegar, con g = id del pegado y gn = cuantas letras tenia;
+ *               { o: "c" } si es una cita insertada con su fuente (fase 9) y { o: "r" } si solo
+ *               reacomoda lo que ya estaba (insertar o borrar filas, ordenar): no es tecleado.
  */
 public record Operacion(String id, String bloque, Map<String, Object> campos, long t, String n, Map<String, Object> s,
                         Map<String, Object> m) {
@@ -36,6 +38,12 @@ public record Operacion(String id, String bloque, Map<String, Object> campos, lo
 
     /** El contenido vino de pegar (Ctrl+V, "Pegar" de la ruedita o el teclado del celular). */
     public boolean pegada() { return m != null && "p".equals(m.get("o")); }
+
+    /** Cita textual insertada desde una fuente (panel Investigar o fichas). */
+    public boolean citada() { return m != null && "c".equals(m.get("o")); }
+
+    /** Solo mueve lo que ya estaba (insertar o borrar filas y columnas, ordenar). */
+    public boolean reacomodo() { return m != null && "r".equals(m.get("o")); }
 
     public boolean valida() {
         boolean cuerpo = s != null ? s.get("k") instanceof String && !DOC.equals(bloque)

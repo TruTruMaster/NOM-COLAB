@@ -5,7 +5,7 @@
   const NOM = window.NOM;
   const F = () => NOM.formulas;
 
-  const IMPORTABLES = [".docx", ".nom", ".json", ".md", ".txt", ".csv", ".tsv", ".html", ".htm"];
+  const IMPORTABLES = [".docx", ".xlsx", ".pptx", ".nom", ".json", ".md", ".txt", ".csv", ".tsv", ".html", ".htm"];
   const MAX_BYTES = 10 * 1024 * 1024;
 
   // ------------------------------------------------------------ utilidades
@@ -355,7 +355,7 @@ ${formas.join("\n")}
     const r = [];
     if (paginas) r.push({ id: "imp:p", bloque: "_doc", campos: { paginas }, t: 2, n: "importar" });
     bloques.forEach((b, i) => { const { id, ...c } = b; r.push({ id: "imp:" + i, bloque: id, campos: c, t: 2, n: "importar" }); });
-    return r;
+    return NOM.DocCRDT.partir(r);
   }
 
   async function importar(archivo) {
@@ -363,6 +363,8 @@ ${formas.join("\n")}
     const ext = (archivo.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
     if (!IMPORTABLES.includes(ext)) throw new Error(`Formato no soportado. Puedes importar: ${IMPORTABLES.join(", ")}`);
     if (ext === ".docx") return importarDocx(archivo, nombre);
+    if (ext === ".xlsx") return importarXlsx(archivo, nombre);
+    if (ext === ".pptx") return importarPptx(archivo, nombre);
     if (archivo.size > MAX_BYTES) throw new Error("El archivo pesa más de 10 MB");
     const texto = await archivo.text();
     if (/�/.test(texto.slice(0, 2000)) && ext !== ".txt") throw new Error("El archivo parece dañado o no es texto");
@@ -436,6 +438,20 @@ ${formas.join("\n")}
     ops.push(...NOM.Secuencia.crearOps("cuerpo", ps, "importar", 2, "imp"));
     if (r.pagina) ops.push({ id: "imp:pag", bloque: "_doc", campos: { pagina: r.pagina }, t: 1, n: "importar" });
     return { nombre, modo: "TEXTO", ops, aviso: r.aviso };
+  }
+
+  /** Excel (.xlsx) → hoja de cálculo: una hoja por pestaña, con fórmulas, formato, combinadas y anchos. */
+  async function importarXlsx(archivo, nombre) {
+    const r = await NOM.ooxml.leerXlsx(archivo);
+    const paginas = r.hojas.map((_, i) => "p" + (i + 1));
+    const bloques = r.hojas.map((h, i) => Object.assign({ id: "hoja-" + paginas[i], tipo: "tabla", pagina: paginas[i], orden: 0, x: 40, y: 40, w: 880, h: 300 }, h.campos));
+    return { nombre, modo: "HOJA", ops: comoOps(bloques, paginas), aviso: r.aviso };
+  }
+  /** PowerPoint (.pptx) → presentación (lo arma ooxml.leerPptx). */
+  async function importarPptx(archivo, nombre) {
+    if (!NOM.ooxml.leerPptx) throw new Error("Este formato todavía no se puede abrir");
+    const r = await NOM.ooxml.leerPptx(archivo);
+    return { nombre, modo: "PRESENTACION", ops: comoOps(r.bloques, r.paginas).concat(r.extra || []), aviso: r.aviso };
   }
 
   /** Imagen local -> data URL comprimida (máx. 1600 px, JPEG 0.85) para no inflar el documento. */

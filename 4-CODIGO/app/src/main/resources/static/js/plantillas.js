@@ -12,7 +12,7 @@
       const { id, ...campos } = b;
       lista.push({ id: "tpl:" + i++, bloque: id, campos, t: 2, n: "plantilla" });
     });
-    return lista;
+    return NOM.DocCRDT.partir(lista);
   }
   let n = 0;
   const id = () => "t" + (++n).toString(36) + Math.random().toString(36).slice(2, 6);

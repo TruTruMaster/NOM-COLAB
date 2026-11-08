@@ -90,13 +90,17 @@
       if (this.opc.soloLectura) return null;
       const previos = {};
       for (const c in campos) { const v = this.valor(b, c); previos[c] = v === undefined ? null : v; }
-      const op = { id: this.nodo + ":" + ++this.contador, bloque: b, campos, t: ++this.estado.reloj, n: this.nodo };
-      if (opc.meta) op.m = opc.meta;
-      const cambios = this._fusionar(op);
-      if (!this.opc.local) {
-        this.pendientes.push(op);
-        NOM.guardar(NOM.api.clave("cola." + this.id), this.pendientes);
-      }
+      // El servidor descarta las operaciones de más de 400 campos: las grandes (ordenar o insertar
+      // filas en una hoja grande) se parten en varias, con el mismo paso de deshacer.
+      const partes = DocCRDT.trozos(campos);
+      let op = null, cambios = {};
+      partes.forEach((p) => {
+        op = { id: this.nodo + ":" + ++this.contador, bloque: b, campos: p, t: ++this.estado.reloj, n: this.nodo };
+        if (opc.meta) op.m = opc.meta;
+        Object.assign(cambios, this._fusionar(op));
+        if (!this.opc.local) this.pendientes.push(op);
+      });
+      if (!this.opc.local) NOM.guardar(NOM.api.clave("cola." + this.id), this.pendientes);
       if (opc.deshacible !== false) this._apilar({ bloque: b, previos }, opc.grupo);
       this._avisar([{ bloque: b, campos: cambios, local: true }], opc.origen);
       if (!this.opc.local) this._programar();
@@ -383,6 +387,57 @@
     return (a + b) / 2;
   };
   DocCRDT.nuevoId = () => "b" + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 7);
+
+  /** Máximo de campos por operación (el servidor rechaza las de más de 400). */
+  DocCRDT.MAX_CAMPOS = 380;
+  /** Parte un mapa de campos en trozos de MAX_CAMPOS. */
+  DocCRDT.trozos = (campos) => {
+    const ks = Object.keys(campos || {});
+    if (ks.length <= DocCRDT.MAX_CAMPOS) return [campos];
+    const r = [];
+    for (let i = 0; i < ks.length; i += DocCRDT.MAX_CAMPOS) {
+      const p = {};
+      ks.slice(i, i + DocCRDT.MAX_CAMPOS).forEach((k) => (p[k] = campos[k]));
+      r.push(p);
+    }
+    return r;
+  };
+  /** Operaciones iniciales (plantillas, importar, subir): parte las que tienen demasiados campos. */
+  DocCRDT.partir = (ops) => {
+    const r = [];
+    (ops || []).forEach((op) => {
+      if (op.s || !op.campos) { r.push(op); return; }
+      const ps = DocCRDT.trozos(op.campos);
+      if (ps.length === 1) r.push(op);
+      else ps.forEach((p, i) => r.push(Object.assign({}, op, { id: op.id + "~" + i, campos: p })));
+    });
+    return r;
+  };
+  /**
+   * Todo el contenido de un estado como operaciones para crear otro documento igual (subir un
+   * documento de este equipo, recuperar uno borrado, hacer una copia): los campos de cada bloque
+   * vivo y también el texto letra por letra (las secuencias), que antes se quedaba fuera.
+   */
+  DocCRDT.opsDeEstado = (estado, prefijo) => {
+    prefijo = prefijo || "copia";
+    const doc = new DocCRDT("tmp-" + prefijo, estado, { local: true, soloMemoria: true });
+    const ops = [];
+    let i = 0;
+    for (const b in doc.estado.bloques) {
+      if (b !== "_doc" && !doc.vivo(b)) continue;
+      const { id: _x, ...campos } = doc.bloque(b);
+      if (b === "_doc") { delete campos.nombre; delete campos.modo; if (!Object.keys(campos).length) continue; }
+      ops.push({ id: prefijo + ":" + i++, bloque: b, campos, t: 2, n: prefijo });
+    }
+    for (const b in doc.estado.seq || {}) {
+      const reg = doc.estado.seq[b];
+      ["ins", "vis", "fmt"].forEach((k) => (reg[k] || []).forEach((e) => {
+        const { t, n, ...s } = e;
+        ops.push({ id: prefijo + ":s" + i++, bloque: b, campos: {}, t, n, s });
+      }));
+    }
+    return DocCRDT.partir(ops);
+  };
 
   NOM.DocCRDT = DocCRDT;
 })();
