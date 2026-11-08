@@ -126,6 +126,9 @@
       else if (espacios.length) l.push({ grupo: "Crear", texto: "Nuevo documento…", icono: "file-plus", claves: "crear documento nuevo", sub: () => espacios.map((e) => ({ grupo: "¿En qué espacio?", texto: e.nombre, icono: "layout-grid", fn: nuevoDoc(e) })) });
       l.push({ grupo: "Crear", texto: "Nuevo espacio", icono: "plus", fn: () => NOM.vistaEspacios.nuevoEspacio(), claves: "crear espacio equipo proyecto" });
       l.push({ grupo: "Crear", texto: "Unirse a un espacio", icono: "radio", fn: () => NOM.vistaEspacios.unirse(), claves: "red compartir buscar" });
+      l.push({ grupo: "Crear", texto: "Unirse con código QR", icono: "qr-code", fn: () => NOM.union.escanear(), claves: "qr camara codigo salon escanear" });
+      if (esp && esp.permiso === "PROPIETARIO") l.push({ grupo: "Crear", texto: `Invitar a ${esp.nombre} con código QR`, icono: "qr-code", fn: () => NOM.union.invitar(esp), claves: "qr invitar salon alumnos apodo" });
+      if (esp && esp.id && !ed) l.push({ grupo: "Crear", texto: `Exportar todo ${esp.nombre} (.zip)`, icono: "archive", fn: async () => NOM.vistaEspacios.exportarTodo(await api().get(`/api/espacios/${esp.id}`)), claves: "descargar office zip respaldo" });
     } else {
       l.push({ grupo: "Crear", texto: "Nuevo documento (en este equipo)", icono: "file-plus", fn: nuevoDoc(null), claves: "crear documento nuevo" });
       l.push({ grupo: "Crear", texto: "Crear una cuenta", icono: "user-plus", fn: () => NOM.app.irACuentas("registro"), claves: "registrarse cuenta" });
@@ -149,6 +152,7 @@
     l.push({ grupo: "Apariencia", texto: "Tema automático (como el sistema)", icono: "monitor", marcado: tema === "auto", fn: () => cambiarPreferencia({ tema: "auto" }, "Tema automático"), claves: "sistema" });
     l.push({ grupo: "Apariencia", texto: pref.movimientoReducido ? "Activar animaciones" : "Reducir movimiento", icono: "sparkles", fn: () => cambiarPreferencia({ movimientoReducido: !pref.movimientoReducido }, pref.movimientoReducido ? "Animaciones activadas" : "Movimiento reducido"), claves: "animaciones accesibilidad" });
     l.push({ grupo: "Ayuda", texto: "Atajos de teclado", icono: "keyboard", atajo: "?", fn: atajos, claves: "teclas shortcuts ayuda" });
+    l.push({ grupo: "Ayuda", texto: "Verificar un recibo de escritura", icono: "circle-check", fn: () => NOM.recibo.verificar(), claves: "recibo autoria hash comprobar" });
     l.push({ grupo: "Ayuda", texto: "Ajustes y preferencias", icono: "settings", fn: () => NOM.vistaEspacios.preferencias(), claves: "configuracion" });
     if (conCuenta()) l.push({ grupo: "Ayuda", texto: "Cerrar sesión", icono: "log-out", fn: () => NOM.app.cerrarSesion && NOM.app.cerrarSesion(), claves: "salir logout" });
     return l;

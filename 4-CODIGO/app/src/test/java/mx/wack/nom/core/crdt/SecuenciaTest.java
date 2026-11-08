@@ -125,4 +125,32 @@ class SecuenciaTest {
         esperado.forEach((id, v) -> assertEquals(v, actual.get(id), "carácter " + id));
         assertEquals(10, e.seq.get("cuerpo").visibles());
     }
+
+    /** 3.5: el servidor sabe de quien es cada parrafo (atributo "dueno" de su marca de parrafo). */
+    @Test
+    void duenosDeParrafo() {
+        Secuencia s = new Secuencia();
+        // "Uno\nDos\nTres": ids 1..3 "Uno", 4 "\n", 5..7 "Dos", 8 "\n", 9..12 "Tres"
+        assertTrue(s.aplicar(ins(null, "Uno\nDos\nTres"), 1, "ana"));
+        assertFalse(s.tieneDuenos());
+        // El parrafo "Dos" (su marca es 8@ana) es de beto.
+        s.aplicar(rango("f", Map.of("dueno", "beto"), "ana", 8, 8), 20, "ana");
+        assertTrue(s.tieneDuenos());
+        assertEquals(java.util.Set.of(), s.duenos(rango("v", false, "ana", 1, 2)), "borrar en 'Uno' no toca a nadie");
+        assertEquals(java.util.Set.of("beto"), s.duenos(rango("v", false, "ana", 6, 6)), "borrar en 'Dos' toca a beto");
+        assertEquals(java.util.Set.of("beto"), s.duenos(rango("v", false, "ana", 8, 8)), "su marca de parrafo tambien");
+        assertEquals(java.util.Set.of("beto"), s.duenos(ins("4@ana", "x")), "escribir al inicio de 'Dos'");
+        assertEquals(java.util.Set.of(), s.duenos(ins("3@ana", "x")), "escribir al final de 'Uno'");
+        assertEquals(java.util.Set.of(), s.duenos(ins("12@ana", "!")), "escribir en 'Tres'");
+        assertEquals(java.util.Set.of(Secuencia.DESCONOCIDO), s.duenos(ins("99@nadie", "x")));
+        // Texto nuevo dentro de "Dos" (despues de 6@ana) sigue siendo de beto, ya con el orden armado.
+        assertTrue(s.aplicar(ins("6@ana", "zz"), 30, "beto"));
+        assertEquals(java.util.Set.of("beto"), s.duenos(rango("v", false, "beto", 30, 31)));
+        // Si se borra la marca de "Uno", "Uno" y "Dos" quedan en un solo parrafo (el de beto).
+        s.aplicar(rango("v", false, "ana", 4, 4), 40, "ana");
+        assertEquals(java.util.Set.of("beto"), s.duenos(rango("v", false, "ana", 1, 1)));
+        // Quitar el dueno libera el parrafo.
+        s.aplicar(rango("f", java.util.Collections.singletonMap("dueno", null), "ana", 8, 8), 50, "ana");
+        assertEquals(java.util.Set.of(), s.duenos(rango("v", false, "ana", 6, 6)));
+    }
 }

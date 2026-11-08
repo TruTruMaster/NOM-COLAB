@@ -68,6 +68,108 @@ public class ServicioCuentas {
         return u;
     }
 
+    // ------------------------------------------------------------ invitados (modo salon)
+    private static final String ALFABETO = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+    /** Texto al azar con letras y numeros que no se confunden (sin 0/O ni 1/I/L). */
+    public String codigo(int largo) {
+        String t = cifrado.token();
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (sb.length() < largo) {
+            if (i >= t.length()) { t = cifrado.token(); i = 0; }
+            char c = Character.toUpperCase(t.charAt(i++));
+            if (ALFABETO.indexOf(c) >= 0) sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Cuenta de invitado: alguien entra con un apodo (sin registrarse) desde un enlace o QR del
+     * espacio. Queda ligada a ese espacio; no tiene contrasena que se pueda usar, asi que solo
+     * entra desde el dispositivo donde abrio la sesion.
+     */
+    public synchronized Sesion crearInvitado(String apodo, String espacioId) {
+        apodo = apodo == null ? "" : apodo.trim().replaceAll("\\s+", " ");
+        if (apodo.isEmpty()) throw ErrorNom.invalido("Escribe tu apodo", "apodo");
+        if (!apodo.matches("[\\p{L}\\p{N} ._-]{2,16}"))
+            throw ErrorNom.invalido("Usa de 2 a 16 letras o números (puede llevar espacios)", "apodo");
+        Usuario u = new Usuario();
+        u.id = cifrado.id();
+        for (int i = 0; i < 20; i++) {
+            u.nombre = apodo + "·" + codigo(3);
+            u.nombreClave = u.nombre.toLowerCase(Locale.ROOT);
+            if (repo.porNombre(u.nombre).isEmpty()) break;
+        }
+        u.sal = cifrado.nuevaSal();
+        // Contrasena al azar que nadie conoce: la cuenta solo se usa con su sesion.
+        u.hashContrasena = cifrado.hash(cifrado.token().toCharArray(), u.sal);
+        u.creado = System.currentTimeMillis();
+        u.color = COLORES[Math.floorMod(u.nombreClave.hashCode(), COLORES.length)];
+        u.invitadoDe = espacioId;
+        repo.guardar(u);
+        log.info("Invitado {} en el espacio {}", u.nombre, espacioId);
+        return nuevaSesion(u, u.creado);
+    }
+
+    // ------------------------------------------------------------ recuperar la contrasena
+    private static String normalizarCodigo(String c) { return c == null ? "" : c.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", ""); }
+
+    /** Nuevo codigo de recuperacion (el anterior deja de servir). Se muestra una sola vez. */
+    public String nuevoCodigoRecuperacion(Usuario u) {
+        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no tienen contraseña");
+        String c = codigo(16);
+        u.salRecuperacion = cifrado.nuevaSal();
+        u.hashRecuperacion = cifrado.hash(c.toCharArray(), u.salRecuperacion);
+        repo.guardar(u);
+        return c.substring(0, 4) + "-" + c.substring(4, 8) + "-" + c.substring(8, 12) + "-" + c.substring(12);
+    }
+
+    /**
+     * Cambia la contrasena con el codigo de recuperacion. Los intentos fallidos cuentan igual que
+     * al iniciar sesion (y bloquean igual). Cierra todas las sesiones y devuelve un codigo nuevo.
+     */
+    public synchronized String recuperar(String nombre, String codigo, String nueva) {
+        if (nombre == null || nombre.isBlank()) throw ErrorNom.invalido("Escribe tu usuario", "nombre");
+        if (normalizarCodigo(codigo).length() != 16) throw ErrorNom.invalido("El código tiene 16 letras y números (por ejemplo ABCD-EFGH-JKMN-PQRS)", "codigo");
+        if (nueva == null || nueva.length() < 8) throw ErrorNom.invalido("La contraseña nueva necesita al menos 8 caracteres", "nueva");
+        long ahora = System.currentTimeMillis();
+        Usuario u = repo.porNombre(nombre).orElse(null);
+        if (u == null || u.esInvitado() || u.hashRecuperacion == null) throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
+        if (u.estaBloqueado(ahora)) {
+            long min = Math.max(1, (u.bloqueadoHasta - ahora + 59_999) / 60_000);
+            throw new ErrorNom(ErrorNom.BLOQUEADO, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
+        }
+        if (!cifrado.coincide(normalizarCodigo(codigo).toCharArray(), u.salRecuperacion, u.hashRecuperacion)) {
+            u.intentosFallidos++;
+            if (u.intentosFallidos > maxIntentos) {
+                u.bloqueadoHasta = ahora + minutosBloqueo * 60_000L;
+                u.intentosFallidos = 0;
+                repo.guardar(u);
+                throw new ErrorNom(ErrorNom.BLOQUEADO, "Acceso bloqueado por " + minutosBloqueo + " minutos tras demasiados intentos.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
+            }
+            repo.guardar(u);
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
+        }
+        u.sal = cifrado.nuevaSal();
+        u.hashContrasena = cifrado.hash(nueva.toCharArray(), u.sal);
+        u.intentosFallidos = 0;
+        u.bloqueadoHasta = 0;
+        repo.borrarSesionesDe(u.id);
+        log.info("Contraseña recuperada con código: {}", u.nombre);
+        return nuevoCodigoRecuperacion(u);
+    }
+
+    private Sesion nuevaSesion(Usuario u, long ahora) {
+        Sesion s = new Sesion();
+        s.token = cifrado.token();
+        s.usuarioId = u.id;
+        s.creada = ahora;
+        s.expira = ahora + horasSesion * 3_600_000L;
+        repo.guardarSesion(s);
+        return s;
+    }
+
     /** CU-02 Iniciar sesion, con CU-04 (bloqueo) como extension. */
     public synchronized Sesion iniciarSesion(String nombre, String contrasena) {
         if (nombre == null || nombre.isBlank() || contrasena == null || contrasena.isEmpty())
@@ -107,14 +209,7 @@ public class ServicioCuentas {
         u.intentosFallidos = 0;
         u.bloqueadoHasta = 0;
         repo.guardar(u);
-
-        Sesion s = new Sesion();
-        s.token = cifrado.token();
-        s.usuarioId = u.id;
-        s.creada = ahora;
-        s.expira = ahora + horasSesion * 3_600_000L;
-        repo.guardarSesion(s);
-        return s;
+        return nuevaSesion(u, ahora);
     }
 
     /** CU-03 Cerrar sesion. Si ya habia expirado no es error. */
@@ -140,6 +235,9 @@ public class ServicioCuentas {
         return p;
     }
 
+    /** ¿Tiene codigo de recuperacion? (para recordarle que lo genere). */
+    public static boolean tieneRecuperacion(Usuario u) { return u.hashRecuperacion != null; }
+
     public static Map<String, Object> publico(Usuario u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", u.id);
@@ -147,6 +245,7 @@ public class ServicioCuentas {
         m.put("empresa", u.empresa);
         m.put("color", u.color);
         m.put("creado", u.creado);
+        if (u.esInvitado()) m.put("invitado", true);
         return m;
     }
 }

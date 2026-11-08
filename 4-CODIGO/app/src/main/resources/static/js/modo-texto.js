@@ -42,8 +42,13 @@
     "#002060", "#7030A0", "#E06666", "#F6B26B", "#FFD966", "#93C47D", "#6FA8DC", "#8E7CC3",
   ];
   const RESALTES = ["#FFFF00", "#00FF00", "#00FFFF", "#FF00FF", "#FFC000", "#C9DAF8", "#F4CCCC", "#D9EAD3"];
-  const CAR = ["b", "i", "u", "s", "va", "color", "fondo", "fuente", "tam", "enlace"];
-  const PAR = ["estilo", "alin", "lista", "nivel", "hecho", "sangria", "interlineado", "antes", "despues"];
+  // sug / sugBorrar: modo sugerencia (7): texto propuesto o propuesto para borrar, con su autor.
+  const CAR = ["b", "i", "u", "s", "va", "color", "fondo", "fuente", "tam", "enlace", "sug", "sugBorrar"];
+  // dueno: el párrafo es de esa persona (3.5); solo ella y el propietario del espacio lo cambian.
+  const PAR = ["estilo", "alin", "lista", "nivel", "hecho", "sangria", "interlineado", "antes", "despues", "dueno"];
+  /** Quién mira el documento (para los párrafos con dueño): lo llena montar(). */
+  const ctx = { yo: null, propietario: false, nombres: new Map(), colores: new Map() };
+  const URL_SOLA = /^https?:\/\/[^\s<>"]+$/i;
   const PAGINAS = { carta: { n: "Carta (21.6 × 27.9 cm)", w: 816, h: 1056 }, a4: { n: "A4 (21 × 29.7 cm)", w: 794, h: 1123 }, oficio: { n: "Oficio (21.6 × 35.6 cm)", w: 816, h: 1344 } };
   const MARGENES = { normal: { n: "Normal (2.5 cm)", v: 96 }, estrecho: { n: "Estrecho (1.27 cm)", v: 48 }, moderado: { n: "Moderado (1.9 cm)", v: 72 }, ancho: { n: "Ancho (5 cm)", v: 192 } };
   const SIMBOLOS = "© ® ™ € £ ¥ ¢ ° ± × ÷ ≠ ≈ ≤ ≥ ∞ √ ∑ π Ω µ α β γ δ θ λ → ← ↑ ↓ ↔ ⇒ • · … — – « » ¿ ¡ § ¶ † ✓ ✗ ★ ☆ ♥ ☐ ☑ ½ ¼ ¾ ² ³".split(" ");
@@ -102,6 +107,9 @@
     else if (tag === "CODE" || tag === "KBD" || tag === "SAMP" || tag === "TT") pon("fuente", "Courier New");
     else if (tag === "MARK") pon("fondo", "#FFFF00");
     else if (tag === "A") { const h = n.getAttribute("href"); if (h && /^(https?:|mailto:|#)/i.test(h)) pon("enlace", h); }
+    if (n.dataset && (n.dataset.sug || n.dataset.sugb)) {
+      try { if (n.dataset.sug) pon("sug", JSON.parse(n.dataset.sug)); if (n.dataset.sugb) pon("sugBorrar", JSON.parse(n.dataset.sugb)); } catch (e) { /* atributo dañado */ }
+    }
     else if (tag === "FONT") {
       if (n.getAttribute("color")) pon("color", hex(n.getAttribute("color")));
       if (n.getAttribute("face")) pon("fuente", n.getAttribute("face").split(",")[0].replace(/['"]/g, "").trim());
@@ -139,6 +147,7 @@
       if (d.li) r.interlineado = +d.li;
       if (d.antes != null && d.antes !== "") r.antes = +d.antes;
       if (d.desp != null && d.desp !== "") r.despues = +d.desp;
+      if (d.dueno) r.dueno = d.dueno;
       return r;
     }
     // HTML ajeno (pegado de Word, Google Docs, la web…)
@@ -272,6 +281,8 @@
     if (a.i) h = `<i>${h}</i>`;
     if (a.b) h = `<b>${h}</b>`;
     if (a.enlace) h = `<a href="${esc(a.enlace)}">${h}</a>`;
+    if (a.sug) h = `<span class="wd-sug" data-sug="${esc(JSON.stringify(a.sug))}" style="--c:${esc(a.sug.c || "#1D7A4C")}" title="${esc("Sugerencia de " + (a.sug.n || ""))}">${h}</span>`;
+    if (a.sugBorrar) h = `<span class="wd-sugb" data-sugb="${esc(JSON.stringify(a.sugBorrar))}" style="--c:${esc(a.sugBorrar.c || "#C2372B")}" title="${esc((a.sugBorrar.n || "") + " propone borrarlo")}">${h}</span>`;
     return h;
   }
   const BLOQUE_OBJ = new Set(["tabla", "salto", "linea", "indice"]);
@@ -290,6 +301,12 @@
       if (pa.lista === "tareas" && pa.hecho) at += ` data-hecho="true"`;
     }
     if (pa.alin) at += ` data-alin="${esc(pa.alin)}"`;
+    if (pa.dueno) {
+      at += ` data-dueno="${esc(pa.dueno)}" data-dueno-nombre="${esc(ctx.nombres.get(pa.dueno) || "Asignado")}"`;
+      st += `--dueno:${esc(ctx.colores.get(pa.dueno) || "#6B6875")};`;
+      // El párrafo de otra persona no se puede editar desde aquí (tampoco con el teclado del celular).
+      if (pa.dueno !== ctx.yo && !ctx.propietario) at += ` contenteditable="false"`;
+    }
     if (+pa.sangria) { at += ` data-sangria="${+pa.sangria}"`; st += `--sang:${+pa.sangria};`; }
     if (pa.interlineado) { at += ` data-li="${+pa.interlineado}"`; st += `--li:${+pa.interlineado};`; }
     if (pa.antes != null) { at += ` data-antes="${+pa.antes}"`; st += `--antes:${+pa.antes}pt;`; }
@@ -341,7 +358,10 @@
     calcularParrafos(sec).forEach((p) => {
       const tramos = [];
       for (let i = p.ini; i < p.fin; i++) {
-        const it = vis[i], a = S().attrs(it);
+        const it = vis[i];
+        let a = S().attrs(it);
+        // Sugerencias sin resolver: se exportan como en "control de cambios" (subrayado o tachado).
+        if (a.sug || a.sugBorrar) { a = Object.assign({}, a); if (a.sug) { a.u = true; a.color = "#1D7A4C"; } if (a.sugBorrar) { a.s = true; a.color = "#C2372B"; } delete a.sug; delete a.sugBorrar; }
         if (it.e) { tramos.push({ e: Object.assign({}, it.e, it.e.ref ? doc.bloque(it.e.ref) || {} : {}, { tipo: it.e.tipo }), a }); continue; }
         const u = tramos[tramos.length - 1];
         if (u && u.x != null && claveA(u.a) === claveA(a)) u.x += it.c; else tramos.push({ x: it.c, a });
@@ -396,6 +416,11 @@
 
       const pref = NOM.leer("nom.texto", {});
       const movil = !matchMedia("(hover: hover)").matches || innerWidth < 760;
+      ctx.yo = (NOM.api.usuario() || {}).id || null;
+      ctx.propietario = !!ed.esPropietario;
+      /** 7: con el modo sugerencia, lo que se escribe o se borra queda propuesto, no aplicado. */
+      let modoSug = false;
+      const yoSug = () => { const u = NOM.api.usuario() || {}; return { u: u.id || "", n: u.nombre || "", c: u.color || "#1D7A4C" }; };
       let vista = pref.vista || (movil ? "continua" : "paginas");
       let zoom = pref.zoom || 1;
 
@@ -462,7 +487,11 @@
         actualizarIndices();
         programarPaginar();
         pintarEsquema();
+        revisarNombres();
+        if (resaltado || marcasComentario.length) programarMarcas();
       }
+      let tMarcas = null;
+      function programarMarcas() { clearTimeout(tMarcas); tMarcas = setTimeout(() => { if (resaltado) aplicarResaltado(); pintarComentarios(); }, 80); }
 
       /** Lo que se dibuja dentro de los objetos (no forma parte del html del párrafo). */
       function llenarObjetos(raizEl) {
@@ -611,24 +640,36 @@
       let pasoN = 0, finEdicion = -1;
       const grupoEscritura = () => "escribir-" + pasoN;
       function cortarPaso() { pasoN++; }
-      function insertarTokens(iz, toks, origen, grupo) {
+      /** Lo que se escribe solo lleva marca de sugerencia en el modo sugerencia (y siempre de quien escribe). */
+      function normalizarSug(toks) {
+        const yo = modoSug ? yoSug() : null;
+        toks.forEach((t) => {
+          if (t.c === "\n") return;
+          if (!t.a || (!t.a.sug && !t.a.sugBorrar && !yo)) return;
+          t.a = Object.assign({}, t.a);
+          delete t.a.sugBorrar;
+          if (yo) t.a.sug = yo; else delete t.a.sug;
+        });
+      }
+      function insertarTokens(iz, toks, origen, grupo, meta) {
+        normalizarSug(toks);
         let i = 0;
         while (i < toks.length) {
           const t = toks[i];
           if (t.c === OBJ) {
             const e = objetoDe(t);
-            if (e) { const r = doc().seq(B, { k: "i", iz, x: OBJ, e, a: limpio(solo(t.a, CAR)) }, { origen, grupo }); if (r) iz = S().clave(r.t, r.n); }
+            if (e) { const r = doc().seq(B, { k: "i", iz, x: OBJ, e, a: limpio(solo(t.a, CAR)) }, { origen, grupo, meta }); if (r) iz = S().clave(r.t, r.n); }
             i++; continue;
           }
           if (t.c === "\n") {
-            const r = doc().seq(B, { k: "i", iz, x: "\n", a: limpio(solo(t.pa, PAR)) }, { origen, grupo });
+            const r = doc().seq(B, { k: "i", iz, x: "\n", a: limpio(solo(t.pa, PAR)) }, { origen, grupo, meta });
             if (r) iz = S().clave(r.t, r.n);
             i++; continue;
           }
           const k = claveA(solo(t.a, CAR));
           let j = i, x = "";
           while (j < toks.length && toks[j].c !== OBJ && toks[j].c !== "\n" && claveA(solo(toks[j].a, CAR)) === k) { x += toks[j].c; j++; }
-          const r = doc().seq(B, { k: "i", iz, x, a: limpio(solo(t.a, CAR)) }, { origen, grupo });
+          const r = doc().seq(B, { k: "i", iz, x, a: limpio(solo(t.a, CAR)) }, { origen, grupo, meta });
           if (r) iz = S().clave(r.t + cps(x).length - 1, r.n);
           i = j;
         }
@@ -678,7 +719,10 @@
         const iz = base + p > 0 ? visPintado[base + p - 1].id : null;
         if (!meter.length && borrar.length && base + p + borrar.length !== finEdicion && base + p !== finEdicion) cortarPaso();
         const grupo = grupoEscritura();
-        if (borrar.length) doc().seq(B, { k: "v", v: false, r: S().rangos(borrar) }, { origen, grupo });
+        if (borrar.length) {
+          if (modoSug) borrarSugerido(borrar, grupo, origen);
+          else doc().seq(B, { k: "v", v: false, r: S().rangos(borrar) }, { origen, grupo });
+        }
         if (meter.length && base + p !== finEdicion) cortarPaso();
         if (meter.length && /\s/.test(meter[meter.length - 1].c || "") && !/\s/.test((visPintado[base + p - 1] || {}).c || " ")) cortarPaso();
         finEdicion = base + p + meter.length;
@@ -688,7 +732,10 @@
             pendiente.pos += meter.length;
             pendiente.usado = true;
           }
-          insertarTokens(iz, meter, origen, grupo);
+          // 3.1: el teclado del celular pegó (insertFromPaste sin evento "paste"): cuenta como pegado.
+          let meta = null;
+          if (pegadoNativo && Date.now() < pegadoNativo.hasta) { meta = { o: "p", g: pegadoNativo.g, gn: pegadoNativo.gn || meter.length }; pegadoNativo = null; }
+          insertarTokens(iz, meter, origen, grupo, meta);
         }
         // Formato: los caracteres seguidos con el mismo cambio van en una sola operación.
         let g = null;
@@ -802,9 +849,9 @@
         doc().seq(B, { k: "v", v: false, r: S().rangos(visPintado.slice(ini, fin)) }, { origen: "comando", grupo });
         actualizarPintado();
       }
-      function insertarEn(i, toks, grupo) {
+      function insertarEn(i, toks, grupo, meta) {
         const iz = i > 0 ? visPintado[i - 1].id : null;
-        insertarTokens(iz, toks, "comando", grupo);
+        insertarTokens(iz, toks, "comando", grupo, meta);
         actualizarPintado();
         return i + toks.length;
       }
@@ -909,12 +956,190 @@
         formatoParrafo({ estilo: null, alin: null, interlineado: null, antes: null, despues: null, sangria: null });
       }
       function cambiarTam(delta) {
-        const t = attrsEnCursor().a.tam || 11;
+        const t = attrsEnCursor().a.tam || baseTam();
         let n;
         if (delta > 0) n = TAMANOS.find((x) => x > t) || Math.min(400, t + 10);
         else n = [...TAMANOS].reverse().find((x) => x < t) || Math.max(1, t - 1);
         formato({ tam: n });
       }
+
+
+      // ------------------------------------------------------------ 3.1 lo que se pega
+      let pegadoNativo = null;
+      const letrasDe = (toks) => toks.filter((t) => t.c !== "\n").length;
+      const metaPegado = (toks) => {
+        toks.forEach((t) => { if (t.pa && t.pa.dueno) { t.pa = Object.assign({}, t.pa); delete t.pa.dueno; } });
+        return { o: "p", g: NOM.idCorto() + Date.now().toString(36), gn: letrasDe(toks) };
+      };
+      /** 1.1 Pegar un enlace sobre texto seleccionado lo convierte en vínculo (un solo paso de deshacer). */
+      function enlazarSeleccion(s, texto) {
+        const url = String(texto || "").trim();
+        if (s.col || !URL_SOLA.test(url)) return false;
+        const its = visPintado.slice(s.ini, s.fin);
+        if (!its.length || its.some((x) => x.c === "\n" || x.e)) return false;
+        cortarPaso();
+        comando(() => { doc().seq(B, { k: "f", a: { enlace: url }, r: S().rangos(its) }, { origen: "comando", grupo: "enlace-" + pasoN }); return { sel: [s.a, s.f] }; });
+        cortarPaso();
+        aviso("Enlace aplicado al texto elegido", { tipo: "ok", ms: 1600 });
+        return true;
+      }
+
+      // ------------------------------------------------------------ 7 modo sugerencia
+      const sugDe = (it) => S().attrs(it).sug;
+      const tachado = (it) => !!S().attrs(it).sugBorrar;
+      /** En modo sugerencia, "borrar" marca para borrar (lo mío propuesto sí se quita de verdad). */
+      function borrarSugerido(items, grupo, origen) {
+        const yo = yoSug();
+        const propios = items.filter((it) => !it.e && it.c !== "\n" && sugDe(it) && sugDe(it).u === yo.u);
+        const marcar = items.filter((it) => it.c !== "\n" && !tachado(it) && !propios.includes(it));
+        if (propios.length) doc().seq(B, { k: "v", v: false, r: S().rangos(propios) }, { origen, grupo });
+        if (marcar.length) doc().seq(B, { k: "f", a: { sugBorrar: yo }, r: S().rangos(marcar) }, { origen, grupo });
+        if (items.some((it) => it.c === "\n")) aviso("En modo sugerencia no se unen párrafos", { tipo: "info", ms: 2200 });
+        necesitaPintar = true;
+      }
+      /** Borrar con la tecla en modo sugerencia: se salta lo ya tachado y el cursor queda donde corresponde. */
+      function borrarConTecla(tipo) {
+        sincronizar();
+        const s = leerSel();
+        let a = s.ini, f = s.fin;
+        if (s.col) {
+          const atras = /Backward/.test(tipo);
+          if (/Word|Line/.test(tipo)) {
+            const sel = getSelection();
+            try { sel.modify("extend", atras ? "backward" : "forward", /Line/.test(tipo) ? "lineboundary" : "word"); } catch (e) { /* sin modify */ }
+            const r = leerSel(); a = r.ini; f = r.fin;
+          } else if (atras) { let k = s.ini - 1; while (k >= 0 && tachado(visPintado[k])) k--; if (k < 0) return; a = k; f = k + 1; }
+          else { let k = s.ini; while (k < visPintado.length && tachado(visPintado[k])) k++; if (k >= visPintado.length) return; a = k; f = k + 1; }
+          if (a === f) return;
+          const r = comando(() => { borrarSugerido(visPintado.slice(a, f), "sug-" + pasoN, "comando"); const p = atras ? a : f; return { sel: [p, p] }; });
+          void r;
+          return;
+        }
+        comando(() => { borrarSugerido(visPintado.slice(a, f), "sug-" + pasoN, "comando"); return { sel: [f, f] }; });
+      }
+      function alternarSugerencias(si) {
+        modoSug = si == null ? !modoSug : !!si;
+        raiz.classList.toggle("sugiriendo", modoSug);
+        aviso(modoSug ? "Modo sugerencia: lo que escribas o borres queda propuesto; el equipo lo acepta o lo rechaza en Comentarios." : "Modo sugerencia apagado", { tipo: "info", ms: 3200 });
+        reflejar();
+      }
+      /** Sugerencias pendientes, en orden: tramos seguidos del mismo autor y tipo. */
+      function sugerencias() {
+        const r = [];
+        let g = null;
+        visPintado.forEach((it, i) => {
+          const a = S().attrs(it), k = a.sug ? "insertar" : a.sugBorrar ? "borrar" : null;
+          const autor = a.sug || a.sugBorrar;
+          if (!k) { g = null; return; }
+          if (g && g.tipo === k && g.autor.u === autor.u && g.fin === i) { g.its.push(it); g.fin = i + 1; g.texto += it.e ? "▪" : it.c; return; }
+          g = { tipo: k, autor, its: [it], ini: i, fin: i + 1, texto: it.e ? "▪" : it.c };
+          r.push(g);
+        });
+        return r;
+      }
+      function resolverSugerencia(g, aceptar) {
+        if (ed.soloLectura) return;
+        comando(() => {
+          const ids = g.its.filter((it) => sec().item(it.id) && sec().item(it.id).v);
+          if (!ids.length) return null;
+          const quitar = (g.tipo === "insertar") !== aceptar;   // aceptar un borrado o rechazar una inserción
+          if (quitar) doc().seq(B, { k: "v", v: false, r: S().rangos(ids) }, { origen: "comando" });
+          else doc().seq(B, { k: "f", a: g.tipo === "insertar" ? { sug: null } : { sugBorrar: null }, r: S().rangos(ids) }, { origen: "comando" });
+          return null;
+        });
+      }
+
+      // ------------------------------------------------------------ 3.5 párrafos con dueño
+      let nombresPedidos = false;
+      function revisarNombres() {
+        if (nombresPedidos || !ed.cargarMiembros) return;
+        if (!psPintado.some((p) => S().attrs(p.mark).dueno)) return;
+        nombresPedidos = true;
+        ed.cargarMiembros().then((ms) => {
+          ms.forEach((m) => { ctx.nombres.set(m.id, m.nombre); ctx.colores.set(m.id, m.color); });
+          const s = leerSel(); cache.clear(); reconciliar(); if (document.activeElement === cuerpo) ponerSel(s.a, s.f);
+        });
+      }
+      async function asignarParrafos(ps) {
+        ps = ps || parrafosDeSel();
+        const actual = S().attrs(ps[0].mark).dueno || null;
+        const uid = await ed.elegirPersona(ps.length > 1 ? `Asignar ${ps.length} párrafos a…` : "Asignar el párrafo a…", actual);
+        if (uid == null) return;
+        if (uid) { const m = ed.miembros.find((x) => x.id === uid); if (m) { ctx.nombres.set(uid, m.nombre); ctx.colores.set(uid, m.color); } }
+        formatoParrafo({ dueno: uid || null }, ps);
+        cache.clear(); reconciliar();
+        aviso(uid ? `Asignado a ${ed.nombreDe(uid)}: solo esa persona (y tú) lo cambian` : "Ya nadie es dueño de ese párrafo", { tipo: "ok" });
+      }
+      /** ¿Algo de la selección cae en el párrafo de otra persona? Devuelve su nombre. */
+      function ajenoEnSeleccion(s) {
+        if (ctx.propietario) return null;
+        for (const p of parrafosDeSel(s)) { const d = S().attrs(p.mark).dueno; if (d && d !== ctx.yo) return ctx.nombres.get(d) || "otra persona"; }
+        return null;
+      }
+
+      // ------------------------------------------------------------ 3.4 lo que cambió desde la última visita
+      let resaltado = null;
+      function aplicarResaltado() {
+        $$(".wd-cambiado", cuerpo).forEach((el) => el.classList.remove("wd-cambiado"));
+        if (resaltar) resaltar.delete("wd-cambio");
+        if (!resaltado) return;
+        const R = +((resaltado.visita || {}).reloj || 0), nodos = new Set((resaltado.cambios || {}).clientes || []);
+        const nuevos = [];
+        visPintado.forEach((it, i) => { if (it.t > R && nodos.has(it.n)) nuevos.push(i); });
+        const tocados = new Set(nuevos.map((i) => parrafoEn(i)));
+        // Formato o borrados de otros: se marca el párrafo (la barra de la izquierda).
+        const reg = doc().estado.seq[B];
+        if (reg) [...reg.vis, ...reg.fmt].forEach((o) => {
+          if (o.t <= R || !nodos.has(o.n)) return;
+          (o.r || []).slice(0, 50).forEach(([n, t1]) => { const it = sec().item(n === FIN ? FIN : S().clave(t1, n)); if (!it) return; let k = sec().indice(it); while (k < sec().items.length && !(sec().items[k].v)) k++; const p = k < sec().items.length ? sec().posicion(sec().items[k].id) : visPintado.length; if (p >= 0) tocados.add(parrafoEn(p)); });
+        });
+        tocados.forEach((pi) => { const el = cuerpo.children[pi]; if (el) el.classList.add("wd-cambiado"); });
+        if (resaltar && nuevos.length) {
+          const rs = [];
+          let a = nuevos[0], b = a;
+          const cierra = () => { const r = rangoDom(a, b + 1); if (r) rs.push(r); };
+          for (let k = 1; k < nuevos.length && rs.length < 400; k++) { if (nuevos[k] === b + 1) b = nuevos[k]; else { cierra(); a = b = nuevos[k]; } }
+          cierra();
+          resaltar.set("wd-cambio", new Highlight(...rs));
+        }
+      }
+      this.resaltarCambios = (c) => { resaltado = c; aplicarResaltado(); };
+
+      // ------------------------------------------------------------ 7 comentarios: ancla en el texto
+      let marcasComentario = [];
+      function pintarComentarios() {
+        if (!resaltar) return;
+        const rs = [];
+        marcasComentario.forEach((c) => {
+          const a = c.ancla && c.ancla.a ? sec().posicion(c.ancla.a) : -1, f = c.ancla && c.ancla.f ? sec().posicion(c.ancla.f) : -1;
+          if (a < 0 || f < 0) return;
+          const r = rangoDom(Math.min(a, f), Math.max(a, f) + 1);
+          if (r) rs.push(r);
+        });
+        if (rs.length) resaltar.set("wd-comentario", new Highlight(...rs)); else resaltar.delete("wd-comentario");
+      }
+      this.comentarios = {
+        /** Ancla para un comentario nuevo: la selección (o la palabra donde está el cursor). */
+        ancla() {
+          let s = leerSel();
+          if (s.col) { const w = palabraEn(s.ini); if (w) s = { ini: w[0], fin: w[1], col: false }; }
+          if (s.col || s.fin <= s.ini) return null;
+          const its = visPintado.slice(s.ini, s.fin);
+          return { tipo: "texto", a: its[0].id, f: its[its.length - 1].id, cita: its.map((x) => (x.e ? "" : x.c)).join("").slice(0, 120) };
+        },
+        irA(ancla) {
+          const a = ancla && ancla.a ? sec().posicion(ancla.a) : -1, f = ancla && ancla.f ? sec().posicion(ancla.f) : -1;
+          if (a < 0) return false;
+          cuerpo.focus({ preventScroll: true });
+          ponerSel(a, Math.max(a, f) + 1);
+          seguirAlCursor();
+          return true;
+        },
+        pintar(lista) { marcasComentario = (lista || []).filter((c) => !c.resuelto && c.ancla && c.ancla.tipo === "texto"); pintarComentarios(); },
+        /** Comentario bajo un punto del texto (para abrirlo al tocarlo). */
+        bajo(i) { return marcasComentario.find((c) => { const a = sec().posicion(c.ancla.a), f = sec().posicion(c.ancla.f); return a >= 0 && i >= Math.min(a, f) && i <= Math.max(a, f); }) || null; },
+      };
+      this.sugerencias = { lista: sugerencias, resolver: resolverSugerencia, activo: () => modoSug, alternar: alternarSugerencias };
 
       // ------------------------------------------------------------ Enter, saltos y objetos
       function enter() {
@@ -1240,6 +1465,7 @@
         if (a && cuerpo.contains(a) && (e.ctrlKey || e.metaKey || ed.soloLectura)) { e.preventDefault(); window.open(a.href, "_blank", "noopener"); return; }
         const ir = e.target.closest("[data-ir]");
         if (ir) { e.preventDefault(); const el = elems.get(ir.dataset.ir); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+        if (marcasComentario.length && NOM.comentarios) { const s0 = leerSel(); const c = s0.col ? this.comentarios.bajo(s0.ini) : null; if (c) NOM.comentarios.abrir(ed, c.id); }
         // Clic a la derecha de una imagen: algunos navegadores dejan el cursor ANTES de ella.
         const s = getSelection();
         if (ed.soloLectura || !s.isCollapsed || !cuerpo.contains(s.anchorNode) || e.target.closest("[data-obj]")) return;
@@ -1255,9 +1481,32 @@
       });
 
       // ------------------------------------------------------------ teclado
+      let avisadoAjeno = 0;
       cuerpo.addEventListener("beforeinput", (e) => {
         if (ed.soloLectura) return;
         if (e.target.closest && e.target.closest("[data-celda]")) return;
+        // 3.5 El párrafo de otra persona no se cambia (el servidor también lo rechaza).
+        const ajeno = ajenoEnSeleccion(leerSel());
+        if (ajeno && e.cancelable) {
+          e.preventDefault();
+          if (Date.now() - avisadoAjeno > 2500) { avisadoAjeno = Date.now(); aviso(`Ese párrafo es de ${ajeno}: solo esa persona (o el propietario del espacio) lo cambia`, { tipo: "info", ms: 3000 }); }
+          return;
+        }
+        if (e.inputType === "insertFromPaste" && !pegadoManejado) {
+          const t = e.data || (e.dataTransfer && e.dataTransfer.getData("text/plain")) || "";
+          pegadoNativo = { g: NOM.idCorto() + Date.now().toString(36), gn: cps(t).length, hasta: Date.now() + 1500 };
+        }
+        // 7 Modo sugerencia: borrar marca para borrar; escribir sobre una selección la marca y escribe después.
+        if (modoSug && e.cancelable && !e.isComposing) {
+          if (/^delete/.test(e.inputType)) { e.preventDefault(); borrarConTecla(e.inputType); return; }
+          if (e.inputType === "insertText" && e.data && !leerSel().col) {
+            e.preventDefault();
+            const s = leerSel();
+            comando(() => { borrarSugerido(visPintado.slice(s.ini, s.fin), "sug-" + pasoN, "comando"); return { sel: [s.fin, s.fin] }; });
+            insertarTexto(e.data);
+            return;
+          }
+        }
         switch (e.inputType) {
           case "insertParagraph": e.preventDefault(); if (imgActiva()) salirDeImagen(); enter(); break;
           case "insertLineBreak": e.preventDefault(); insertarTexto(SALTO); break;
@@ -1390,6 +1639,8 @@
         const archivo = [...(dt.files || [])].find((f) => /^image\//.test(f.type));
         if (archivo) { try { insertarImagenSrc(await NOM.formatos.imagenADataUrl(archivo)); } catch (err) { aviso(err.message, { tipo: "error" }); } return; }
         const h = dt.getData("text/html"), t = dt.getData("text/plain");
+        // 1.1 Un enlace pegado sobre texto elegido lo convierte en vínculo.
+        if (enlazarSeleccion(leerSel(), t)) return;
         let toks;
         if (h && !e.shiftKey) {
           const d = new DOMParser().parseFromString(h, "text/html");
@@ -1399,9 +1650,11 @@
         // El último fin de párrafo pegado se une al párrafo donde está el cursor.
         if (toks[toks.length - 1].c === "\n" && !(toks.length === 1)) toks.pop();
         const s = leerSel();
+        const meta = metaPegado(toks);
         comando(() => {
-          if (!s.col) borrarRango(s.ini, s.fin, "pegar");
-          const fin = insertarEn(s.ini, toks, "pegar");
+          let en = s.ini;
+          if (!s.col) { if (modoSug) { borrarSugerido(visPintado.slice(s.ini, s.fin), "pegar", "comando"); actualizarPintado(); en = s.fin; } else borrarRango(s.ini, s.fin, "pegar"); }
+          const fin = insertarEn(en, toks, "pegar", meta);
           return { sel: [fin, fin] };
         });
         seguirAlCursor();
@@ -1419,7 +1672,8 @@
       let brocha = null;
       function copiarFormato(fija) {
         const { a, pa } = attrsEnCursor();
-        brocha = { a: Object.assign(Object.fromEntries(CAR.filter((k) => k !== "enlace").map((k) => [k, null])), solo(a, CAR.filter((k) => k !== "enlace"))), pa: Object.assign(Object.fromEntries(PAR.filter((k) => k !== "hecho").map((k) => [k, null])), solo(pa, PAR.filter((k) => k !== "hecho"))), fija };
+        const car = CAR.filter((k) => !["enlace", "sug", "sugBorrar"].includes(k)), par = PAR.filter((k) => k !== "hecho" && k !== "dueno");
+        brocha = { a: Object.assign(Object.fromEntries(car.map((k) => [k, null])), solo(a, car)), pa: Object.assign(Object.fromEntries(par.map((k) => [k, null])), solo(pa, par)), fija };
         raiz.classList.add("brocha");
         aviso(fija ? "Copiar formato fijo: selecciona textos para aplicarlo. Esc para terminar." : "Selecciona el texto al que quieres darle este formato", { ms: 3000 });
       }
@@ -1456,7 +1710,18 @@
         const v = (x) => (typeof x === "number" ? x : 96);
         return { tam: c.tam || "carta", orient: hor ? "h" : "v", w: hor ? base.h : base.w, h: hor ? base.w : base.h, m: { s: v(m.s), i: v(m.i), iz: v(m.iz), d: v(m.d) } };
       }
+      /** Formato con el que nació el documento (lo fija el propietario del espacio): fuente, tamaño e interlineado. */
+      const formatoBase = () => doc().valor("_doc", "formato") || {};
+      const baseTam = () => +formatoBase().tam || 11;
+      function aplicarFormato() {
+        const fb = formatoBase();
+        cuerpo.style.fontFamily = fb.fuente ? cssFuente(fb.fuente) : "";
+        cuerpo.style.fontSize = fb.tam ? +fb.tam + "pt" : "";
+        if (fb.interlineado) cuerpo.style.setProperty("--wd-li", +fb.interlineado); else cuerpo.style.removeProperty("--wd-li");
+        cuerpo.classList.toggle("con-fuente", !!fb.fuente);
+      }
       function aplicarPagina() {
+        aplicarFormato();
         const pg = pagina();
         hoja.style.setProperty("--pw", pg.w + "px");
         hoja.style.setProperty("--ph", pg.h + "px");
@@ -1730,7 +1995,7 @@
         let seq = false;
         lista.forEach((c) => {
           if (c.seq) { if (origen !== "teclado" && origen !== "comando") seq = true; return; }
-          if (c.bloque === "_doc") { if (["pagina", "encabezado", "pie", "numeros"].some((k) => k in c.campos)) aplicarPagina(); return; }
+          if (c.bloque === "_doc") { if (["pagina", "encabezado", "pie", "numeros", "formato"].some((k) => k in c.campos)) aplicarPagina(); return; }
           if (origen === "celda" && c.local) return;
           // Tablas e imágenes del texto: se actualizan en su lugar (sin quitar el foco de una celda).
           $$(`[data-ref="${CSS.escape(c.bloque)}"]`, cuerpo).forEach((o) => {
@@ -1776,6 +2041,9 @@
       ed.lienzo.addEventListener("scroll", NOM.throttle(pintarEstado, 200), { passive: true });
       const ro = new ResizeObserver(() => programarPaginar());
       ro.observe(cuerpo);
+      // Si cambia el ancho del área (se abre un panel, gira el teléfono), la hoja se recentra: los cursores de los demás se recolocan.
+      const roArea = new ResizeObserver(NOM.throttle(() => pintarCursores(), 120));
+      roArea.observe(ed.lienzo);
 
       // ------------------------------------------------------------ barra de herramientas
       const ctl = {};
@@ -1785,9 +2053,18 @@
         if (!ctl.estilo) return;
         const { a, pa } = attrsEnCursor();
         if (document.activeElement !== ctl.estilo) ctl.estilo.value = pa.estilo || "";
+        // Sin fuente propia, el texto usa la del formato del espacio: la lista la nombra así.
+        const fbF = formatoBase().fuente || "";
+        if (ctl.fuente.dataset.base !== fbF) {
+          ctl.fuente.dataset.base = fbF;
+          const o0 = ctl.fuente.querySelector('option[value=""]');
+          if (o0) o0.textContent = fbF || "Calibri";
+          ctl.fuente.querySelectorAll("option").forEach((o) => { if (o.value && o.value !== "_otra") o.hidden = !!fbF && o.value === fbF; });
+        }
         if (document.activeElement !== ctl.fuente) ctl.fuente.value = a.fuente && FUENTES[a.fuente] ? a.fuente : a.fuente ? "_otra" : "";
         if (ctl.fuente.value === "_otra" && ctl.fuenteOtra) ctl.fuenteOtra.textContent = a.fuente;
-        if (document.activeElement !== ctl.tam) ctl.tam.value = a.tam || { titulo: 28, h1: 16, h2: 13, h3: 12, codigo: 10 }[pa.estilo] || 11;
+        if (document.activeElement !== ctl.tam) ctl.tam.value = a.tam || { titulo: 28, h1: 16, h2: 13, h3: 12, codigo: 10 }[pa.estilo] || baseTam();
+        if (ed.botones && ed.botones.sugerir) ed.botones.sugerir.setAttribute("aria-pressed", modoSug);
         const on = (id, v) => { const b = ed.botones && ed.botones[id]; if (b) b.setAttribute("aria-pressed", !!v); };
         on("negrita", a.b); on("cursiva", a.i); on("subrayado", a.u); on("tachado", a.s);
         on("vinetas", pa.lista === "vinetas"); on("numeros", pa.lista === "numeros"); on("tareas", pa.lista === "tareas");
@@ -1891,6 +2168,9 @@
           { texto: "Contar palabras", icono: "file-text", fn: dialogoConteo },
           { texto: esquema.hidden ? "Mostrar esquema" : "Ocultar esquema", icono: "list-tree", fn: alternarEsquema },
           { texto: "Configurar página…", icono: "file-cog", fn: dialogoPagina },
+          { texto: "Formato del documento…", icono: "type", fn: dialogoFormato },
+          { texto: modoSug ? "Apagar el modo sugerencia" : "Modo sugerencia", icono: "pen-line", fn: () => alternarSugerencias() },
+          ...(ctx.propietario ? [{ texto: "Asignar párrafos a una persona…", icono: "user-check", fn: () => asignarParrafos() }] : []),
           { texto: "Encabezado y pie de página…", icono: "panel-top", fn: dialogoEncabezado },
           { texto: vista === "paginas" ? "Ver sin páginas" : "Ver como páginas", icono: vista === "paginas" ? "scroll-text" : "file-text", fn: () => fijarVista(vista === "paginas" ? "continua" : "paginas") },
           { texto: "Atajos de teclado", icono: "keyboard", fn: dialogoAtajos },
@@ -1913,6 +2193,25 @@
           doc().cambiar("_doc", { pagina: Object.assign({}, c, { tam: $("[data-tam]", cuerpoH).value, orient, margen: v ? { s: v, i: v, iz: v, d: v } : c.margen }) });
           aplicarPagina();
           h.cerrar();
+        };
+      }
+      function dialogoFormato() {
+        const fb = formatoBase(), esp = (ed.espacio && ed.espacio.formatoBase) || null;
+        const cuerpoH = html(`<form class="col">
+          <p class="suave" style="font-weight:650">El texto sin formato propio usa esta fuente, este tamaño y este interlineado (como el estilo Normal de Word).</p>
+          <div class="campo"><label>Fuente</label><div class="entrada"><select data-f><option value="">Calibri (la de siempre)</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option ${fb.fuente === f ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div></div>
+          <div class="fila"><div class="campo crece"><label>Tamaño (pt)</label><div class="entrada"><input data-t inputmode="decimal" value="${esc(fb.tam || "")}" placeholder="11"></div></div>
+            <div class="campo crece"><label>Interlineado</label><div class="entrada"><select data-l>${[["", "1.15 (Word)"], [1, "Sencillo"], [1.5, "1.5"], [2, "Doble"]].map(([v, t]) => `<option value="${v}" ${String(fb.interlineado || "") === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></div></div></div>
+          ${esp ? `<button type="button" class="btn chico" data-espacio>${ico("layout-grid", "ico-s")} Usar el formato del espacio (${esc([esp.fuente, esp.tam && esp.tam + " pt", esp.interlineado && "interlineado " + esp.interlineado].filter(Boolean).join(", "))})</button>` : ""}</form>`);
+        const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Aplicar</button></div>`);
+        const h = NOM.hoja({ titulo: "Formato del documento", icono: "type", cuerpo: cuerpoH, pie });
+        const fijar = (f) => { doc().cambiar("_doc", { formato: f }); aplicarPagina(); reflejar(); h.cerrar(); };
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        const be = $("[data-espacio]", cuerpoH); if (be) be.onclick = () => fijar(Object.assign({}, esp));
+        $("[data-si]", pie).onclick = () => {
+          const t = parseFloat(String($("[data-t]", cuerpoH).value).replace(",", "."));
+          const f = { fuente: $("[data-f]", cuerpoH).value || null, tam: t >= 6 && t <= 72 ? t : null, interlineado: +$("[data-l]", cuerpoH).value || null };
+          fijar(f.fuente || f.tam || f.interlineado ? f : null);
         };
       }
       function dialogoEncabezado() {
@@ -1952,8 +2251,8 @@
             });
             if (i < r.parrafos.length - 1) toks.push({ c: "\n", pa: p.pa || {} });
           });
-          const s = leerSel();
-          comando(() => { const fin = insertarEn(s.ini, toks, "pegar"); return { sel: [fin, fin] }; });
+          const s = leerSel(), meta = metaPegado(toks);
+          comando(() => { const fin = insertarEn(s.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
           if (r.aviso) aviso(r.aviso, { tipo: "aviso", ms: 5000 });
         } catch (e) { aviso(e.message, { tipo: "error" }); }
       }
@@ -1970,7 +2269,7 @@
           ctl.tam.addEventListener("change", () => { const v = parseFloat(String(ctl.tam.value).replace(",", ".")); if (v > 0 && v <= 400) formato({ tam: Math.round(v * 2) / 2 }); cuerpo.focus({ preventScroll: true }); });
           ctl.tam.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ctl.tam.dispatchEvent(new Event("change")); } });
           // Antes de tocar el texto ya se ve el tamaño del primer párrafo, como en Word.
-          ctl.tam.value = 11; programarReflejo();
+          ctl.tam.value = baseTam(); programarReflejo();
         } },
         "|",
         { id: "negrita", icono: "bold", micro: "Negrita||Ctrl+B", fn: () => alternar("b") },
@@ -1993,6 +2292,8 @@
         { id: "brocha", icono: "paintbrush", micro: "Copiar formato|Clic: una vez. Doble clic: varias veces.|Ctrl+Alt+C", fn: () => { if (brocha) { brocha = null; raiz.classList.remove("brocha"); reflejar(); } else copiarFormato(false); } },
         { id: "borrar-formato", icono: "remove-formatting", micro: "Borrar formato||Ctrl+\\", fn: borrarFormato, clase: "solo-escritorio" },
         { id: "buscar", icono: "search", micro: "Buscar y reemplazar||Ctrl+F", fn: () => buscar(false) },
+        { id: "sugerir", icono: "pen-line", micro: "Modo sugerencia|Lo que escribas o borres queda propuesto; el equipo lo acepta o lo rechaza.", fn: () => alternarSugerencias(), clase: "solo-escritorio" },
+        { id: "comentar", icono: "message-square", micro: "Comentar|Comenta el texto elegido. Funciona sin Internet, en la red del salón.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed) },
         { id: "mas-texto", icono: "more-vertical", micro: "Más|Tachado, superíndice, configurar página, encabezado y pie, esquema…", fn: (e, b) => menuMas(b) },
       ];
       // Doble clic en la brocha: modo fijo.
@@ -2028,8 +2329,9 @@
             { texto: "Copiar formato", icono: "paintbrush", fn: con(() => copiarFormato(false)) },
             { texto: "Borrar formato", icono: "remove-formatting", mantener: true, fn: con(borrarFormato) },
             { texto: "Tachado", icono: "strikethrough", marcado: !!a.s, mantener: true, fn: con(() => alternar("s")) },
-            { texto: "Buscar", icono: "search", fn: con(() => buscar(false)) },
-            { texto: "Salto de página", icono: "file-plus", fn: con(() => insertarBloque({ tipo: "salto" })) }] },
+            { texto: "Comentar", icono: "message-square", fn: con(() => NOM.comentarios && NOM.comentarios.nuevo(ed)) },
+            ctx.propietario ? { texto: "Asignar párrafo a…", corto: "Asignar", icono: "user-check", fn: con(() => asignarParrafos(parrafosDeSel(s))) }
+              : { texto: modoSug ? "Apagar sugerencias" : "Sugerir cambios", corto: modoSug ? "Sin sugerir" : "Sugerir", icono: "pen-line", marcado: modoSug, fn: con(() => alternarSugerencias()) }] },
         ];
       }
       function accionesImagen(o) {
@@ -2099,14 +2401,31 @@
       ["pointerup", "pointercancel"].forEach((t) => cuerpo.addEventListener(t, (e) => dedos.delete(e.pointerId), true));
       async function pegarPortapapeles() {
         try {
+          const s0 = leerSel();
+          // 1.1 También con "Pegar" de la ruedita (celular y app): un enlace sobre texto elegido es vínculo.
+          if (!s0.col && navigator.clipboard && navigator.clipboard.readText) {
+            let t0 = "";
+            try { t0 = await navigator.clipboard.readText(); } catch (e) { t0 = ""; }
+            if (enlazarSeleccion(s0, t0)) return;
+          }
           if (navigator.clipboard && navigator.clipboard.read) {
             const items = await navigator.clipboard.read();
             for (const it of items) {
-              if (it.types.includes("text/html")) { const h = await (await it.getType("text/html")).text(); const d = new DOMParser().parseFromString(h, "text/html"); const toks = tokens(d.body, {}); if (toks.length && toks[toks.length - 1].c === "\n") toks.pop(); const s = leerSel(); comando(() => { if (!s.col) borrarRango(s.ini, s.fin); const fin = insertarEn(s.ini, toks, "pegar"); return { sel: [fin, fin] }; }); return; }
+              if (it.types.includes("text/html")) {
+                const h = await (await it.getType("text/html")).text(); const d = new DOMParser().parseFromString(h, "text/html"); const toks = tokens(d.body, {});
+                if (toks.length && toks[toks.length - 1].c === "\n") toks.pop();
+                const s = leerSel(), meta = metaPegado(toks);
+                comando(() => { if (!s.col) borrarRango(s.ini, s.fin); const fin = insertarEn(s.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
+                return;
+              }
             }
           }
           const t = await navigator.clipboard.readText();
-          if (t) insertarTexto(t.replace(/\r\n?/g, "\n"));
+          if (t) {
+            const s = leerSel(), cur = attrsEnCursor(), toks = textoTokens(t.replace(/\r\n?/g, "\n"), cur.a, cur.pa), meta = metaPegado(toks);
+            comando(() => { if (!s.col) borrarRango(s.ini, s.fin, "pegar"); const fin = insertarEn(s.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
+            seguirAlCursor();
+          }
         } catch (e) { aviso("El navegador no dejó leer el portapapeles. Usa Ctrl+V.", { tipo: "info" }); }
       }
 
@@ -2126,7 +2445,7 @@
 
       this.desmontar = () => {
         mo.disconnect();
-        ro.disconnect();
+        ro.disconnect(); roArea.disconnect();
         clearTimeout(tPag);
         document.removeEventListener("selectionchange", selDeb);
         cerrarBuscar();
@@ -2136,6 +2455,11 @@
       void self;
     },
     herramientas() { return this._herr || []; },
+    acciones() {
+      const a = [];
+      if (this.sugerencias) a.push({ texto: this.sugerencias.activo() ? "Apagar el modo sugerencia" : "Modo sugerencia (proponer cambios)", icono: "pen-line", fn: () => this.sugerencias.alternar(), claves: "sugerir control de cambios revisar" });
+      return a;
+    },
   };
 
   NOM.textoRico = { parrafosDe, asegurarSecuencia, tokens, envolver, BLOQUE: B, cssFuente, FUENTES };

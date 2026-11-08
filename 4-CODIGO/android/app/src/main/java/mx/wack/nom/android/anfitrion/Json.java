@@ -116,6 +116,7 @@ public final class Json implements CodecJson {
             m.put("t", op.t());
             m.put("n", op.n());
             m.put("s", op.s());
+            m.put("m", op.m());
             return m;
         }
         if (o instanceof EspacioRemoto) {
@@ -203,7 +204,8 @@ public final class Json implements CodecJson {
                 m.get("campos") instanceof Map ? (Map<String, Object>) m.get("campos") : null,
                 t instanceof Number ? ((Number) t).longValue() : 0,
                 m.get("n") == null ? null : String.valueOf(m.get("n")),
-                m.get("s") instanceof Map ? (Map<String, Object>) m.get("s") : null);
+                m.get("s") instanceof Map ? (Map<String, Object>) m.get("s") : null,
+                m.get("m") instanceof Map ? (Map<String, Object>) m.get("m") : null);
     }
 
     public static List<Operacion> operaciones(Object o) {

@@ -16,8 +16,16 @@ public class Usuario {
     /** Color con el que aparece su cursor y su avatar. */
     public String color;
     public Preferencias preferencias = new Preferencias();
+    /** Cuenta de invitado (entro con apodo y un codigo QR, sin registrarse): el espacio al que
+        esta ligada. null en las cuentas normales. */
+    public String invitadoDe;
+    /** Codigo para recuperar la contrasena: solo su hash con su sal (se muestra una vez). */
+    public String hashRecuperacion;
+    public String salRecuperacion;
 
     public boolean estaBloqueado(long ahora) {
         return bloqueadoHasta > ahora;
     }
+
+    public boolean esInvitado() { return invitadoDe != null && !invitadoDe.isEmpty(); }
 }

@@ -29,6 +29,9 @@ public class Difusor {
     public static class Suscriptor {
         final Canal canal;
         final String usuarioId, nombre, color, espacioId, docId, cliente;
+        /** Pantalla de proyeccion (5.5): recibe los cambios del documento, pero no es una persona
+            del espacio (no cuenta para el maximo, ni sale en la presencia). */
+        final String proyector;
         volatile String bloque;
         volatile String modo;
         volatile Map<String, Object> cursor;
@@ -41,11 +44,36 @@ public class Difusor {
             this.espacioId = espacioId;
             this.docId = docId;
             this.cliente = cliente;
+            this.proyector = null;
+        }
+
+        Suscriptor(Canal c, String espacioId, String docId, String codigo) {
+            this.canal = c;
+            this.usuarioId = "proyector";
+            this.nombre = "Proyector";
+            this.color = "#6B6875";
+            this.espacioId = espacioId;
+            this.docId = docId;
+            this.cliente = "proyector-" + codigo;
+            this.proyector = codigo;
         }
     }
 
     private final List<Suscriptor> subs = new CopyOnWriteArrayList<>();
     private final int maxUsuarios;
+    /** Quien deja de ver un documento (docId, usuarioId): ahi termina su visita (3.4). */
+    private volatile java.util.function.BiConsumer<String, String> alSalirDeDocumento;
+
+    public void alSalirDeDocumento(java.util.function.BiConsumer<String, String> f) { this.alSalirDeDocumento = f; }
+
+    /** Quienes tienen abierto un documento ahora (sin contar proyectores). */
+    public Set<String> usuariosEnDocumento(String docId) { return usuariosEnDocumento(docId, null); }
+
+    /** Igual, sin contar el canal de un cliente (el que avisa que se va). */
+    public Set<String> usuariosEnDocumento(String docId, String exceptoCliente) {
+        return subs.stream().filter(s -> s.proyector == null && docId.equals(s.docId) && (exceptoCliente == null || !exceptoCliente.equals(s.cliente)))
+                .map(s -> s.usuarioId).collect(Collectors.toSet());
+    }
 
     public Difusor(int maxUsuarios) {
         this.maxUsuarios = maxUsuarios;
@@ -64,6 +92,10 @@ public class Difusor {
             if (subs.remove(s)) {
                 if (docId != null) presencia(docId);
                 avisarEspacio(espacioId, "conectados", Map.of("usuarios", conectadosPublico(espacioId)));
+                java.util.function.BiConsumer<String, String> f = alSalirDeDocumento;
+                if (docId != null && f != null) {
+                    try { f.accept(docId, u.id); } catch (RuntimeException ex) { /* la visita es solo informativa */ }
+                }
             }
         };
         canal.alCerrar(fuera);
@@ -72,18 +104,31 @@ public class Difusor {
         avisarEspacio(espacioId, "conectados", Map.of("usuarios", conectadosPublico(espacioId)));
     }
 
+    /** Una pantalla de proyeccion para un documento (5.5). */
+    public void suscribirProyector(String espacioId, String docId, String codigo, Canal canal) {
+        Suscriptor s = new Suscriptor(canal, espacioId, docId, codigo);
+        subs.add(s);
+        canal.alCerrar(() -> subs.remove(s));
+        enviar(s, "hola", Map.of("ok", true));
+    }
+
+    /** A las pantallas que siguen una presentacion: que diapositiva va, o que termino. */
+    public void avisarProyectores(String codigo, String evento, Object datos) {
+        for (Suscriptor s : subs) if (codigo.equals(s.proyector)) enviar(s, evento, datos);
+    }
+
     public Set<String> usuariosEn(String espacioId) {
-        return subs.stream().filter(s -> s.espacioId.equals(espacioId)).map(s -> s.usuarioId).collect(Collectors.toSet());
+        return subs.stream().filter(s -> s.proyector == null && s.espacioId.equals(espacioId)).map(s -> s.usuarioId).collect(Collectors.toSet());
     }
 
     public boolean otroEditando(String docId, String usuarioId) {
-        return subs.stream().anyMatch(s -> docId.equals(s.docId) && !s.usuarioId.equals(usuarioId));
+        return subs.stream().anyMatch(s -> s.proyector == null && docId.equals(s.docId) && !s.usuarioId.equals(usuarioId));
     }
 
     public List<Map<String, Object>> conectadosPublico(String espacioId) {
         Map<String, Map<String, Object>> porUsuario = new LinkedHashMap<>();
         for (Suscriptor s : subs) {
-            if (!s.espacioId.equals(espacioId)) continue;
+            if (s.proyector != null || !s.espacioId.equals(espacioId)) continue;
             porUsuario.computeIfAbsent(s.usuarioId, k -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id", s.usuarioId);
@@ -114,7 +159,7 @@ public class Difusor {
     private void presencia(String docId) {
         List<Map<String, Object>> lista = new ArrayList<>();
         for (Suscriptor s : subs) {
-            if (!docId.equals(s.docId)) continue;
+            if (s.proyector != null || !docId.equals(s.docId)) continue;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("cliente", s.cliente);
             m.put("id", s.usuarioId);
@@ -125,7 +170,7 @@ public class Difusor {
             m.put("cursor", s.cursor);
             lista.add(m);
         }
-        for (Suscriptor s : subs) if (docId.equals(s.docId)) enviar(s, "presencia", Map.of("usuarios", lista));
+        for (Suscriptor s : subs) if (s.proyector == null && docId.equals(s.docId)) enviar(s, "presencia", Map.of("usuarios", lista));
     }
 
     public void avisarDocumento(String docId, String evento, Object datos) {
@@ -133,18 +178,18 @@ public class Difusor {
     }
 
     public void avisarEspacio(String espacioId, String evento, Object datos) {
-        for (Suscriptor s : subs) if (s.espacioId.equals(espacioId) && s.docId == null) enviar(s, evento, datos);
+        for (Suscriptor s : subs) if (s.proyector == null && s.espacioId.equals(espacioId) && s.docId == null) enviar(s, evento, datos);
     }
 
     /** Para todos los canales del espacio, incluidos los de documentos. */
     public void avisarTodoEspacio(String espacioId, String evento, Object datos) {
-        for (Suscriptor s : subs) if (s.espacioId.equals(espacioId)) enviar(s, evento, datos);
+        for (Suscriptor s : subs) if (s.proyector == null && s.espacioId.equals(espacioId)) enviar(s, evento, datos);
     }
 
     /** CU-17 3b: al revocar un acceso se cierra el canal de ese usuario. */
     public void expulsar(String espacioId, String usuarioId) {
         for (Suscriptor s : subs) {
-            if (s.espacioId.equals(espacioId) && s.usuarioId.equals(usuarioId)) {
+            if (s.proyector == null && s.espacioId.equals(espacioId) && s.usuarioId.equals(usuarioId)) {
                 enviar(s, "expulsado", Map.of("motivo", "El propietario retiró tu acceso a este espacio"));
                 s.canal.cerrar();
             }

@@ -48,3 +48,10 @@ CREATE TABLE dbo.sesion (
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_sesion_usuario')
 CREATE INDEX ix_sesion_usuario ON dbo.sesion(id_usuario);
+
+-- Noviembre 2026: cuentas de invitado (entran con apodo y QR, ligadas a un espacio) y el código
+-- para recuperar la contraseña (solo su hash con sal). La página entra como nomcolab_app, que no
+-- tiene ALTER: ahí el intento falla en silencio (TRY/CATCH) y la página sigue funcionando, con esos
+-- datos aparte, hasta que "./desplegar.sh roles" corra este archivo con el administrador.
+IF COL_LENGTH(N'dbo.usuario', N'invitado_de') IS NULL
+EXEC sp_executesql N'BEGIN TRY ALTER TABLE dbo.usuario ADD invitado_de VARCHAR(16) NULL, hash_recuperacion VARCHAR(64) NULL, sal_recuperacion VARCHAR(32) NULL END TRY BEGIN CATCH END CATCH';

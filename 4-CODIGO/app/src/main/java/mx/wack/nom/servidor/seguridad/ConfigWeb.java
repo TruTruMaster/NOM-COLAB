@@ -18,7 +18,8 @@ public class ConfigWeb implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(filtro)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/cuentas/registro", "/api/cuentas/sesion", "/api/red/info");
+                .excludePathPatterns("/api/cuentas/registro", "/api/cuentas/sesion", "/api/cuentas/recuperar", "/api/red/info",
+                        "/api/enlaces/*", "/api/enlaces/*/invitado", "/api/recibos/verificar", "/api/proyeccion/**");
     }
 
     /**

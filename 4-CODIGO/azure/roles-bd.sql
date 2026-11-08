@@ -31,7 +31,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.sesion       TO rol_nomcolab_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.preferencias TO rol_nomcolab_app;
 
 -- Privilegios del rol de consulta: lectura por columnas (las de la contraseña quedan fuera).
-GRANT SELECT ON dbo.usuario (id, nombre, nombre_clave, empresa, intentos_fallidos, bloqueado_hasta, creado, color) TO rol_nomcolab_consulta;
+-- (hash_recuperacion y sal_recuperacion, del código para recuperar la contraseña, también quedan fuera.)
+GRANT SELECT ON dbo.usuario (id, nombre, nombre_clave, empresa, intentos_fallidos, bloqueado_hasta, creado, color, invitado_de) TO rol_nomcolab_consulta;
 GRANT SELECT ON dbo.preferencias TO rol_nomcolab_consulta;
 
 -- Usuarios: se crean sin ningún privilegio propio y lo reciben todo por el rol.

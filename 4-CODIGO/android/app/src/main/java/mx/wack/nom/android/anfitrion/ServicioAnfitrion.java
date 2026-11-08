@@ -32,6 +32,7 @@ import mx.wack.nom.core.servicio.Difusor;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioSincronia;
 
 /**
  * El teléfono como servidor de NOM-COLAB. Corre en primer plano (con su notificación) para que
@@ -128,8 +129,10 @@ public class ServicioAnfitrion extends Service {
         ServicioEspacios espacios = new ServicioEspacios(espaciosRepo, docsRepo, cuentas, difusor, nodo, cifrado);
         documentos = new ServicioDocumentos(docsRepo, espacios, cuentas, difusor, cifrado, nodo);
         descubrimiento = new Descubrimiento(nodo, espaciosRepo, usuarios, Json.YO, true, 47474);
+        // 6.5: copia de los espacios conectados con Azure o con el servidor propio (cuando hay Internet).
+        ServicioSincronia sincronia = new ServicioSincronia(espacios, documentos, Json.YO, nodo);
 
-        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo));
+        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo, sincronia));
         puerto = http.iniciar(8080);
         nodo.fijarPuerto(puerto);
 
@@ -161,6 +164,10 @@ public class ServicioAnfitrion extends Service {
         reloj.scheduleAtFixedRate(seguro(documentos::autoguardar), 60, 60, TimeUnit.SECONDS);
         reloj.scheduleAtFixedRate(seguro(difusor::latido), 20, 20, TimeUnit.SECONDS);
         reloj.scheduleAtFixedRate(seguro(() -> primerPlano(null)), 30, 30, TimeUnit.SECONDS);
+        reloj.scheduleWithFixedDelay(seguro(sincronia::cadaRato), 90, 300, TimeUnit.SECONDS);
+        // 6.4: respaldo del día (se revisa cada hora; si hoy ya hay uno, no hace nada).
+        File filesDir = getFilesDir();
+        reloj.scheduleWithFixedDelay(seguro(() -> Respaldo.diario(filesDir)), 20, 3600, TimeUnit.SECONDS);
         activo = this;
         log.info("Servidor del teléfono en el puerto {} ({})", puerto, nodo.direcciones());
     }

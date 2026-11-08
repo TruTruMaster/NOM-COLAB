@@ -16,6 +16,62 @@
   /** Tiempo límite de registro e inicio de sesión: cubre el arranque en frío de la base de datos. */
   const ESPERA_BD = 90000;
 
+  /** El código para recuperar la contraseña: se muestra una sola vez (no hay correo ni administrador). */
+  function mostrarCodigo(codigo, nombre) {
+    return new Promise((listo) => {
+      const cuerpo = html(`<div class="col" style="align-items:center;text-align:center">
+        <span class="modo-insignia" style="width:56px;height:56px;border-radius:18px;background:var(--acento-tenue);color:var(--acento-tinta)">${ico("key-round", "ico-l")}</span>
+        <p style="font-weight:650">Si algún día olvidas tu contraseña, con este código pones una nueva. <b>Guárdalo</b> (foto, papel o archivo): solo se muestra ahora y nadie más lo tiene, ni quien instaló el servidor.</p>
+        <b class="qr-codigo" style="font-size:24px;letter-spacing:.08em">${esc(codigo)}</b>
+        <div class="fila"><button class="btn chico" data-copiar>${ico("copy", "ico-s")} Copiar</button><button class="btn chico" data-bajar>${ico("download", "ico-s")} Guardar archivo</button></div></div>`);
+      const pie = html(`<div style="display:contents"><span class="crece"></span><button class="btn primario" data-ok>Ya lo guardé</button></div>`);
+      const h = NOM.hoja({ titulo: "Tu código de recuperación", icono: "key-round", cuerpo, pie, alCerrar: () => listo() });
+      $("[data-copiar]", cuerpo).onclick = () => { try { navigator.clipboard.writeText(codigo); NOM.aviso("Código copiado", { tipo: "ok" }); } catch (e) { /* sin portapapeles */ } };
+      $("[data-bajar]", cuerpo).onclick = () => NOM.formatos.descargar(`Codigo de recuperacion NOM-COLAB - ${nombre || "cuenta"}.txt`, "text/plain", `Cuenta: ${nombre || ""}\r\nCódigo para recuperar la contraseña de NOM-COLAB: ${codigo}\r\nGuárdalo en un lugar seguro.\r\n`);
+      $("[data-ok]", pie).onclick = () => h.cerrar();
+    });
+  }
+
+  /** ¿Olvidaste tu contraseña?: usuario + código de recuperación + contraseña nueva. */
+  function recuperar(nombre) {
+    const cuerpo = html(`<form class="col" novalidate>
+      <p class="suave" style="font-weight:650">Usa el código que te dio NOM-COLAB al crear la cuenta (o el último que generaste en Ajustes).</p>
+      <div class="alerta" data-alerta hidden role="alert"></div>
+      <div class="campo"><label for="rn">Usuario</label><div class="entrada">${ico("users")}<input id="rn" name="nombre" autocomplete="username" autocapitalize="none" value="${esc(nombre || "")}"></div></div>
+      <div class="campo"><label for="rk">Código de recuperación</label><div class="entrada">${ico("key-round")}<input id="rk" name="codigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH-JKMN-PQRS"></div></div>
+      <div class="campo"><label for="rp">Contraseña nueva</label><div class="entrada">${ico("lock")}<input id="rp" name="nueva" type="password" autocomplete="new-password" minlength="8"></div></div>
+    </form>`);
+    const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Cambiar contraseña</button></div>`);
+    const h = NOM.hoja({ titulo: "Recuperar la contraseña", icono: "key-round", cuerpo, pie });
+    const al = $("[data-alerta]", cuerpo);
+    const enviar = async (e) => {
+      e && e.preventDefault();
+      const b = $("[data-si]", pie);
+      b.disabled = true;
+      try {
+        const r = await api.post("/api/cuentas/recuperar", { nombre: cuerpo.nombre.value.trim(), codigo: cuerpo.codigo.value, nueva: cuerpo.nueva.value }, { sin401: true, ms: ESPERA_BD });
+        h.cerrar(true);
+        NOM.aviso("Listo: ya puedes entrar con tu contraseña nueva", { tipo: "ok", ms: 5000 });
+        await mostrarCodigo(r.recuperacion, cuerpo.nombre.value.trim());
+      } catch (x) {
+        al.className = "alerta " + (x.estado === 423 ? "aviso" : "error"); al.hidden = false;
+        al.innerHTML = `${ico("triangle-alert")}<span>${esc(x.message)}</span>`;
+        b.disabled = false;
+      }
+    };
+    cuerpo.onsubmit = enviar;
+    $("[data-si]", pie).onclick = enviar;
+    $("[data-no]", pie).onclick = () => h.cerrar();
+  }
+
+  /** "¿Tienes un código del salón?": QR con la cámara o código escrito. */
+  async function entrarConCodigo() {
+    if (!NOM.union) return;
+    if (NOM.qr && NOM.qr.hayCamara()) return NOM.union.escanear();
+    const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio el propietario del espacio", ph: "ABCD-2345", si: "Entrar", max: 60 });
+    if (c) NOM.union.usar(c);
+  }
+
   function campoContrasena(id, auto) {
     return `<div class="campo">
       <label for="${id}">Contraseña</label>
@@ -200,12 +256,15 @@
           <div class="entrada">${ico("users")}<input id="u" name="nombre" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(opc.nombre || NOM.leer("nom.ultimoNombre", ""))}"></div></div>
         ${campoContrasena("c", "current-password").replace('id="c"', 'id="c" name="contrasena"')}
         <button class="btn primario ancho" type="submit">Entrar ${ico("arrow-right")}</button>
-        <p class="suave chico" style="text-align:center">¿Primera vez? <a href="#" data-ir2="registro">Crea tu cuenta en un minuto</a></p>
+        <p class="suave chico" style="text-align:center">¿Primera vez? <a href="#" data-ir2="registro">Crea tu cuenta en un minuto</a> · <a href="#" data-olvide>¿Olvidaste tu contraseña?</a></p>
+        <button type="button" class="btn ancho" data-codigo>${ico("qr-code")} Tengo un código del salón</button>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
         <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       </form>`);
       enlazarComunes(f);
       $("[data-ir2]", f).onclick = (e) => { e.preventDefault(); modo = "registro"; render(); };
+      $("[data-olvide]", f).onclick = (e) => { e.preventDefault(); recuperar(f.nombre.value.trim()); };
+      $("[data-codigo]", f).onclick = entrarConCodigo;
       f.onsubmit = (e) => {
         e.preventDefault();
         const nombre = f.nombre.value.trim(), contrasena = f.contrasena.value;
@@ -246,7 +305,9 @@
         if (!/^[\p{L}\p{N}._-]{3,24}$/u.test(nombre)) return mostrarError(f, { campo: "nombre", message: "Usa de 3 a 24 letras, números, punto, guion o guion bajo, sin espacios" });
         if (contrasena.length < 8) return mostrarError(f, { campo: "contrasena", message: "La contraseña necesita al menos 8 caracteres" });
         enviando(f, async () => {
-          await api.post("/api/cuentas/registro", { nombre, contrasena, empresa }, { ms: ESPERA_BD });
+          const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa }, { ms: ESPERA_BD });
+          // El código de recuperación solo se ve ahora: primero se guarda, después se entra.
+          if (reg && reg.recuperacion) await mostrarCodigo(reg.recuperacion, nombre);
           tarjeta.innerHTML = "";
           tarjeta.append(html(`<div class="col" style="align-items:center;text-align:center;padding:24px 0">
             <div class="exito-check">${ico("check")}</div>
@@ -279,11 +340,14 @@
         ${window.NomAndroid && window.NomAndroid.buscarServidores ? `<button type="button" class="btn crece" data-buscar>${ico("radio")} Buscar en la red</button>` : ""}
         <button class="btn primario crece" type="submit">Conectar</button>
       </div>
+      <button type="button" class="btn ancho" data-escanear>${ico("qr-code")} Escanear el QR de un espacio</button>
       <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
         <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} Usar sin cuenta</button>
       <p class="suave chico" style="text-align:center">Sin servidor puedes crear y editar documentos en este teléfono; no se comparten hasta que los subas a un espacio.</p>
     </form>`);
     f.querySelector("[data-sin-cuenta]").onclick = () => NOM.app.sinCuenta();
+    // 2.1 En la app: el QR trae la dirección del servidor y el código; el espacio se abre aquí, en la app.
+    f.querySelector("[data-escanear]").onclick = () => NOM.union && NOM.union.escanear();
     // El teléfono también puede ser el servidor de la red (Android 8+).
     const propio = NOM.anfitrion && NOM.anfitrion.opcion(listo);
     if (propio) f.querySelector("[data-alerta]").before(propio);
@@ -328,5 +392,5 @@
     if (b) b.click();
   }
 
-  NOM.vistaCuentas = { pintar };
+  NOM.vistaCuentas = { pintar, mostrarCodigo, recuperar };
 })();

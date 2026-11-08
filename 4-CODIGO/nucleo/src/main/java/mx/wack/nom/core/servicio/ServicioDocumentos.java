@@ -1,10 +1,15 @@
 package mx.wack.nom.core.servicio;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -12,6 +17,7 @@ import mx.wack.nom.core.almacen.RepositorioDocumentos;
 import mx.wack.nom.core.crdt.EstadoDocumento;
 import mx.wack.nom.core.crdt.MotorCRDT;
 import mx.wack.nom.core.crdt.Operacion;
+import mx.wack.nom.core.crdt.Registro;
 import mx.wack.nom.core.crdt.Secuencia;
 import mx.wack.nom.core.modelo.Documento;
 import mx.wack.nom.core.modelo.Espacio;
@@ -39,6 +45,11 @@ public class ServicioDocumentos {
     /** Bitacora: los cambios seguidos de una misma persona se juntan en una sola linea. */
     private final Map<String, Map<String, Object>> rachas = new ConcurrentHashMap<>();
     private static final long RACHA_MS = 60_000;
+    /** Pegados ya contados (un pegado puede llegar repartido en varios lotes). */
+    private final Map<String, Set<String>> pegadosVistos = new ConcurrentHashMap<>();
+    /** Cuota por cuenta en bytes (0 = sin limite, como en la red local). */
+    private volatile long cuotaBytes;
+    private final Map<String, long[]> usoCache = new ConcurrentHashMap<>();
 
     public ServicioDocumentos(RepositorioDocumentos repo, ServicioEspacios espacios, ServicioCuentas cuentas,
                               Difusor difusor, Cifrado cifrado, Nodo nodo) {
@@ -48,6 +59,29 @@ public class ServicioDocumentos {
         this.difusor = difusor;
         this.cifrado = cifrado;
         this.nodo = nodo;
+        difusor.alSalirDeDocumento(this::finDeVisita);
+    }
+
+    /** 3.4 La visita dura mientras la persona tiene el documento abierto: al salir se anota la hora,
+        asi lo que otros escribieron mientras lo veia en vivo no sale como "cambios desde tu visita". */
+    void finDeVisita(String docId, String usuarioId) { finDeVisita(docId, usuarioId, null); }
+
+    /** La persona cierra el documento (lo avisa su cliente; el canal puede tardar en caerse). */
+    public void salir(Usuario u, String docId, String cliente) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.LECTURA);
+        finDeVisita(docId, u.id, cliente == null || cliente.isBlank() ? null : cliente);
+    }
+
+    private void finDeVisita(String docId, String usuarioId, String exceptoCliente) {
+        if (repo.porId(docId).isEmpty()) return;
+        if (difusor.usuariosEnDocumento(docId, exceptoCliente).contains(usuarioId)) return;   // lo sigue viendo en otra pestaña
+        long reloj;
+        synchronized (candado(docId)) { reloj = repo.estado(docId).reloj; }
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("t", System.currentTimeMillis());
+        v.put("reloj", reloj);
+        repo.guardarVisita(docId, usuarioId, v);
     }
 
     private Object candado(String docId) { return candados.computeIfAbsent(docId, k -> new Object()); }
@@ -56,13 +90,34 @@ public class ServicioDocumentos {
 
     private String nodoServidor() { return "srv-" + nodo.id(); }
 
+    private static long num(Object o) { return o instanceof Number n ? n.longValue() : 0; }
+
     public Documento requerir(String id) {
         return repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("El documento"));
     }
 
+    // ------------------------------------------------------------ permisos (con la fecha de entrega)
+
+    /** Al pasar la fecha limite de una entrega, quien no es el propietario del espacio solo puede leer. */
+    private static Permiso efectivo(Permiso p, Documento d) {
+        if (p != Permiso.PROPIETARIO && entregaVencida(d)) return Permiso.LECTURA;
+        return p;
+    }
+
+    private static boolean entregaVencida(Documento d) {
+        return d.entregaLimite > 0 && System.currentTimeMillis() >= d.entregaLimite;
+    }
+
     public Permiso permiso(Usuario u, Documento d, Permiso minimo) {
         Espacio e = espacios.requerir(d.espacioId);
-        return espacios.exigir(e, u, minimo);
+        Permiso p = espacios.exigir(e, u, Permiso.LECTURA);
+        Permiso ef = efectivo(p, d);
+        if (!ef.alMenos(minimo)) {
+            if (ef != p) throw new ErrorNom(ErrorNom.PROHIBIDO, "La fecha límite de entrega ya pasó: el documento quedó en solo lectura",
+                    null, Map.of("permiso", ef, "entregaLimite", d.entregaLimite));
+            espacios.exigir(e, u, minimo);
+        }
+        return ef;
     }
 
     public List<Documento> listar(Usuario u, String espacioId) {
@@ -70,10 +125,47 @@ public class ServicioDocumentos {
         return repo.delEspacio(espacioId);
     }
 
+    /** Sin revisar permisos (para la sincronizacion entre servidores). */
+    List<Documento> listarInterno(String espacioId) { return repo.delEspacio(espacioId); }
+
+    // ------------------------------------------------------------ cuota por cuenta (en la nube)
+
+    public void fijarCuota(long bytes) { this.cuotaBytes = Math.max(0, bytes); }
+
+    public long cuota() { return cuotaBytes; }
+
+    /** Bytes que ocupan los espacios de una cuenta (documentos y versiones). Se recalcula cada minuto. */
+    public long usoDe(String propietarioId) {
+        long ahora = System.currentTimeMillis();
+        long[] c = usoCache.get(propietarioId);
+        if (c != null && ahora - c[1] < 60_000) return c[0];
+        long total = 0;
+        for (Espacio e : espacios.todos()) {
+            if (!propietarioId.equals(e.propietarioId)) continue;
+            for (Documento d : repo.delEspacio(e.id)) {
+                total += repo.bytesEstado(d.id);
+                for (Version v : repo.historial(d.id)) total += v.bytes;
+            }
+        }
+        usoCache.put(propietarioId, new long[] { total, ahora });
+        return total;
+    }
+
+    private void revisarCuota(Espacio e) {
+        if (cuotaBytes <= 0) return;
+        if (usoDe(e.propietarioId) >= cuotaBytes)
+            throw new ErrorNom(ErrorNom.LLENO, "El propietario del espacio ya usó todo su espacio en la nube ("
+                    + (cuotaBytes / (1024 * 1024)) + " MB). Liberen versiones viejas o borren documentos.", null,
+                    Map.of("cuota", cuotaBytes));
+    }
+
+    // ------------------------------------------------------------ crear y abrir
+
     /** CU-18 Crear documento (opcionalmente desde una plantilla, que llega como operaciones iniciales). */
     public Documento crear(Usuario u, String espacioId, String nombre, String modo, List<Operacion> iniciales) {
         Espacio e = espacios.requerir(espacioId);
         espacios.exigir(e, u, Permiso.EDICION);
+        revisarCuota(e);
         nombre = nombre == null || nombre.isBlank() ? "Documento sin título" : nombre.trim();
         if (nombre.length() > 120) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
         ModoEditor m;
@@ -96,8 +188,13 @@ public class ServicioDocumentos {
         EstadoDocumento est = new EstadoDocumento();
         MotorCRDT mot = motor(d.id);
         String n = nodoServidor();
-        mot.fusionar(est, new Operacion(n + ":c1", Operacion.DOC,
-                Map.of("nombre", nombre, "modo", m.name(), "paginas", List.of("p1")), 1, n));
+        Map<String, Object> inicial = new LinkedHashMap<>();
+        inicial.put("nombre", nombre);
+        inicial.put("modo", m.name());
+        inicial.put("paginas", List.of("p1"));
+        // 1.4: los documentos de texto nacen con el formato que fijo el propietario del espacio.
+        if (m == ModoEditor.TEXTO && e.formatoBase != null && !e.formatoBase.isEmpty()) inicial.put("formato", new LinkedHashMap<>(e.formatoBase));
+        mot.fusionar(est, new Operacion(n + ":c1", Operacion.DOC, inicial, 1, n));
         if (iniciales != null) {
             for (Operacion op : iniciales) if (op.valida()) mot.fusionar(est, op);
         }
@@ -117,12 +214,77 @@ public class ServicioDocumentos {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("documento", d);
         r.put("permiso", p);
-        r.put("espacio", Map.of("id", e.id, "nombre", e.nombre, "color", e.color));
+        Map<String, Object> esp = new LinkedHashMap<>();
+        esp.put("id", e.id);
+        esp.put("nombre", e.nombre);
+        esp.put("color", e.color);
+        esp.put("formatoBase", e.formatoBase);
+        esp.put("propietarioId", e.propietarioId);
+        esp.put("miPermiso", e.permisoDe(u.id));
+        r.put("espacio", esp);
+        long reloj;
         synchronized (candado(docId)) {
-            r.put("estado", repo.estado(docId).copia());
+            EstadoDocumento est = repo.estado(docId);
+            r.put("estado", est.copia());
+            reloj = est.reloj;
+        }
+        if (d.entregaLimite > 0) r.put("entrega", entregaInfo(d, p));
+        // 3.4: lo que cambiaron otros desde la ultima vez que esta persona lo abrio.
+        try {
+            Map<String, Map<String, Object>> vs = repo.visitas(docId);
+            Map<String, Object> antes = vs.get(u.id);
+            if (antes != null) {
+                r.put("visita", antes);
+                Map<String, Object> c = cambiosDesde(docId, u.id, num(antes.get("t")));
+                if (c != null) r.put("cambios", c);
+            }
+            Map<String, Object> ahora = new LinkedHashMap<>();
+            ahora.put("t", System.currentTimeMillis());
+            ahora.put("reloj", reloj);
+            repo.guardarVisita(docId, u.id, ahora);
+        } catch (RuntimeException ex) {
+            log.aviso("No se pudo anotar la visita de {}: {}", docId, ex.getMessage());
         }
         return r;
     }
+
+    /** Quien, que bloques y que celdas cambiaron otras personas despues de 'desde'. null si nadie. */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> cambiosDesde(String docId, String usuarioId, long desde) {
+        cerrarRachas(docId, true);
+        Map<String, Map<String, Object>> porPersona = new LinkedHashMap<>();
+        Set<String> bloques = new LinkedHashSet<>(), campos = new LinkedHashSet<>(), clientes = new LinkedHashSet<>();
+        for (Map<String, Object> a : repo.actividad(docId, 3000)) {
+            if (num(a.get("t")) <= desde) break;
+            String uid = String.valueOf(a.get("usuarioId"));
+            if (uid.equals(usuarioId)) continue;
+            Map<String, Object> pm = porPersona.computeIfAbsent(uid, k -> {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("usuarioId", uid);
+                x.put("nombre", a.get("usuario"));
+                x.put("color", a.get("color"));
+                x.put("escritas", 0L);
+                x.put("borradas", 0L);
+                x.put("ultima", num(a.get("t")));
+                return x;
+            });
+            pm.put("escritas", num(pm.get("escritas")) + num(a.get("escritas")));
+            pm.put("borradas", num(pm.get("borradas")) + num(a.get("borradas")));
+            if (a.get("bloques") instanceof List<?> l) for (Object b : l) bloques.add(String.valueOf(b));
+            if (a.get("campos") instanceof List<?> l) for (Object c : l) if (String.valueOf(c).startsWith("c:")) campos.add(String.valueOf(c));
+            if (a.get("cliente") != null) clientes.add(String.valueOf(a.get("cliente")));
+        }
+        if (porPersona.isEmpty()) return null;
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("desde", desde);
+        r.put("personas", new ArrayList<>(porPersona.values()));
+        r.put("bloques", new ArrayList<>(bloques));
+        r.put("celdas", new ArrayList<>(campos));
+        r.put("clientes", new ArrayList<>(clientes));
+        return r;
+    }
+
+    // ------------------------------------------------------------ editar
 
     /** CU-19 / CU-21: integra un lote de operaciones y las difunde a los demas. */
     public Map<String, Object> aplicar(Usuario u, String docId, List<Operacion> ops, String cliente) {
@@ -131,21 +293,38 @@ public class ServicioDocumentos {
 
     public Map<String, Object> aplicar(Usuario u, String docId, List<Operacion> ops, String cliente, String dispositivo) {
         Documento d = requerir(docId);
-        Permiso p = permiso(u, d, Permiso.LECTURA);
+        Espacio e = espacios.requerir(d.espacioId);
+        Permiso base = espacios.exigir(e, u, Permiso.LECTURA);
+        Permiso p = efectivo(base, d);
         if (!p.alMenos(Permiso.EDICION)) {
-            // CU-26 7a: el permiso cambio a lectura mientras estaba sin conexion.
-            throw new ErrorNom(ErrorNom.PROHIBIDO,
-                    "Tu permiso cambió a solo lectura; tus cambios no se aplicaron", null, Map.of("permiso", p));
+            // CU-26 7a: el permiso cambio a lectura mientras estaba sin conexion (o paso la fecha de entrega).
+            boolean entrega = base != p;
+            throw new ErrorNom(ErrorNom.PROHIBIDO, entrega ? "La fecha límite de entrega ya pasó; tus cambios no se aplicaron"
+                    : "Tu permiso cambió a solo lectura; tus cambios no se aplicaron", null,
+                    entrega ? Map.of("permiso", p, "entregaLimite", d.entregaLimite) : Map.of("permiso", p));
         }
         if (ops == null || ops.isEmpty()) return Map.of("aplicadas", 0);
+        boolean propietario = p == Permiso.PROPIETARIO;
         List<Operacion> aplicadas = new ArrayList<>();
+        List<String> rechazadas = new ArrayList<>();
+        String motivo = null;
         EstadoDocumento est;
         synchronized (candado(docId)) {
             est = repo.estado(docId);
+            if (repo.bytesEstado(docId) > 64 * 1024) revisarCuota(e);
             MotorCRDT mot = motor(docId);
+            Set<String> descartados = new HashSet<>();
             for (Operacion op : ops) {
                 op = sinCambioDeTipo(op);
                 if (op == null || !op.valida()) continue;
+                // 3.5 y 5.4: partes con dueno y plantilla del maestro. El propietario del espacio siempre puede.
+                String no = propietario ? null : candadoDe(u, est, op, descartados);
+                if (no != null) {
+                    rechazadas.add(op.id());
+                    if (motivo == null) motivo = no;
+                    if (op.esSecuencia() && "i".equals(op.s().get("k"))) descartados.addAll(Secuencia.idsDe(op.s(), op.t(), op.n()));
+                    continue;
+                }
                 if (!mot.fusionar(est, op).isEmpty()) aplicadas.add(op);
             }
             if (!aplicadas.isEmpty()) {
@@ -164,7 +343,65 @@ public class ServicioDocumentos {
             }
         }
         if (!aplicadas.isEmpty()) difusor.ops(docId, Map.of("ops", aplicadas, "cliente", cliente == null ? "" : cliente));
-        return Map.of("aplicadas", aplicadas.size(), "reloj", est.reloj);
+        if (rechazadas.isEmpty()) return Map.of("aplicadas", aplicadas.size(), "reloj", est.reloj);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("aplicadas", aplicadas.size());
+        r.put("reloj", est.reloj);
+        r.put("rechazadas", rechazadas);
+        r.put("motivo", motivo);
+        return r;
+    }
+
+    private String nombreDe(String usuarioId) {
+        return cuentas.porId(usuarioId).map(x -> x.nombre).orElse("otra persona");
+    }
+
+    /**
+     * Por que una persona (que no es el propietario del espacio) no puede aplicar esta operacion,
+     * o null si puede. Partes con dueno: bloques y figuras (campo "dueno"), diapositivas
+     * ("dueno:" + pagina en _doc) y parrafos del texto (atributo "dueno" de su marca de parrafo).
+     * Plantilla del maestro: bloques con "maestro" = true.
+     */
+    private String candadoDe(Usuario u, EstadoDocumento est, Operacion op, Set<String> descartados) {
+        if (op.esSecuencia()) {
+            Map<String, Object> s = op.s();
+            if ("f".equals(s.get("k")) && s.get("a") instanceof Map<?, ?> a && a.containsKey("dueno"))
+                return "Solo el propietario del espacio asigna partes del documento";
+            if ("i".equals(s.get("k")) && s.get("iz") != null && descartados.contains(String.valueOf(s.get("iz"))))
+                return "Esa parte del documento tiene dueño";
+            Secuencia sec = est.seq.get(op.bloque());
+            if (sec == null || !sec.tieneDuenos()) return null;
+            for (String du : sec.duenos(s)) {
+                if (Secuencia.DESCONOCIDO.equals(du)) return "El texto quedó junto a una parte que no existe en el servidor";
+                if (!du.equals(u.id)) return "Ese párrafo es de " + nombreDe(du) + ": solo esa persona (o el propietario del espacio) lo cambia";
+            }
+            return null;
+        }
+        Map<String, Object> c = op.campos();
+        if (Operacion.DOC.equals(op.bloque())) {
+            for (String k : c.keySet()) if (k.startsWith("dueno:")) return "Solo el propietario del espacio asigna diapositivas";
+            if (c.get("paginas") instanceof List<?> nuevas && est.valor(Operacion.DOC, "paginas") instanceof List<?> viejas) {
+                for (Object pg : viejas) {
+                    if (nuevas.contains(pg)) continue;
+                    Object du = est.valor(Operacion.DOC, "dueno:" + pg);
+                    if (du instanceof String ds && !ds.isEmpty() && !ds.equals(u.id)) return "Esa diapositiva es de " + nombreDe(ds) + ": no se puede quitar";
+                }
+            }
+            return null;
+        }
+        if (c.containsKey("dueno") || c.containsKey("maestro")) return "Solo el propietario del espacio asigna partes o fija la plantilla";
+        Object tipo = c.containsKey("tipo") ? c.get("tipo") : est.valor(op.bloque(), "tipo");
+        boolean comentario = "comentario".equals(tipo);
+        Object du = est.valor(op.bloque(), "dueno");
+        if (du instanceof String ds && !ds.isEmpty() && !ds.equals(u.id)) return "Esa parte es de " + nombreDe(ds) + ": solo esa persona (o el propietario del espacio) la cambia";
+        if (Boolean.TRUE.equals(est.valor(op.bloque(), "maestro"))) return "Es parte de la plantilla del maestro: solo el propietario del espacio la cambia";
+        if (comentario) return null;
+        for (Object pg : new Object[] { est.valor(op.bloque(), "pagina"), c.get("pagina") }) {
+            if (!(pg instanceof String)) continue;
+            Object dp = est.valor(Operacion.DOC, "dueno:" + pg);
+            if (dp instanceof String ds && !ds.isEmpty() && !ds.equals(u.id)) return "Esa diapositiva es de " + nombreDe(ds) + ": solo esa persona (o el propietario del espacio) la cambia";
+        }
+        return null;
     }
 
     /**
@@ -182,6 +419,8 @@ public class ServicioDocumentos {
      * Una linea de la bitacora: quien, desde que dispositivo, cuando y que bloques/campos toco.
      * Como el texto viaja letra por letra, los lotes seguidos de la misma persona (menos de
      * 60 s entre uno y otro) se suman en la misma linea: "escribio 240 letras, borro 12".
+     * 3.1: tambien separa lo tecleado de lo pegado, y anota cada pegado grande (hora y tamano,
+     * nunca el texto).
      */
     @SuppressWarnings("unchecked")
     private void anotar(String docId, Usuario u, String cliente, String dispositivo, List<Operacion> ops) {
@@ -196,6 +435,7 @@ public class ServicioDocumentos {
         if (m == null) {
             m = new LinkedHashMap<>();
             m.put("t", ahora);
+            m.put("inicio", ahora);
             m.put("usuarioId", u.id);
             m.put("usuario", u.nombre);
             m.put("color", u.color);
@@ -206,27 +446,59 @@ public class ServicioDocumentos {
             m.put("campos", new java.util.LinkedHashSet<String>());
             m.put("escritas", 0);
             m.put("borradas", 0);
+            m.put("tecleadas", 0);
+            m.put("pegadas", 0);
+            m.put("pegados", new ArrayList<Map<String, Object>>());
             rachas.put(clave, m);
         }
         java.util.Set<String> bloques = (java.util.Set<String>) m.get("bloques"), campos = (java.util.Set<String>) m.get("campos");
+        List<Map<String, Object>> pegados = (List<Map<String, Object>>) m.get("pegados");
+        Set<String> vistos = pegadosVistos.computeIfAbsent(docId + "|" + u.id, k -> Collections.newSetFromMap(new java.util.LinkedHashMap<String, Boolean>() {
+            @Override protected boolean removeEldestEntry(Map.Entry<String, Boolean> x) { return size() > 300; }
+        }));
         int escritas = ((Number) m.get("escritas")).intValue(), borradas = ((Number) m.get("borradas")).intValue();
+        int tecleadas = ((Number) m.get("tecleadas")).intValue(), pegadas = ((Number) m.get("pegadas")).intValue();
         for (Operacion op : ops) {
             if (bloques.size() < 12) bloques.add(op.bloque());
+            boolean pego = op.pegada();
+            if (pego && op.m().get("g") != null) {
+                String g = String.valueOf(op.m().get("g"));
+                synchronized (vistos) {
+                    if (vistos.add(g) && num(op.m().get("gn")) > 40 && pegados.size() < 500) {
+                        Map<String, Object> pg = new LinkedHashMap<>();
+                        pg.put("t", ahora);
+                        pg.put("letras", num(op.m().get("gn")));
+                        pegados.add(pg);
+                    }
+                }
+            }
             if (op.esSecuencia()) {
                 campos.add("texto");
                 Object k = op.s().get("k");
-                if ("i".equals(k) && op.s().get("x") instanceof String x) escritas += x.codePointCount(0, x.length());
-                else if ("v".equals(k) && Boolean.FALSE.equals(op.s().get("v")) && op.s().get("r") instanceof List<?> r) {
+                if ("i".equals(k) && op.s().get("x") instanceof String x) {
+                    int n = x.codePointCount(0, x.length());
+                    escritas += n;
+                    if (pego) pegadas += n; else tecleadas += n;
+                } else if ("v".equals(k) && Boolean.FALSE.equals(op.s().get("v")) && op.s().get("r") instanceof List<?> r) {
                     for (Object o : r) if (o instanceof List<?> rango && rango.size() == 3 && rango.get(1) instanceof Number a && rango.get(2) instanceof Number b) borradas += (int) (b.longValue() - a.longValue() + 1);
                 } else if ("f".equals(k)) campos.add("formato");
                 continue;
             }
-            for (String c : op.campos().keySet()) if (campos.size() < 12) campos.add(c);
+            for (var c : op.campos().entrySet()) {
+                if (campos.size() < 12) campos.add(c.getKey());
+                // Celdas: lo escrito tambien se separa en tecleado y pegado (no cuenta como "letras").
+                if (c.getKey().startsWith("c:") && c.getValue() instanceof String v && !v.isEmpty()) {
+                    int n = v.codePointCount(0, v.length());
+                    if (pego) pegadas += n; else tecleadas += n;
+                }
+            }
         }
         m.put("t", ahora);
         m.put("operaciones", ((Number) m.get("operaciones")).intValue() + ops.size());
         m.put("escritas", escritas);
         m.put("borradas", borradas);
+        m.put("tecleadas", tecleadas);
+        m.put("pegadas", pegadas);
     }
 
     /** Escribe a disco las rachas de la bitacora que ya terminaron (o todas). */
@@ -292,13 +564,98 @@ public class ServicioDocumentos {
     public void eliminar(Usuario u, String docId) {
         Documento d = requerir(docId);
         permiso(u, d, Permiso.EDICION);
+        if (d.protegido)
+            throw new ErrorNom(ErrorNom.CONFLICTO, "Este documento está protegido contra el borrado. Quita la protección para borrarlo.", null, Map.of("protegido", true));
         repo.borrar(docId);
         motores.remove(docId);
         difusor.avisarDocumento(docId, "eliminado", Map.of("por", u.nombre));
         difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "eliminado", "id", d.id));
     }
 
-    // ------------------------------------------------------------------ versiones (CU-23)
+    // ------------------------------------------------------------ 1.2 proteger contra el borrado
+
+    /** Solo el propietario del espacio pone o quita la marca; para quitarla hay que escribir BORRAR. */
+    public Documento proteger(Usuario u, String docId, boolean protegido, String confirmacion) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.PROPIETARIO);
+        if (!protegido && d.protegido && !"BORRAR".equals(confirmacion == null ? "" : confirmacion.trim().toUpperCase(Locale.ROOT)))
+            throw ErrorNom.invalido("Escribe BORRAR para quitar la protección", "confirmacion");
+        d.protegido = protegido;
+        repo.guardar(d);
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        difusor.avisarDocumento(docId, "documento", Map.of("protegido", protegido));
+        return d;
+    }
+
+    // ------------------------------------------------------------ 3.6 entrega con fecha limite
+
+    private Map<String, Object> entregaInfo(Documento d, Permiso p) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("limite", d.entregaLimite);
+        m.put("vencida", entregaVencida(d));
+        m.put("cerrada", d.entregaCerrada);
+        if (p == Permiso.PROPIETARIO) m.put("recibos", d.entregaRecibos == null ? List.of() : d.entregaRecibos);
+        return m;
+    }
+
+    /** El propietario del espacio fija (o quita, con limite 0) la fecha limite de entrega. */
+    public Map<String, Object> fijarEntrega(Usuario u, String docId, long limite) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.PROPIETARIO);
+        long ahora = System.currentTimeMillis();
+        if (limite != 0 && limite < ahora + 60_000) throw ErrorNom.invalido("La fecha límite tiene que ser en el futuro", "limite");
+        if (limite != 0 && limite > ahora + 366L * 86_400_000L) throw ErrorNom.invalido("La fecha límite es de máximo un año", "limite");
+        d.entregaLimite = limite;
+        d.entregaCerrada = false;
+        repo.guardar(d);
+        difusor.avisarDocumento(docId, "entrega", Map.of("limite", limite));
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        return entregaInfo(d, p);
+    }
+
+    /** Al pasar la fecha: version final y un recibo de cada persona que trabajo en el documento. */
+    private void cerrarEntrega(Documento d) {
+        synchronized (candado(d.id)) {
+            if (d.entregaCerrada || !entregaVencida(d)) return;
+            Usuario duenio = cuentas.porId(espacios.requerir(d.espacioId).propietarioId).orElse(null);
+            nuevaVersion(d, repo.estado(d.id), duenio, "Entrega (fecha límite)");
+        }
+        cerrarRachas(d.id, true);
+        Set<String> personas = new LinkedHashSet<>();
+        for (Map<String, Object> a : repo.actividad(d.id, 100_000)) if (a.get("usuarioId") != null) personas.add(String.valueOf(a.get("usuarioId")));
+        String duenio = espacios.requerir(d.espacioId).propietarioId;
+        List<Map<String, Object>> recibos = new ArrayList<>();
+        for (String uid : personas) {
+            if (uid.equals(duenio)) continue;
+            Map<String, Object> r = construirRecibo(d, uid);
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("usuarioId", uid);
+            x.put("usuario", ((Map<?, ?>) r.get("persona")).get("nombre"));
+            x.put("hash", r.get("hash"));
+            x.put("generado", r.get("generado"));
+            x.put("recibo", r);
+            recibos.add(x);
+        }
+        d.entregaRecibos = recibos;
+        d.entregaCerrada = true;
+        repo.guardar(d);
+        difusor.avisarDocumento(d.id, "entrega", Map.of("limite", d.entregaLimite, "cerrada", true));
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        log.info("Entrega cerrada: {} ({} recibos)", d.nombre, recibos.size());
+    }
+
+    /** Cada minuto (con el autoguardado): cierra las entregas cuya fecha ya paso. */
+    public void revisarEntregas() {
+        for (Espacio e : espacios.todos()) {
+            for (Documento d : repo.delEspacio(e.id)) {
+                if (d.entregaLimite > 0 && !d.entregaCerrada && entregaVencida(d)) {
+                    try { cerrarEntrega(d); } catch (RuntimeException ex) { log.error("No se pudo cerrar la entrega " + d.id, ex); }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ versiones (CU-23)
 
     public List<Version> historial(Usuario u, String docId) {
         Documento d = requerir(docId);
@@ -324,10 +681,24 @@ public class ServicioDocumentos {
         }
     }
 
+    /** ¿Alguna parte tiene dueno o es plantilla del maestro? */
+    private static boolean tieneCandados(EstadoDocumento est) {
+        for (var b : est.bloques.entrySet()) {
+            for (var c : b.getValue().entrySet()) {
+                Object v = c.getValue().v;
+                if (("dueno".equals(c.getKey()) || c.getKey().startsWith("dueno:")) && v instanceof String s && !s.isEmpty()) return true;
+                if ("maestro".equals(c.getKey()) && Boolean.TRUE.equals(v)) return true;
+            }
+        }
+        for (Secuencia s : est.seq.values()) if (s.tieneDuenos()) return true;
+        return false;
+    }
+
     /** Restaura como version NUEVA; las intermedias se conservan. */
     public Version restaurar(Usuario u, String docId, int numero) {
         Documento d = requerir(docId);
-        if (!permiso(u, d, Permiso.LECTURA).alMenos(Permiso.EDICION))
+        Permiso p = permiso(u, d, Permiso.LECTURA);
+        if (!p.alMenos(Permiso.EDICION))
             throw ErrorNom.prohibido("Solo puedes consultar versiones");
         Map<String, Map<String, Object>> f = repo.fotoVersion(docId, numero);
         if (f == null) throw ErrorNom.noEncontrado("La versión " + numero);
@@ -335,6 +706,9 @@ public class ServicioDocumentos {
         Version v;
         synchronized (candado(docId)) {
             EstadoDocumento est = repo.estado(docId);
+            // Restaurar cambiaria tambien las partes de los demas: con partes asignadas, solo el propietario.
+            if (p != Permiso.PROPIETARIO && tieneCandados(est))
+                throw ErrorNom.prohibido("Este documento tiene partes asignadas: solo el propietario del espacio restaura versiones");
             MotorCRDT mot = motor(docId);
             ops = mot.restaurar(est, f, nodoServidor());
             for (Operacion op : ops) mot.fusionar(est, op);
@@ -389,5 +763,338 @@ public class ServicioDocumentos {
                 log.detalle("Autoguardado {} v{}", d.nombre, d.version);
             });
         }
+        revisarEntregas();
+        proyecciones.values().removeIf(p -> ahora - p.visto > 8 * 3_600_000L);
     }
+
+    // ------------------------------------------------------------ 3.2 recibo de proceso de escritura
+
+    /** Lineas de la bitacora de una persona, de la mas vieja a la mas nueva. */
+    private List<Map<String, Object>> actividadDe(String docId, String usuarioId) {
+        cerrarRachas(docId, true);
+        List<Map<String, Object>> l = new ArrayList<>();
+        for (Map<String, Object> a : repo.actividad(docId, 200_000)) if (usuarioId.equals(String.valueOf(a.get("usuarioId")))) l.add(a);
+        Collections.reverse(l);
+        return l;
+    }
+
+    /**
+     * El recibo: sesiones (inicio, fin, minutos activos, dispositivo), letras tecleadas contra
+     * pegadas, pegados grandes (hora y tamano, nunca el texto), versiones y la huella SHA-256 de
+     * todo eso. Se guarda la huella para poder comprobar despues que el recibo es autentico.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> construirRecibo(Documento d, String usuarioId) {
+        Usuario persona = cuentas.porId(usuarioId).orElse(null);
+        List<Map<String, Object>> act = actividadDe(d.id, usuarioId);
+        List<Map<String, Object>> sesiones = new ArrayList<>();
+        List<Map<String, Object>> grandes = new ArrayList<>();
+        Map<String, Object> s = null;
+        long tTotalMs = 0, tec = 0, peg = 0, bor = 0, opsN = 0, primera = 0, ultima = 0;
+        String nombre = persona != null ? persona.nombre : null;
+        for (Map<String, Object> a : act) {
+            long fin = num(a.get("t")), ini = a.get("inicio") != null ? num(a.get("inicio")) : fin;
+            if (nombre == null && a.get("usuario") != null) nombre = String.valueOf(a.get("usuario"));
+            long dur = Math.max(5_000, fin - ini);
+            String disp = String.valueOf(a.getOrDefault("dispositivo", "Navegador"));
+            long t1 = num(a.get("tecleadas")), p1 = num(a.get("pegadas")), b1 = num(a.get("borradas"));
+            // Lineas viejas (antes de separar tecleado y pegado): todo lo escrito cuenta como tecleado.
+            if (a.get("tecleadas") == null && a.get("pegadas") == null) t1 = num(a.get("escritas"));
+            if (s != null && ini - num(s.get("fin")) <= 15 * 60_000L && disp.equals(s.get("dispositivo"))) {
+                s.put("fin", Math.max(num(s.get("fin")), fin));
+                s.put("ms", num(s.get("ms")) + dur);
+            } else {
+                s = new LinkedHashMap<>();
+                s.put("inicio", ini);
+                s.put("fin", fin);
+                s.put("ms", dur);
+                s.put("dispositivo", disp);
+                s.put("letrasTecleadas", 0L);
+                s.put("letrasPegadas", 0L);
+                s.put("letrasBorradas", 0L);
+                sesiones.add(s);
+            }
+            s.put("letrasTecleadas", num(s.get("letrasTecleadas")) + t1);
+            s.put("letrasPegadas", num(s.get("letrasPegadas")) + p1);
+            s.put("letrasBorradas", num(s.get("letrasBorradas")) + b1);
+            if (a.get("pegados") instanceof List<?> pl) for (Object o : pl) if (o instanceof Map<?, ?> pm) {
+                Map<String, Object> g = new LinkedHashMap<>();
+                g.put("t", num(pm.get("t")));
+                g.put("letras", num(pm.get("letras")));
+                grandes.add(g);
+            }
+            tTotalMs += dur; tec += t1; peg += p1; bor += b1; opsN += num(a.get("operaciones"));
+            if (primera == 0) primera = ini;
+            ultima = Math.max(ultima, fin);
+        }
+        for (Map<String, Object> x : sesiones) x.put("minutosActivos", Math.max(1, Math.round(num(x.remove("ms")) / 60_000.0)));
+        List<Version> vs = repo.historial(d.id);
+        long suyas = vs.stream().filter(v -> usuarioId.equals(v.autorId)).count();
+        Espacio e = espacios.requerir(d.espacioId);
+
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("recibo", "NOM-COLAB · Recibo de proceso de escritura");
+        r.put("formato", 1);
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("id", d.id);
+        doc.put("nombre", d.nombre);
+        doc.put("tipo", d.modo == null ? "TEXTO" : d.modo.name());
+        doc.put("espacio", e.nombre);
+        r.put("documento", doc);
+        Map<String, Object> per = new LinkedHashMap<>();
+        per.put("id", usuarioId);
+        per.put("nombre", nombre == null ? "?" : nombre);
+        r.put("persona", per);
+        r.put("servidor", nodo.equipo());
+        r.put("generado", System.currentTimeMillis());
+        r.put("primeraActividad", primera);
+        r.put("ultimaActividad", ultima);
+        r.put("sesiones", sesiones);
+        Map<String, Object> tot = new LinkedHashMap<>();
+        tot.put("sesiones", (long) sesiones.size());
+        tot.put("minutosActivos", sesiones.stream().mapToLong(x -> num(x.get("minutosActivos"))).sum());
+        tot.put("letrasTecleadas", tec);
+        tot.put("letrasPegadas", peg);
+        tot.put("letrasBorradas", bor);
+        tot.put("operaciones", opsN);
+        tot.put("pegadosGrandes", (long) grandes.size());
+        tot.put("porcentajeTecleado", tec + peg == 0 ? 100L : Math.round(tec * 100.0 / (tec + peg)));
+        r.put("totales", tot);
+        r.put("pegadosGrandes", grandes);
+        Map<String, Object> ver = new LinkedHashMap<>();
+        ver.put("total", (long) vs.size());
+        ver.put("guardadasPorLaPersona", suyas);
+        ver.put("ultima", (long) d.version);
+        r.put("versiones", ver);
+        String h = Huella.sha256(r);
+        r.put("hash", h);
+        Map<String, Object> reg = new LinkedHashMap<>();
+        reg.put("documentoId", d.id);
+        reg.put("usuarioId", usuarioId);
+        reg.put("generado", r.get("generado"));
+        reg.put("documento", d.nombre);
+        reg.put("persona", per.get("nombre"));
+        repo.guardarRecibo(h, reg);
+        return r;
+    }
+
+    /** La persona ve su propio recibo; el propietario del espacio, el de cualquiera. */
+    public Map<String, Object> recibo(Usuario u, String docId, String usuarioId) {
+        Documento d = requerir(docId);
+        Espacio e = espacios.requerir(d.espacioId);
+        Permiso p = espacios.exigir(e, u, Permiso.LECTURA);
+        String quien = usuarioId == null || usuarioId.isBlank() ? u.id : usuarioId;
+        if (!quien.equals(u.id) && p != Permiso.PROPIETARIO)
+            throw ErrorNom.prohibido("Solo el propietario del espacio ve el recibo de otras personas");
+        return construirRecibo(d, quien);
+    }
+
+    /** Publico: ¿este recibo lo emitio este servidor y nadie lo cambio? */
+    public Map<String, Object> verificarRecibo(Map<String, Object> recibo) {
+        if (recibo == null || !(recibo.get("hash") instanceof String h)) throw ErrorNom.invalido("Ese archivo no es un recibo de NOM-COLAB", null);
+        Map<String, Object> sin = new LinkedHashMap<>(recibo);
+        sin.remove("hash");
+        String calculado = Huella.sha256(sin);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("hash", h);
+        if (!calculado.equals(h)) {
+            r.put("valido", false);
+            r.put("motivo", "El contenido no coincide con su huella: el recibo fue modificado después de emitirse.");
+            return r;
+        }
+        Map<String, Object> reg = repo.recibo(h);
+        if (reg == null) {
+            r.put("valido", false);
+            r.put("motivo", "Este servidor no emitió ese recibo (o se emitió en otro servidor).");
+            return r;
+        }
+        r.put("valido", true);
+        r.put("emitido", reg.get("generado"));
+        r.put("documento", reg.get("documento"));
+        r.put("persona", reg.get("persona"));
+        r.put("servidor", nodo.equipo());
+        return r;
+    }
+
+    // ------------------------------------------------------------ 3.3 mapa de aportes
+
+    /** Cuanto aporto cada persona (de la bitacora) y cuanto de su texto sigue en el documento. */
+    public Map<String, Object> aportes(Usuario u, String docId) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.LECTURA);
+        cerrarRachas(docId, true);
+        Map<String, Map<String, Object>> per = new LinkedHashMap<>();
+        Map<String, String> nodoUsuario = new HashMap<>();
+        List<Map<String, Object>> act = repo.actividad(docId, 200_000);
+        Collections.reverse(act);
+        for (Map<String, Object> a : act) {
+            String uid = String.valueOf(a.get("usuarioId"));
+            Map<String, Object> m = per.computeIfAbsent(uid, k -> {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("usuarioId", uid);
+                for (String c : new String[] { "escritas", "borradas", "tecleadas", "pegadas", "operaciones", "minutos", "enDocumento" }) x.put(c, 0L);
+                return x;
+            });
+            m.put("usuario", a.get("usuario"));
+            m.put("color", a.get("color"));
+            for (String c : new String[] { "escritas", "borradas", "tecleadas", "pegadas", "operaciones" }) m.put(c, num(m.get(c)) + num(a.get(c)));
+            if (a.get("tecleadas") == null && a.get("pegadas") == null) m.put("tecleadas", num(m.get("tecleadas")) + num(a.get("escritas")));
+            long fin = num(a.get("t")), ini = a.get("inicio") != null ? num(a.get("inicio")) : fin;
+            m.put("ms", num(m.get("ms")) + Math.max(5_000, fin - ini));
+            m.put("ultima", fin);
+            if (a.get("cliente") != null && !"".equals(a.get("cliente"))) nodoUsuario.put(String.valueOf(a.get("cliente")), uid);
+        }
+        long total = 0, sinAutor = 0;
+        EstadoDocumento est;
+        synchronized (candado(docId)) { est = repo.estado(docId); }
+        for (Secuencia s : est.seq.values()) {
+            for (var c : s.caracteres().entrySet()) {
+                if (Secuencia.FIN.equals(c.getKey()) || !c.getValue().visible()) continue;
+                total++;
+                String n = c.getKey().substring(c.getKey().indexOf('@') + 1);
+                String uid = nodoUsuario.get(n);
+                Map<String, Object> m = uid == null ? null : per.get(uid);
+                if (m == null) sinAutor++; else m.put("enDocumento", num(m.get("enDocumento")) + 1);
+            }
+        }
+        List<Map<String, Object>> l = new ArrayList<>(per.values());
+        for (Map<String, Object> m : l) m.put("minutos", Math.max(1, Math.round(num(m.remove("ms")) / 60_000.0)));
+        l.sort((a, b) -> Long.compare(num(b.get("enDocumento")) * 4 + num(b.get("escritas")), num(a.get("enDocumento")) * 4 + num(a.get("escritas"))));
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("personas", l);
+        r.put("letrasEnDocumento", total);
+        r.put("sinAutor", sinAutor);
+        return r;
+    }
+
+    // ------------------------------------------------------------ 5.5 presentar en otra pantalla
+
+    private static final class Proyeccion {
+        final String codigo, docId, espacioId, usuarioId;
+        volatile String pagina;
+        volatile int paso;
+        volatile long visto = System.currentTimeMillis();
+
+        Proyeccion(String codigo, String docId, String espacioId, String usuarioId) {
+            this.codigo = codigo; this.docId = docId; this.espacioId = espacioId; this.usuarioId = usuarioId;
+        }
+    }
+
+    private final Map<String, Proyeccion> proyecciones = new ConcurrentHashMap<>();
+
+    private Proyeccion proyeccionDe(String docId, String usuarioId) {
+        for (Proyeccion p : proyecciones.values()) if (p.docId.equals(docId) && p.usuarioId.equals(usuarioId)) return p;
+        return null;
+    }
+
+    private static Map<String, Object> estadoProyeccion(Proyeccion p) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("codigo", p.codigo);
+        m.put("pagina", p.pagina);
+        m.put("paso", p.paso);
+        return m;
+    }
+
+    /** Quien presenta pide un codigo: el proyector (otro navegador) lo abre sin iniciar sesion. */
+    public synchronized Map<String, Object> iniciarProyeccion(Usuario u, String docId) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.LECTURA);
+        Proyeccion p = proyeccionDe(docId, u.id);
+        if (p == null) {
+            String c;
+            do { c = cuentas.codigo(6); } while (proyecciones.containsKey(c));
+            p = new Proyeccion(c, docId, d.espacioId, u.id);
+            proyecciones.put(c, p);
+        }
+        p.visto = System.currentTimeMillis();
+        return estadoProyeccion(p);
+    }
+
+    public Map<String, Object> moverProyeccion(Usuario u, String docId, String pagina, int paso) {
+        Proyeccion p = proyeccionDe(docId, u.id);
+        if (p == null) { iniciarProyeccion(u, docId); p = proyeccionDe(docId, u.id); }
+        p.pagina = pagina;
+        p.paso = Math.max(0, paso);
+        p.visto = System.currentTimeMillis();
+        difusor.avisarProyectores(p.codigo, "diapositiva", estadoProyeccion(p));
+        return estadoProyeccion(p);
+    }
+
+    public void terminarProyeccion(Usuario u, String docId) {
+        Proyeccion p = proyeccionDe(docId, u.id);
+        if (p == null) return;
+        proyecciones.remove(p.codigo);
+        difusor.avisarProyectores(p.codigo, "fin", Map.of("ok", true));
+    }
+
+    private Proyeccion proyeccionVigente(String codigo) {
+        Proyeccion p = codigo == null ? null : proyecciones.get(codigo.trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", ""));
+        if (p == null || repo.porId(p.docId).isEmpty()) throw new ErrorNom(ErrorNom.NO_EXISTE, "Ese código no corresponde a ninguna presentación activa");
+        return p;
+    }
+
+    /** Publico (con el codigo): la presentacion y en que diapositiva va. */
+    public Map<String, Object> verProyeccion(String codigo) {
+        Proyeccion p = proyeccionVigente(codigo);
+        Documento d = requerir(p.docId);
+        Map<String, Object> r = new LinkedHashMap<>(estadoProyeccion(p));
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("id", d.id);
+        doc.put("nombre", d.nombre);
+        doc.put("modo", d.modo);
+        r.put("documento", doc);
+        synchronized (candado(d.id)) { r.put("estado", repo.estado(d.id).copia()); }
+        return r;
+    }
+
+    public void suscribirProyeccion(String codigo, Canal canal) {
+        Proyeccion p = proyeccionVigente(codigo);
+        difusor.suscribirProyector(p.espacioId, p.docId, p.codigo, canal);
+        try { canal.enviar("diapositiva", estadoProyeccion(p)); } catch (java.io.IOException ignorado) { }
+    }
+
+    // ------------------------------------------------------------ 6.5 sincronizar con otro servidor
+
+    /** Copia del estado, para mandarlo a otro servidor. */
+    public EstadoDocumento estadoParaCopiar(String docId) {
+        synchronized (candado(docId)) { return repo.estado(docId).copia(); }
+    }
+
+    /** Operaciones que llegan de otro servidor: se integran sin revisar permisos (ya los reviso aquel). */
+    public int fusionarExterno(String docId, List<Operacion> ops, String quien) {
+        Documento d = requerir(docId);
+        List<Operacion> aplicadas = new ArrayList<>();
+        synchronized (candado(docId)) {
+            EstadoDocumento est = repo.estado(docId);
+            MotorCRDT mot = motor(docId);
+            for (Operacion op : ops) {
+                op = sinCambioDeTipo(op);
+                if (op != null && op.valida() && !mot.fusionar(est, op).isEmpty()) aplicadas.add(op);
+            }
+            if (!aplicadas.isEmpty()) {
+                d.modificado = System.currentTimeMillis();
+                d.pendienteVersion = true;
+                if (sincronizarMeta(d, est)) difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+                repo.guardar(d);
+                sucios.add(docId);
+                Usuario sync = new Usuario();
+                sync.id = "sincronia";
+                sync.nombre = quien == null ? "Sincronización" : quien;
+                sync.color = "#6B6875";
+                anotar(docId, sync, "sincronia", "Sincronización", aplicadas);
+            }
+        }
+        if (!aplicadas.isEmpty()) difusor.ops(docId, Map.of("ops", aplicadas, "cliente", "sincronia"));
+        return aplicadas.size();
+    }
+
+    /** Documento nuevo que llego de otro servidor (lo crea el propietario del espacio). */
+    public Documento crearExterno(String espacioId, String nombre, String modo) {
+        Espacio e = espacios.requerir(espacioId);
+        Usuario duenio = cuentas.porId(e.propietarioId).orElseThrow(() -> ErrorNom.noEncontrado("El propietario"));
+        return crear(duenio, espacioId, nombre, modo, List.of());
+    }
+
+    /** Lo que guarda el servidor de un registro LWW, para armar operaciones de sincronizacion. */
+    public static Map<String, Map<String, Registro>> registros(EstadoDocumento est) { return est.bloques; }
 }

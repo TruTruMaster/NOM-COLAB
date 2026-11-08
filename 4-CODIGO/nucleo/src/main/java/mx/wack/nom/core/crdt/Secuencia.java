@@ -1,9 +1,11 @@
 package mx.wack.nom.core.crdt;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,6 +25,10 @@ import java.util.TreeMap;
  *   ins: { t, n, iz, x, e?, a? }   el caracter i del tramo tiene id (t+i)@n
  *   vis: { t, n, v, r }            r = [[nodo, t1, t2], ...]
  *   fmt: { t, n, a, r }
+ *
+ * Para los parrafos con dueno (candados por persona) si hace falta el orden: se arma con el
+ * mismo algoritmo RGA que el cliente, solo cuando el documento tiene algun parrafo asignado, y
+ * despues se actualiza con cada operacion (sin volver a recorrer todo).
  */
 public class Secuencia {
 
@@ -55,6 +61,8 @@ public class Secuencia {
         else e.put("a", s.get("a"));
         e.put("r", r);
         ("v".equals(k) ? vis : fmt).add(e);
+        if ("f".equals(k) && ((Map<?, ?>) e.get("a")).containsKey("dueno")) duenos = true;
+        if (orden != null) aplicarRangosOrden(e);
         return true;
     }
 
@@ -86,6 +94,7 @@ public class Secuencia {
             if (p.get("e") == null && pt + px.codePointCount(0, px.length()) == t
                     && ((t - 1) + "@" + n).equals(iz) && Objects.equals(p.get("a"), a)) {
                 p.put("x", px + x);
+                alInsertar(t, n, (String) iz, x, null, a);
                 return true;
             }
         }
@@ -99,6 +108,7 @@ public class Secuencia {
         if (a != null) r.put("a", a);
         ins.add(r);
         deNodo.put(t, r);
+        alInsertar(t, n, iz == null ? null : String.valueOf(iz), x, e, a);
         return true;
     }
 
@@ -126,6 +136,197 @@ public class Secuencia {
             for (Map<String, Object> e : fmt) vistas.add("f:" + e.get("t") + "@" + e.get("n"));
         }
         return vistas;
+    }
+
+    // ------------------------------------------------------------------ orden (candados por parrafo)
+
+    /** Un caracter en el orden del documento (incluidos los ocultos). */
+    private static final class Nodo {
+        final String id, n;
+        final long t;
+        final boolean salto;
+        final Car car = new Car();
+
+        Nodo(String id, long t, String n, boolean salto) { this.id = id; this.t = t; this.n = n; this.salto = salto; }
+    }
+
+    // Privados y sin "getters": no salen en el JSON.
+    private List<Nodo> orden;
+    private Map<String, Nodo> nodos;
+    private Car carFin;
+    private Boolean duenos;
+
+    /** ¿Algun parrafo tiene (o tuvo) dueno? Solo entonces se revisan los candados. */
+    @SuppressWarnings("unchecked")
+    public synchronized boolean tieneDuenos() {
+        if (duenos == null) {
+            duenos = false;
+            for (Map<String, Object> e : fmt) if (e.get("a") instanceof Map && ((Map<String, Object>) e.get("a")).containsKey("dueno")) { duenos = true; break; }
+        }
+        return duenos;
+    }
+
+    private static final Comparator<Nodo> HERMANOS = (x, y) -> x.t != y.t ? Long.compare(y.t, x.t) : y.n.compareTo(x.n);
+
+    /** Arma el orden completo (RGA): hijos de cada caracter de mas nuevo a mas viejo, en profundidad. */
+    @SuppressWarnings("unchecked")
+    private void armarOrden() {
+        nodos = new HashMap<>();
+        Map<String, List<Nodo>> hijos = new HashMap<>();
+        for (Map<String, Object> r : ins) {
+            long t = ((Number) r.get("t")).longValue();
+            String n = (String) r.get("n");
+            String x = r.get("e") != null ? "￼" : (String) r.get("x");
+            Map<String, Object> a = r.get("a") instanceof Map ? (Map<String, Object>) r.get("a") : Map.of();
+            int[] cps = x.codePoints().toArray();
+            for (int i = 0; i < cps.length; i++) {
+                String id = (t + i) + "@" + n;
+                if (nodos.containsKey(id)) continue;
+                Nodo nd = new Nodo(id, t + i, n, cps[i] == '\n' && r.get("e") == null);
+                nd.car.vt = t + i;
+                nd.car.vn = n;
+                for (var en : a.entrySet()) nd.car.f.put(en.getKey(), new Object[] { en.getValue(), t + i, n });
+                nodos.put(id, nd);
+                String iz = i == 0 ? (r.get("iz") == null ? "" : String.valueOf(r.get("iz"))) : (t + i - 1) + "@" + n;
+                hijos.computeIfAbsent(iz, z -> new ArrayList<>()).add(nd);
+            }
+        }
+        hijos.values().forEach(l -> l.sort(HERMANOS));
+        orden = new ArrayList<>(nodos.size());
+        List<Nodo> pila = new ArrayList<>(hijos.getOrDefault("", List.of()));
+        java.util.Collections.reverse(pila);
+        while (!pila.isEmpty()) {
+            Nodo nd = pila.remove(pila.size() - 1);
+            orden.add(nd);
+            List<Nodo> h = hijos.get(nd.id);
+            if (h != null) for (int i = h.size() - 1; i >= 0; i--) pila.add(h.get(i));
+        }
+        // Lo que no quedo colgado de la raiz (su vecino izquierdo no llego) no cuenta.
+        if (orden.size() != nodos.size()) {
+            Set<String> puestos = new HashSet<>();
+            for (Nodo nd : orden) puestos.add(nd.id);
+            nodos.keySet().retainAll(puestos);
+        }
+        carFin = new Car();
+        for (Map<String, Object> o : vis) aplicarRangosOrden(o);
+        for (Map<String, Object> o : fmt) aplicarRangosOrden(o);
+    }
+
+    /** Un tramo nuevo entra al orden ya armado (mismo lugar que en el cliente). */
+    private void alInsertar(long t, String n, String iz, String x, Object e, Object a) {
+        if (orden == null) return;
+        int i;
+        if (iz == null) i = 0;
+        else {
+            Nodo izq = nodos.get(iz);
+            if (izq == null) { orden = null; nodos = null; return; }   // huerfano: se rearma la proxima vez
+            i = orden.indexOf(izq) + 1;
+        }
+        while (i < orden.size() && (orden.get(i).t > t || (orden.get(i).t == t && orden.get(i).n.compareTo(n) > 0))) i++;
+        int[] cps = x.codePoints().toArray();
+        List<Nodo> nuevos = new ArrayList<>(cps.length);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> at = a instanceof Map ? (Map<String, Object>) a : Map.of();
+        for (int k = 0; k < cps.length; k++) {
+            Nodo nd = new Nodo((t + k) + "@" + n, t + k, n, cps[k] == '\n' && e == null);
+            nd.car.vt = t + k;
+            nd.car.vn = n;
+            for (var en : at.entrySet()) nd.car.f.put(en.getKey(), new Object[] { en.getValue(), t + k, n });
+            nodos.put(nd.id, nd);
+            nuevos.add(nd);
+        }
+        orden.addAll(i, nuevos);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void aplicarRangosOrden(Map<String, Object> o) {
+        long t = ((Number) o.get("t")).longValue();
+        String n = (String) o.get("n");
+        boolean esV = "v".equals(o.get("k")) || o.containsKey("v");
+        Map<String, Object> a = esV ? null : (Map<String, Object>) o.get("a");
+        for (Object ob : (List<Object>) o.get("r")) {
+            if (!(ob instanceof List<?> rango) || rango.size() < 3) continue;
+            String rn = String.valueOf(rango.get(0));
+            if (FIN.equals(rn)) { aplicarA(carFin, esV, o, a, t, n); continue; }
+            long t1 = ((Number) rango.get(1)).longValue(), t2 = ((Number) rango.get(2)).longValue();
+            for (long tt = t1; tt <= t2 && tt - t1 < 2_000_000; tt++) {
+                Nodo nd = nodos.get(tt + "@" + rn);
+                if (nd != null) aplicarA(nd.car, esV, o, a, t, n);
+            }
+        }
+    }
+
+    private static void aplicarA(Car c, boolean esV, Map<String, Object> o, Map<String, Object> a, long t, String n) {
+        if (esV) { if (gana(t, n, c.vt, c.vn)) { c.v = Boolean.TRUE.equals(o.get("v")); c.vt = t; c.vn = n; } return; }
+        if (a == null) return;
+        for (var e : a.entrySet()) {
+            Object[] reg = c.f.get(e.getKey());
+            if (reg == null || gana(t, n, ((Number) reg[1]).longValue(), (String) reg[2])) c.f.put(e.getKey(), new Object[] { e.getValue(), t, n });
+        }
+    }
+
+    private static String duenoDe(Car c) {
+        Object[] reg = c.f.get("dueno");
+        return reg == null || reg[0] == null || "".equals(reg[0]) ? null : String.valueOf(reg[0]);
+    }
+
+    /** Dueno del parrafo que empieza a buscar en la posicion i (el primer salto visible, o el final). */
+    private String duenoDesde(int i) {
+        for (int k = Math.max(0, i); k < orden.size(); k++) {
+            Nodo nd = orden.get(k);
+            if (nd.salto && nd.car.v) return duenoDe(nd.car);
+        }
+        return duenoDe(carFin);
+    }
+
+    /** Marca usada cuando el texto va junto a algo que este servidor no conoce. */
+    public static final String DESCONOCIDO = "?";
+
+    /**
+     * Duenos de los parrafos que tocaria una operacion (insertar, mostrar u ocultar, o dar formato),
+     * calculados ANTES de aplicarla. Vacio si ningun parrafo tocado tiene dueno.
+     */
+    public synchronized Set<String> duenos(Map<String, Object> s) {
+        if (orden == null) armarOrden();
+        Set<String> r = new LinkedHashSet<>();
+        Object k = s.get("k");
+        if ("i".equals(k)) {
+            Object iz = s.get("iz");
+            if (iz == null) { String d = duenoDesde(0); if (d != null) r.add(d); return r; }
+            Nodo izq = nodos.get(String.valueOf(iz));
+            if (izq == null) { r.add(DESCONOCIDO); return r; }
+            String d = duenoDesde(orden.indexOf(izq) + 1);
+            if (d != null) r.add(d);
+            return r;
+        }
+        if (!(s.get("r") instanceof List<?> rangos)) return r;
+        Set<Nodo> tocados = new HashSet<>();
+        for (Object ob : rangos) {
+            if (!(ob instanceof List<?> rango) || rango.size() < 3) continue;
+            String rn = String.valueOf(rango.get(0));
+            if (FIN.equals(rn)) { String d = duenoDesde(orden.size()); if (d != null) r.add(d); continue; }
+            long t1 = ((Number) rango.get(1)).longValue(), t2 = ((Number) rango.get(2)).longValue();
+            for (long tt = t1; tt <= t2 && tt - t1 < 2_000_000; tt++) { Nodo nd = nodos.get(tt + "@" + rn); if (nd != null) tocados.add(nd); }
+        }
+        if (tocados.isEmpty()) return r;
+        // Una sola pasada de atras hacia adelante: cada caracter pertenece al siguiente salto visible.
+        String actual = duenoDe(carFin);
+        int faltan = tocados.size();
+        for (int i = orden.size() - 1; i >= 0 && faltan > 0; i--) {
+            Nodo nd = orden.get(i);
+            if (nd.salto && nd.car.v) actual = duenoDe(nd.car);
+            if (tocados.contains(nd)) { faltan--; if (actual != null) r.add(actual); }
+        }
+        return r;
+    }
+
+    /** Ids de los caracteres de un tramo de insercion (para descartar lo que dependa de el). */
+    public static List<String> idsDe(Map<String, Object> s, long t, String n) {
+        List<String> l = new ArrayList<>();
+        String x = s.get("e") != null ? "￼" : s.get("x") instanceof String str ? str : "";
+        int largo = x.codePointCount(0, x.length());
+        for (int i = 0; i < largo; i++) l.add((t + i) + "@" + n);
+        return l;
     }
 
     // ------------------------------------------------------------------ estado por caracter (sin orden)

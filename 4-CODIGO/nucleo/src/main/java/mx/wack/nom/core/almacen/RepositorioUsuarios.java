@@ -13,4 +13,6 @@ public interface RepositorioUsuarios {
     Optional<Sesion> sesion(String token);
     void guardarSesion(Sesion s);
     void borrarSesion(String token);
+    /** Cierra todas las sesiones de una cuenta (al cambiar la contrasena). */
+    void borrarSesionesDe(String usuarioId);
 }

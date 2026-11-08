@@ -28,4 +28,13 @@ public interface RepositorioDocumentos {
     void anotarActividad(String docId, Map<String, Object> entrada);
     /** Las ultimas 'max' entradas de la bitacora, de la mas nueva a la mas vieja. */
     List<Map<String, Object>> actividad(String docId, int max);
+
+    /** Ultima vez que cada persona abrio el documento: usuarioId -> { t, reloj }. */
+    Map<String, Map<String, Object>> visitas(String docId);
+    void guardarVisita(String docId, String usuarioId, Map<String, Object> visita);
+
+    /** Registro de los recibos emitidos (por su huella): asi se comprueba que uno es autentico,
+        aunque el documento ya no exista. */
+    void guardarRecibo(String huella, Map<String, Object> registro);
+    Map<String, Object> recibo(String huella);
 }

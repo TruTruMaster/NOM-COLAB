@@ -21,6 +21,7 @@ import mx.wack.nom.core.servicio.Nodo;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioSincronia;
 
 /**
  * La API del servidor del teléfono: las mismas rutas, respuestas y códigos que la de la
@@ -37,15 +38,17 @@ final class ApiTelefono {
     private final Difusor difusor;
     private final Descubrimiento descubrimiento;
     private final Nodo nodo;
+    private final ServicioSincronia sincronia;
 
     ApiTelefono(ServicioCuentas cuentas, ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor,
-                Descubrimiento descubrimiento, Nodo nodo) {
+                Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia) {
         this.cuentas = cuentas;
         this.espacios = espacios;
         this.documentos = documentos;
         this.difusor = difusor;
         this.descubrimiento = descubrimiento;
         this.nodo = nodo;
+        this.sincronia = sincronia;
     }
 
     // ------------------------------------------------------------------ utilidades
@@ -104,8 +107,15 @@ final class ApiTelefono {
         }
         m.put("usuario", ServicioCuentas.publico(u));
         m.put("preferencias", u.preferencias);
+        m.put("recuperacion", ServicioCuentas.tieneRecuperacion(u));
         return m;
     }
+
+    private static Permiso permisoDe(String p, Permiso siFalta) {
+        return p == null || p.isBlank() ? siFalta : Permiso.valueOf(p);
+    }
+
+    private static long largo(Object o) { return o instanceof Number ? ((Number) o).longValue() : 0; }
 
     Map<String, Object> info() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -139,7 +149,21 @@ final class ApiTelefono {
         if (r.equals("/api/cuentas/registro") && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);
             Usuario u = cuentas.registrar(texto(c, "nombre"), texto(c, "contrasena"), texto(c, "empresa"));
-            return creado(Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso"));
+            return creado(Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u)));
+        }
+        if (r.equals("/api/cuentas/recuperar") && m.equals("POST")) {
+            Map<String, Object> c = cuerpo(p);
+            return ok(Map.of("recuperacion", cuentas.recuperar(texto(c, "nombre"), texto(c, "codigo"), texto(c, "nueva")), "mensaje", "Listo: ya puedes entrar con tu contraseña nueva"));
+        }
+        // Enlaces para unirse (QR), recibos y proyeccion: sin sesion (como en ConfigWeb).
+        if ((x = coincide("/api/enlaces/" + ID, r)) != null && m.equals("GET")) return ok(espacios.infoEnlace(x.group(1)));
+        if ((x = coincide("/api/enlaces/" + ID + "/invitado", r)) != null && m.equals("POST"))
+            return ok(espacios.entrarComoInvitado(x.group(1), texto(cuerpo(p), "apodo")));
+        if (r.equals("/api/recibos/verificar") && m.equals("POST")) return ok(documentos.verificarRecibo(cuerpo(p)));
+        if ((x = coincide("/api/proyeccion/" + ID, r)) != null && m.equals("GET")) return ok(documentos.verProyeccion(x.group(1)));
+        if ((x = coincide("/api/proyeccion/" + ID + "/eventos", r)) != null && m.equals("GET")) {
+            String codigo = x.group(1);
+            return Respuesta.sse(canal -> documentos.suscribirProyeccion(codigo, canal));
         }
         if (r.equals("/api/cuentas/sesion")) {
             if (m.equals("POST")) {
@@ -162,6 +186,8 @@ final class ApiTelefono {
             Object c = p.json();
             return ok(cuentas.guardarPreferencias(u, c == null ? null : Json.aObjeto(c, Preferencias.class)));
         }
+        if (r.equals("/api/cuentas/recuperacion") && m.equals("POST")) return ok(Map.of("recuperacion", cuentas.nuevoCodigoRecuperacion(u)));
+        if ((x = coincide("/api/enlaces/" + ID + "/entrar", r)) != null && m.equals("POST")) return ok(espacios.entrarConEnlace(u, x.group(1)));
 
         // ---- espacios
         if (r.equals("/api/espacios")) {
@@ -200,8 +226,33 @@ final class ApiTelefono {
         }
         if ((x = coincide("/api/espacios/" + ID + "/solicitudes/" + ID, r)) != null && m.equals("DELETE"))
             return ok(espacios.rechazarSolicitud(u, x.group(1), x.group(2)));
-        if ((x = coincide("/api/espacios/" + ID + "/almacenamiento", r)) != null && m.equals("GET"))
-            return ok(espacios.almacenamiento(u, x.group(1)));
+        if ((x = coincide("/api/espacios/" + ID + "/formato", r)) != null && m.equals("PUT"))
+            return ok(espacios.fijarFormatoBase(u, x.group(1), cuerpo(p)));
+        if ((x = coincide("/api/espacios/" + ID + "/enlaces", r)) != null) {
+            if (m.equals("GET")) return ok(espacios.enlaces(u, x.group(1)));
+            if (m.equals("POST")) {
+                Map<String, Object> c = cuerpo(p);
+                Object h = c.get("horas");
+                return creado(espacios.crearEnlace(u, x.group(1), permisoDe(texto(c, "permiso"), Permiso.EDICION),
+                        h instanceof Number ? ((Number) h).intValue() : 24, Boolean.TRUE.equals(c.get("invitados"))));
+            }
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/enlaces/" + ID, r)) != null && m.equals("DELETE"))
+            return ok(espacios.revocarEnlace(u, x.group(1), x.group(2)));
+        if ((x = coincide("/api/espacios/" + ID + "/sincronia", r)) != null) {
+            if (m.equals("PUT")) {
+                Map<String, Object> c = cuerpo(p);
+                return ok(sincronia.configurar(u, x.group(1), texto(c, "servidor"), texto(c, "usuario"), texto(c, "contrasena")));
+            }
+            if (m.equals("POST")) return ok(sincronia.sincronizar(u, x.group(1)));
+            if (m.equals("DELETE")) return ok(sincronia.quitar(u, x.group(1)));
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/almacenamiento", r)) != null && m.equals("GET")) {
+            Map<String, Object> a = new LinkedHashMap<>(espacios.almacenamiento(u, x.group(1)));
+            a.put("cuota", documentos.cuota());
+            a.put("usoPropietario", documentos.usoDe(espacios.requerir(x.group(1)).propietarioId));
+            return ok(a);
+        }
         if ((x = coincide("/api/espacios/" + ID + "/almacenamiento/depurar", r)) != null && m.equals("POST")) {
             Object c = cuerpo(p).get("conservar");
             return ok(espacios.depurar(u, x.group(1), c instanceof Number ? ((Number) c).intValue() : 0));
@@ -239,8 +290,28 @@ final class ApiTelefono {
             Map<String, Object> c = cuerpo(p);
             @SuppressWarnings("unchecked")
             Map<String, Object> cursor = c.get("cursor") instanceof Map ? (Map<String, Object>) c.get("cursor") : null;
+            // 3.4 Al cerrar el documento, el cliente lo avisa: ahí termina su visita.
+            if (Boolean.TRUE.equals(c.get("salir"))) { documentos.salir(u, x.group(1), texto(c, "cliente")); return ok(Map.of("ok", true)); }
             difusor.actualizarPresencia(x.group(1), texto(c, "cliente"), texto(c, "bloque"), texto(c, "modo"), cursor);
             return ok(Map.of("ok", true));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/proteccion", r)) != null && m.equals("PUT")) {
+            Map<String, Object> c = cuerpo(p);
+            return ok(documentos.proteger(u, x.group(1), Boolean.TRUE.equals(c.get("protegido")), texto(c, "confirmacion")));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/recibo", r)) != null && m.equals("GET"))
+            return ok(documentos.recibo(u, x.group(1), p.consulta.get("usuario")));
+        if ((x = coincide("/api/documentos/" + ID + "/aportes", r)) != null && m.equals("GET"))
+            return ok(documentos.aportes(u, x.group(1)));
+        if ((x = coincide("/api/documentos/" + ID + "/entrega", r)) != null && m.equals("PUT"))
+            return ok(documentos.fijarEntrega(u, x.group(1), largo(cuerpo(p).get("limite"))));
+        if ((x = coincide("/api/documentos/" + ID + "/proyeccion", r)) != null) {
+            if (m.equals("POST")) return ok(documentos.iniciarProyeccion(u, x.group(1)));
+            if (m.equals("PUT")) {
+                Map<String, Object> c = cuerpo(p);
+                return ok(documentos.moverProyeccion(u, x.group(1), texto(c, "pagina"), (int) largo(c.get("paso"))));
+            }
+            if (m.equals("DELETE")) { documentos.terminarProyeccion(u, x.group(1)); return ok(Map.of("ok", true)); }
         }
         if ((x = coincide("/api/documentos/" + ID + "/versiones", r)) != null) {
             if (m.equals("GET")) return ok(documentos.historial(u, x.group(1)));

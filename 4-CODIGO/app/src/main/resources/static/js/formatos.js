@@ -197,7 +197,7 @@ ${partes}
   }
 
   function aSvg(doc, pagina) {
-    const bs = doc.deLaPagina(pagina).filter((b) => b.x != null);
+    const bs = doc.deLaPagina(pagina).filter((b) => b.x != null && !b.oculto);
     if (!bs.length) return null;
     const minX = Math.min(...bs.map((b) => b.x)) - 40, minY = Math.min(...bs.map((b) => b.y)) - 40;
     const maxX = Math.max(...bs.map((b) => b.x + b.w)) + 40, maxY = Math.max(...bs.map((b) => b.y + b.h)) + 40;
@@ -303,7 +303,11 @@ ${formas.join("\n")}
         descargar(base + ".svg", "image/svg+xml", s);
         return null;
       }
-      case "pdf": setTimeout(() => window.print(), 80); return null;
+      case "pdf":
+        // En la app no existe "imprimir" del navegador: se usa la impresión de Android (también guarda PDF).
+        if (window.NomAndroid && window.NomAndroid.imprimir) window.NomAndroid.imprimir(base);
+        else setTimeout(() => window.print(), 80);
+        return null;
       default: throw new Error("Formato no soportado");
     }
   }
@@ -465,5 +469,5 @@ ${formas.join("\n")}
     });
   }
 
-  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, textoPlano };
+  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, textoPlano, descargar, descargarBytes, MIME, limpioNombre };
 })();

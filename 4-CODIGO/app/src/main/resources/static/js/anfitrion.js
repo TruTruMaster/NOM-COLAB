@@ -93,8 +93,10 @@
             : "Convierte este teléfono en el servidor de tu equipo: cuentas, espacios y documentos en tiempo real, guardados aquí, sin computadora ni Internet. Mientras esté encendido verás una notificación; gasta algo más de batería."}</p>
           ${e.activo ? (dirs.length
             ? `<div class="lista">${dirs.map((d) => `<div class="lista-item"><span class="anfitrion-icono chico">${ico("wifi", "ico-s")}</span><span class="crece"><b style="font-family:var(--mono)">${esc(d.replace(/^http:\/\//, ""))}</b><small>${esc(d)}</small></span>
+                <button class="icono-btn" data-qr-dir="${esc(d)}" aria-label="Mostrar QR" data-micro="Código QR|Quien lo escanea abre NOM-COLAB de este teléfono en su navegador.">${ico("qr-code")}</button>
                 <button class="icono-btn" data-copiar="${esc(d)}" aria-label="Copiar" data-micro="Copiar dirección">${ico("copy")}</button>
-                <button class="icono-btn" data-compartir="${esc(d)}" aria-label="Compartir" data-micro="Compartir dirección|WhatsApp, correo, Bluetooth…">${ico("share-2")}</button></div>`).join("")}</div>`
+                <button class="icono-btn" data-compartir="${esc(d)}" aria-label="Compartir" data-micro="Compartir dirección|WhatsApp, correo, Bluetooth…">${ico("share-2")}</button></div>`).join("")}</div>
+               ${esLocal() && NOM.api.token() ? `<button class="btn primario" data-invitar>${ico("qr-code")} Invitar a un espacio con QR</button>` : ""}`
             : `<div class="alerta aviso">${ico("wifi-off")}<span>Sin red local: conecta el Wi-Fi o activa el punto de acceso del teléfono para que los demás entren.</span></div>`) : ""}
           <div class="fila" style="flex-wrap:wrap">
             ${e.activo
@@ -102,7 +104,16 @@
               : `<button class="btn primario" data-encender>${ico("power")} Encender</button>`}
           </div>
           ${e.error ? `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.error)}</span></div>` : ""}
-        </div>`;
+        </div>
+        ${respaldosHtml()}`;
+      $$("[data-qr-dir]", sec).forEach((b) => (b.onclick = () => qrDireccion(b.dataset.qrDir)));
+      const inv = $("[data-invitar]", sec);
+      if (inv) inv.onclick = invitarEspacio;
+      const exp = $("[data-exportar]", sec);
+      if (exp) exp.onclick = () => {
+        exp.disabled = true; exp.innerHTML = `<span class="cargando"></span> Preparando…`;
+        setTimeout(() => { const n = window.NomAndroid.exportarRespaldo(); exp.disabled = false; exp.innerHTML = `${ico("archive")} Exportar todo`; if (n) pintar(); }, 30);
+      };
       $$("[data-copiar]", sec).forEach((b) => (b.onclick = () => { try { navigator.clipboard.writeText(b.dataset.copiar); aviso("Dirección copiada", { tipo: "ok" }); } catch (x) { compartir(b.dataset.copiar); } }));
       $$("[data-compartir]", sec).forEach((b) => (b.onclick = () => compartir(b.dataset.compartir)));
       const enc = $("[data-encender]", sec);
@@ -127,5 +138,33 @@
     pintar();
   }
 
-  NOM.anfitrion = { disponible, estado, esLocal, encender, detener, compartir, reanudar, opcion, pie, panel };
+  /** QR con la dirección del teléfono: quien lo escanea abre NOM-COLAB en su navegador. */
+  function qrDireccion(dir) {
+    NOM.hoja({ titulo: "Entrar a este teléfono", icono: "qr-code", cuerpo: `<div class="col" style="align-items:center;text-align:center">
+      <div class="qr-caja" style="width:min(280px,70vw)">${NOM.qr ? NOM.qr.svg(dir, { titulo: "QR de la dirección del servidor" }) : ""}</div>
+      <b style="font-family:var(--mono);font-size:18px">${esc(dir.replace(/^http:\/\//, ""))}</b>
+      <p class="suave" style="font-weight:650">Hay que estar en el mismo Wi-Fi, o conectado al punto de acceso de este teléfono. Para entrar directo a un espacio, usa “Invitar a un espacio con QR”.</p></div>` });
+  }
+  /** El QR para unirse se crea por espacio: se elige cuál (de los que este teléfono comparte y son tuyos). */
+  async function invitarEspacio() {
+    let ls = [];
+    try { ls = (await NOM.api.get("/api/espacios")).filter((x) => x.permiso === "PROPIETARIO"); } catch (e) { return aviso(e.message, { tipo: "error" }); }
+    if (!ls.length) return aviso("Primero crea un espacio en este teléfono", { tipo: "info" });
+    if (ls.length === 1) return NOM.union.invitar(ls[0]);
+    const cuerpo = html(`<div class="lista">${ls.map((x, i) => `<button class="lista-item" data-i="${i}" style="text-align:left;width:100%"><span class="punto-color" style="background:${esc(x.color)}"></span><span class="crece"><b>${esc(x.nombre)}</b><small>${x.documentos} documento(s)</small></span>${ico("chevron-right")}</button>`).join("")}</div>`);
+    const h = NOM.hoja({ titulo: "¿A qué espacio?", icono: "qr-code", cuerpo });
+    $$("[data-i]", cuerpo).forEach((b) => (b.onclick = () => { h.cerrar(true); NOM.union.invitar(ls[+b.dataset.i]); }));
+  }
+  /** 6.4 Respaldos diarios del servidor de este teléfono (los últimos 7) y "Exportar todo". */
+  function respaldosHtml() {
+    if (!window.NomAndroid || !window.NomAndroid.respaldos) return "";
+    let l = [];
+    try { l = JSON.parse(window.NomAndroid.respaldos() || "[]"); } catch (e) { l = []; }
+    return `<div class="clay anfitrion-caja" style="margin-top:12px">
+      <div class="fila-e"><b>${ico("archive", "ico-s")} Respaldos del servidor</b><button class="btn chico" data-exportar>${ico("archive")} Exportar todo</button></div>
+      <p class="suave chico" style="font-weight:650">Una copia por día de todo (cuentas, espacios, documentos y versiones), se guardan las últimas 7 dentro de la app. “Exportar todo” guarda una copia de este momento en Descargas.</p>
+      ${l.length ? `<div class="lista">${l.map((r) => `<div class="lista-item">${ico("archive", "ico-s")}<span class="crece"><b>${esc(r.nombre)}</b><small>${esc(new Date(r.fecha).toLocaleString("es-MX"))} · ${esc(NOM.bytes(r.bytes))}</small></span></div>`).join("")}</div>` : `<p class="suave chico">Todavía no hay respaldos (el primero se hace en unos segundos con el servidor encendido).</p>`}</div>`;
+  }
+
+  NOM.anfitrion = { disponible, estado, esLocal, encender, detener, compartir, reanudar, opcion, pie, panel, qrDireccion };
 })();

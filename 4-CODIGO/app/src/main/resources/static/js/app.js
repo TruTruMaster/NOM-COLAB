@@ -11,7 +11,12 @@
     fijarEspacios(l) { app.espacios = l || []; pintarRielEspacios(); },
     fijarTitulo(t) { const el = $("[data-titulo-movil]"); if (el) el.textContent = t; document.title = t + " · NOM-COLAB"; },
     fijarFab(fn) { fab = fn; const b = $("[data-fab]"); if (b) b.hidden = !fn; },
-    alIniciarSesion() { NOM.local.salir(); api.migrarClaves(); app.espacios = NOM.leer(api.clave("cache.espacios"), []); location.hash = "#/"; ruta(); },
+    alIniciarSesion() {
+      NOM.local.salir(); api.migrarClaves(); app.espacios = NOM.leer(api.clave("cache.espacios"), []);
+      // Si llegó desde un enlace o QR para unirse, regresa a él ya con la sesión abierta.
+      if (NOM.union && NOM.union.pendiente()) return;
+      location.hash = "#/"; ruta();
+    },
     cerrarSesion,
   });
 
@@ -45,7 +50,7 @@
         <nav class="riel-lista" data-riel-espacios></nav>`}
         <div class="riel-pie">
           ${avatar(u)}
-          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${!sinCuenta && u.empresa ? `<div class="chico suave recorta" style="font-weight:800">${esc(u.empresa)}</div>` : ""}</div>
+          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${!sinCuenta && u.invitado ? `<div class="chico suave recorta" style="font-weight:800">Invitado (sin cuenta)</div>` : !sinCuenta && u.empresa ? `<div class="chico suave recorta" style="font-weight:800">${esc(u.empresa)}</div>` : ""}</div>
           <button class="icono-btn" data-a="cuenta" aria-label="Cuenta y ajustes" data-micro="Cuenta|Preferencias y cerrar sesión.">${ico("settings")}</button>
         </div>
       </aside>
@@ -150,6 +155,9 @@
     document.title = "NOM-COLAB";
     const h = location.hash || "#/";
     let m;
+    // Unirse con un código o QR (2.1) y la pantalla del proyector (5.5): con o sin cuenta.
+    if ((m = h.match(/^#\/unirse\/([^/?]+)/))) { await montar(NOM.union.pantalla(raiz, decodeURIComponent(m[1]))); return; }
+    if ((m = h.match(/^#\/proyectar(?:\/([^/?]*))?\/?$/))) { await montar(NOM.proyector.abrir(raiz, decodeURIComponent(m[1] || ""))); return; }
     // Documentos de este equipo: se abren con o sin cuenta.
     if ((m = h.match(/^#\/local\/([^/?]+)/))) {
       await montar(NOM.editor.abrir(raiz, decodeURIComponent(m[1]), { local: true, vigente }));
@@ -210,6 +218,8 @@
   /** Al abrir la página con sesión: se reabre la bóveda cifrada de la cuenta. Si su llave ya no
       está (se cerró sesión en otra pestaña, se borraron datos), se pide la contraseña otra vez. */
   async function arrancar() {
+    // Se abrió desde un QR (/unirse?c=… o /proyectar?c=…): se pasa a la ruta de la app.
+    if (NOM.union) NOM.union.desdeDireccion();
     // App Android: si este teléfono era el servidor y Android lo cerró, se vuelve a encender.
     if (NOM.anfitrion) NOM.anfitrion.reanudar();
     if (api.token()) {
@@ -225,6 +235,7 @@
       }
     }
     ruta();
+    if (NOM.cola) NOM.cola.arrancar();
   }
   arrancar();
 })();

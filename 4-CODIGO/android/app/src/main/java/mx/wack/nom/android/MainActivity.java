@@ -11,6 +11,8 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.ActionMode;
@@ -19,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -27,13 +30,16 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import mx.wack.nom.android.anfitrion.Respaldo;
 import mx.wack.nom.android.anfitrion.ServicioAnfitrion;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -55,10 +61,13 @@ import java.util.Map;
 public class MainActivity extends Activity {
 
     private static final int ELEGIR_ARCHIVO = 41;
+    private static final int PERMISO_CAMARA = 42;
     private static final int PUERTO_DESCUBRIMIENTO = 47474;
 
     private WebView web;
     private ValueCallback<Uri[]> alElegir;
+    /** La cámara que pidió la página (escanear un QR) mientras Android pregunta el permiso. */
+    private PermissionRequest pedidoCamara;
 
     @Override
     protected void onCreate(Bundle guardado) {
@@ -95,6 +104,23 @@ public class MainActivity extends Activity {
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
+            /** 2.1 Escanear un código QR: la página pide la cámara; primero se pide el permiso a Android. */
+            @Override
+            public void onPermissionRequest(PermissionRequest pedido) {
+                runOnUiThread(() -> {
+                    boolean soloCamara = true;
+                    for (String r : pedido.getResources()) if (!PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) soloCamara = false;
+                    if (!soloCamara) { pedido.deny(); return; }
+                    if (Build.VERSION.SDK_INT < 23 || checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        pedido.grant(pedido.getResources());
+                        return;
+                    }
+                    if (pedidoCamara != null) pedidoCamara.deny();
+                    pedidoCamara = pedido;
+                    requestPermissions(new String[] { android.Manifest.permission.CAMERA }, PERMISO_CAMARA);
+                });
+            }
+
             @Override
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
                 if (alElegir != null) alElegir.onReceiveValue(null);
@@ -158,9 +184,40 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int pedido, String[] permisos, int[] resultados) {
+        super.onRequestPermissionsResult(pedido, permisos, resultados);
+        if (pedido != PERMISO_CAMARA || pedidoCamara == null) return;
+        boolean ok = resultados.length > 0 && resultados[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        if (ok) pedidoCamara.grant(pedidoCamara.getResources()); else pedidoCamara.deny();
+        pedidoCamara = null;
+    }
+
+    @Override
     protected void onDestroy() {
         web.destroy();
         super.onDestroy();
+    }
+
+    /** Guarda un archivo en Descargas (Android 10+ con MediaStore; antes, en la carpeta de la app). */
+    private void aDescargas(String nombre, String mime, InputStream datos) throws Exception {
+        try (InputStream in = datos) {
+            OutputStream salida;
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.Downloads.DISPLAY_NAME, nombre);
+                v.put(MediaStore.Downloads.MIME_TYPE, mime);
+                Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                salida = getContentResolver().openOutputStream(uri);
+            } else {
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                salida = new FileOutputStream(new File(dir, nombre));
+            }
+            try (OutputStream o = salida) {
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+            }
+        }
     }
 
     /** Lo que la interfaz web puede pedirle al teléfono (window.NomAndroid). */
@@ -255,20 +312,45 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void guardarArchivo(String nombre, String mime, String base64) {
             try {
-                byte[] datos = Base64.decode(base64, Base64.DEFAULT);
-                if (Build.VERSION.SDK_INT >= 29) {
-                    ContentValues v = new ContentValues();
-                    v.put(MediaStore.Downloads.DISPLAY_NAME, nombre);
-                    v.put(MediaStore.Downloads.MIME_TYPE, mime);
-                    Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-                    try (OutputStream o = getContentResolver().openOutputStream(uri)) { o.write(datos); }
-                } else {
-                    File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                    try (FileOutputStream o = new FileOutputStream(new File(dir, nombre))) { o.write(datos); }
-                }
+                aDescargas(nombre, mime, new java.io.ByteArrayInputStream(Base64.decode(base64, Base64.DEFAULT)));
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Guardado en Descargas: " + nombre, Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "No se pudo guardar el archivo", Toast.LENGTH_LONG).show());
+            }
+        }
+
+        /**
+         * En la app no existe "imprimir" del navegador: se imprime la página con el servicio de
+         * impresión de Android (que también guarda como PDF). La página decide qué se ve al imprimir.
+         */
+        @JavascriptInterface
+        public void imprimir(String titulo) {
+            runOnUiThread(() -> {
+                try {
+                    PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                    String t = titulo == null || titulo.isEmpty() ? "NOM-COLAB" : titulo;
+                    pm.print(t, web.createPrintDocumentAdapter(t), new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.NA_LETTER).build());
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "No se pudo abrir la impresión", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        /** 6.4 Los respaldos diarios del servidor de este teléfono: [{nombre, bytes, fecha}]. */
+        @JavascriptInterface
+        public String respaldos() { return Respaldo.lista(getFilesDir()); }
+
+        /** 6.4 "Exportar todo": un respaldo de este momento, a Descargas. */
+        @JavascriptInterface
+        public String exportarRespaldo() {
+            try {
+                File f = Respaldo.ahora(getFilesDir());
+                aDescargas(f.getName(), "application/zip", new FileInputStream(f));
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Guardado en Descargas: " + f.getName(), Toast.LENGTH_LONG).show());
+                return f.getName();
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "No se pudo exportar: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                return "";
             }
         }
     }

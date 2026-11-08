@@ -26,6 +26,7 @@ import mx.wack.nom.servidor.seguridad.FiltroSesion;
 import mx.wack.nom.core.servicio.Difusor;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioSincronia;
 
 @RestController
 @RequestMapping("/api/espacios")
@@ -36,15 +37,19 @@ public class EspaciosApi {
     public record CambioAcceso(String usuario, String permiso) { }
     public record Depuracion(int conservar) { }
     public record NuevoDocumento(String nombre, String modo, List<Operacion> ops) { }
+    public record NuevoEnlace(String permiso, Integer horas, Boolean invitados) { }
+    public record Sincronizar(String servidor, String usuario, String contrasena) { }
 
     private final ServicioEspacios espacios;
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
+    private final ServicioSincronia sincronia;
 
-    public EspaciosApi(ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor) {
+    public EspaciosApi(ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor, ServicioSincronia sincronia) {
         this.espacios = espacios;
         this.documentos = documentos;
         this.difusor = difusor;
+        this.sincronia = sincronia;
     }
 
     @GetMapping
@@ -114,9 +119,57 @@ public class EspaciosApi {
         return espacios.rechazarSolicitud(u, id, usuarioId);
     }
 
+    /** 1.4 Formato con el que nacen los documentos de texto del espacio (solo el propietario). */
+    @PutMapping("/{id}/formato")
+    public Map<String, Object> formato(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                       @RequestBody(required = false) Map<String, Object> f) {
+        return espacios.fijarFormatoBase(u, id, f);
+    }
+
+    /** 2.1 y 2.3 Enlaces (y codigos QR) para unirse: caducan y se pueden revocar. */
+    @GetMapping("/{id}/enlaces")
+    public Map<String, Object> enlaces(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return espacios.enlaces(u, id);
+    }
+
+    @PostMapping("/{id}/enlaces")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Map<String, Object> crearEnlace(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                           @RequestBody NuevoEnlace n) {
+        Permiso p = n.permiso() == null || n.permiso().isBlank() ? Permiso.EDICION : Permiso.valueOf(n.permiso());
+        return espacios.crearEnlace(u, id, p, n.horas() == null ? 24 : n.horas(), Boolean.TRUE.equals(n.invitados()));
+    }
+
+    @DeleteMapping("/{id}/enlaces/{codigo}")
+    public Map<String, Object> revocarEnlace(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                             @PathVariable String codigo) {
+        return espacios.revocarEnlace(u, id, codigo);
+    }
+
+    /** 6.5 Copia del espacio en otro servidor. */
+    @PutMapping("/{id}/sincronia")
+    public Map<String, Object> configurarSincronia(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                                   @RequestBody Sincronizar s) {
+        return sincronia.configurar(u, id, s.servidor(), s.usuario(), s.contrasena());
+    }
+
+    @PostMapping("/{id}/sincronia")
+    public Map<String, Object> sincronizar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return sincronia.sincronizar(u, id);
+    }
+
+    @DeleteMapping("/{id}/sincronia")
+    public Map<String, Object> quitarSincronia(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return sincronia.quitar(u, id);
+    }
+
     @GetMapping("/{id}/almacenamiento")
     public Map<String, Object> almacenamiento(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
-        return espacios.almacenamiento(u, id);
+        Map<String, Object> m = new java.util.LinkedHashMap<>(espacios.almacenamiento(u, id));
+        // Cuota de la cuenta propietaria (en la nube; 0 = sin limite).
+        m.put("cuota", documentos.cuota());
+        m.put("usoPropietario", documentos.usoDe(espacios.requerir(id).propietarioId));
+        return m;
     }
 
     @PostMapping("/{id}/almacenamiento/depurar")

@@ -39,3 +39,9 @@ CREATE TABLE IF NOT EXISTS sesion (
     expira     BIGINT      NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_sesion_usuario ON sesion(id_usuario);
+
+-- Noviembre 2026: cuentas de invitado (entran con apodo y QR, ligadas a un espacio) y el código
+-- para recuperar la contraseña (solo su hash con sal).
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS invitado_de VARCHAR(16);
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS hash_recuperacion VARCHAR(64);
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS sal_recuperacion VARCHAR(32);

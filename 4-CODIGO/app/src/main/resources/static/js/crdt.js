@@ -34,6 +34,8 @@
       this.espera = 0;
       this.detenido = false;
       this.estadoSync = this.opc.local ? "local" : this.pendientes.length ? "pendiente" : "ok";
+      // Último reloj que se sabe que el servidor tiene (para el resumen al reconectar, 6.3).
+      this.relojServidor = this.estado.reloj || 0;
       // Lo que quedó en cola de una sesión anterior también cuenta para el reloj.
       this.pendientes.forEach((op) => this._fusionar(op));
       this._guardarCache = this.opc.soloMemoria ? () => {}
@@ -51,10 +53,17 @@
       return o;
     }
     vivo(b) { const x = this.estado.bloques[b]; return !!x && !(x.eliminado && x.eliminado.v === true); }
+    /** Bloques vivos del contenido (los comentarios van aparte: no se pintan ni se exportan). */
     vivos() {
       const r = [];
-      for (const id in this.estado.bloques) if (id !== "_doc" && this.vivo(id)) r.push(this.bloque(id));
+      for (const id in this.estado.bloques) if (id !== "_doc" && this.vivo(id) && this.valor(id, "tipo") !== "comentario") r.push(this.bloque(id));
       return r;
+    }
+    /** Comentarios y respuestas vivos (7). */
+    comentarios() {
+      const r = [];
+      for (const id in this.estado.bloques) if (this.valor(id, "tipo") === "comentario" && this.vivo(id)) r.push(this.bloque(id));
+      return r.sort((a, b) => (a.t || 0) - (b.t || 0));
     }
     doc() { return this.bloque("_doc") || {}; }
     paginas() {
@@ -74,13 +83,15 @@
     }
 
     // ---------------------------------------------------------- escritura local
-    /** Cambia campos de un bloque. opc.grupo agrupa varias teclas en un solo "deshacer". */
+    /** Cambia campos de un bloque. opc.grupo agrupa varias teclas en un solo "deshacer".
+        opc.meta: datos para la bitácora que no cambian el documento (p. ej. { o: "p" } si se pegó). */
     cambiar(b, campos, opc) {
       opc = opc || {};
       if (this.opc.soloLectura) return null;
       const previos = {};
       for (const c in campos) { const v = this.valor(b, c); previos[c] = v === undefined ? null : v; }
       const op = { id: this.nodo + ":" + ++this.contador, bloque: b, campos, t: ++this.estado.reloj, n: this.nodo };
+      if (opc.meta) op.m = opc.meta;
       const cambios = this._fusionar(op);
       if (!this.opc.local) {
         this.pendientes.push(op);
@@ -118,6 +129,7 @@
       const t = this.estado.reloj + 1;
       this.estado.reloj += largo;
       const op = { id: this.nodo + ":" + ++this.contador, bloque: b, campos: {}, t, n: this.nodo, s };
+      if (opc.meta) op.m = opc.meta;
       const sec = this.secuencia(b);
       const entrada = Object.assign({ t, n: this.nodo }, s);
       const inverso = opc.deshacible !== false ? this._inversoSeq(sec, entrada) : null;
@@ -229,6 +241,7 @@
     fusionarRemotas(ops) {
       const lista = [];
       ops.forEach((op) => {
+        if (op.t > (this.relojServidor || 0)) this.relojServidor = op.t;
         if (op.n === this.nodo) return;
         const c = this._fusionar(op);
         if (c._seq) lista.push({ bloque: op.bloque, campos: {}, seq: c._seq, local: false, autor: op.n });
@@ -280,8 +293,13 @@
       const lento = setTimeout(() => { if (this.enviando) this._fijarEstado("sin-red"); }, 2500);
       const lote = this.pendientes.slice(0, 300);
       try {
-        await NOM.api.post(`/api/documentos/${this.id}/ops`, { cliente: this.nodo, ops: lote, dispositivo: NOM.api.dispositivo }, { ms: 12000 });
+        const r = await NOM.api.post(`/api/documentos/${this.id}/ops`, { cliente: this.nodo, ops: lote, dispositivo: NOM.api.dispositivo }, { ms: 12000 });
+        // 3.5: partes con dueño. El servidor no aplicó esas operaciones; el editor vuelve a cargar.
+        if (r && r.rechazadas && r.rechazadas.length) setTimeout(() => this.opc.alRechazadas && this.opc.alRechazadas(r), 0);
+        if (r && r.reloj) this.relojServidor = Math.max(this.relojServidor || 0, r.reloj);
         const enviados = new Set(lote.map((o) => o.id));
+        // 6.3: lo que hice sin conexión puede llegar antes que el canal en vivo; se guarda para el resumen.
+        if (this.relojDesconexion != null) (this.enviadasSinRed = this.enviadasSinRed || []).push(...lote);
         this.pendientes = this.pendientes.filter((o) => !enviados.has(o.id));
         if (this.pendientes.length) this._guardarCola(); else NOM.guardar(NOM.api.clave("cola." + this.id), this.pendientes);
         this.espera = 0;
@@ -290,6 +308,7 @@
         this._fijarEstado(this.pendientes.length ? "enviando" : "ok");
       } catch (e) {
         if (e.red) {
+          if (this.relojDesconexion == null) this.relojDesconexion = this.relojServidor || 0;
           this.sinRed = true;
           this.espera = Math.min((this.espera || 500) * 2, 4000);
           this._fijarEstado("sin-red");
@@ -302,6 +321,11 @@
           this.opc.alEliminado && this.opc.alEliminado(e);
         } else if (e.estado === 401) {
           this.detenido = true;
+        } else if (e.estado === 413) {
+          // Cuota llena (en la nube): los cambios se quedan en este equipo hasta que haya espacio.
+          this.detenido = true;
+          this._fijarEstado("lleno");
+          this.opc.alLleno && this.opc.alLleno(e);
         } else {
           // Lote inválido: se descarta para no bloquear la cola para siempre.
           console.warn("Lote rechazado", e);
@@ -317,7 +341,22 @@
       }
     }
     reanudar() { this.detenido = false; this.espera = 0; this._programar(); }
-    marcarSinRed() { this.sinRed = true; if (this.pendientes.length) this._fijarEstado("sin-red"); }
+    marcarSinRed() {
+      this.sinRed = true;
+      // 6.3: desde aquí, lo que cambien los demás se compara con lo que yo cambie sin conexión.
+      if (this.relojDesconexion == null) this.relojDesconexion = this.relojServidor || 0;
+      if (this.pendientes.length) this._fijarEstado("sin-red");
+    }
+    /** Reemplaza el estado por el del servidor (cuando rechazó cambios) y vuelve a aplicar lo que aún no se envía. */
+    reemplazarEstado(remoto) {
+      this.estado = remoto && remoto.bloques ? remoto : { bloques: {}, reloj: 0 };
+      if (!this.estado.seq) this.estado.seq = {};
+      this._secs = {};
+      this.pendientes.forEach((op) => this._fusionar(op));
+      this.deshacerPila = [];
+      this.rehacerPila = [];
+      this._guardarCache();
+    }
     _fijarEstado(e) {
       this.estadoSync = e;
       this.opc.alEstado && this.opc.alEstado(e, this.pendientes.length);

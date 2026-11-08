@@ -260,7 +260,8 @@ final class ServidorHttp {
 
     /** La interfaz web, desde los mismos archivos que usa la app. */
     private void estatico(Peticion p, OutputStream out, boolean mantener) throws IOException {
-        String ruta = p.ruta.equals("/") ? "index.html" : p.ruta.substring(1);
+        // /unirse?c=… y /proyectar?c=… (desde un codigo QR) muestran la misma pagina; ella lee el codigo.
+        String ruta = p.ruta.equals("/") || p.ruta.equals("/unirse") || p.ruta.equals("/proyectar") ? "index.html" : p.ruta.substring(1);
         if (ruta.contains("..") || ruta.startsWith("/") || !("GET".equals(p.metodo) || "HEAD".equals(p.metodo))) {
             responder(out, 404, "application/json;charset=UTF-8", Json.YO.escribir(Map.of("error", "No existe")), mantener, false);
             return;
@@ -291,6 +292,7 @@ final class ServidorHttp {
             case 403: return "Forbidden";
             case 404: return "Not Found";
             case 409: return "Conflict";
+            case 413: return "Payload Too Large";
             case 423: return "Locked";
             default: return c >= 500 ? "Internal Server Error" : "OK";
         }

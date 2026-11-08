@@ -167,10 +167,11 @@
         ? `<div class="alerta aviso">${ico("wifi-off")}<span>Este equipo no está conectado a ninguna red. No habrá descubrimiento hasta que te conectes a una.</span></div>`
         : c.activa
           ? `<p class="etiqueta">Tus compañeros entran desde</p>
-             <div class="lista">${c.direcciones.map((ip) => `<div class="lista-item">${ico("link")}<span class="crece"><b style="font-family:var(--mono)">http://${esc(ip)}:${c.puerto}</b><small>Equipo ${esc(c.equipo)}</small></span><button class="icono-btn" data-copiar="http://${esc(ip)}:${c.puerto}" aria-label="Copiar" data-micro="Copiar dirección|Pégala en el navegador o en la app de tu compañero.">${ico("copy")}</button></div>`).join("")}</div>
-             <p class="suave chico">La app Android también los encuentra con “Buscar en la red”.</p>`
+             <div class="lista">${c.direcciones.map((ip) => `<div class="lista-item">${ico("link")}<span class="crece"><b style="font-family:var(--mono)">http://${esc(ip)}:${c.puerto}</b><small>Equipo ${esc(c.equipo)}</small></span><button class="icono-btn" data-qrdir="http://${esc(ip)}:${c.puerto}" aria-label="Código QR" data-micro="Código QR|Quien lo escanea abre NOM-COLAB de este equipo.">${ico("qr-code")}</button><button class="icono-btn" data-copiar="http://${esc(ip)}:${c.puerto}" aria-label="Copiar" data-micro="Copiar dirección|Pégala en el navegador o en la app de tu compañero.">${ico("copy")}</button></div>`).join("")}</div>
+             <p class="suave chico">La app Android también los encuentra con “Buscar en la red”. Para que entren directo al espacio, sin pedir acceso, usa <b>Invitar con QR</b>.</p>`
           : `<div class="alerta info">${ico("lock")}<span>El espacio solo existe en este equipo. Los miembros que ya tienen acceso pueden seguir entrando con la dirección del servidor.</span></div>`;
       $$("[data-copiar]", det).forEach((b) => (b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copiar); aviso("Dirección copiada", { tipo: "ok" }); }));
+      $$("[data-qrdir]", det).forEach((b) => (b.onclick = () => NOM.anfitrion.qrDireccion(b.dataset.qrdir)));
     };
     pintar(c);
     hoja({ titulo: "Conexión del proyecto", cuerpo });
@@ -187,11 +188,18 @@
   // ================================================================== Unirse (A4)
   function unirse() {
     if (!api.lan) {
-      hoja({ titulo: "Unirse a un espacio", icono: "radio", cuerpo: html(`<div class="col">
-        <div class="alerta info">${ico("cloud")}<span>Estás en la versión en línea: no hace falta buscar en la red. Pide al propietario que te comparta el espacio desde <b>Compartir</b> con tu nombre de usuario <b>${esc((api.usuario() || {}).nombre || "")}</b>; aparecerá solo en tu Inicio, en todos tus dispositivos.</span></div></div>`) });
+      const c0 = html(`<div class="col">
+        <div class="alerta info">${ico("cloud")}<span>Estás en la versión en línea: no hace falta buscar en la red. Pide al propietario que te comparta el espacio desde <b>Compartir</b> con tu nombre de usuario <b>${esc((api.usuario() || {}).nombre || "")}</b>, o que te dé su código QR.</span></div>
+        <div class="fila"><button class="btn primario crece" data-qr>${ico("qr-code")} Escanear código QR</button><button class="btn crece" data-codigo>${ico("keyboard")} Escribir código</button></div></div>`);
+      const h0 = hoja({ titulo: "Unirse a un espacio", icono: "radio", cuerpo: c0 });
+      $("[data-qr]", c0).onclick = () => { h0.cerrar(true); NOM.union.escanear(); };
+      $("[data-codigo]", c0).onclick = async () => { const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio el propietario", ph: "ABCD-2345", si: "Entrar", max: 12 }); if (c) { h0.cerrar(true); NOM.union.usar(c); } };
       return;
     }
     const cuerpo = html(`<div class="col">
+      <div class="fila union-rapida">
+        <button class="btn primario crece" type="button" data-qr>${ico("qr-code")} Escanear código QR</button>
+        <button class="btn crece" type="button" data-codigo>${ico("keyboard")} Escribir código</button></div>
       <div class="fila-e"><span class="etiqueta">Espacios en tu red</span><span class="chip" data-buscando><span class="cargando" style="width:12px;height:12px;border-width:2px"></span> Buscando…</span></div>
       <div class="lista" data-lista></div>
       <details style="margin-top:4px"><summary class="etiqueta" style="cursor:pointer">¿No aparece? Escribe la dirección</summary>
@@ -202,6 +210,11 @@
       </details>
     </div>`);
     const h = hoja({ titulo: "Unirse a un espacio", icono: "radio", cuerpo, alCerrar: () => clearInterval(t) });
+    $("[data-qr]", cuerpo).onclick = () => { h.cerrar(true); NOM.union.escanear(); };
+    $("[data-codigo]", cuerpo).onclick = async () => {
+      const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio el propietario (8 letras y números)", ph: "ABCD-2345", si: "Entrar", max: 12 });
+      if (c) { h.cerrar(true); NOM.union.usar(c); }
+    };
     const lista = $("[data-lista]", cuerpo);
     let primera = true;
     async function buscar() {
@@ -339,7 +352,9 @@
       let d;
       try { d = await api.get(`/api/espacios/${esp.id}/almacenamiento`); } catch (e) { cuerpo.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.message)}</span></div>`; return; }
       const max = Math.max(1, ...d.documentos.map((x) => x.bytesDocumento + x.bytesVersiones));
-      cuerpo.innerHTML = `
+      const cuota = d.cuota > 0 ? `<div class="clay col" style="padding:14px 16px;gap:8px"><div class="fila-e"><b>Espacio en la nube de ${d.esPropietario ? "tu cuenta" : "quien es propietario"}</b><span class="chip ${d.usoPropietario >= d.cuota ? "error" : d.usoPropietario > d.cuota * 0.8 ? "aviso" : ""}">${bytes(d.usoPropietario)} de ${bytes(d.cuota)}</span></div>
+          <div class="barra-uso"><i style="width:${Math.min(100, (d.usoPropietario / d.cuota) * 100)}%"></i></div>${d.usoPropietario >= d.cuota ? `<span class="suave chico" style="font-weight:700">Lleno: los cambios nuevos se quedan en cada equipo hasta liberar espacio (depura versiones abajo).</span>` : ""}</div>` : "";
+      cuerpo.innerHTML = cuota + `
         <div class="clay" style="padding:18px;display:flex;align-items:center;gap:16px">
           <span class="modo-insignia" style="width:52px;height:52px;border-radius:18px;background:var(--acento-tenue);color:var(--acento-tinta)">${ico("hard-drive", "ico-l")}</span>
           <div class="crece"><div style="font-size:26px;font-weight:900">${bytes(d.total)}</div><div class="suave chico" style="font-weight:700">en ${d.documentos.length} documento(s) y su historial</div></div>
@@ -543,7 +558,8 @@
         <div class="fila" style="flex-wrap:wrap">
           <button class="btn" data-a="compartir" data-micro="Compartir|Invita personas y elige si pueden editar o solo leer.">${ico("share-2")} <span class="solo-escritorio">Compartir</span></button>
           ${dueno && api.lan ? `<button class="btn" data-a="conexion" data-micro="Conexión del proyecto|Haz visible el espacio a otros equipos de tu red local.">${ico("wifi")} <span class="solo-escritorio">Conexión</span></button>` : ""}
-          <button class="btn" data-a="almacen" data-micro="Almacenamiento|Cuánto ocupa el espacio y su historial de versiones.">${ico("hard-drive")} <span class="solo-escritorio">Almacenamiento</span></button>
+          ${dueno ? `<button class="btn" data-a="qr" data-micro="Invitar con código QR|Los demás entran escaneándolo o escribiendo el código, sin Internet. Puede dejar entrar con apodo.">${ico("qr-code")} <span class="solo-escritorio">Invitar con QR</span></button>` : ""}
+          <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Almacenamiento, formato, exportar todo y copia en otro servidor.">${ico("more-horizontal")}</button>
           ${edita ? `<button class="btn primario solo-escritorio" data-a="nuevo">${ico("plus")} Nuevo documento</button>` : ""}
         </div>
       </div>
@@ -583,7 +599,8 @@
         <a class="tarjeta doc-tarjeta clay modo-${esc(x.modo)}" href="#/doc/${esc(x.id)}">
           <div class="miniatura">${NOM.miniatura(x.modo)}</div>
           <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(x.nombre)}</span>
-            <span class="meta"><span>${ico(MODOS[x.modo].icono, "ico-s")} ${esc(MODOS[x.modo].nombre)}</span><span>${esc(haceCuanto(x.modificado))}</span></span></div>
+            <span class="meta"><span>${ico(MODOS[x.modo].icono, "ico-s")} ${esc(MODOS[x.modo].nombre)}</span><span>${esc(haceCuanto(x.modificado))}</span></span>
+            ${x.protegido || x.entregaLimite ? `<span class="meta">${x.protegido ? `<span class="chip chico" data-micro="Protegido|Nadie lo puede borrar hasta que el propietario quite la marca.">${ico("lock", "ico-s")} Protegido</span>` : ""}${x.entregaLimite ? `<span class="chip chico ${Date.now() >= x.entregaLimite ? "aviso" : "acento"}">${ico("calendar", "ico-s")} ${Date.now() >= x.entregaLimite ? "Entrega cerrada" : "Entrega " + esc(new Date(x.entregaLimite).toLocaleDateString("es-MX", { day: "numeric", month: "short" }))}</span>` : ""}</span>` : ""}</div>
           ${edita ? `<div class="acciones"><button class="icono-btn" data-menu="${esc(x.id)}" aria-label="Más opciones">${ico("more-horizontal")}</button></div>` : ""}
         </a>`).join("")}</div>`;
       $$("[data-menu]", cont2).forEach((b) => (b.onclick = (e) => {
@@ -591,8 +608,10 @@
         const doc = d.lista.find((x) => x.id === b.dataset.menu);
         NOM.menu(b, [
           { texto: "Abrir", icono: "folder-open", fn: () => (location.hash = "#/doc/" + doc.id) },
+          ...(dueno ? [{ texto: doc.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: doc.protegido ? "lock-open" : "lock", fn: () => proteger(doc, !doc.protegido) }] : []),
           "-",
           { texto: "Eliminar", icono: "trash-2", peligro: true, fn: async () => {
+            if (doc.protegido) return aviso("Está protegido contra el borrado. " + (dueno ? "Quita la protección primero." : "Solo el propietario puede quitar la protección."), { tipo: "aviso", ms: 4500 });
             if (!(await confirmar("Eliminar documento", `“${doc.nombre}” y todo su historial se eliminarán para todos los miembros.`, { si: "Eliminar", peligro: true }))) return;
             try { await api.delete(`/api/documentos/${doc.id}`); aviso("Documento eliminado", { tipo: "ok" }); } catch (err) { aviso(err.message, { tipo: "error" }); }
           } },
@@ -605,12 +624,27 @@
     $("[data-buscar]", cont).oninput = (e) => { busqueda = e.target.value.trim().toLowerCase(); pintarDocs(); };
     $("[data-a=compartir]", cont).onclick = () => accesos(d);
     const bc = $("[data-a=conexion]", cont); if (bc) bc.onclick = () => conexion(d, recargar);
-    $("[data-a=almacen]", cont).onclick = () => almacenamiento(d);
+    const bq = $("[data-a=qr]", cont); if (bq) bq.onclick = () => NOM.union.invitar(d);
+    $("[data-a=mas-espacio]", cont).onclick = (e) => NOM.menu(e.currentTarget, [
+      { texto: "Almacenamiento", icono: "hard-drive", fn: () => almacenamiento(d) },
+      { texto: "Exportar todo (.zip con archivos de Office)", icono: "archive", fn: () => exportarTodo(d) },
+      ...(dueno ? [
+        "-",
+        { texto: "Formato de los documentos de texto…", icono: "type", fn: () => formatoEspacio(d, recargar) },
+        { texto: d.sincronia ? "Copia en otro servidor…" : "Sincronizar con otro servidor…", icono: "refresh-cw", fn: () => sincronia(d, recargar) },
+      ] : []),
+    ]);
     const bn = $("[data-a=nuevo]", cont); if (bn) bn.onclick = () => nuevoDocumento(d);
     NOM.app.fijarFab(edita ? () => nuevoDocumento(d) : null);
 
     async function recargar() {
       try { const n = await api.get(`/api/espacios/${id}`); d = n; pintarRed(d.conexion); pintarConectados(d.conectados); pintarDocs(); } catch (e) { /* se reintenta con el siguiente evento */ }
+    }
+    async function proteger(doc, si) {
+      let confirmacion = null;
+      if (!si) { confirmacion = await NOM.pedirTexto("Quitar la protección", { etiqueta: "Para quitarla, escribe BORRAR", ph: "BORRAR", si: "Quitar protección", max: 10 }); if (confirmacion == null) return; }
+      try { await api.put(`/api/documentos/${doc.id}/proteccion`, { protegido: si, confirmacion }); aviso(si ? `“${doc.nombre}” está protegido contra el borrado` : "Protección quitada", { tipo: "ok" }); recargar(); }
+      catch (e) { aviso(e.message, { tipo: "error" }); }
     }
     const canal = api.eventos(`/api/espacios/${id}/eventos`, "esp-" + NOM.idCorto(), {
       hola: () => recargar(),
@@ -626,6 +660,88 @@
     return () => canal.cerrar();
   }
 
+  // ================================================================== 1.4 Formato por defecto del espacio
+  function formatoEspacio(esp, listo) {
+    const fb = esp.formatoBase || {};
+    const FUENTES = (NOM.textoRico && NOM.textoRico.FUENTES) || {};
+    const cuerpo = html(`<form class="col">
+      <p class="suave" style="font-weight:650">Los documentos de texto <b>nuevos</b> de este espacio nacen con este formato (por ejemplo, para APA: Times New Roman 12 a doble espacio). Cada documento lo puede cambiar después en Más → Formato del documento.</p>
+      <div class="campo"><label>Fuente</label><div class="entrada"><select data-f><option value="">Calibri (la de siempre)</option>${Object.keys(FUENTES).filter((f) => f !== "Calibri").map((f) => `<option ${fb.fuente === f ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div></div>
+      <div class="fila"><div class="campo crece"><label>Tamaño (pt)</label><div class="entrada"><input data-t inputmode="decimal" value="${esc(fb.tam || "")}" placeholder="11"></div></div>
+        <div class="campo crece"><label>Interlineado</label><div class="entrada"><select data-l>${[["", "1.15 (Word)"], [1, "Sencillo"], [1.5, "1.5"], [2, "Doble"]].map(([v, t]) => `<option value="${v}" ${String(fb.interlineado || "") === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></div></div></div>
+      <button type="button" class="btn chico" data-apa>${ico("type", "ico-s")} Usar APA (Times New Roman 12, doble)</button></form>`);
+    const pie = html(`<div style="display:contents"><button class="btn plano" data-quitar type="button">Sin formato propio</button><span class="crece"></span><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
+    const h = hoja({ titulo: "Formato de los documentos de texto", icono: "type", cuerpo, pie });
+    const guardar = async (f) => {
+      try { const r = await api.put(`/api/espacios/${esp.id}/formato`, f || {}); esp.formatoBase = r.formatoBase; h.cerrar(); aviso(f ? "Los documentos de texto nuevos tendrán este formato" : "Sin formato propio", { tipo: "ok" }); listo && listo(); }
+      catch (e) { aviso(e.message, { tipo: "error" }); }
+    };
+    $("[data-apa]", cuerpo).onclick = () => { $("[data-f]", cuerpo).value = "Times New Roman"; $("[data-t]", cuerpo).value = 12; $("[data-l]", cuerpo).value = "2"; };
+    $("[data-no]", pie).onclick = () => h.cerrar();
+    $("[data-quitar]", pie).onclick = () => guardar(null);
+    $("[data-si]", pie).onclick = () => {
+      const t = parseFloat(String($("[data-t]", cuerpo).value).replace(",", "."));
+      const f = { fuente: $("[data-f]", cuerpo).value || null, tam: t > 0 ? t : null, interlineado: +$("[data-l]", cuerpo).value || null };
+      guardar(f.fuente || f.tam || f.interlineado ? f : null);
+    };
+  }
+
+  // ================================================================== 6.5 Copia del espacio en otro servidor
+  function sincronia(esp, listo) {
+    const s = esp.sincronia;
+    const cuerpo = html(`<div class="col">
+      <p class="suave" style="font-weight:650">Por ejemplo, el teléfono del salón (que trabajó sin Internet) con NOM-COLAB en la nube. Cuando haya red, los documentos de este espacio se copian en los dos sentidos cada 5 minutos: nada se borra y los permisos de cada servidor no cambian.</p>
+      ${s ? `<div class="lista-item">${ico(s.estado === "ok" ? "cloud" : "cloud-off")}<span class="crece"><b>${esc((s.servidor || "").replace(/^https?:\/\//, ""))}</b><small>como ${esc(s.usuario || "")} · ${s.ultima ? "última copia " + esc(haceCuanto(s.ultima)) : "aún sin copiar"} · ${s.documentos} documento(s)${s.error ? " · " + esc(s.error) : ""}</small></span></div>` : ""}
+      <form class="col" data-f ${s && s.estado !== "sesion" ? "hidden" : ""}>
+        <div class="campo"><label for="ss">Otro servidor</label><div class="entrada">${ico("server")}<input id="ss" name="servidor" placeholder="nomcolab-wack.azurewebsites.net o 192.168.1.20:8080" value="${esc(s ? s.servidor : "")}" autocapitalize="none"></div></div>
+        <div class="fila"><div class="campo crece"><label for="su">Tu usuario allá</label><div class="entrada"><input id="su" name="usuario" autocapitalize="none" value="${esc(s ? s.usuario : (api.usuario() || {}).nombre || "")}"></div></div>
+          <div class="campo crece"><label for="sc">Contraseña allá</label><div class="entrada"><input id="sc" name="contrasena" type="password" autocomplete="off"></div></div></div>
+        <div class="alerta error" data-err hidden></div>
+        <button class="btn primario">${ico("refresh-cw")} Conectar y copiar</button></form>
+      <div data-res></div></div>`);
+    const pie = s ? html(`<div style="display:contents"><button class="btn plano peligro" data-quitar>Desconectar</button><span class="crece"></span><button class="btn" data-cambiar>Cambiar cuenta</button><button class="btn primario" data-ahora>${ico("refresh-cw", "ico-s")} Copiar ahora</button></div>`) : null;
+    const h = hoja({ titulo: "Copia en otro servidor", icono: "refresh-cw", cuerpo, pie, ancha: true });
+    const res = $("[data-res]", cuerpo), f = $("[data-f]", cuerpo);
+    const mostrar = (r) => { res.innerHTML = `<div class="alerta ${r.estado === "ok" ? "ok" : "aviso"}">${ico(r.estado === "ok" ? "circle-check" : "triangle-alert")}<span>${r.estado === "ok" ? `Listo: se enviaron ${r.subidas} cambio(s) y llegaron ${r.bajadas}. ${r.nuevosAlla ? r.nuevosAlla + " documento(s) nuevos allá. " : ""}${r.nuevosAqui ? r.nuevosAqui + " documento(s) nuevos aquí." : ""}` : esc(r.error || "No se pudo copiar")}</span></div>`; };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const b = $("button", f), err = $("[data-err]", f);
+      b.disabled = true; b.innerHTML = `<span class="cargando"></span> Conectando…`; err.hidden = true;
+      try { const r = await api.put(`/api/espacios/${esp.id}/sincronia`, { servidor: f.servidor.value, usuario: f.usuario.value, contrasena: f.contrasena.value }, { ms: 120000 }); mostrar(r); f.hidden = true; listo && listo(); }
+      catch (x) { err.hidden = false; err.innerHTML = `${ico("triangle-alert")}<span>${esc(x.message)}</span>`; }
+      b.disabled = false; b.innerHTML = `${ico("refresh-cw")} Conectar y copiar`;
+    };
+    if (pie) {
+      $("[data-cambiar]", pie).onclick = () => { f.hidden = false; f.contrasena.focus(); };
+      $("[data-ahora]", pie).onclick = async (e) => { const b = e.currentTarget; b.disabled = true; try { mostrar(await api.post(`/api/espacios/${esp.id}/sincronia`, {}, { ms: 120000 })); listo && listo(); } catch (x) { aviso(x.message, { tipo: "error" }); } b.disabled = false; };
+      $("[data-quitar]", pie).onclick = async () => { if (!(await confirmar("Desconectar", "Ya no se copiará este espacio. Lo copiado se queda en los dos servidores.", { si: "Desconectar" }))) return; try { await api.delete(`/api/espacios/${esp.id}/sincronia`); h.cerrar(); listo && listo(); } catch (x) { aviso(x.message, { tipo: "error" }); } };
+    }
+  }
+
+  // ================================================================== Exportar todo el espacio (.zip con Office)
+  async function exportarTodo(esp) {
+    const fin = NOM.cargando ? NOM.cargando.empezar() : () => {};
+    const cerrar = aviso("Preparando el .zip con todos los documentos…", { ms: 60000 });
+    try {
+      const lista = esp.lista || await api.get(`/api/espacios/${esp.id}/documentos`);
+      const usados = new Set(), archivos = [];
+      const nombreUnico = (base, ext) => { let n = NOM.formatos.limpioNombre(base) || "documento", k = 2; while (usados.has((n + "." + ext).toLowerCase())) n = NOM.formatos.limpioNombre(base) + " (" + k++ + ")"; usados.add((n + "." + ext).toLowerCase()); return n + "." + ext; };
+      for (const d of lista) {
+        const r = await api.get(`/api/documentos/${d.id}`, undefined, { ms: 20000 });
+        const doc = new NOM.DocCRDT("zip-" + d.id, r.estado, { local: true, soloMemoria: true, soloLectura: true });
+        const modo = (r.documento || d).modo;
+        const ext = modo === "HOJA" ? "xlsx" : modo === "TEXTO" ? "docx" : "pptx";
+        const datos = ext === "docx" ? NOM.ooxml.docx(doc) : ext === "xlsx" ? NOM.ooxml.xlsx(doc) : NOM.ooxml.pptx(doc, modo === "DIAGRAMA");
+        archivos.push({ nombre: nombreUnico(d.nombre, ext), datos });
+      }
+      archivos.push({ nombre: "LEEME.txt", datos: `Espacio "${esp.nombre}" exportado de NOM-COLAB el ${new Date().toLocaleString("es-MX")}.\r\n${lista.length} documento(s): texto en .docx (Word), hojas en .xlsx (Excel), presentaciones y diagramas en .pptx (PowerPoint).\r\n` });
+      NOM.formatos.descargarBytes(NOM.formatos.limpioNombre(esp.nombre) + ".zip", "application/zip", NOM.ooxml.zip(archivos));
+      cerrar();
+      aviso(`Listo: ${lista.length} documento(s) en el .zip`, { tipo: "ok" });
+    } catch (e) { cerrar(); aviso(e.red ? "Sin conexión: no se pudieron leer los documentos" : e.message, { tipo: "error" }); }
+    finally { fin(); }
+  }
+
   // ================================================================== Preferencias (CU-27)
   const FABRICA = { tema: "auto", autoguardadoMin: 5, versionesConservar: 30, calidad: "alta", movimientoReducido: false, enfoqueAtenuar: true, idioma: "es" };
   async function preferencias() {
@@ -633,6 +749,8 @@
     const sinCuenta = !api.token();
     if (!sinCuenta) { try { const r = await api.get("/api/cuentas/yo"); p = Object.assign({}, FABRICA, r.preferencias); } catch (e) { /* se usan las locales */ } }
     const u = sinCuenta ? NOM.local.usuario() : api.usuario() || {};
+    let recuperacion = null;
+    if (!sinCuenta) { try { recuperacion = (await api.get("/api/cuentas/yo")).recuperacion; } catch (e) { /* sin red */ } }
     const cuerpo = html(`<div class="col">
       <div class="lista-item" style="padding:14px">${avatar(u, "g")}<span class="crece"><b>${esc(u.nombre)}</b><small>${esc(sinCuenta ? "Preferencias guardadas en este equipo" : u.empresa || "Sin organización")}</small></span></div>
       <div class="campo"><span class="etiqueta">Apariencia</span>
@@ -646,6 +764,7 @@
         <label class="lista-item">${ico("hand")}<span class="crece"><b>Reducir movimiento</b><small>Quita animaciones y transiciones</small></span><span class="interruptor"><input type="checkbox" data-mov ${p.movimientoReducido ? "checked" : ""}><span></span></span></label>
         <label class="lista-item">${ico("scan-eye")}<span class="crece"><b>Atenuar en modo enfoque</b><small>Resalta solo el párrafo que escribes</small></span><span class="interruptor"><input type="checkbox" data-atenuar ${p.enfoqueAtenuar ? "checked" : ""}><span></span></span></label>
       </div>
+      ${sinCuenta || u.invitado ? "" : `<div class="lista-item">${ico("key-round")}<span class="crece"><b>Código para recuperar tu contraseña</b><small data-rec>${recuperacion === false ? "Aún no tienes uno: genéralo y guárdalo en un lugar seguro." : "Si olvidas tu contraseña, con él pones una nueva."}</small></span><button type="button" class="btn chico" data-recuperacion>${recuperacion === false ? "Generar" : "Generar otro"}</button></div>`}
     </div>`);
     const pie = html(`<div style="display:contents"><button class="btn plano" data-fabrica>Valores de fábrica</button><span class="crece"></span><button class="btn primario" data-guardar>Guardar</button></div>`);
     let guardado = false;
@@ -663,6 +782,11 @@
     });
     $$("[data-tema] button", cuerpo).forEach((b) => (b.onclick = () => { $$("[data-tema] button", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); NOM.aplicarPreferencias(leerForm()); }));
     $("#pa", cuerpo).oninput = (e) => ($("[data-va]", cuerpo).textContent = e.target.value);
+    const br = $("[data-recuperacion]", cuerpo);
+    if (br) br.onclick = async () => {
+      if (recuperacion !== false && !(await confirmar("Código nuevo", "El código anterior dejará de servir.", { si: "Generar" }))) return;
+      try { const r = await api.post("/api/cuentas/recuperacion"); recuperacion = true; NOM.vistaCuentas.mostrarCodigo(r.recuperacion, u.nombre); } catch (e) { aviso(e.message, { tipo: "error" }); }
+    };
     $("#pv", cuerpo).oninput = (e) => ($("[data-vv]", cuerpo).textContent = e.target.value);
     ["[data-calidad]", "[data-mov]"].forEach((s) => ($(s, cuerpo).onchange = () => NOM.aplicarPreferencias(leerForm())));
     $("[data-fabrica]", pie).onclick = async () => {
@@ -675,5 +799,5 @@
     };
   }
 
-  NOM.vistaEspacios = { inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, PERMISOS };
+  NOM.vistaEspacios = { inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, formatoEspacio, sincronia, exportarTodo, PERMISOS };
 })();

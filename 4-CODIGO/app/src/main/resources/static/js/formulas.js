@@ -1,6 +1,8 @@
 /* NOM-COLAB · motor de fórmulas del modo hoja.
    Acepta nombres en español y en inglés (=SUMA o =SUM) y los separadores , y ;
-   Errores: #REF! #DIV/0! #NOMBRE? #VALOR! #CICLO! */
+   Errores: #REF! #DIV/0! #NOMBRE? #VALOR! #CICLO! #N/A
+   Fechas como en Excel: un número de serie (días desde el 30/12/1899) que se muestra dd/mm/aaaa.
+   Se escriben en una celda como 07/11/2026 o 2026-11-07, o con =FECHA(2026; 11; 7) y =HOY(). */
 (function () {
   "use strict";
   const NOM = window.NOM;
@@ -12,6 +14,52 @@
 
   class ErrorF { constructor(c) { this.codigo = c; } toString() { return this.codigo; } }
   const E = (c) => new ErrorF(c);
+
+  // ------------------------------------------------------------ fechas
+  const DIA = 86400000, BASE = Date.UTC(1899, 11, 30);
+  /** Una fecha: su número de serie de Excel. Sumarle días da otra fecha; restar dos fechas, los días. */
+  class FechaF { constructor(serie) { this.serie = Math.floor(serie); } valueOf() { return this.serie; } }
+  const serieDe = (a, m, d) => Math.round((Date.UTC(a, m - 1, d) - BASE) / DIA);
+  const fechaDe = (serie) => new Date(BASE + Math.floor(serie) * DIA);
+  function textoFecha(f) { const d = fechaDe(f.serie); return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`; }
+  /** "07/11/2026", "7/11/26" (día/mes/año, como en México) o "2026-11-07". */
+  function leerFecha(t) {
+    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+    if (m) return valida(+m[1], +m[2], +m[3]);
+    m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(t);
+    if (m) return valida(m[3].length === 2 ? 2000 + +m[3] : +m[3], +m[2], +m[1]);
+    return null;
+  }
+  function valida(a, m, d) {
+    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const f = new Date(Date.UTC(a, m - 1, d));
+    return f.getUTCMonth() === m - 1 ? new FechaF(serieDe(a, m, d)) : null;
+  }
+  function hoy() { const d = new Date(); return new FechaF(serieDe(d.getFullYear(), d.getMonth() + 1, d.getDate())); }
+
+  // ------------------------------------------------------------ criterios de CONTAR.SI y SUMAR.SI
+  /** ">=5", "<>listo", "=a", "a*" (comodines * y ?), 7…: devuelve una función que prueba un valor. */
+  function criterio(c) {
+    if (c instanceof ErrorF) throw c;
+    if (typeof c === "number" || c instanceof FechaF) { const n = +c; return (v) => esNum(v) && +v === n; }
+    if (typeof c === "boolean") return (v) => v === c;
+    const t = String(c == null ? "" : c);
+    const m = /^(<=|>=|<>|<|>|=)?(.*)$/.exec(t);
+    const op = m[1] || "=", resto = m[2];
+    const f = leerFecha(resto.trim()), n = f ? +f : /^-?\d+([.,]\d+)?$/.test(resto.trim()) ? parseFloat(resto.trim().replace(",", ".")) : null;
+    if (n != null) {
+      const cmp = { "=": (a) => a === n, "<>": (a) => a !== n, "<": (a) => a < n, ">": (a) => a > n, "<=": (a) => a <= n, ">=": (a) => a >= n }[op];
+      return (v) => (esNum(v) ? cmp(+v) : op === "<>");
+    }
+    const bajo = resto.toLowerCase();
+    if (op === "=" || op === "<>") {
+      const re = /[*?]/.test(bajo) ? new RegExp("^" + bajo.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$") : null;
+      const igual = (v) => { const x = texto(v).toLowerCase(); return re ? re.test(x) : x === bajo; };
+      return op === "=" ? igual : (v) => !igual(v);
+    }
+    return (v) => { const x = texto(v).toLowerCase(); return { "<": x < bajo, ">": x > bajo, "<=": x <= bajo, ">=": x >= bajo }[op]; };
+  }
+  const esNum = (v) => typeof v === "number" || v instanceof FechaF;
 
   function tokens(s) {
     const t = []; let i = 0;
@@ -31,7 +79,9 @@
   }
 
   const plano = (args) => args.flat(Infinity);
-  const nums = (args) => { const p = plano(args); const e = p.find((v) => v instanceof ErrorF); if (e) throw e; return p.filter((v) => typeof v === "number"); };
+  const nums = (args) => { const p = plano(args); const e = p.find((v) => v instanceof ErrorF); if (e) throw e; return p.filter(esNum).map((v) => +v); };
+  /** Un rango como tabla (filas × columnas), para BUSCARV. */
+  const tabla = (r) => { if (!Array.isArray(r) || !r.cols) return null; const t = []; for (let i = 0; i < r.length; i += r.cols) t.push(r.slice(i, i + r.cols)); return t; };
   const FUNCS = {
     SUMA: (a) => nums(a).reduce((x, y) => x + y, 0),
     PROMEDIO: (a) => { const n = nums(a); return n.length ? n.reduce((x, y) => x + y, 0) / n.length : E("#DIV/0!"); },
@@ -54,21 +104,58 @@
     MINUSC: (a) => texto(a[0]).toLowerCase(),
     LARGO: (a) => texto(a[0]).length,
     PI: () => Math.PI,
+    // 4.2 Las que más piden en la escuela.
+    "BUSCARV": (a) => {
+      const t = tabla(a[1]);
+      if (!t) return E("#REF!");
+      const col = Math.floor(num(a[2]));
+      if (col < 1 || col > (a[1].cols || 1)) return E("#REF!");
+      const aprox = a[3] === undefined ? true : verdad(a[3]) && a[3] !== 0;
+      const buscado = a[0];
+      if (buscado instanceof ErrorF) throw buscado;
+      if (!aprox) {
+        const prueba = criterio(esNum(buscado) ? +buscado : "=" + texto(buscado));
+        const fila = t.find((f) => prueba(f[0]));
+        return fila ? fila[col - 1] : E("#N/A");
+      }
+      // Coincidencia aproximada (como Excel): la última fila cuyo valor no pasa del buscado (columna ordenada).
+      let mejor = null;
+      for (const f of t) {
+        const v = f[0];
+        const menor = esNum(buscado) ? esNum(v) && +v <= +buscado : !esNum(v) && texto(v).toLowerCase() <= texto(buscado).toLowerCase();
+        if (menor) mejor = f; else if (mejor) break;
+      }
+      return mejor ? mejor[col - 1] : E("#N/A");
+    },
+    "CONTAR.SI": (a) => { const p = criterio(a[1]); return plano([a[0]]).filter((v) => p(v)).length; },
+    "SUMAR.SI": (a) => {
+      const p = criterio(a[1]), r = plano([a[0]]), sumas = a[2] === undefined ? r : plano([a[2]]);
+      let total = 0;
+      r.forEach((v, i) => { if (p(v) && esNum(sumas[i])) total += +sumas[i]; });
+      return total;
+    },
+    HOY: () => hoy(),
+    FECHA: (a) => { const y = Math.floor(num(a[0])), m = Math.floor(num(a[1])), d = Math.floor(num(a[2])); return new FechaF(Math.round((Date.UTC(y < 100 ? 1900 + y : y, m - 1, d) - BASE) / DIA)); },
+    DIAS: (a) => Math.round(num(a[0]) - num(a[1])),
   };
   const ALIAS = { SUM: "SUMA", AVERAGE: "PROMEDIO", COUNT: "CONTAR", COUNTA: "CONTARA", IF: "SI", AND: "Y", OR: "O", NOT: "NO",
-    ROUND: "REDONDEAR", ISERROR: "ESERROR", IFERROR: "SIERROR", SQRT: "RAIZ", POWER: "POTENCIA", CONCAT: "CONCATENAR", CONCATENATE: "CONCATENAR", UPPER: "MAYUSC", LOWER: "MINUSC", LEN: "LARGO" };
+    ROUND: "REDONDEAR", ISERROR: "ESERROR", IFERROR: "SIERROR", SQRT: "RAIZ", POWER: "POTENCIA", CONCAT: "CONCATENAR", CONCATENATE: "CONCATENAR", UPPER: "MAYUSC", LOWER: "MINUSC", LEN: "LARGO",
+    VLOOKUP: "BUSCARV", COUNTIF: "CONTAR.SI", SUMIF: "SUMAR.SI", TODAY: "HOY", DATE: "FECHA", DAYS: "DIAS", "DÍAS": "DIAS" };
   const NOMBRES = Object.keys(FUNCS);
 
   function num(v) {
     if (v instanceof ErrorF) throw v;
     if (typeof v === "number") return v;
+    if (v instanceof FechaF) return v.serie;
     if (typeof v === "boolean") return v ? 1 : 0;
     if (v === "" || v == null) return 0;
+    const fe = leerFecha(String(v).trim());   // "2026-12-01" o "01/12/2026" escritos como texto: su número de serie
+    if (fe) return fe.serie;
     const n = parseFloat(String(v).replace(",", "."));
     if (isNaN(n)) throw E("#VALOR!");
     return n;
   }
-  const texto = (v) => (v == null ? "" : typeof v === "number" ? formatear(v) : String(v));
+  const texto = (v) => (v == null ? "" : typeof v === "number" || v instanceof FechaF ? formatear(v) : String(v));
   const verdad = (v) => (typeof v === "string" ? v !== "" && v.toUpperCase() !== "FALSO" : !!v);
 
   /** Hoja: obtener(c, f) -> texto crudo de la celda. Devuelve un evaluador con caché. */
@@ -94,6 +181,8 @@
       if (s[0] !== "=") {
         const t = s.trim();
         if (/^-?\d+([.,]\d+)?%?$/.test(t)) { const n = parseFloat(t.replace(",", ".")); return t.endsWith("%") ? n / 100 : n; }
+        const f = leerFecha(t);
+        if (f) return f;
         return s;
       }
       const tk = tokens(s.slice(1));
@@ -106,7 +195,7 @@
         let a = suma();
         while (ver() && ver().k === "op" && ["=", "<>", "<", ">", "<=", ">="].includes(ver().v)) {
           const o = toma().v, b = suma();
-          const x = typeof a === "number" && typeof b === "number" ? [a, b] : [texto(a), texto(b)];
+          const x = esNum(a) && esNum(b) ? [+a, +b] : [texto(a), texto(b)];
           a = { "=": x[0] === x[1], "<>": x[0] !== x[1], "<": x[0] < x[1], ">": x[0] > x[1], "<=": x[0] <= x[1], ">=": x[0] >= x[1] }[o];
         }
         return a;
@@ -115,7 +204,11 @@
         let a = term();
         while (ver() && ver().k === "op" && ["+", "-", "&"].includes(ver().v)) {
           const o = toma().v, b = term();
-          a = o === "&" ? texto(a) + texto(b) : o === "+" ? num(a) + num(b) : num(a) - num(b);
+          if (o === "&") { a = texto(a) + texto(b); continue; }
+          const r = o === "+" ? num(a) + num(b) : num(a) - num(b);
+          // Fecha ± días = fecha; fecha - fecha = días.
+          const fa = a instanceof FechaF, fb = b instanceof FechaF;
+          a = (fa && !fb) || (fb && !fa && o === "+") ? new FechaF(r) : r;
         }
         return a;
       }
@@ -195,6 +288,7 @@
         const [a, b] = s.split(":").map(parseRef);
         if (!a || !b) throw E("#REF!");
         const out = [];
+        out.cols = Math.abs(a.c - b.c) + 1;   // forma del rango (BUSCARV la usa)
         for (let f = Math.min(a.f, b.f); f <= Math.max(a.f, b.f); f++)
           for (let c = Math.min(a.c, b.c); c <= Math.max(a.c, b.c); c++) {
             const v = valorCelda(c, f);
@@ -214,6 +308,7 @@
 
   function formatear(v) {
     if (v instanceof ErrorF) return v.codigo;
+    if (v instanceof FechaF) return textoFecha(v);
     if (typeof v === "boolean") return v ? "VERDADERO" : "FALSO";
     if (typeof v === "number") {
       if (!isFinite(v)) return "#DIV/0!";
@@ -223,5 +318,5 @@
     return String(v);
   }
 
-  NOM.formulas = { evaluador, formatear, ErrorF, colLetra, colNum, ref, parseRef, NOMBRES };
+  NOM.formulas = { evaluador, formatear, ErrorF, FechaF, esNum, colLetra, colNum, ref, parseRef, NOMBRES, leerFecha, criterio };
 })();

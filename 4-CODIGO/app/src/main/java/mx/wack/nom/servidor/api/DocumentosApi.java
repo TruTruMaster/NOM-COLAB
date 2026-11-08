@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,8 +30,11 @@ public class DocumentosApi {
 
     public record Lote(String cliente, List<Operacion> ops, String dispositivo) { }
     /** cursor: dónde está el cursor de texto ({ a, f }: ids de caracteres), para pintarlo en los demás equipos. */
-    public record Presencia(String cliente, String bloque, String modo, Map<String, Object> cursor) { }
+    public record Presencia(String cliente, String bloque, String modo, Map<String, Object> cursor, Boolean salir) { }
     public record Etiqueta(String etiqueta) { }
+    public record Proteccion(boolean protegido, String confirmacion) { }
+    public record Entrega(Long limite) { }
+    public record Diapositiva(String pagina, Integer paso) { }
 
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
@@ -76,6 +80,8 @@ public class DocumentosApi {
     @PostMapping("/{id}/presencia")
     public Map<String, Object> presencia(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
                                          @RequestBody Presencia p) {
+        // 3.4 Al cerrar el documento, el cliente lo avisa: ahí termina su visita.
+        if (Boolean.TRUE.equals(p.salir())) { documentos.salir(u, id, p.cliente()); return Map.of("ok", true); }
         difusor.actualizarPresencia(id, p.cliente(), p.bloque(), p.modo(), p.cursor());
         return Map.of("ok", true);
     }
@@ -95,6 +101,48 @@ public class DocumentosApi {
     public Map<String, Map<String, Object>> foto(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u,
                                                  @PathVariable String id, @PathVariable int numero) {
         return documentos.foto(u, id, numero);
+    }
+
+    /** 1.2 Marca "no borrar" (solo el propietario del espacio; para quitarla, escribir BORRAR). */
+    @PutMapping("/{id}/proteccion")
+    public Documento proteger(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Proteccion p) {
+        return documentos.proteger(u, id, p.protegido(), p.confirmacion());
+    }
+
+    /** 3.2 Recibo de proceso de escritura (el propio, o el de cualquiera si eres el propietario). */
+    @GetMapping("/{id}/recibo")
+    public Map<String, Object> recibo(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                      @RequestParam(required = false) String usuario) {
+        return documentos.recibo(u, id, usuario);
+    }
+
+    /** 3.3 Mapa de aportes. */
+    @GetMapping("/{id}/aportes")
+    public Map<String, Object> aportes(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.aportes(u, id);
+    }
+
+    /** 3.6 Entrega con fecha limite (limite 0 la quita). */
+    @PutMapping("/{id}/entrega")
+    public Map<String, Object> entrega(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Entrega e) {
+        return documentos.fijarEntrega(u, id, e.limite() == null ? 0 : e.limite());
+    }
+
+    /** 5.5 Presentar en otra pantalla: codigo para el proyector y en que diapositiva va. */
+    @PostMapping("/{id}/proyeccion")
+    public Map<String, Object> iniciarProyeccion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.iniciarProyeccion(u, id);
+    }
+
+    @PutMapping("/{id}/proyeccion")
+    public Map<String, Object> moverProyeccion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Diapositiva d) {
+        return documentos.moverProyeccion(u, id, d.pagina(), d.paso() == null ? 0 : d.paso());
+    }
+
+    @DeleteMapping("/{id}/proyeccion")
+    public Map<String, Object> terminarProyeccion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        documentos.terminarProyeccion(u, id);
+        return Map.of("ok", true);
     }
 
     @PostMapping("/{id}/versiones/{numero}/restaurar")

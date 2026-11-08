@@ -79,6 +79,10 @@ final class Repositorios {
         @Override public synchronized void borrarSesion(String token) {
             if (sesiones.remove(token) != null) almacen.escribir("sesiones.json", sesiones);
         }
+
+        @Override public synchronized void borrarSesionesDe(String usuarioId) {
+            if (sesiones.values().removeIf(s -> usuarioId.equals(s.usuarioId))) almacen.escribir("sesiones.json", sesiones);
+        }
     }
 
     // ================================================================== espacios
@@ -186,6 +190,39 @@ final class Repositorios {
                 if (o instanceof Map) r.add((Map<String, Object>) o);
             }
             return r;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override public synchronized Map<String, Map<String, Object>> visitas(String docId) {
+            Map<String, Map<String, Object>> r = new LinkedHashMap<>();
+            Object o = almacen.leer("docs/" + docId + "/visitas.json", null);
+            if (o instanceof Map) for (Map.Entry<String, Object> e : ((Map<String, Object>) o).entrySet())
+                if (e.getValue() instanceof Map) r.put(e.getKey(), (Map<String, Object>) e.getValue());
+            return r;
+        }
+
+        @Override public synchronized void guardarVisita(String docId, String usuarioId, Map<String, Object> visita) {
+            if (!docs.containsKey(docId)) return;
+            Map<String, Map<String, Object>> v = visitas(docId);
+            v.put(usuarioId, visita);
+            almacen.escribir("docs/" + docId + "/visitas.json", v);
+        }
+
+        private static String archivoRecibo(String huella) {
+            String h = huella == null ? "" : huella.replaceFirst("^sha256:", "");
+            return h.matches("[0-9a-f]{64}") ? "recibos/" + h + ".json" : null;
+        }
+
+        @Override public void guardarRecibo(String huella, Map<String, Object> registro) {
+            String a = archivoRecibo(huella);
+            if (a != null) almacen.escribir(a, registro);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override public Map<String, Object> recibo(String huella) {
+            String a = archivoRecibo(huella);
+            Object o = a == null ? null : almacen.leer(a, null);
+            return o instanceof Map ? (Map<String, Object>) o : null;
         }
 
         @Override public synchronized long depurar(String docId, int conservar) {

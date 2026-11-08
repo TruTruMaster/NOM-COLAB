@@ -131,9 +131,28 @@
   const girar = (x, y, grados) => { const a = (grados * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return { x: x * c - y * s, y: x * s + y * c }; };
   NOM.geometria = { conector };
   NOM.figuras = { ruta, svgFigura, estiloFigura, FIGURAS, esLinea, enNegrita };
+  // Lo que usa la pantalla del proyector (proyector.js) para pintar diapositivas.
+  NOM.lienzoVista = { htmlDiapositiva: (...a) => htmlDiapositiva(...a), pasosDe: (...a) => pasosDe(...a), bloquesPresentables: (...a) => bloquesPresentables(...a), ANCHO, ALTO };
 
+  /** Lo único que se guarda del texto de un cuadro: texto, saltos de línea y enlaces http(s). */
+  function htmlSeguro(h) {
+    const t = document.createElement("template");
+    t.innerHTML = String(h || "");
+    let r = "";
+    (function rec(n) {
+      for (let c = n.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) { r += esc(c.nodeValue); continue; }
+        if (c.nodeType !== 1) continue;
+        if (c.tagName === "BR") { r += "<br>"; continue; }
+        if (c.tagName === "A" && /^https?:\/\//i.test(c.getAttribute("href") || "")) { r += `<a href="${esc(c.getAttribute("href"))}" target="_blank" rel="noopener">`; rec(c); r += "</a>"; continue; }
+        if (c.tagName === "DIV" || c.tagName === "P") { if (r && !r.endsWith("<br>")) r += "<br>"; rec(c); continue; }
+        rec(c);
+      }
+    })(t.content);
+    return r;
+  }
   function contenido(b) {
-    if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${b.html || ""}</div>`;
+    if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${htmlSeguro(b.html)}</div>`;
     if (b.tipo === "forma") {
       const e = estiloFigura(b);
       return `<div class="forma" data-figura="${esc(e.f)}">${svgFigura(b)}${e.lineal ? "" : `<div class="txt" data-ph="Texto" style="${estiloTexto(b, e.relleno)}">${esc(b.texto || "")}</div>`}</div>`;
@@ -197,10 +216,15 @@
   }
   function paletaColores(ancla, actual, alElegir, opc) {
     opc = opc || {};
+    const gotas = opc.gotero ? `<div class="fila lz-gotas">${window.EyeDropper && matchMedia("(pointer: fine)").matches ? `<button class="btn chico" data-gotas="pantalla">${ico("pipette", "ico-s")} Cuentagotas</button>` : ""}<button class="btn chico" data-gotas="figura">${ico("pipette", "ico-s")} Copiar de otra figura</button></div>` : "";
     const p = panel(ancla, `${opc.sinColor ? `<button class="lz-sin" data-c="">${ico("x", "ico-s")} ${esc(opc.sinColor)}</button>` : ""}
       <div class="lz-muestras">${COLORES.map((c) => `<button data-c="${c}" style="background:${c}" aria-label="${c}" ${String(actual).toUpperCase() === c ? 'aria-pressed="true"' : ""}></button>`).join("")}</div>
-      <label class="lz-otro">${ico("palette", "ico-s")} Color personalizado <input type="color" value="${/^#[0-9a-f]{6}$/i.test(actual || "") ? actual : "#5B5BD6"}"></label>`, { titulo: opc.titulo || "Color" });
-    p.addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (b) { alElegir(b.dataset.c || null); p.cerrar(); } });
+      <label class="lz-otro">${ico("palette", "ico-s")} Color personalizado <input type="color" value="${/^#[0-9a-f]{6}$/i.test(actual || "") ? actual : "#5B5BD6"}"></label>${gotas}`, { titulo: opc.titulo || "Color" });
+    p.addEventListener("click", (e) => {
+      const g = e.target.closest("[data-gotas]");
+      if (g) { p.cerrar(); opc.gotero(alElegir, g.dataset.gotas); return; }
+      const b = e.target.closest("[data-c]"); if (b) { alElegir(b.dataset.c || null); p.cerrar(); }
+    });
     $("input", p).addEventListener("input", (e) => alElegir(e.target.value.toUpperCase()));
   }
   function deslizador(ancla, titulo, valor, min, max, paso, unidad, alCambiar) {
@@ -216,6 +240,29 @@
     const doc = () => ed.doc;
     const acotado = !!opc.acotado;
     let vista = { x: 40, y: 40, z: 1 }, escala = 1;
+    // 5.1 Mesa de trabajo: en la presentación se puede alejar y mover la vista alrededor de la diapositiva.
+    let zoomD = 1, panD = { x: 0, y: 0 };
+    // 3.4 Bloques que cambiaron otros desde la última visita; 7 bloques con comentarios.
+    let resaltados = new Set(), comentados = new Map();
+    // 1.3 Cuentagotas: el próximo toque en una figura copia su color.
+    let gotero = null;
+    const yo = () => (NOM.api.usuario() || {}).id;
+    /** 5.2 Grupos dentro de grupos: lista de grupos, del de afuera al de adentro ("grupo" de antes = un nivel). */
+    const gruposDe = (b) => (b && Array.isArray(b.grupos) ? b.grupos : b && b.grupo ? [b.grupo] : []);
+    const duenoPagina = (p) => doc().valor("_doc", "dueno:" + p) || null;
+    /** 3.5 y 5.4: ¿puedo cambiar este bloque? El propietario del espacio siempre puede. */
+    function motivoAjeno(b) {
+      if (ed.soloLectura) return "Solo lectura";
+      if (ed.esPropietario || !b) return null;
+      if (b.maestro) return "Es parte de la plantilla del maestro";
+      if (b.dueno && b.dueno !== yo()) return "Es de " + ed.nombreDe(b.dueno);
+      const dp = duenoPagina(b.pagina || ed.pagina);
+      if (dp && dp !== yo()) return "Esta diapositiva es de " + ed.nombreDe(dp);
+      return null;
+    }
+    const puedoEditar = (b) => !motivoAjeno(b);
+    const paginaAjena = () => { const d = duenoPagina(ed.pagina); return d && d !== yo() && !ed.esPropietario ? d : null; };
+    const fuera = (b) => acotado && b.x != null && (b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= ANCHO || b.y >= ALTO);
     let sel = new Set(), selConector = null, herramienta = null, editando = null, origenEnlace = null;
     let espacio = false, multiple = false;
     const capa = html(acotado
@@ -230,6 +277,24 @@
       zoomCtl = html(`<div class="zoom-ctl"><button class="icono-btn" data-z="-" aria-label="Alejar" data-micro="Alejar||Ctrl+rueda">${ico("zoom-out")}</button><span data-zv>100%</span><button class="icono-btn" data-z="+" aria-label="Acercar" data-micro="Acercar||Ctrl+rueda">${ico("zoom-in")}</button><button class="icono-btn" data-z="ajustar" aria-label="Ajustar" data-micro="Ver todo|Encuadra todas las figuras.">${ico("maximize-2")}</button></div>`);
       capa.append(zoomCtl);
       $$("[data-z]", zoomCtl).forEach((b) => (b.onclick = () => (b.dataset.z === "ajustar" ? ajustar() : zoomEn(b.dataset.z === "+" ? 1.2 : 1 / 1.2))));
+    } else {
+      // 5.1 Alejar para ver la mesa de trabajo alrededor de la diapositiva (lo que quede fuera no se presenta ni se exporta).
+      zoomCtl = html(`<div class="zoom-ctl"><button class="icono-btn" data-z="-" aria-label="Alejar" data-micro="Alejar|Para ver la mesa de trabajo: lo que dejes fuera de la diapositiva no se presenta ni se exporta.|Ctrl+rueda">${ico("zoom-out")}</button><span data-zv>100%</span><button class="icono-btn" data-z="+" aria-label="Acercar" data-micro="Acercar||Ctrl+rueda">${ico("zoom-in")}</button><button class="icono-btn" data-z="ajustar" aria-label="Ajustar" data-micro="Ajustar|La diapositiva completa en pantalla.">${ico("maximize-2")}</button></div>`);
+      capa.append(zoomCtl);
+      $$("[data-z]", zoomCtl).forEach((b) => (b.onclick = () => (b.dataset.z === "ajustar" ? ((zoomD = 1), (panD = { x: 0, y: 0 }), aplicarVista()) : zoomDiapo(b.dataset.z === "+" ? 1.2 : 1 / 1.2))));
+    }
+    function zoomDiapo(k, centro) {
+      const r = capa.getBoundingClientRect();
+      const c = centro || { x: r.width / 2, y: r.height / 2 };
+      const antes = escala, z = Math.max(0.3, Math.min(3, zoomD * k));
+      // El punto bajo el dedo (o el cursor) se queda en su lugar.
+      const ml = parseFloat(mundo.style.left) || 0, mt = parseFloat(mundo.style.top) || 0;
+      const wx = (c.x - ml) / antes, wy = (c.y - mt) / antes;
+      zoomD = z;
+      aplicarVista();
+      const ml2 = parseFloat(mundo.style.left) || 0, mt2 = parseFloat(mundo.style.top) || 0;
+      panD.x += c.x - (ml2 + wx * escala); panD.y += c.y - (mt2 + wy * escala);
+      aplicarVista();
     }
     const barra = html(`<div class="lz-barra" role="toolbar" aria-label="Opciones de la selección" hidden></div>`);
     capa.append(barra);
@@ -238,10 +303,12 @@
     function aplicarVista() {
       if (acotado) {
         const r = superficie.getBoundingClientRect();
-        escala = Math.max(0.1, Math.min((r.width - 48) / ANCHO, (r.height - 48) / ALTO));
+        escala = Math.max(0.05, Math.min((r.width - 48) / ANCHO, (r.height - 48) / ALTO)) * zoomD;
         mundo.style.transform = `scale(${escala})`;
-        mundo.style.left = (r.width - ANCHO * escala) / 2 + "px";
-        mundo.style.top = (r.height - ALTO * escala) / 2 + "px";
+        mundo.style.left = (r.width - ANCHO * escala) / 2 + panD.x + "px";
+        mundo.style.top = (r.height - ALTO * escala) / 2 + panD.y + "px";
+        if (zoomCtl) $("[data-zv]", zoomCtl).textContent = Math.round(zoomD * 100) + "%";
+        capa.classList.toggle("alejado", zoomD < 0.999);
       } else {
         mundo.style.transform = `translate(${vista.x}px,${vista.y}px) scale(${vista.z})`;
         capa.style.backgroundSize = `${24 * vista.z}px ${24 * vista.z}px`;
@@ -278,7 +345,7 @@
 
     // ------------------------------------------------------------ pintar
     function bloques() {
-      return posiciones(doc().deLaPagina(ed.pagina).filter((b) => b.tipo !== "conector"), acotado)
+      return posiciones(doc().deLaPagina(ed.pagina).filter((b) => b.tipo !== "conector" && !b.oculto), acotado)
         .concat(doc().deLaPagina(ed.pagina).filter((b) => b.tipo === "conector"));
     }
     const porId = (id) => bloques().find((b) => b.id === id);
@@ -290,7 +357,8 @@
       for (const id of [...sel]) if (!bs.some((b) => b.id === id)) sel.delete(id);
       bs.filter((b) => b.tipo !== "conector").sort((a, b) => (a.z || 0) - (b.z || 0)).forEach((b, i) => {
         mapa[b.id] = b;
-        const el = html(`<div class="bl${b.sinPos ? " sin-pos" : ""}${sel.has(b.id) ? " sel" : ""}${clasesBloque(b)}" data-id="${esc(b.id)}" data-tipo="${esc(b.tipo)}" style="${estiloBloque(b, i)}">${contenido(b)}</div>`);
+        const ajeno = motivoAjeno(b);
+        const el = html(`<div class="bl${b.sinPos ? " sin-pos" : ""}${sel.has(b.id) ? " sel" : ""}${clasesBloque(b)}${fuera(b) ? " fuera" : ""}${resaltados.has(b.id) ? " cambiado" : ""}${ajeno && !ed.soloLectura ? " ajeno" : ""}" data-id="${esc(b.id)}" data-tipo="${esc(b.tipo)}" style="${estiloBloque(b, i)}${b.dueno ? `--dueno:${esc(ed.colorDe(b.dueno))};` : ""}"${b.dueno ? ` data-dueno="${esc(ed.nombreDe(b.dueno))}"` : ""}>${contenido(b)}${comentados.has(b.id) ? `<span class="lz-coment" title="Comentarios">${ico("message-square", "ico-s")}${comentados.get(b.id) > 1 ? comentados.get(b.id) : ""}</span>` : ""}</div>`);
         if (sel.size === 1 && sel.has(b.id) && !ed.soloLectura) adornos(el, b);
         mundo.append(el);
       });
@@ -300,10 +368,12 @@
       ed.pintarPresencia();
       pintarBarra();
       pintarMultiple();
+      capas.pintar();
       opc.alPintar && opc.alPintar();
     }
     function adornos(el, b) {
-      if (b.bloqueado) { el.append(html(`<span class="lz-candado" title="Bloqueado">${ico("lock", "ico-s")}</span>`)); return; }
+      const ajeno = motivoAjeno(b);
+      if (b.bloqueado || ajeno) { el.append(html(`<span class="lz-candado" title="${esc(ajeno || (b.maestro ? "Plantilla del maestro" : "Bloqueado"))}">${ico(b.maestro ? "crown" : "lock", "ico-s")}</span>`)); return; }
       const lineal = b.tipo === "forma" && esLinea(b.figura);
       (lineal ? ["w", "e"] : ["nw", "n", "ne", "e", "se", "s", "sw", "w"]).forEach((t) => el.append(html(`<span class="tirador" data-t="${t}"></span>`)));
       el.append(html(`<span class="girador" data-girar title="Girar (Mayús: de 15° en 15°)">${ico("rotate-cw", "ico-s")}</span>`));
@@ -346,12 +416,34 @@
     };
 
     // ------------------------------------------------------------ selección y edición de texto
-    /** Al elegir una figura agrupada se elige todo su grupo (como en Canva). */
+    /** Al elegir una figura agrupada se elige todo su grupo de más afuera (como en Canva). Un segundo
+        toque sobre ella entra al grupo de adentro (o a la figura sola). */
     function conGrupo(ids) {
       const r = new Set(ids);
-      const grupos = new Set([...r].map((id) => doc().valor(id, "grupo")).filter(Boolean));
-      if (grupos.size) bloques().forEach((b) => { if (b.grupo && grupos.has(b.grupo)) r.add(b.id); });
+      const tops = new Set([...r].map((id) => gruposDe(doc().bloque(id))[0]).filter(Boolean));
+      if (tops.size) bloques().forEach((b) => { const g = gruposDe(b)[0]; if (g && tops.has(g)) r.add(b.id); });
       return r;
+    }
+    /** Ids con el mismo prefijo de grupos (los primeros 'nivel' + 1 grupos de b). */
+    function miembrosHasta(b, nivel) {
+      const pre = gruposDe(b).slice(0, nivel + 1);
+      return bloques().filter((x) => { const g = gruposDe(x); return pre.every((p, i) => g[i] === p); }).map((x) => x.id);
+    }
+    /** Toque sobre una figura ya elegida como parte de su grupo: se entra un nivel. */
+    function entrarAlGrupo(id) {
+      const b = porId(id), g = gruposDe(b);
+      if (!g.length) return false;
+      let nivel = -1;
+      for (let k = 0; k < g.length; k++) { const m = miembrosHasta(b, k); if (m.length === sel.size && m.every((x) => sel.has(x))) { nivel = k; break; } }
+      if (nivel < 0) return false;
+      const siguiente = nivel + 1 < g.length ? miembrosHasta(b, nivel + 1) : [id];
+      terminarEdicion();
+      sel = new Set(siguiente); selConector = null;
+      ed.seleccionar(id);
+      render();
+      opc.alSeleccionar && opc.alSeleccionar(unico());
+      ed.refrescarHerramientas();
+      return true;
     }
     function seleccionar(ids, sumar) {
       ids = Array.isArray(ids) ? ids : ids ? [ids] : [];
@@ -373,6 +465,20 @@
         const s = getSelection(); s.removeAllRanges(); s.addRange(r);
       }
       el.onblur = () => terminarEdicion();
+      el.onpaste = (e) => {
+        const t = (e.clipboardData && e.clipboardData.getData("text/plain") || "").trim();
+        const s0 = getSelection();
+        if (/^https?:\/\/[^\s<>"]+$/i.test(t) && s0.rangeCount && !s0.isCollapsed && el.contains(s0.anchorNode)) {
+          e.preventDefault();
+          const r = s0.getRangeAt(0), a = document.createElement("a");
+          a.href = t; a.target = "_blank"; a.rel = "noopener";
+          try { a.append(r.extractContents()); r.insertNode(a); } catch (x) { /* selección rara */ }
+          aviso("Enlace aplicado al texto elegido", { tipo: "ok", ms: 1600 });
+          return;
+        }
+        // Lo demás se pega como texto (sin formato ajeno).
+        if (t) { e.preventDefault(); document.execCommand("insertText", false, t); }
+      };
       el.onkeydown = (e) => {
         if (e.key === "Escape") { e.preventDefault(); el.blur(); }
         // Ctrl+B / I / U: el formato es de todo el texto del cuadro. El que pone el navegador por su
@@ -394,6 +500,7 @@
       if (ed.soloLectura) return;
       const b = doc().bloque(id);
       if (!b || !["texto", "forma"].includes(b.tipo) || b.bloqueado || (b.tipo === "forma" && esLinea(b.figura))) return;
+      if (!puedoEditar(b)) { aviso(motivoAjeno(b), { tipo: "info" }); return; }
       editando = id;
       barra.hidden = true;
       const el = mundo.querySelector(`[data-id="${id}"] .txt, [data-id="${id}"] .libre-texto`);
@@ -408,13 +515,15 @@
       const b = doc().bloque(id);
       if (!b) return;
       if (b.tipo === "forma") { const t = el.innerText.trim(); if (t !== (b.texto || "")) doc().cambiar(id, { texto: t }); }
-      else { const h = esc(el.innerText.replace(/\n$/, "")).replace(/\n/g, "<br>"); if (h !== (b.html || "")) doc().cambiar(id, { html: h }); }
+      else { const h = htmlSeguro(el.innerHTML).replace(/(<br>)+$/, ""); if (h !== (b.html || "")) doc().cambiar(id, { html: h }); }
       pintarBarra();
     }
 
     // ------------------------------------------------------------ crear
     const TAM = { texto: [420, 64], rect: [200, 110], elipse: [190, 120], rombo: [190, 130], nota: [180, 160], linea: [220, 24], "linea-flecha": [220, 24], flecha: [200, 100], "flecha-doble": [220, 100], estrella: [150, 145], corazon: [150, 135], burbuja: [220, 130] };
     function crear(tipo, extra, en) {
+      const dp = paginaAjena();
+      if (dp) { aviso(`Esta diapositiva es de ${ed.nombreDe(dp)}: solo esa persona (o el propietario del espacio) agrega cosas aquí`, { tipo: "info", ms: 3500 }); return null; }
       const p = en || (acotado ? { x: ANCHO / 2, y: ALTO / 2 } : centroVista());
       const fig = extra && extra.figura;
       const tam = TAM[fig || tipo] || [170, 150];
@@ -445,7 +554,7 @@
 
     // ------------------------------------------------------------ acciones sobre la selección
     const seleccionados = () => [...sel].map(porId).filter(Boolean);
-    const editables = () => seleccionados().filter((b) => !b.bloqueado);
+    const editables = () => seleccionados().filter((b) => !b.bloqueado && puedoEditar(b));
     function cambiarSel(campos, opcC) {
       const bs = typeof campos === "function" ? editables() : editables();
       if (!bs.length || ed.soloLectura) return;
@@ -456,7 +565,7 @@
       if (ed.soloLectura) return;
       if (selConector) { doc().cambiar(selConector, { eliminado: true }); selConector = null; render(); return; }
       const bs = editables();
-      if (!bs.length) { if (sel.size) aviso("Desbloquea la figura para eliminarla", { tipo: "info" }); return; }
+      if (!bs.length) { if (sel.size) aviso(motivoAjeno(seleccionados()[0]) || "Desbloquea la figura para eliminarla", { tipo: "info" }); return; }
       const ids = new Set(bs.map((b) => b.id));
       doc().lote(() => {
         ids.forEach((id) => doc().cambiar(id, { eliminado: true }));
@@ -481,7 +590,8 @@
         if (c.tipo === "conector") { if (!nuevos[c.desde] || !nuevos[c.hasta]) return; c.desde = nuevos[c.desde]; c.hasta = nuevos[c.hasta]; }
         else { c.x = (c.x || 0) + desplazar; c.y = (c.y || 0) + desplazar; c.z = zMax + 1 + i; }
         if (c.grupo) c.grupo = grupos[c.grupo] || (grupos[c.grupo] = "g" + NOM.DocCRDT.nuevoId());
-        delete c.bloqueado;
+        if (Array.isArray(c.grupos)) c.grupos = c.grupos.map((x) => grupos[x] || (grupos[x] = "g" + NOM.DocCRDT.nuevoId()));
+        delete c.bloqueado; delete c.maestro; delete c.dueno; delete c.oculto;
         doc().cambiar(nuevos[id], c);
       }));
       seleccionar(lista.filter((b) => b.tipo !== "conector").map((b) => nuevos[b.id]));
@@ -516,18 +626,33 @@
       doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, esLinea(b.figura) ? { borde: c } : { color: c, relleno: true })));
       render();
     }
+    /** Lo que comparten todas las rutas de grupos de la selección (el grupo donde está). */
+    function prefijoComun(bs) {
+      const rutas = bs.map(gruposDe);
+      const r = [];
+      for (let i = 0; rutas.length && i < rutas[0].length; i++) { const g = rutas[0][i]; if (rutas.every((x) => x[i] === g)) r.push(g); else break; }
+      return r;
+    }
     function agrupar() {
       const bs = editables();
       if (bs.length < 2) return;
-      const g = "g" + NOM.DocCRDT.nuevoId();
-      doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, { grupo: g })));
+      const g = "g" + NOM.DocCRDT.nuevoId(), pre = prefijoComun(bs);
+      // El grupo nuevo queda dentro del grupo donde ya estaban todas (si había uno).
+      doc().lote(() => bs.forEach((b) => { const r = gruposDe(b); doc().cambiar(b.id, { grupos: pre.concat([g], r.slice(pre.length)), grupo: null }); }));
+      sel = new Set(miembrosHasta(Object.assign({}, bs[0], { grupos: pre.concat([g]) }), pre.length));
       render();
-      aviso("Agrupado: se mueven juntos. Ctrl+Mayús+G para desagrupar.", { ms: 2600 });
+      aviso(pre.length ? "Agrupado dentro de su grupo. Ctrl+Mayús+G para desagrupar." : "Agrupado: se mueven juntos. Ctrl+Mayús+G para desagrupar.", { ms: 2600 });
     }
+    /** Desagrupar quita solo el nivel de arriba: los grupos de adentro se conservan. */
     function desagrupar() {
-      const bs = editables().filter((b) => b.grupo);
+      const bs = editables().filter((b) => gruposDe(b).length);
       if (!bs.length) return;
-      doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, { grupo: null })));
+      const pre = prefijoComun(bs);
+      doc().lote(() => bs.forEach((b) => {
+        const r = gruposDe(b).slice();
+        if (pre.length) r.splice(pre.length - 1, 1); else r.shift();
+        doc().cambiar(b.id, { grupos: r.length ? r : null, grupo: null });
+      }));
       render();
     }
     function alinear(modo) {
@@ -558,13 +683,23 @@
     function rotar(grados) { cambiarSel((b) => ({ rot: (((b.rot || 0) + grados) % 360 + 360) % 360 || null })); }
     function voltear(eje) { cambiarSel((b) => (eje === "h" ? { volteoH: !b.volteoH || null } : { volteoV: !b.volteoV || null })); }
     function bloquear() {
-      const bs = seleccionados();
-      if (!bs.length) return;
+      const bs = seleccionados().filter((b) => puedoEditar(b));
+      if (!bs.length) { const m = motivoAjeno(seleccionados()[0]); if (m) aviso(m, { tipo: "info" }); return; }
       const todos = bs.every((b) => b.bloqueado);
       doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, { bloqueado: todos ? null : true })));
       render();
     }
     function seleccionarTodo() { seleccionar(bloques().filter((b) => b.tipo !== "conector").map((b) => b.id)); }
+
+    // ------------------------------------------------------------ 1.3 cuentagotas
+    const colorDe = (b) => (!b ? null : b.tipo === "forma" ? (esLinea(b.figura) ? b.borde || "#4A4854" : b.relleno === false ? null : b.color || "#E7E5EE") : b.tipo === "texto" ? b.tColor || null : null);
+    /** Toma un color: con EyeDropper (Chrome de computadora) de cualquier punto; si no, tocando otra figura. */
+    function iniciarGotero(alElegir, como) {
+      if (como === "pantalla" && window.EyeDropper) { new window.EyeDropper().open().then((r) => alElegir(String(r.sRGBHex).toUpperCase())).catch(() => {}); return; }
+      gotero = (c) => alElegir(c);
+      capa.classList.add("gotero");
+      aviso("Toca la figura de la que quieres copiar el color", { ms: 3200 });
+    }
 
     // ------------------------------------------------------------ barra contextual (como la de Canva)
     function pintarBarra() {
@@ -572,7 +707,12 @@
       const bs = seleccionados();
       if (!bs.length) { barra.hidden = true; return; }
       const formas = bs.filter((b) => b.tipo === "forma"), imgs = bs.filter((b) => b.tipo === "imagen"), textos = bs.filter((b) => b.tipo === "texto");
-      const b0 = bs[0], bloq = bs.every((b) => b.bloqueado);
+      const b0 = bs[0], bloq = bs.every((b) => b.bloqueado || !puedoEditar(b));
+      if (bs.every((b) => !puedoEditar(b))) {
+        barra.innerHTML = `<span class="lz-ajeno">${ico(b0.maestro ? "crown" : "lock", "ico-s")} ${esc(motivoAjeno(b0))}</span>` + (NOM.comentarios ? btn("comentar", ico("message-square"), "Comentar") : "");
+        barra.hidden = false;
+        return;
+      }
       const relleno = formas.length && !esLinea(formas[0].figura) ? (formas[0].relleno === false ? "" : formas[0].color || "#E7E5EE") : null;
       const conTexto = formas.some((b) => !esLinea(b.figura)) || textos.length;
       const btn = (a, i, t, extra) => `<button class="icono-btn" data-a="${a}" aria-label="${esc(t)}" data-micro="${esc(t)}" ${extra || ""}>${i}</button>`;
@@ -590,8 +730,8 @@
           btn("posicion", ico("al-centro-h"), "Posición|Alinear, distribuir y orden de capas."),
           btn("girar", ico("rotate-cw"), "Girar 90°"),
           btn("voltear", ico("flip-horizontal"), "Voltear"),
-          bs.length > 1 && !bs.every((b) => b.grupo && b.grupo === b0.grupo) ? btn("agrupar", ico("group"), "Agrupar|Ctrl+G") : "",
-          bs.some((b) => b.grupo) ? btn("desagrupar", ico("ungroup"), "Desagrupar|Ctrl+Mayús+G") : "",
+          bs.length > 1 ? btn("agrupar", ico("group"), "Agrupar|También dentro de otro grupo.|Ctrl+G") : "",
+          bs.some((b) => gruposDe(b).length) ? btn("desagrupar", ico("ungroup"), "Desagrupar|Quita solo el nivel de arriba.|Ctrl+Mayús+G") : "",
           btn("bloquear", ico("lock"), "Bloquear|Evita moverlo por accidente."),
           btn("duplicar", ico("copy"), "Duplicar|Ctrl+D"),
           btn("eliminar", ico("trash-2"), "Eliminar|Supr"),
@@ -605,8 +745,8 @@
       const bs = editables(), b0 = bs[0] || {};
       const grupo = { grupo: "barra-" + [...sel].join(",") };
       switch (b.dataset.a) {
-        case "relleno": paletaColores(b, b0.color, (c) => cambiarSel(c ? { color: c, relleno: true } : { relleno: false }, grupo), { titulo: "Relleno", sinColor: "Sin relleno" }); break;
-        case "borde-color": paletaColores(b, b0.borde, (c) => cambiarSel({ borde: c || "#4A4854" }, grupo), { titulo: "Color de la línea" }); break;
+        case "relleno": paletaColores(b, b0.color, (c) => cambiarSel(c ? { color: c, relleno: true } : { relleno: false }, grupo), { titulo: "Relleno", sinColor: "Sin relleno", gotero: iniciarGotero }); break;
+        case "borde-color": paletaColores(b, b0.borde, (c) => cambiarSel({ borde: c || "#4A4854" }, grupo), { titulo: "Color de la línea", gotero: iniciarGotero }); break;
         case "borde": menuBorde(b, b0, grupo); break;
         case "texto": menuTexto(b, b0, grupo); break;
         case "opacidad": deslizador(b, "Transparencia", Math.round((b0.opacidad != null ? b0.opacidad : 1) * 100), 10, 100, 1, "%", (v) => cambiarSel({ opacidad: v >= 100 ? null : v / 100 }, grupo)); break;
@@ -620,6 +760,7 @@
         case "bloquear": bloquear(); break;
         case "duplicar": duplicar(); break;
         case "eliminar": eliminar(); break;
+        case "comentar": NOM.comentarios && NOM.comentarios.nuevo(ed); break;
       }
     });
     function menuBorde(ancla, b0, grupo) {
@@ -709,15 +850,16 @@
         if (navigator.vibrate) navigator.vibrate(10);
         return;
       }
-      if (punteros.size === 2 && !acotado) {   // pellizco para hacer zoom
+      if (punteros.size === 2) {   // pellizco para hacer zoom (en la presentación: para ver la mesa de trabajo)
         const [a, b] = [...punteros.values()];
-        gesto = { tipo: "pellizco", d: Math.hypot(a.x - b.x, a.y - b.y), z: vista.z };
+        if (gesto && gesto.tipo === "mover" && gesto.movido) render();
+        gesto = { tipo: "pellizco", d: Math.hypot(a.x - b.x, a.y - b.y), z: acotado ? zoomD : vista.z };
         return;
       }
       const p = aMundo(e);
-      if (!acotado && (e.button === 1 || espacio)) {
+      if (e.button === 1 || espacio) {
         e.preventDefault();
-        gesto = { tipo: "paneo", x0: e.clientX, y0: e.clientY, v0: { ...vista } };
+        gesto = { tipo: "paneo", x0: e.clientX, y0: e.clientY, v0: acotado ? { ...panD } : { ...vista } };
         capa.classList.add("arrastrando");
         superficie.setPointerCapture(e.pointerId);
         return;
@@ -748,6 +890,13 @@
         return;
       }
       if (conectorEl) { terminarEdicion(); sel = new Set(); selConector = conectorEl.dataset.conector; render(); return; }
+      if (bl && gotero) {
+        e.preventDefault();
+        const c = colorDe(porId(bl.dataset.id)), f = gotero;
+        gotero = null; capa.classList.remove("gotero");
+        if (c) { f(c); aviso("Color copiado", { tipo: "ok", ms: 1400 }); } else aviso("Esa figura no tiene un color que copiar", { tipo: "info" });
+        return;
+      }
       if (bl) {
         const id = bl.dataset.id;
         if (herramienta === "conector" && !ed.soloLectura) {
@@ -758,13 +907,19 @@
         if (e.shiftKey || e.ctrlKey || e.metaKey) { seleccionar([id], true); return; }
         // Selección múltiple con el dedo: tocar otra figura la suma; tocar una ya elegida la quita
         // (si no se arrastra: arrastrar mueve todas juntas).
-        let quitar = null;
+        let quitar = null, entrar = null;
         if (multiple && e.pointerType !== "mouse") { if (sel.has(id)) quitar = id; else seleccionar([id], true); }
         else if (!sel.has(id)) seleccionar(id);
+        else if (sel.size > 1 && gruposDe(porId(id)).length) entrar = id;
         if (ed.soloLectura) return;
         const bs = editables();
-        if (!bs.length) return;
-        gesto = { tipo: "mover", ids: bs.map((b) => b.id), p0: p, b0: Object.fromEntries(bs.map((b) => [b.id, { x: b.x, y: b.y, w: b.w, h: b.h }])), caja0: cajaDe(bs), movido: false, idClic: id, quitar };
+        if (!bs.length) {
+          const m = motivoAjeno(porId(id));
+          if (m && Date.now() - (finGesto.avisoAjeno || 0) > 2500) { finGesto.avisoAjeno = Date.now(); aviso(m + ": no se puede mover ni cambiar", { tipo: "info", ms: 2400 }); }
+          if (entrar) gesto = { tipo: "mover", ids: [], p0: p, b0: {}, caja0: null, movido: false, idClic: id, entrar };
+          return;
+        }
+        gesto = { tipo: "mover", ids: bs.map((b) => b.id), p0: p, b0: Object.fromEntries(bs.map((b) => [b.id, { x: b.x, y: b.y, w: b.w, h: b.h }])), caja0: cajaDe(bs), movido: false, idClic: id, quitar, entrar };
         superficie.setPointerCapture(e.pointerId);
         return;
       }
@@ -780,8 +935,8 @@
         opc.alUsarHerramienta && opc.alUsarHerramienta();
         return;
       }
-      if (!acotado && e.pointerType !== "mouse") {
-        gesto = { tipo: "paneo", x0: e.clientX, y0: e.clientY, v0: { ...vista }, limpiar: true };
+      if ((!acotado || zoomD !== 1) && e.pointerType !== "mouse") {
+        gesto = { tipo: "paneo", x0: e.clientX, y0: e.clientY, v0: acotado ? { ...panD } : { ...vista }, limpiar: true };
         capa.classList.add("arrastrando");
         superficie.setPointerCapture(e.pointerId);
         return;
@@ -798,8 +953,14 @@
       if (gesto.tipo === "pellizco" && punteros.size === 2) {
         const [a, b] = [...punteros.values()];
         const r = capa.getBoundingClientRect();
-        zoomEn(gesto.z * (Math.hypot(a.x - b.x, a.y - b.y) / gesto.d) / vista.z, { x: (a.x + b.x) / 2 - r.left, y: (a.y + b.y) / 2 - r.top });
+        const centro = { x: (a.x + b.x) / 2 - r.left, y: (a.y + b.y) / 2 - r.top }, k = gesto.z * (Math.hypot(a.x - b.x, a.y - b.y) / gesto.d);
+        if (acotado) zoomDiapo(k / zoomD, centro); else zoomEn(k / vista.z, centro);
         return;
+      }
+      if (gesto.tipo === "paneo" && acotado) {
+        panD = { x: gesto.v0.x + e.clientX - gesto.x0, y: gesto.v0.y + e.clientY - gesto.y0 };
+        if (Math.abs(e.clientX - gesto.x0) + Math.abs(e.clientY - gesto.y0) > 4) gesto.movido = true;
+        aplicarVista(); return;
       }
       if (gesto.tipo === "paneo") {
         vista.x = gesto.v0.x + e.clientX - gesto.x0; vista.y = gesto.v0.y + e.clientY - gesto.y0;
@@ -809,6 +970,7 @@
       const p = aMundo(e);
       const dx = p.x - (gesto.p0 ? gesto.p0.x : 0), dy = p.y - (gesto.p0 ? gesto.p0.y : 0);
       if (gesto.tipo === "mover") {
+        if (!gesto.ids.length) return;
         if (!gesto.movido && Math.abs(dx) + Math.abs(dy) < 3 / zoomActual()) return;
         if (!gesto.movido) { gesto.movido = true; barra.hidden = true; }
         let mx = dx, my = dy;
@@ -868,6 +1030,8 @@
       capa.classList.remove("arrastrando");
       pintarGuias(null);
       if (g.tipo === "mover" && !g.movido && g.quitar && e.type === "pointerup") { seleccionar([g.quitar], true); return; }
+      // 5.2 Segundo toque sobre un grupo ya elegido: entra al grupo de adentro.
+      if (g.tipo === "mover" && !g.movido && g.entrar && e.type === "pointerup" && entrarAlGrupo(g.entrar)) { finGesto.ultimo = Date.now(); finGesto.id = g.idClic; return; }
       if (g.tipo === "mover" && g.movido) doc().lote(() => g.ids.forEach((id) => doc().cambiar(id, g.b[id])));
       else if (g.tipo === "mover" && !g.movido && e.type === "pointerup" && doc().valor(g.idClic, "tipo") !== "imagen" && Date.now() - (finGesto.ultimo || 0) < 350 && finGesto.id === g.idClic) editar(g.idClic);
       else if (g.tipo === "tamano" && g.b) doc().cambiar(g.id, g.b);
@@ -897,6 +1061,15 @@
         if (e.ctrlKey || e.metaKey) zoomEn(Math.exp(-e.deltaY * 0.0022), { x: e.clientX - r.left, y: e.clientY - r.top });
         else { vista.x -= e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX; vista.y -= e.shiftKey && !e.deltaX ? 0 : e.deltaY; aplicarVista(); }
       }, { passive: false });
+    } else {
+      // 5.1 Ctrl + rueda aleja o acerca la diapositiva; ya alejada (o acercada), la rueda mueve la vista.
+      superficie.addEventListener("wheel", (e) => {
+        const r = capa.getBoundingClientRect();
+        if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomDiapo(Math.exp(-e.deltaY * 0.0022), { x: e.clientX - r.left, y: e.clientY - r.top }); return; }
+        if (zoomD === 1) return;
+        e.preventDefault();
+        panD.x -= e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX; panD.y -= e.shiftKey && !e.deltaX ? 0 : e.deltaY; aplicarVista();
+      }, { passive: false });
     }
 
     function unir(a, b) {
@@ -922,10 +1095,13 @@
         doc().lote(() => conTexto.forEach((b) => doc().cambiar(b.id, { [k]: on || (k === "tNegrita" ? false : null) }, grupo)));
         render();
       };
-      const tonos = COLORES.filter((_, i) => [0, 8, 12, 15, 19, 23, 27].includes(i));
-      const colorTexto = tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => cambiarSel((b) => (conTexto.includes(b) ? { tColor: c } : null), grupo) }));
+      const tonos = COLORES.filter((_, i) => [0, 8, 12, 19, 23, 27].includes(i));
+      const colorTexto = tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => cambiarSel((b) => (conTexto.includes(b) ? { tColor: c } : null), grupo) }))
+        .concat([{ texto: "Copiar color de otra figura", corto: "Copiar", icono: "pipette", fn: () => iniciarGotero((c) => cambiarSel((b) => (conTexto.includes(b) ? { tColor: c } : null), grupo), "figura") }]);
+      // 1.3 Cuentagotas con el dedo: tocar otra figura copia su color (sirve igual con el mouse).
+      const gotas = { texto: "Copiar color de otra figura", corto: "Copiar", icono: "pipette", fn: () => iniciarGotero((c) => colorear(c), "figura") };
       const colorSub = formas.length
-        ? tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => colorear(c) })).concat(conTexto.length ? [{ texto: "Color del texto", corto: "Texto", icono: "baseline", sub: colorTexto }] : [])
+        ? tonos.map((c) => ({ texto: c, corto: " ", color: c, mantener: true, fn: () => colorear(c) })).concat([gotas], conTexto.length ? [{ texto: "Color del texto", corto: "Texto", icono: "baseline", sub: colorTexto }] : [])
         : colorTexto;
       const varios = sel.size > 1;
       const alinearSub = [
@@ -952,16 +1128,130 @@
           (varios || acotado) ? { texto: "Alinear", icono: "al-centro-h", sub: alinearSub } : { texto: "Alinear", icono: "al-centro-h", off: true }] },
         { texto: "Más", icono: "more-horizontal", sub: [
           { texto: multiple ? "Terminar de elegir" : "Elegir varias", corto: multiple ? "Listo" : "Varias", icono: "group", fn: () => { multiple = !multiple; pintarMultiple(); } },
-          varios && !bs.every((b) => b.grupo && b.grupo === b0.grupo) ? { texto: "Agrupar", icono: "group", fn: agrupar }
-            : { texto: "Desagrupar", icono: "ungroup", off: !bs.some((b) => b.grupo), fn: desagrupar },
+          varios ? { texto: "Agrupar", icono: "group", fn: agrupar }
+            : { texto: "Desagrupar", icono: "ungroup", off: !bs.some((b) => gruposDe(b).length), fn: desagrupar },
           { texto: bloq ? "Desbloquear" : "Bloquear", icono: bloq ? "lock-open" : "lock", fn: bloquear },
           { texto: "Copiar", icono: "clipboard-copy", fn: () => copiar(false) },
           { texto: "Cortar", icono: "scissors", off: bloq, fn: () => copiar(true) },
           { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
-          { texto: "Editar texto", icono: "type", off: !(unico() && conTexto.length === 1), fn: () => editar(unico()) },
-          { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo }] },
+          { texto: "Comentar", icono: "message-square", off: !NOM.comentarios, fn: () => NOM.comentarios.nuevo(ed) },
+          { texto: "Otras", icono: "more-vertical", sub: [
+            { texto: "Editar texto", icono: "type", off: !(unico() && conTexto.length === 1), fn: () => editar(unico()) },
+            { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo },
+            { texto: "Capas", icono: "layers", fn: () => capas.abrir() },
+            ...(ed.esPropietario ? [
+              { texto: "Asignar a…", icono: "user-check", fn: asignarSeleccion },
+              { texto: bs.every((b) => b.maestro) ? "Quitar de la plantilla" : "Fijar como plantilla del maestro", corto: bs.every((b) => b.maestro) ? "Liberar" : "Plantilla", icono: "crown", fn: plantillaMaestro },
+            ] : [])] }] },
       ];
     }
+    // ------------------------------------------------------------ 3.5 asignar y 5.4 plantilla del maestro (solo el propietario)
+    async function asignarSeleccion() {
+      const bs = seleccionados();
+      if (!bs.length) return;
+      const uid = await ed.elegirPersona(bs.length > 1 ? `Asignar ${bs.length} elementos a…` : "Asignar a…", bs[0].dueno || null);
+      if (uid == null) return;
+      doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, { dueno: uid || null })));
+      render();
+      aviso(uid ? `Asignado a ${ed.nombreDe(uid)}` : "Ya nadie es dueño", { tipo: "ok" });
+    }
+    async function asignarPagina(p) {
+      const uid = await ed.elegirPersona("Asignar la diapositiva a…", duenoPagina(p));
+      if (uid == null) return;
+      doc().cambiar("_doc", { ["dueno:" + p]: uid || null });
+      render();
+      aviso(uid ? `La diapositiva es de ${ed.nombreDe(uid)}: solo esa persona (y tú) la cambian` : "Diapositiva libre", { tipo: "ok" });
+    }
+    function plantillaMaestro() {
+      const bs = seleccionados();
+      if (!bs.length || !ed.esPropietario) return;
+      const quitar = bs.every((b) => b.maestro);
+      doc().lote(() => bs.forEach((b) => doc().cambiar(b.id, quitar ? { maestro: null, bloqueado: null } : { maestro: true, bloqueado: true })));
+      render();
+      aviso(quitar ? "Ya no es parte de la plantilla" : "Plantilla del maestro: los demás no la pueden mover, cambiar ni desbloquear", { tipo: "ok", ms: 3200 });
+    }
+
+    // ------------------------------------------------------------ 5.3 panel de capas
+    const capas = (() => {
+      let abierto = false, cont = null;
+      const nombre = (b) => {
+        const t = (b.tipo === "forma" ? b.texto : b.tipo === "texto" ? NOM.formatos.textoPlano(b.html) : "") || "";
+        const base = { forma: (FIGURAS.find((f) => f[0] === (b.figura || "rect")) || [0, "Figura"])[1], texto: "Texto", imagen: "Imagen", tabla: "Tabla" }[b.tipo] || b.tipo;
+        return t.trim() ? `${base}: ${t.trim().slice(0, 40)}` : base;
+      };
+      const icono = (b) => ({ forma: "shapes", texto: "type", imagen: "image", tabla: "table" }[b.tipo] || "square");
+      function lista() {
+        return posiciones(doc().deLaPagina(ed.pagina).filter((b) => b.tipo !== "conector"), acotado).sort((a, b) => (b.z || 0) - (a.z || 0));
+      }
+      function pintar() {
+        if (!abierto || !cont) return;
+        const l = lista();
+        $("[data-capas]", cont).innerHTML = l.length ? l.map((b) => {
+          const aj = motivoAjeno(b);
+          return `<div class="capa-fila${sel.has(b.id) ? " sel" : ""}${b.oculto ? " oculta" : ""}" data-c="${esc(b.id)}">
+            <button class="icono-btn chico capa-asa" data-asa aria-label="Mover de capa" ${aj ? "disabled" : ""}>${ico("grip-vertical", "ico-s")}</button>
+            <button class="capa-nombre crece" data-elegir>${ico(icono(b), "ico-s")}<span class="recorta">${esc(nombre(b))}</span>${b.dueno ? `<span class="chip chico" style="--c:${esc(ed.colorDe(b.dueno))}">${esc(ed.nombreDe(b.dueno))}</span>` : ""}${b.maestro ? ico("crown", "ico-s") : ""}${fuera(b) ? `<span class="chip chico">fuera</span>` : ""}</button>
+            <button class="icono-btn chico" data-ojo aria-label="${b.oculto ? "Mostrar" : "Ocultar"}" aria-pressed="${!!b.oculto}" ${aj ? "disabled" : ""} data-micro="${b.oculto ? "Mostrar" : "Ocultar"}|Lo oculto no se ve, no se presenta ni se exporta.">${ico(b.oculto ? "eye-off" : "eye", "ico-s")}</button>
+            <button class="icono-btn chico" data-candado aria-label="${b.bloqueado ? "Desbloquear" : "Bloquear"}" aria-pressed="${!!b.bloqueado}" ${aj ? "disabled" : ""}>${ico(b.bloqueado ? "lock" : "lock-open", "ico-s")}</button></div>`;
+        }).join("") : `<p class="suave">Esta ${acotado ? "diapositiva" : "página"} está vacía.</p>`;
+      }
+      function reordenar(id, destino) {
+        const l = lista();
+        const i = l.findIndex((b) => b.id === id);
+        if (i < 0 || destino === i) return;
+        const [b] = l.splice(i, 1);
+        l.splice(destino, 0, b);
+        const n = l.length;
+        doc().lote(() => l.forEach((x, k) => { if (puedoEditar(x) && (x.z || 0) !== n - k) doc().cambiar(x.id, { z: n - k }); }));
+        render();
+      }
+      function abrir() {
+        const lateral = $("[data-lateral]", ed.vista);
+        if (abierto) { cerrar(); return; }
+        abierto = true;
+        lateral.innerHTML = `<div class="cajon capas-cajon"><div class="cajon-cab"><h3>${ico("layers", "ico-s")} Capas</h3><button class="icono-btn" data-cerrar aria-label="Cerrar capas">${ico("x")}</button></div>
+          <p class="suave chico" style="padding:0 16px;font-weight:650">Arriba lo que está al frente. Arrastra de la manija para cambiar el orden.</p>
+          <div class="cajon-cuerpo" data-capas></div></div>`;
+        cont = lateral.firstElementChild;
+        $("[data-cerrar]", cont).onclick = cerrar;
+        cont.addEventListener("click", (e) => {
+          const f = e.target.closest("[data-c]");
+          if (!f) return;
+          const id = f.dataset.c, b = doc().bloque(id);
+          if (e.target.closest("[data-ojo]")) { doc().cambiar(id, { oculto: b.oculto ? null : true }); if (!b.oculto) { sel.delete(id); } render(); return; }
+          if (e.target.closest("[data-candado]")) { doc().cambiar(id, { bloqueado: b.bloqueado ? null : true }); render(); return; }
+          if (e.target.closest("[data-elegir]") && !b.oculto) seleccionar(id);
+        });
+        // Arrastrar de la manija (dedo o mouse) para cambiar el orden de las capas.
+        cont.addEventListener("pointerdown", (e) => {
+          const asa = e.target.closest("[data-asa]");
+          if (!asa || asa.disabled) return;
+          e.preventDefault();
+          const fila = asa.closest("[data-c]"), filas = $$("[data-c]", cont), y0 = e.clientY, i0 = filas.indexOf(fila);
+          const alto = fila.getBoundingClientRect().height + 4;
+          let destino = i0;
+          fila.classList.add("arrastrando");
+          asa.setPointerCapture(e.pointerId);
+          const mover = (ev) => {
+            const d = ev.clientY - y0;
+            fila.style.transform = `translateY(${d}px)`;
+            destino = Math.max(0, Math.min(filas.length - 1, i0 + Math.round(d / alto)));
+            filas.forEach((x, k) => { if (x !== fila) x.style.transform = k > i0 && k <= destino ? `translateY(${-alto}px)` : k < i0 && k >= destino ? `translateY(${alto}px)` : ""; });
+          };
+          const soltar = () => {
+            asa.removeEventListener("pointermove", mover); asa.removeEventListener("pointerup", soltar); asa.removeEventListener("pointercancel", soltar);
+            filas.forEach((x) => (x.style.transform = ""));
+            fila.classList.remove("arrastrando");
+            reordenar(fila.dataset.c, destino);
+          };
+          asa.addEventListener("pointermove", mover); asa.addEventListener("pointerup", soltar); asa.addEventListener("pointercancel", soltar);
+        });
+        pintar();
+      }
+      function cerrar() { abierto = false; cont = null; const l = $("[data-lateral]", ed.vista); if (l && l.querySelector(".capas-cajon")) l.innerHTML = ""; }
+      return { abrir, pintar, cerrar, abierto: () => abierto };
+    })();
+
     // Selección múltiple con el dedo: un aviso fijo dice cómo seguir y cómo terminar.
     let avisoMultiple = null;
     function pintarMultiple() {
@@ -1010,7 +1300,7 @@
       if (!ed.vista.contains(t) && t !== document.body) return;
       const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       if (e.key === "Delete" || e.key === "Backspace") { if (sel.size || selConector) { e.preventDefault(); eliminar(); } return; }
-      if (e.key === "Escape") { herramienta = null; origenEnlace = null; multiple = false; opc.alUsarHerramienta && opc.alUsarHerramienta(); if (sel.size) { sel = new Set(); ed.seleccionar(null); render(); } return; }
+      if (e.key === "Escape") { if (gotero) { gotero = null; capa.classList.remove("gotero"); } herramienta = null; origenEnlace = null; multiple = false; opc.alUsarHerramienta && opc.alUsarHerramienta(); if (sel.size) { sel = new Set(); ed.seleccionar(null); render(); } return; }
       if (e.key === "Enter" && unico()) { e.preventDefault(); editar(unico()); return; }
       if (mod && k === "d") { e.preventDefault(); duplicar(); return; }
       if (mod && k === "a") { e.preventDefault(); seleccionarTodo(); return; }
@@ -1040,7 +1330,18 @@
     render();
     if (!acotado) requestAnimationFrame(ajustar);
 
+    // Los nombres de los dueños llegan con los miembros del espacio.
+    const hayDuenos = () => doc().vivos().some((b) => b.dueno) || Object.keys(doc().doc()).some((k) => k.startsWith("dueno:") && doc().valor("_doc", k));
+    if (hayDuenos() && ed.cargarMiembros) ed.cargarMiembros().then(() => render());
+
     return {
+      capas, asignarPagina, duenoPagina, paginaAjena,
+      /** 3.4 Resalta los bloques que cambiaron otros (null lo quita). */
+      resaltar(c) { resaltados = new Set(c && c.cambios ? c.cambios.bloques || [] : []); render(); },
+      /** 7 Marca los bloques con comentarios abiertos. */
+      marcarComentarios(lista) { comentados = new Map(); (lista || []).forEach((c) => { if (!c.resuelto && c.ancla && c.ancla.tipo === "bloque") comentados.set(c.ancla.id, (comentados.get(c.ancla.id) || 0) + 1); }); render(); },
+      anclaComentario() { const b = porId(unico() || [...sel][0]); if (!b) return null; const t = b.tipo === "forma" ? b.texto : b.tipo === "texto" ? NOM.formatos.textoPlano(b.html) : ""; return { tipo: "bloque", id: b.id, pagina: ed.pagina, cita: (t || ({ forma: "Figura", imagen: "Imagen", tabla: "Tabla", texto: "Texto" }[b.tipo] || "")).slice(0, 120) }; },
+      irABloque(id) { if (!porId(id)) return false; seleccionar(id); return true; },
       render, crear, imagen, eliminar, duplicar, capaZ: (arriba) => capaZ(arriba === true ? "frente" : arriba === false ? "fondo" : arriba), colorear, ajustar, alinear, distribuir, agrupar, desagrupar, bloquear, rotar, voltear,
       seleccion: () => unico() || [...sel][0] || null,
       cuantos: () => sel.size,
@@ -1051,7 +1352,7 @@
         if (editando && lista.length === 1 && lista[0].bloque === editando && lista[0].local) return;
         render();
       },
-      destruir() { document.removeEventListener("keydown", teclas); document.removeEventListener("keyup", teclas); ro.disconnect(); terminarEdicion(); $$(".lz-panel").forEach((x) => x.remove()); },
+      destruir() { document.removeEventListener("keydown", teclas); document.removeEventListener("keyup", teclas); ro.disconnect(); terminarEdicion(); capas.cerrar(); $$(".lz-panel").forEach((x) => x.remove()); },
     };
   }
 
@@ -1087,31 +1388,83 @@
         const minis = $("[data-minis]", raiz);
         const pags = doc().paginas();
         minis.innerHTML = pags.map((p, i) => {
-          const bs = posiciones(doc().deLaPagina(p).filter((b) => b.tipo !== "conector"), true).sort((a, b) => (a.z || 0) - (b.z || 0));
+          const du = lienzo.duenoPagina(p), cambios = ed.resaltando && ed.cambiosVisita && (ed.cambiosVisita.bloques || []).some((id) => doc().valor(id, "pagina") === p);
           return `<button class="mini" data-p="${esc(p)}" aria-current="${p === ed.pagina}" aria-label="Diapositiva ${i + 1}"><span class="num">${i + 1}</span>
-            <div class="mini-cont">${bs.map((b) => `<div class="bl${clasesBloque(b)}" style="${estiloBloque(b)}overflow:hidden">${contenido(b)}</div>`).join("")}</div></button>`;
+            <div class="mini-cont">${htmlDiapositiva(doc(), p)}</div>${du ? `<span class="mini-dueno" style="--c:${esc(ed.colorDe(du))}">${esc(ed.nombreDe(du))}</span>` : ""}${cambios ? `<span class="mini-cambio" title="Cambió desde tu última visita"></span>` : ""}${doc().valor("_doc", "trans:" + p) ? `<span class="mini-trans" title="Con transición">${ico("sparkles", "ico-s")}</span>` : ""}</button>`;
         }).join("") + (ed.soloLectura ? "" : `<button class="btn plano" data-nueva data-micro="Nueva diapositiva|Agrega una diapositiva después de la actual.">${ico("plus")}</button>`);
         $$(".mini", minis).forEach((m) => {
           const c = $(".mini-cont", m);
           const k = m.clientWidth / ANCHO || 0.17;
           c.style.transform = `scale(${k})`;
-          m.onclick = () => { ed.pagina = m.dataset.p; lienzo.render(); };
+          m.onclick = () => { ed.pagina = m.dataset.p; lienzo.render(); pintarNotas(); };
           m.oncontextmenu = (e) => { e.preventDefault(); if (!ed.soloLectura) menuDiapo(m, m.dataset.p); };
         });
+        // Con el dedo: mantener presionada una miniatura abre sus opciones (no hay clic derecho).
+        if (!minis._rueda) {
+          minis._rueda = true;
+          NOM.rueda.enlazar(minis, (e) => {
+            const m = e.target.closest && e.target.closest(".mini");
+            if (!m || ed.soloLectura) return null;
+            const l = accionesDiapo(m.dataset.p);
+            l.titulo = "Diapositiva " + (doc().paginas().indexOf(m.dataset.p) + 1);
+            return l;
+          }, { titulo: "Diapositiva" });
+        }
         const n = $("[data-nueva]", minis);
         if (n) n.onclick = () => { ed.pagina = ed.nuevaPagina(ed.pagina); lienzo.render(); };
       }, 150);
       // El lienzo ya se pintó antes de que existiera esta función: sin esto la tira de miniaturas
       // quedaba vacía hasta el primer cambio.
       pintarMinis();
+      function duplicarDiapo(p) {
+        const np = ed.nuevaPagina(p);
+        doc().lote(() => doc().deLaPagina(p).forEach((b) => { const { id, ...c } = b; delete c.dueno; delete c.maestro; doc().cambiar(NOM.DocCRDT.nuevoId(), Object.assign(c, { pagina: np })); }));
+        ed.pagina = np; lienzo.render();
+      }
+      function moverDiapo(p, d) {
+        const pags = doc().paginas(), i = pags.indexOf(p), q = pags.slice();
+        if (i + d < 0 || i + d >= q.length) return;
+        q.splice(i, 1); q.splice(i + d, 0, p);
+        doc().cambiar("_doc", { paginas: q });
+      }
+      /** Ruedita de una miniatura (mismo orden de siempre: abajo eliminar, a su lado duplicar). */
+      function accionesDiapo(p) {
+        const pags = doc().paginas(), i = pags.indexOf(p);
+        return [
+          { texto: "Transición", icono: "sparkles", fn: () => menuTransicion(null, p) },
+          { texto: "Notas", icono: "sticky-note", fn: () => { ed.pagina = p; lienzo.render(); alternarNotas(true); } },
+          { texto: "Antes", icono: "chevron-left", off: i <= 0, fn: () => moverDiapo(p, -1) },
+          { texto: "Después", icono: "chevron-right", off: i >= pags.length - 1, fn: () => moverDiapo(p, 1) },
+          { texto: "Eliminar", icono: "trash-2", off: pags.length <= 1 || !!lienzo.paginaAjena(), fn: () => eliminarDiapo(p) },
+          { texto: "Duplicar", icono: "copy", fn: () => duplicarDiapo(p) },
+          ed.esPropietario ? { texto: "Asignar a…", icono: "user-check", fn: () => lienzo.asignarPagina(p) } : { texto: "Presentar", icono: "play", fn: () => { ed.pagina = p; presentar(ed); } },
+          { texto: "Revolver", icono: "shuffle", off: pags.length < 3, fn: revolver },
+        ];
+      }
+      /** "Revolver o reordenar páginas": las diapositivas en otro orden al azar (se puede deshacer). */
+      function revolver() {
+        const q = doc().paginas().slice();
+        for (let k = q.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [q[k], q[j]] = [q[j], q[k]]; }
+        doc().cambiar("_doc", { paginas: q });
+        aviso("Diapositivas revueltas. Ctrl+Z para volver", { ms: 2400 });
+      }
+      function eliminarDiapo(p) {
+        const pags = doc().paginas(), i = pags.indexOf(p);
+        if (pags.length <= 1) return;
+        doc().lote(() => {
+          doc().deLaPagina(p).forEach((b) => doc().cambiar(b.id, { eliminado: true }));
+          doc().cambiar("_doc", { paginas: pags.filter((x) => x !== p) });
+        });
+        ed.pagina = pags[Math.max(0, i - 1)] === p ? pags[1] : pags[Math.max(0, i - 1)];
+        lienzo.render();
+      }
       function menuDiapo(anc, p) {
         const pags = doc().paginas(), i = pags.indexOf(p);
         NOM.menu(anc, [
-          { texto: "Duplicar", icono: "copy", fn: () => {
-            const np = ed.nuevaPagina(p);
-            doc().lote(() => doc().deLaPagina(p).forEach((b) => { const { id, ...c } = b; doc().cambiar(NOM.DocCRDT.nuevoId(), Object.assign(c, { pagina: np })); }));
-            ed.pagina = np; lienzo.render();
-          } },
+          { texto: "Duplicar", icono: "copy", fn: () => duplicarDiapo(p) },
+          { texto: "Transición…", icono: "sparkles", fn: () => menuTransicion(anc, p) },
+          ...(ed.esPropietario ? [{ texto: lienzo.duenoPagina(p) ? "Cambiar a quién se asignó…" : "Asignar a una persona…", icono: "user-check", fn: () => lienzo.asignarPagina(p) }] : []),
+          { texto: "Revolver el orden", icono: "shuffle", fn: revolver },
           ...(i > 0 ? [{ texto: "Mover antes", icono: "chevron-left", fn: () => { const q = pags.slice(); q.splice(i, 1); q.splice(i - 1, 0, p); doc().cambiar("_doc", { paginas: q }); } }] : []),
           ...(i < pags.length - 1 ? [{ texto: "Mover después", icono: "chevron-right", fn: () => { const q = pags.slice(); q.splice(i, 1); q.splice(i + 1, 0, p); doc().cambiar("_doc", { paginas: q }); } }] : []),
           ...(pags.length > 1 ? ["-", { texto: "Eliminar diapositiva", icono: "trash-2", peligro: true, fn: () => {
@@ -1124,6 +1477,35 @@
           } }] : []),
         ]);
       }
+
+      // 5.5 Notas del orador (por diapositiva, en _doc "nota:<página>"): solo se ven en el modo presentador.
+      const notas = html(`<div class="pres-notas" hidden><div class="fila-e"><b>${ico("sticky-note", "ico-s")} Notas del orador</b><button class="icono-btn chico" data-x aria-label="Cerrar notas">${ico("x", "ico-s")}</button></div>
+        <textarea placeholder="Lo que quieres decir en esta diapositiva. Solo tú lo ves al presentar (modo presentador)." ${ed.soloLectura ? "readonly" : ""}></textarea></div>`);
+      $("[data-escena]", raiz).append(notas);
+      const area = $("textarea", notas);
+      const guardarNota = NOM.debounce(() => { if (!ed.soloLectura) doc().cambiar("_doc", { ["nota:" + ed.pagina]: area.value || null }, { grupo: "nota-" + ed.pagina }); }, 400);
+      area.addEventListener("input", guardarNota);
+      $("[data-x]", notas).onclick = () => alternarNotas(false);
+      function pintarNotas() { if (!notas.hidden && document.activeElement !== area) area.value = doc().valor("_doc", "nota:" + ed.pagina) || ""; }
+      function alternarNotas(si) { notas.hidden = si == null ? !notas.hidden : !si; pintarNotas(); if (!notas.hidden && matchMedia("(hover: hover)").matches) area.focus(); ed.refrescarHerramientas(); }
+      const TRANS = [["", "Sin transición"], ["desvanecer", "Desvanecer"], ["deslizar", "Deslizar"], ["empujar", "Empujar hacia arriba"], ["zoom", "Acercar"]];
+      function menuTransicion(anc, p) {
+        p = p || ed.pagina;
+        const actual = doc().valor("_doc", "trans:" + p) || "";
+        const elegir = (v, todas) => doc().cambiar("_doc", Object.fromEntries((todas ? doc().paginas() : [p]).map((x) => ["trans:" + x, v || null])));
+        const items = [{ titulo: "Al llegar a la diapositiva…" }, ...TRANS.map(([v, t]) => ({ texto: t, marcado: v === actual, fn: () => elegir(v) })), "-", { texto: "Usar la misma en todas", icono: "copy", fn: () => elegir(actual, true) }];
+        if (anc) NOM.menu(anc, items);
+        else NOM.rueda.abrir(innerWidth / 2, innerHeight / 2, TRANS.map(([v, t]) => ({ texto: t, icono: v ? "sparkles" : "x", marcado: v === actual, fn: () => elegir(v) })).concat([{ texto: "En todas", icono: "copy", fn: () => elegir(actual, true) }]), { titulo: "Transición", modo: "clic" });
+      }
+      function menuPresentar(b) {
+        NOM.menu(b, [
+          { titulo: "Presentar" },
+          { texto: "Aquí, en pantalla completa", icono: "play", atajo: "F5", fn: () => presentar(ed) },
+          { texto: "Modo presentador (notas, siguiente y tiempo)", icono: "sticky-note", fn: () => presentar(ed, { presentador: true }) },
+          ...(ed.local ? [] : [{ texto: "En otra pantalla (proyector)…", icono: "cast", fn: () => presentar(ed, { presentador: true, proyectar: true }) }]),
+        ]);
+      }
+      this._notas = { pintar: pintarNotas };
 
       this._herr = [
         { id: "texto", icono: "type", micro: "Cuadro de texto|Agrega un título o un párrafo a la diapositiva.", fn: () => lienzo.crear("texto") },
@@ -1141,60 +1523,175 @@
         { id: "atras", icono: "send-to-back", micro: "Enviar al fondo||Ctrl+Mayús+[", fn: () => lienzo.capaZ("fondo"), off: () => !lienzo.seleccion() },
         { id: "borrar", icono: "trash-2", micro: "Eliminar|Quita los bloques seleccionados.|Supr", fn: () => lienzo.eliminar(), off: () => !lienzo.seleccion() },
         "|",
+        { id: "capas", icono: "layers", micro: "Capas|Ocultar, bloquear y ordenar lo de la diapositiva.", fn: () => lienzo.capas.abrir() },
+        { id: "comentar", icono: "message-square", micro: "Comentar|Comenta lo elegido (o la diapositiva). Funciona sin Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed), clase: "solo-escritorio" },
+        "|",
         { id: "nueva", icono: "plus-square", micro: "Nueva diapositiva", fn: () => { ed.pagina = ed.nuevaPagina(ed.pagina); lienzo.render(); } },
-        { id: "presentar", icono: "play", micro: "Presentar|Pantalla completa con animaciones. Avanza con clic o →.|F5", fn: () => presentar(ed) },
+        { id: "notas", icono: "sticky-note", micro: "Notas del orador|Solo tú las ves, en el modo presentador.", fn: () => alternarNotas(), activo: () => !notas.hidden },
+        { id: "transicion", icono: "sparkles", micro: "Transición|Cómo entra esta diapositiva al presentar.", fn: (e, b) => menuTransicion(b) },
+        { id: "presentar", icono: "play", micro: "Presentar|Aquí, en modo presentador o en otra pantalla (proyector).|F5", fn: (e, b) => menuPresentar(b) },
       ];
       this._teclaF5 = (e) => { if (e.key === "F5") { e.preventDefault(); presentar(ed); } };
       document.addEventListener("keydown", this._teclaF5);
-      this.cambios = (l) => lienzo.cambios(l);
+      this.cambios = (l) => { lienzo.cambios(l); if (l.some((c) => c.bloque === "_doc")) pintarNotas(); };
       this.desmontar = () => { lienzo.destruir(); document.removeEventListener("keydown", this._teclaF5); ed.lienzo.style.overflow = ""; };
+      this.resaltarCambios = (c) => { lienzo.resaltar(c); pintarMinis(); };
+      this.comentarios = {
+        ancla: () => lienzo.anclaComentario() || { tipo: "pagina", pagina: ed.pagina, cita: "Diapositiva " + (doc().paginas().indexOf(ed.pagina) + 1) },
+        irA: (a) => { if (a.pagina && doc().paginas().includes(a.pagina)) { ed.pagina = a.pagina; lienzo.render(); } return a.id ? lienzo.irABloque(a.id) : true; },
+        pintar: (l) => lienzo.marcarComentarios(l),
+      };
     },
     herramientas() { return this._herr || []; },
+    acciones() {
+      return [
+        { texto: "Modo presentador", icono: "sticky-note", fn: () => presentar(NOM.editorActual, { presentador: true }), claves: "presentar notas orador" },
+        { texto: "Presentar en otra pantalla (proyector)", icono: "cast", fn: () => presentar(NOM.editorActual, { presentador: true, proyectar: true }), claves: "proyector pantalla telefono" },
+        { texto: "Capas", icono: "layers", fn: () => this._lienzo.capas.abrir(), claves: "ocultar bloquear orden" },
+      ];
+    },
   };
 
+  // ------------------------------------------------------------ una diapositiva como HTML (miniaturas, presentar, proyector)
+  /** Lo que se presenta de una página: sin lo oculto ni lo que quedó en la mesa de trabajo (5.1). */
+  function bloquesPresentables(doc, p) {
+    const fueraDe = (b) => b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= ANCHO || b.y >= ALTO;
+    return posiciones(doc.deLaPagina(p).filter((b) => b.tipo !== "conector" && !b.oculto), true).filter((b) => !fueraDe(b)).sort((a, b) => (a.z || 0) - (b.z || 0));
+  }
+  /** Bloques animados de una página, en el orden en que aparecen. */
+  const pasosDe = (bs) => bs.filter((b) => b.animacion).sort((a, b) => a.y - b.y || a.x - b.x);
+  /** HTML de los bloques de una diapositiva. paso: cuántos bloques animados ya aparecieron (null = todos). */
+  function htmlDiapositiva(doc, p, paso) {
+    const bs = bloquesPresentables(doc, p), pasos = pasosDe(bs);
+    const visibles = paso == null ? null : new Set(pasos.slice(0, paso).map((b) => b.id));
+    const ultimo = paso ? pasos[paso - 1] : null;
+    return bs.map((b) => {
+      const oculto = visibles && b.animacion && !visibles.has(b.id);
+      const anim = ultimo && ultimo.id === b.id ? " anim-" + b.animacion : "";
+      return `<div class="bl${clasesBloque(b)}${oculto ? " anim-oculto" : ""}${anim}" data-id="${esc(b.id)}" style="${estiloBloque(b)}overflow:hidden">${contenido(b)}</div>`;
+    }).join("");
+  }
+
   // ------------------------------------------------------------ reproductor
-  function presentar(ed) {
+  /**
+   * Presenta en pantalla completa. opc.presentador: vista con notas, la siguiente diapositiva y el
+   * tiempo (5.5). opc.proyectar: además la presentación se ve en otra pantalla (el navegador de la
+   * computadora del proyector abre /proyectar?c=CÓDIGO, sin iniciar sesión) y la mueve este equipo.
+   */
+  function presentar(ed, opc) {
+    opc = opc || {};
     const doc = ed.doc;
-    const pags = doc.paginas();
-    let i = Math.max(0, pags.indexOf(ed.pagina)), paso = 0, pasos = [];
-    const rep = html(`<div class="reproductor" tabindex="0"><div class="diapo" data-d></div><button class="icono-btn salir" aria-label="Salir">${ico("x")}</button><span class="contador" data-c></span></div>`);
+    const pags = () => doc.paginas();
+    let i = Math.max(0, pags().indexOf(ed.pagina)), paso = 0, pasos = [], codigo = null;
+    const presentador = !!opc.presentador;
+    const rep = html(`<div class="reproductor${presentador ? " presentador" : ""}" tabindex="0">
+      ${presentador ? `<div class="pv-actual"><div class="diapo" data-d></div></div>
+        <aside class="pv-lado"><div class="pv-sig"><span>Siguiente</span><div class="pv-sig-caja"><div class="diapo" data-sig></div></div></div>
+          <div class="pv-notas" data-notas></div>
+          <div class="pv-proy" data-proy hidden></div></aside>
+        <div class="pv-ctl"><button class="btn" data-ant>${ico("chevron-left")} Anterior</button><span class="pv-tiempo" data-tiempo>0:00</span><span class="contador" data-c></span><button class="btn primario" data-sig-btn>Siguiente ${ico("chevron-right")}</button></div>`
+        : `<div class="diapo" data-d></div><span class="contador" data-c></span>`}
+      <button class="icono-btn salir" aria-label="Salir">${ico("x")}</button></div>`);
     document.body.append(rep);
-    const d = $("[data-d]", rep);
-    function escala() {
-      const k = Math.min(innerWidth / ANCHO, innerHeight / ALTO);
-      d.style.transform = `scale(${k})`;
-      d.style.left = (innerWidth - ANCHO * k) / 2 + "px";
-      d.style.top = (innerHeight - ALTO * k) / 2 + "px";
+    const d = $("[data-d]", rep), sig = $("[data-sig]", rep);
+    const inicio = Date.now();
+    const reloj = presentador ? setInterval(() => { const s2 = Math.floor((Date.now() - inicio) / 1000); $("[data-tiempo]", rep).textContent = `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, "0")}`; }, 1000) : null;
+    function escalar(el, caja) {
+      const r = caja ? caja.getBoundingClientRect() : { width: innerWidth, height: innerHeight, left: 0, top: 0 };
+      const k = Math.min(r.width / ANCHO, r.height / ALTO);
+      el.style.transform = `scale(${k})`;
+      el.style.left = (caja ? 0 : 0) + (r.width - ANCHO * k) / 2 + "px";
+      el.style.top = (r.height - ALTO * k) / 2 + "px";
     }
-    function pintar(revelarTodo) {
-      const bs = posiciones(doc.deLaPagina(pags[i]).filter((b) => b.tipo !== "conector"), true).sort((a, b) => (a.z || 0) - (b.z || 0));
-      d.innerHTML = bs.map((b) => `<div class="bl${clasesBloque(b)} ${b.animacion && !revelarTodo ? "anim-oculto" : ""}" data-id="${esc(b.id)}" style="${estiloBloque(b)}">${contenido(b)}</div>`).join("");
-      pasos = revelarTodo ? [] : bs.filter((b) => b.animacion).sort((a, b) => a.y - b.y || a.x - b.x);
-      paso = 0;
-      $("[data-c]", rep).textContent = `${i + 1} / ${pags.length}`;
+    function escala() {
+      escalar(d, presentador ? $(".pv-actual", rep) : null);
+      if (sig) escalar(sig, $(".pv-sig-caja", rep));
+    }
+    const avisarProyector = NOM.throttle(() => {
+      if (!codigo) return;
+      NOM.api.put(`/api/documentos/${ed.id}/proyeccion`, { pagina: pags()[i], paso }).catch(() => {});
+    }, 120);
+    function transicion() {
+      const t = doc.valor("_doc", "trans:" + pags()[i]);
+      d.classList.remove("trans-desvanecer", "trans-deslizar", "trans-empujar", "trans-zoom");
+      if (t) { void d.offsetWidth; d.classList.add("trans-" + t); }
+    }
+    function pintar(revelarTodo, conTransicion) {
+      const p = pags()[i];
+      const bs = bloquesPresentables(doc, p);
+      pasos = revelarTodo ? [] : pasosDe(bs);
+      paso = revelarTodo ? pasosDe(bs).length : 0;
+      d.innerHTML = htmlDiapositiva(doc, p, revelarTodo ? null : 0);
+      if (conTransicion !== false) transicion();
+      $("[data-c]", rep).textContent = `${i + 1} / ${pags().length}`;
+      if (presentador) {
+        const n = pags()[i + 1];
+        sig.innerHTML = n ? htmlDiapositiva(doc, n) : "";
+        $(".pv-sig", rep).classList.toggle("fin", !n);
+        const nota = doc.valor("_doc", "nota:" + p) || "";
+        $("[data-notas]", rep).innerHTML = nota ? esc(nota).replace(/\n/g, "<br>") : `<span class="suave">Sin notas para esta diapositiva.</span>`;
+      }
+      avisarProyector();
     }
     function avanzar() {
       if (paso < pasos.length) {
         const b = pasos[paso++];
-        const el = d.querySelector(`[data-id="${b.id}"]`);
-        el.classList.remove("anim-oculto"); el.classList.add("anim-" + b.animacion);
+        const el = d.querySelector(`[data-id="${CSS.escape(b.id)}"]`);
+        if (el) { el.classList.remove("anim-oculto"); el.classList.add("anim-" + b.animacion); }
+        avisarProyector();
         return;
       }
-      if (i < pags.length - 1) { i++; pintar(); } else salir();
+      if (i < pags().length - 1) { i++; pintar(); } else salir();
     }
-    function retroceder() { if (i > 0) { i--; pintar(true); } }
-    function salir() { document.removeEventListener("keydown", tecla, true); removeEventListener("resize", escala); rep.remove(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+    function retroceder() { if (i > 0) { i--; pintar(true, false); } }
+    function salir() {
+      clearInterval(reloj);
+      document.removeEventListener("keydown", tecla, true);
+      removeEventListener("resize", escala);
+      rep.remove();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      if (codigo) NOM.api.delete(`/api/documentos/${ed.id}/proyeccion`).catch(() => {});
+      if (wake) wake.release().catch(() => {});
+    }
     function tecla(e) {
       e.stopPropagation();
       if (["ArrowRight", "ArrowDown", " ", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); avanzar(); }
       else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); retroceder(); }
       else if (e.key === "Escape") salir();
     }
-    rep.addEventListener("click", (e) => { if (e.target.closest(".salir")) return salir(); (e.clientX < innerWidth / 3 ? retroceder : avanzar)(); });
+    rep.addEventListener("click", (e) => {
+      if (e.target.closest(".salir")) return salir();
+      if (e.target.closest("[data-ant]")) return retroceder();
+      if (e.target.closest("[data-sig-btn]")) return avanzar();
+      if (presentador && !e.target.closest(".pv-actual")) return;
+      (e.clientX < innerWidth / 3 ? retroceder : avanzar)();
+    });
+    // Deslizar con el dedo: a la izquierda avanza, a la derecha regresa.
+    let x0 = null;
+    rep.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") x0 = e.clientX; });
+    rep.addEventListener("pointerup", (e) => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 60) { e.preventDefault(); (dx < 0 ? avanzar : retroceder)(); } });
     document.addEventListener("keydown", tecla, true);
     addEventListener("resize", escala);
-    if (rep.requestFullscreen) rep.requestFullscreen().catch(() => {});
+    let wake = null;
+    if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request("screen").then((w) => (wake = w)).catch(() => {});
+    if (rep.requestFullscreen && !presentador) rep.requestFullscreen().catch(() => {});
     escala(); pintar(); rep.focus();
+    if (opc.proyectar) {
+      const caja = $("[data-proy]", rep);
+      caja.hidden = false;
+      caja.innerHTML = `<span class="cargando"></span> Preparando la pantalla del público…`;
+      NOM.api.post(`/api/documentos/${ed.id}/proyeccion`).then(async (r) => {
+        codigo = r.codigo;
+        let bases = [];
+        try { const esp = await NOM.api.get(`/api/espacios/${ed.espacio.id}`); bases = NOM.union.bases(esp.conexionDetalle); } catch (e) { bases = NOM.union.bases(null); }
+        const url = bases[0] ? `${bases[0]}/proyectar?c=${codigo}` : "";
+        caja.innerHTML = `<div class="pv-qr">${url ? NOM.qr.svg(url, { titulo: "QR para proyectar" }) : ""}</div>
+          <div><b>Pantalla del público</b><small>En la computadora del proyector abre <b>${esc(url ? url.replace(/^https?:\/\//, "").replace(/\/proyectar.*$/, "") : "NOM-COLAB")}/proyectar</b> y escribe <b class="qr-codigo chico">${esc(codigo)}</b>, o escanea el QR. Aquí la mueves.</small>
+          ${url && !NOM.api.empaquetada ? `<button class="btn chico" data-abrir>${ico("monitor", "ico-s")} Abrir en otra ventana</button>` : ""}</div>`;
+        const ab = $("[data-abrir]", caja); if (ab) ab.onclick = () => window.open(url, "nom-proyector", "noopener");
+        avisarProyector();
+      }).catch((e) => { caja.innerHTML = `<div class="alerta error">${ico("triangle-alert")}<span>${esc(e.red ? "Para proyectar en otra pantalla hace falta el servidor" : e.message)}</span></div>`; });
+    }
   }
 
   // ================================================================== Diagrama
@@ -1227,7 +1724,15 @@
         { id: "frente", icono: "bring-to-front", micro: "Traer al frente||Ctrl+Mayús+]", fn: () => lienzo.capaZ("frente"), off: () => !lienzo.seleccion() },
         { id: "duplicar", icono: "copy", micro: "Duplicar||Ctrl+D", fn: () => lienzo.duplicar(), off: () => !lienzo.seleccion() },
         { id: "borrar", icono: "trash-2", micro: "Eliminar|Borra las figuras y sus flechas.|Supr", fn: () => lienzo.eliminar(), off: () => !lienzo.seleccion() },
+        { id: "capas", icono: "layers", micro: "Capas|Ocultar, bloquear y ordenar las figuras.", fn: () => lienzo.capas.abrir() },
+        { id: "comentar", icono: "message-square", micro: "Comentar|Comenta la figura elegida. Funciona sin Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed), clase: "solo-escritorio" },
       ];
+      this.resaltarCambios = (c) => lienzo.resaltar(c);
+      this.comentarios = {
+        ancla: () => lienzo.anclaComentario(),
+        irA: (a) => { if (a.pagina && ed.doc.paginas().includes(a.pagina) && a.pagina !== ed.pagina) { ed.pagina = a.pagina; lienzo.render(); } return a.id ? lienzo.irABloque(a.id) : true; },
+        pintar: (l) => lienzo.marcarComentarios(l),
+      };
       if (!ed.doc.deLaPagina(ed.pagina).length && !ed.soloLectura) {
         const p = html(`<div class="pista">${ico("info", "ico-s")} Elige una figura arriba y haz clic en el lienzo. Clic derecho (o mantener el dedo) en el lienzo vacío para más</div>`);
         ed.lienzo.append(p);

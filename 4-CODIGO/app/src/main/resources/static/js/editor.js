@@ -22,7 +22,13 @@
       const c = NOM.DocCRDT.cache(docId);
       if (e.red && c) { datos = { estado: c.estado, documento: c.meta && c.meta.documento, permiso: c.meta && c.meta.permiso, espacio: c.meta && c.meta.espacio }; sinRed = true; }
       else {
-        raiz.innerHTML = `<div class="contenido"><div class="vacio"><div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div><h3>${esc(e.red ? "Sin conexión y sin copia local de este documento" : e.message)}</h3><a class="btn" href="#/">Volver al inicio</a></div></div>`;
+        raiz.innerHTML = `<div class="contenido"><div class="vacio"><div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div>
+          <h3>${esc(e.red ? "No se pudo abrir el documento" : e.message)}</h3>
+          ${e.red ? `<p>No hay conexión con el servidor y este equipo no tiene una copia guardada. Revisa el Wi-Fi y vuelve a intentarlo.</p>` : ""}
+          <div class="fila" style="justify-content:center;flex-wrap:wrap">${e.red ? `<button class="btn primario" data-reintentar>${ico("refresh-cw")} Volver a intentar</button>` : ""}<a class="btn" href="#/">Ir al inicio</a></div></div></div>`;
+        // Vuelve a pasar por la ruta (así el intento nuevo es una pantalla limpia).
+        const re = raiz.querySelector("[data-reintentar]");
+        if (re) re.onclick = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
         return () => {};
       }
     }
@@ -36,6 +42,12 @@
     };
     ed.soloLectura = ed.permiso === "LECTURA";
     ed.local = enLocal;
+    // El propietario del espacio (aunque haya pasado la fecha de entrega, él sigue editando).
+    ed.esPropietario = !enLocal && ((datos.espacio || {}).miPermiso || datos.permiso) === "PROPIETARIO";
+    ed.entrega = datos.entrega || null;
+    ed.protegido = !!(datos.documento && datos.documento.protegido);
+    ed.visita = datos.visita || null;
+    ed.cambiosVisita = datos.cambios || null;
     if (!enLocal) NOM.anotarReciente({ id: docId, nombre: (datos.documento || {}).nombre, modo: (datos.documento || {}).modo }, ed.espacio);
 
     const doc = new NOM.DocCRDT(docId, datos.estado, {
@@ -44,6 +56,8 @@
       alEstado: (e, n) => pintarEstado(e, n),
       alRechazo: (e) => permisoPerdido(e),
       alEliminado: () => documentoEliminado(),
+      alRechazadas: (r) => cambiosRechazados(r),
+      alLleno: (e) => aviso(e.message, { tipo: "error", ms: 9000 }),
     });
     ed.doc = doc;
     NOM.editorActual = ed;   // útil para depurar desde la consola
@@ -66,11 +80,13 @@
           <span class="avatares solo-escritorio" data-presencia></span>
           <span class="estado-sync" data-sync role="status" aria-live="polite"></span>
           <button class="icono-btn solo-escritorio" data-a="paleta" data-micro="Buscar o ir a|Documentos, espacios y acciones.|Ctrl K">${ico("search")}</button>
+          <button class="icono-btn" ${enLocal ? "hidden" : ""} data-a="comentarios" aria-label="Comentarios" data-micro="Comentarios|Comentarios y sugerencias del documento. Funcionan sin Internet, en la red del salón.">${ico("message-square")}</button>
           <button class="icono-btn solo-escritorio" ${enLocal ? "hidden" : ""} data-a="historial" data-micro="Historial de versiones|Consulta y restaura versiones anteriores.">${ico("history")}</button>
           <button class="icono-btn" data-a="mas" aria-label="Más opciones" data-micro="Más opciones|Exportar, guardar versión, enfoque y más.">${ico("more-horizontal")}</button>
         </header>
         <div class="ed-herramientas" role="toolbar" aria-label="Herramientas" data-herr></div>
         <div class="ed-lienzo" data-lienzo tabindex="-1"></div>
+        <div class="ed-avisos" data-avisos-doc aria-live="polite"></div>
         <aside class="ed-lateral" data-lateral></aside>
         <button class="icono-btn salir-enfoque" data-a="salir-enfoque" aria-label="Salir del modo enfoque" data-micro="Salir del modo enfoque||Esc">${ico("minimize-2")}</button>
       </div>`);
@@ -103,6 +119,8 @@
       ed.modoApi.montar(ed);
       pintarHerramientas();
       ed.pintarPresencia();
+      if (ed.resaltando && ed.modoApi.resaltarCambios) ed.modoApi.resaltarCambios({ visita: ed.visita, cambios: ed.cambiosVisita });
+      if (ed.alMontarModo) ed.alMontarModo();
     }
 
     // ------------------------------------------------------------ herramientas
@@ -162,6 +180,7 @@
         if ("nombre" in docCambio.campos) pintarNombre();
       }
       if (ed.modoApi && ed.modoApi.cambios) ed.modoApi.cambios(cambios, origen);
+      if (NOM.comentarios) NOM.comentarios.cambios(ed, cambios);
       ed.refrescarHerramientas();
       if (cambios.some((c) => !c.local)) ed.pintarPresencia();
     }
@@ -177,12 +196,14 @@
         "sin-red": [ico("cloud-off", "ico-s"), `Sin conexión${n ? " · " + n + " en este equipo" : ""}`, "sin-red"],
         pendiente: [ico("clock", "ico-s"), `${n} por enviar`, "pendiente"],
         lectura: [ico("eye", "ico-s"), "Solo lectura", "lectura"],
+        lleno: [ico("hard-drive", "ico-s"), `Sin espacio en la nube${n ? " · " + n + " en este equipo" : ""}`, "sin-red"],
         local: [ico("hard-drive", "ico-s"), "Solo en este equipo", "pendiente"],
       }[ed.soloLectura ? "lectura" : ed.local ? "local" : e] || ["", "", ""];
       s.className = "estado-sync " + t[2];
       s.innerHTML = `${t[0]}<span class="solo-escritorio">${t[1]}</span>`;
       s.setAttribute("data-micro", ed.local ? "Solo en este equipo|Se guarda automáticamente " + NOM.aqui().en + ", pero si " + NOM.aqui().borrar + " se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
         : ed.soloLectura ? "Solo lectura|Tu permiso permite ver, no editar."
+        : e === "lleno" ? "Sin espacio en la nube|El propietario del espacio usó toda su cuota. Tus cambios se quedan en este equipo; liberen versiones viejas en Almacenamiento."
         : e === "sin-red" ? "Sin conexión|Sigue trabajando: tus cambios se guardan en este equipo y se envían solos al volver la red."
         : "Sincronización|Cada cambio se ve al instante aquí y en menos de 1.5 s en los demás equipos.");
     }
@@ -223,8 +244,18 @@
       hola: async () => {
         if (caido) {
           caido = false;
-          try { const r = await api.get(`/api/documentos/${docId}`); doc.fusionarEstado(r.estado); if (r.permiso !== ed.permiso) cambiarPermiso(r.permiso); } catch (e) { /* siguiente intento */ }
-          aviso("Conexión recuperada. Sincronizando tus cambios…", { tipo: "ok" });
+          let resumen = null;
+          try {
+            const r = await api.get(`/api/documentos/${docId}`);
+            const desde = doc.relojDesconexion, mios = (doc.enviadasSinRed || []).concat(doc.pendientes);
+            doc.fusionarEstado(r.estado);
+            if (desde != null && mios.length) resumen = NOM.reconexion ? NOM.reconexion.calcular(ed, r.estado, desde, mios) : null;
+            if (r.permiso !== ed.permiso) cambiarPermiso(r.permiso);
+          } catch (e) { /* siguiente intento */ }
+          doc.relojDesconexion = null;
+          doc.enviadasSinRed = [];
+          if (resumen && resumen.length) NOM.reconexion.mostrar(ed, resumen);
+          else aviso("Conexión recuperada. Sincronizando tus cambios…", { tipo: "ok" });
         }
         doc.reanudar();
         enviarPresencia();
@@ -236,6 +267,8 @@
       guardado: (x) => { ultimoGuardado = x.numero; pintarEstado(doc.estadoSync, doc.pendientes.length); },
       permiso: (x) => { if (x.usuarioId === (api.usuario() || {}).id) cambiarPermiso(x.permiso); },
       eliminado: () => documentoEliminado(),
+      entrega: () => refrescarEntrega(true),
+      documento: (x) => { if ("protegido" in x) { ed.protegido = !!x.protegido; pintarAvisos(); } },
       expulsado: (x) => { aviso(x.motivo, { tipo: "aviso" }); location.hash = "#/"; },
       rechazo: (e) => {
         if (e.estado === 409) {
@@ -299,6 +332,129 @@
       };
     }
 
+
+    // ------------------------------------------------------------ 3.5 cambios que el servidor no aceptó
+    let recargando = false;
+    async function cambiosRechazados(r) {
+      aviso(r.motivo || "Parte de tus cambios no se aplicó", { tipo: "aviso", ms: 6000 });
+      if (recargando) return;
+      recargando = true;
+      try {
+        const d = await api.get(`/api/documentos/${docId}`);
+        doc.reemplazarEstado(d.estado);
+        if (!ed.previa) montar(ed.modo, true);
+      } catch (e) { /* se queda como está hasta reabrir */ }
+      recargando = false;
+    }
+
+    // ------------------------------------------------------------ avisos fijos: entrega, protección, cambios
+    const fechaLarga = (ms) => new Date(ms).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    function desdeCuando(ms) {
+      const d = new Date(ms), hoy = new Date(), ayer = new Date(Date.now() - 86400000);
+      const hora = d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+      if (d.toDateString() === hoy.toDateString()) return "desde hoy a las " + hora;
+      if (d.toDateString() === ayer.toDateString()) return "desde ayer a las " + hora;
+      if (Date.now() - ms < 6 * 86400000) return "desde el " + d.toLocaleDateString("es-MX", { weekday: "long" });
+      return "desde el " + d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+    }
+    const listaNombres = (ps) => { const n = ps.map((p) => p.nombre); return n.length <= 1 ? n.join("") : n.slice(0, -1).join(", ") + " y " + n[n.length - 1]; };
+    let tEntrega = null;
+    function pintarAvisos() {
+      const cont = $("[data-avisos-doc]", vista);
+      if (!cont) return;
+      const l = [];
+      const e = ed.entrega;
+      if (e && e.limite) {
+        const vencida = e.vencida || Date.now() >= e.limite;
+        l.push(`<div class="banda ${vencida ? "aviso" : "info"}">${ico("calendar", "ico-s")}<span class="crece">${vencida
+          ? (ed.esPropietario ? `La entrega cerró el ${esc(fechaLarga(e.limite))}: los demás ya solo pueden leer.` : `La fecha límite pasó (${esc(fechaLarga(e.limite))}): el documento quedó en solo lectura.`)
+          : `Entrega: fecha límite ${esc(fechaLarga(e.limite))}`}</span>
+          ${ed.esPropietario ? `<button class="btn chico" data-a="entrega">Cambiar</button>` : ""}${vencida && ed.esPropietario && (e.recibos || []).length ? `<button class="btn chico" data-a="recibos-entrega">${ico("shield-check", "ico-s")} Recibos (${e.recibos.length})</button>` : ""}</div>`);
+      }
+      const c = ed.cambiosVisita;
+      if (c && c.personas && c.personas.length && !ed.previa) {
+        l.push(`<div class="banda cambios">${ico("sparkles", "ico-s")}<span class="crece">Cambios de <b>${esc(listaNombres(c.personas))}</b> ${esc(desdeCuando(c.desde))}${ed.resaltando ? " · resaltados" : ""}.</span>
+          <button class="btn chico" data-a="ver-cambios">${ed.resaltando ? "Quitar resaltado" : "Resaltar"}</button><button class="icono-btn chico" data-a="cerrar-cambios" aria-label="Cerrar">${ico("x", "ico-s")}</button></div>`);
+      }
+      cont.innerHTML = l.join("");
+      const b = (a) => $(`[data-a="${a}"]`, cont);
+      if (b("entrega")) b("entrega").onclick = dialogoEntrega;
+      if (b("recibos-entrega")) b("recibos-entrega").onclick = () => NOM.recibo.lista(ed.entrega.recibos);
+      if (b("ver-cambios")) b("ver-cambios").onclick = () => resaltarCambios(!ed.resaltando);
+      if (b("cerrar-cambios")) b("cerrar-cambios").onclick = () => { resaltarCambios(false); ed.cambiosVisita = null; pintarAvisos(); };
+      clearTimeout(tEntrega);
+      // Si la fecha límite llega con el documento abierto, pasa a solo lectura en ese momento.
+      if (e && e.limite && !ed.esPropietario && Date.now() < e.limite && e.limite - Date.now() < 2 ** 31 - 1) tEntrega = setTimeout(() => refrescarEntrega(false), e.limite - Date.now() + 1500);
+    }
+    function resaltarCambios(si) {
+      ed.resaltando = !!si && !!ed.cambiosVisita;
+      if (ed.modoApi && ed.modoApi.resaltarCambios) ed.modoApi.resaltarCambios(ed.resaltando ? { visita: ed.visita, cambios: ed.cambiosVisita } : null);
+      pintarAvisos();
+    }
+    ed.resaltarCambios = resaltarCambios;
+    async function refrescarEntrega(avisar) {
+      try {
+        const d = await api.get(`/api/documentos/${docId}`);
+        ed.entrega = d.entrega || null;
+        if (d.permiso !== ed.permiso) cambiarPermiso(d.permiso);
+        pintarAvisos();
+        if (avisar && ed.entrega && ed.entrega.cerrada && !ed.esPropietario) aviso("Se cerró la entrega: el documento quedó en solo lectura", { tipo: "info" });
+      } catch (e) { /* sin red */ }
+    }
+    function dialogoEntrega() {
+      const actual = ed.entrega && ed.entrega.limite ? new Date(ed.entrega.limite) : new Date(Date.now() + 7 * 86400000);
+      const local = new Date(actual.getTime() - actual.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const cuerpo = html(`<form class="col">
+        <p class="suave" style="font-weight:650">Al llegar la fecha, quien no es el propietario del espacio queda en <b>solo lectura</b> y se guarda una versión final con el <b>recibo de proceso de escritura</b> de cada persona que trabajó en el documento.</p>
+        <div class="campo"><label for="fl">Fecha y hora límite</label><div class="entrada">${ico("calendar")}<input id="fl" type="datetime-local" value="${local}" required></div></div></form>`);
+      const pie = html(`<div style="display:contents">${ed.entrega && ed.entrega.limite ? `<button class="btn plano peligro" data-quitar type="button">Quitar la entrega</button>` : ""}<span class="crece"></span><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
+      const h = hoja({ titulo: "Entrega con fecha límite", icono: "calendar", cuerpo, pie });
+      const fijar = async (limite) => {
+        try { ed.entrega = await api.put(`/api/documentos/${docId}/entrega`, { limite }); if (!limite) ed.entrega = null; pintarAvisos(); h.cerrar(); aviso(limite ? "Fecha límite guardada" : "Ya no es una entrega", { tipo: "ok" }); }
+        catch (e) { aviso(e.message, { tipo: "error" }); }
+      };
+      $("[data-no]", pie).onclick = () => h.cerrar();
+      const q = $("[data-quitar]", pie); if (q) q.onclick = () => fijar(0);
+      const enviar = (e) => { e && e.preventDefault(); const v = $("#fl", cuerpo).value; if (!v) return; fijar(new Date(v).getTime()); };
+      cuerpo.onsubmit = enviar;
+      $("[data-si]", pie).onclick = enviar;
+    }
+
+    // ------------------------------------------------------------ 1.2 proteger contra el borrado
+    async function proteger(si) {
+      let confirmacion = null;
+      if (!si) {
+        confirmacion = await NOM.pedirTexto("Quitar la protección", { etiqueta: "Para quitarla, escribe BORRAR", ph: "BORRAR", si: "Quitar protección", max: 10 });
+        if (confirmacion == null) return;
+      }
+      try {
+        await api.put(`/api/documentos/${docId}/proteccion`, { protegido: si, confirmacion });
+        ed.protegido = si;
+        aviso(si ? "Protegido: nadie puede borrarlo hasta que quites la marca" : "Protección quitada", { tipo: "ok" });
+      } catch (e) { aviso(e.message, { tipo: "error" }); }
+    }
+
+    // ------------------------------------------------------------ 3.5 asignar partes a una persona
+    /** Miembros del espacio (para "Asignar a…" y para poner nombre a los dueños). */
+    ed.miembros = [];
+    ed.cargarMiembros = async () => {
+      if (enLocal) return [];
+      try { const a = await api.get(`/api/espacios/${ed.espacio.id}/accesos`); ed.miembros = a.miembros || []; } catch (e) { /* sin red */ }
+      return ed.miembros;
+    };
+    ed.nombreDe = (uid) => { const m = ed.miembros.find((x) => x.id === uid); return m ? m.nombre : (uid === (api.usuario() || {}).id ? (api.usuario() || {}).nombre : "otra persona"); };
+    ed.colorDe = (uid) => { const m = ed.miembros.find((x) => x.id === uid); return m ? m.color : "#6B6875"; };
+    /** Elige a quién asignar una parte. Devuelve el id, "" para quitar la asignación, o null si se canceló. */
+    ed.elegirPersona = (titulo, actual) => new Promise(async (ok) => {
+      const ms = (await ed.cargarMiembros()).filter((m) => m.permiso !== "LECTURA");
+      const cuerpo = html(`<div class="col"><p class="suave" style="font-weight:650">Solo esa persona (y tú, como propietario) podrá cambiar esta parte. Los demás la ven, pero no la editan.</p>
+        <div class="lista">${ms.map((m) => `<button class="lista-item" data-u="${esc(m.id)}" style="text-align:left;width:100%" ${m.id === actual ? 'aria-pressed="true"' : ""}>${avatar(m)}<span class="crece"><b>${esc(m.nombre)}</b><small>${esc(m.permiso === "PROPIETARIO" ? "Propietario" : "Puede editar")}</small></span>${m.id === actual ? ico("check") : ""}</button>`).join("")}
+        ${actual ? `<button class="lista-item" data-u="" style="text-align:left;width:100%">${ico("lock-open")}<span class="crece"><b>Nadie</b><small>Quitar la asignación: todos pueden editarla</small></span></button>` : ""}</div></div>`);
+      let elegido = null;
+      const h = hoja({ titulo: titulo || "Asignar a…", icono: "users", cuerpo, alCerrar: () => ok(elegido) });
+      $$("[data-u]", cuerpo).forEach((b) => (b.onclick = () => { elegido = b.dataset.u; h.cerrar(); }));
+    });
+
     // ------------------------------------------------------------ versiones (CU-23)
     async function historial() {
       if (enLocal) return aviso("El historial de versiones necesita una cuenta. Sin cuenta, descarga copias con Exportar → .nom", { tipo: "info", ms: 5000 });
@@ -309,12 +465,20 @@
           <button class="icono-btn" data-cerrar aria-label="Cerrar historial">${ico("x")}</button></div>
         <div style="padding:0 16px 8px"><div class="segmentado lleno" role="group" aria-label="Ver">
           <button type="button" data-tab="versiones" aria-pressed="true">Versiones</button>
-          <button type="button" data-tab="actividad" aria-pressed="false" data-micro="Actividad|Cada cambio guardado: quién, desde qué dispositivo y cuándo.">Actividad</button></div></div>
+          <button type="button" data-tab="actividad" aria-pressed="false" data-micro="Actividad|Cada cambio guardado: quién, desde qué dispositivo y cuándo.">Actividad</button>
+          <button type="button" data-tab="aportes" aria-pressed="false" data-micro="Aportes|Cuánto escribió cada persona y cuánto de su texto sigue en el documento.">Aportes</button></div></div>
+        <div class="fila historial-acciones">
+          <button class="btn chico" data-recibo data-micro="Recibo de mi trabajo|Tus sesiones, lo que tecleaste y lo que pegaste, con una huella SHA-256 para probar que es auténtico.">${ico("shield-check", "ico-s")} Recibo de mi trabajo</button>
+          <button class="icono-btn chico" data-repeticion aria-label="Repetición" data-micro="Repetición|Mira cómo creció el documento, versión por versión.">${ico("play", "ico-s")}</button>
+          <button class="icono-btn chico" data-verificar aria-label="Verificar un recibo" data-micro="Verificar un recibo|Comprueba que un recibo (.json) lo emitió este servidor y no se cambió.">${ico("circle-check", "ico-s")}</button></div>
         <div class="cajon-cuerpo" data-versiones><div class="esqueleto" style="height:56px"></div><div class="esqueleto" style="height:56px"></div></div></div>`;
       $$("[data-tab]", lateral).forEach((b) => (b.onclick = () => {
         $$("[data-tab]", lateral).forEach((x) => x.setAttribute("aria-pressed", x === b));
-        if (b.dataset.tab === "actividad") cargarActividad(); else cargar();
+        if (b.dataset.tab === "actividad") cargarActividad(); else if (b.dataset.tab === "aportes") NOM.recibo.aportes($("[data-versiones]", lateral), ed); else cargar();
       }));
+      $("[data-recibo]", lateral).onclick = () => NOM.recibo.mostrar(ed);
+      $("[data-repeticion]", lateral).onclick = () => NOM.recibo.repeticion(ed);
+      $("[data-verificar]", lateral).onclick = () => NOM.recibo.verificar();
       $("[data-cerrar]", lateral).onclick = cerrarHistorial;
       const g = $("[data-guardar]", lateral);
       if (g) g.onclick = async () => { await guardarVersion(); cargar(); };
@@ -343,7 +507,7 @@
       const campos = a.campos || [], n = (a.bloques || []).filter((b) => b !== "_doc").length;
       if (a.escritas || a.borradas) {
         const p = [];
-        if (a.escritas) p.push(`escribió ${a.escritas} ${a.escritas === 1 ? "letra" : "letras"}`);
+        if (a.escritas) p.push(`escribió ${a.escritas} ${a.escritas === 1 ? "letra" : "letras"}${a.pegadas ? ` (${a.pegadas} pegadas)` : ""}`);
         if (a.borradas) p.push(`borró ${a.borradas}`);
         if (campos.includes("formato")) p.push("cambió formato");
         return p.join(", ").replace(/^./, (c) => c.toUpperCase());
@@ -441,6 +605,7 @@
 
     // ------------------------------------------------------------ menú y atajos
     $("[data-a=historial]", vista).onclick = historial;
+    $("[data-a=comentarios]", vista).onclick = () => NOM.comentarios && NOM.comentarios.abrir(ed);
     // Descarga directa en el formato de Office que corresponde al tipo del documento.
     const office = NOM.formatos.paraTipo(tipo)[0];
     const descargarOffice = { texto: "Descargar " + office.nombre, icono: "download", fn: () => {
@@ -469,8 +634,15 @@
       { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl+.", fn: () => enfoque(true) },
       "-",
       { texto: "Compartir espacio", icono: "share-2", fn: () => NOM.vistaEspacios.accesos(ed.espacio) },
+      { texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed) },
+      ...(ed.esPropietario ? [
+        { titulo: "Como propietario del espacio" },
+        { texto: ed.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: ed.protegido ? "lock-open" : "lock", fn: () => proteger(!ed.protegido) },
+        { texto: ed.entrega && ed.entrega.limite ? "Cambiar la fecha de entrega…" : "Entrega con fecha límite…", icono: "calendar", fn: dialogoEntrega },
+      ] : []),
       { texto: "Preferencias", icono: "settings", fn: () => NOM.vistaEspacios.preferencias() },
       ...(ed.soloLectura ? [] : ["-", { texto: "Eliminar documento", icono: "trash-2", peligro: true, fn: async () => {
+        if (ed.protegido) return aviso("Este documento está protegido contra el borrado. Quita la protección para borrarlo.", { tipo: "aviso", ms: 5000 });
         if (!(await confirmar("Eliminar documento", "Se eliminará para todos los miembros del espacio, con su historial.", { si: "Eliminar", peligro: true }))) return;
         try { await api.delete(`/api/documentos/${docId}`); avisadoEliminado = true; location.hash = "#/espacio/" + ed.espacio.id; } catch (err) { aviso(err.message, { tipo: "error" }); }
       } }]),
@@ -484,6 +656,14 @@
       { texto: "Exportar en otro formato…", icono: "file-down", fn: exportar, claves: "pdf html descargar" },
       { texto: "Modo enfoque", icono: "scan-eye", atajo: "Ctrl .", fn: () => enfoque(true), claves: "concentrar pantalla completa" },
       ...(enLocal ? [] : [{ texto: "Compartir espacio", icono: "share-2", fn: () => NOM.vistaEspacios.accesos(ed.espacio), claves: "invitar accesos" }]),
+      ...(enLocal ? [] : [{ texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed), claves: "prueba autoria tecleado pegado hash" }]),
+      ...(enLocal ? [] : [{ texto: "Comentarios", icono: "message-square", fn: () => NOM.comentarios && NOM.comentarios.abrir(ed), claves: "notas sugerencias revisar" }]),
+      ...(ed.cambiosVisita ? [{ texto: ed.resaltando ? "Quitar el resaltado de cambios" : "Resaltar lo que cambió desde mi última visita", icono: "sparkles", fn: () => resaltarCambios(!ed.resaltando), claves: "cambios nuevo visita" }] : []),
+      ...(ed.esPropietario ? [
+        { texto: ed.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: "lock", fn: () => proteger(!ed.protegido), claves: "no borrar proteger" },
+        { texto: "Entrega con fecha límite…", icono: "calendar", fn: dialogoEntrega, claves: "tarea fecha limite entrega" },
+      ] : []),
+      ...((ed.modoApi && ed.modoApi.acciones) ? ed.modoApi.acciones(ed) : []),
     ];
 
     function teclas(e) {
@@ -516,13 +696,30 @@
 
     // ------------------------------------------------------------ arranque
     montar(tipo);
+    pintarAvisos();
+    if (ed.cambiosVisita) setTimeout(() => resaltarCambios(true), 300);
+    if (!enLocal && NOM.comentarios) NOM.comentarios.montar(ed);
     if (NOM.alAbrirEditor) NOM.alAbrirEditor(ed, tipo);
 
+    // 3.4 Al irse, se avisa al servidor: lo que escriban otros desde aquí sí será "cambios desde tu visita".
+    const avisarSalida = (alCerrarPestana) => {
+      if (enLocal || !api.token()) return;
+      const url = api.servidor() + `/api/documentos/${docId}/presencia`, cuerpo = JSON.stringify({ cliente: doc.nodo, salir: true });
+      if (alCerrarPestana) {
+        try { fetch(url, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", Authorization: "Bearer " + api.token() }, body: cuerpo }).catch(() => {}); } catch (e) { /* sin red */ }
+      } else api.post(`/api/documentos/${docId}/presencia`, { cliente: doc.nodo, salir: true }).catch(() => {});
+    };
+    const alOcultarPagina = () => avisarSalida(true);
+    addEventListener("pagehide", alOcultarPagina);
+
     return () => {
+      clearTimeout(tEntrega);
+      removeEventListener("pagehide", alOcultarPagina);
       document.removeEventListener("keydown", teclas);
       document.removeEventListener("fullscreenchange", alSalirPantalla);
       if (ed.modoApi && ed.modoApi.desmontar) ed.modoApi.desmontar();
       canal && canal.cerrar();
+      avisarSalida(false);
       // A6: al terminar de editar se guarda una versión (si hubo cambios enviados en esta sesión).
       if (doc.ultimoEnvio && !ed.soloLectura) {
         doc.enviar().finally(() => api.post(`/api/documentos/${docId}/versiones`, { etiqueta: "Al cerrar" }).catch(() => {}));

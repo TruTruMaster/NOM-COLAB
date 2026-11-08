@@ -14,6 +14,7 @@ import mx.wack.nom.core.servicio.Difusor;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioSincronia;
 import mx.wack.nom.red.nodo.NodoLocal;
 import mx.wack.nom.servidor.repositorio.AlmacenJson;
 
@@ -46,19 +47,32 @@ public class Configuracion {
 
     @Bean
     public ServicioDocumentos servicioDocumentos(RepositorioDocumentos repo, ServicioEspacios espacios, ServicioCuentas cuentas,
-                                                 Difusor difusor, Cifrado cifrado, NodoLocal nodo) {
-        return new ServicioDocumentos(repo, espacios, cuentas, difusor, cifrado, nodo);
+                                                 Difusor difusor, Cifrado cifrado, NodoLocal nodo,
+                                                 @Value("${nom.cuota.mb:0}") long cuotaMb) {
+        ServicioDocumentos s = new ServicioDocumentos(repo, espacios, cuentas, difusor, cifrado, nodo);
+        // En la nube cada cuenta tiene un limite (NOM_CUOTA_MB); en la red local, 0 = sin limite.
+        s.fijarCuota(cuotaMb * 1024 * 1024);
+        return s;
+    }
+
+    @Bean
+    public CodecJson codecJson(AlmacenJson almacen) {
+        return new CodecJson() {
+            @Override public byte[] escribir(Object valor) { return almacen.json().writeValueAsBytes(valor); }
+            @Override public Object leer(String texto) { return almacen.json().readValue(texto, Object.class); }
+        };
+    }
+
+    @Bean
+    public ServicioSincronia servicioSincronia(ServicioEspacios espacios, ServicioDocumentos documentos, CodecJson json, NodoLocal nodo) {
+        return new ServicioSincronia(espacios, documentos, json, nodo);
     }
 
     @Bean(initMethod = "iniciar", destroyMethod = "detener")
     public Descubrimiento descubrimiento(NodoLocal nodo, RepositorioEspacios espacios, RepositorioUsuarios usuarios,
-                                         AlmacenJson almacen,
+                                         CodecJson json,
                                          @Value("${nom.descubrimiento.activo}") boolean activo,
                                          @Value("${nom.descubrimiento.puerto}") int puerto) {
-        CodecJson json = new CodecJson() {
-            @Override public byte[] escribir(Object valor) { return almacen.json().writeValueAsBytes(valor); }
-            @Override public Object leer(String texto) { return almacen.json().readValue(texto, Object.class); }
-        };
         return new Descubrimiento(nodo, espacios, usuarios, json, activo, puerto);
     }
 }

@@ -6,17 +6,24 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PreDestroy;
 import mx.wack.nom.core.servicio.Difusor;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
+import mx.wack.nom.core.servicio.ServicioSincronia;
 
 /** Lo que corre solo: al arrancar, cada cierto tiempo y al apagar (en el teléfono lo hace la app). */
 @Component
 public class Tareas {
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
+    private final ServicioSincronia sincronia;
 
-    public Tareas(ServicioDocumentos documentos, Difusor difusor) {
+    public Tareas(ServicioDocumentos documentos, Difusor difusor, ServicioSincronia sincronia) {
         this.documentos = documentos;
         this.difusor = difusor;
+        this.sincronia = sincronia;
     }
+
+    /** Los espacios conectados con otro servidor se copian cada 5 minutos (si hay red). */
+    @Scheduled(fixedDelay = 300_000, initialDelay = 90_000)
+    public void sincronizar() { sincronia.cadaRato(); }
 
     @Scheduled(fixedDelay = 800)
     public void persistir() { documentos.persistir(); }

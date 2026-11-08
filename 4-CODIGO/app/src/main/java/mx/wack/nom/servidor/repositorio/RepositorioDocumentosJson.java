@@ -28,6 +28,9 @@ import tools.jackson.core.type.TypeReference;
  *   docs/{id}/estado.json           estado CRDT
  *   docs/{id}/versiones.json        indice del historial
  *   docs/{id}/v/{n}.json            foto de cada version
+ *   docs/{id}/actividad.jsonl       bitacora (una linea por racha de cambios)
+ *   docs/{id}/visitas.json          ultima vez que cada persona lo abrio
+ *   recibos/{huella}.json           recibos de proceso de escritura emitidos
  */
 @Repository
 public class RepositorioDocumentosJson implements RepositorioDocumentos {
@@ -121,6 +124,35 @@ public class RepositorioDocumentosJson implements RepositorioDocumentos {
             return r;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override public synchronized Map<String, Map<String, Object>> visitas(String docId) {
+        return almacen.leer("docs/" + docId + "/visitas.json", new TypeReference<LinkedHashMap<String, Map<String, Object>>>() { }, new LinkedHashMap<>());
+    }
+
+    @Override public synchronized void guardarVisita(String docId, String usuarioId, Map<String, Object> visita) {
+        if (!docs.containsKey(docId)) return;
+        Map<String, Map<String, Object>> v = visitas(docId);
+        v.put(usuarioId, visita);
+        almacen.escribir("docs/" + docId + "/visitas.json", v);
+    }
+
+    private static String archivoRecibo(String huella) {
+        String h = huella.replaceFirst("^sha256:", "");
+        if (!h.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Huella no válida");
+        return "recibos/" + h + ".json";
+    }
+
+    @Override public void guardarRecibo(String huella, Map<String, Object> registro) {
+        almacen.escribir(archivoRecibo(huella), registro);
+    }
+
+    @Override public Map<String, Object> recibo(String huella) {
+        try {
+            return almacen.leer(archivoRecibo(huella), new TypeReference<LinkedHashMap<String, Object>>() { }, null);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 

@@ -27,6 +27,7 @@ public class CuentasApi {
 
     public record Registro(String nombre, String contrasena, String empresa) { }
     public record Credenciales(String nombre, String contrasena) { }
+    public record Recuperacion(String nombre, String codigo, String nueva) { }
 
     private final ServicioCuentas cuentas;
 
@@ -38,7 +39,20 @@ public class CuentasApi {
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> registrar(@RequestBody Registro r) {
         Usuario u = cuentas.registrar(r.nombre(), r.contrasena(), r.empresa());
-        return Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso");
+        // El codigo para recuperar la contrasena se muestra solo esta vez.
+        return Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u));
+    }
+
+    /** Publico: nueva contrasena con el codigo de recuperacion (devuelve un codigo nuevo). */
+    @PostMapping("/recuperar")
+    public Map<String, Object> recuperar(@RequestBody Recuperacion r) {
+        return Map.of("recuperacion", cuentas.recuperar(r.nombre(), r.codigo(), r.nueva()), "mensaje", "Listo: ya puedes entrar con tu contraseña nueva");
+    }
+
+    /** Un codigo de recuperacion nuevo para la cuenta abierta (el anterior deja de servir). */
+    @PostMapping("/recuperacion")
+    public Map<String, Object> nuevaRecuperacion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u) {
+        return Map.of("recuperacion", cuentas.nuevoCodigoRecuperacion(u));
     }
 
     @PostMapping("/sesion")
@@ -72,6 +86,7 @@ public class CuentasApi {
         }
         m.put("usuario", ServicioCuentas.publico(u));
         m.put("preferencias", u.preferencias);
+        m.put("recuperacion", ServicioCuentas.tieneRecuperacion(u));
         return m;
     }
 }

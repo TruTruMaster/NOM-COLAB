@@ -12,6 +12,7 @@ import mx.wack.nom.core.almacen.RepositorioEspacios;
 import mx.wack.nom.core.modelo.Documento;
 import mx.wack.nom.core.modelo.Espacio;
 import mx.wack.nom.core.modelo.Permiso;
+import mx.wack.nom.core.modelo.Sesion;
 import mx.wack.nom.core.modelo.SolicitudAcceso;
 import mx.wack.nom.core.modelo.Usuario;
 
@@ -78,11 +79,31 @@ public class ServicioEspacios {
         m.put("conectados", difusor.conectadosPublico(e.id));
         m.put("solicitudes", e.permisoDe(u.id) == Permiso.PROPIETARIO ? e.solicitudes.size() : 0);
         m.put("actividad", ds.isEmpty() ? e.creado : Math.max(e.creado, ds.get(0).modificado));
+        m.put("formatoBase", e.formatoBase);
+        if (e.permisoDe(u.id) == Permiso.PROPIETARIO) {
+            long ahora = System.currentTimeMillis();
+            m.put("enlacesVigentes", e.enlaces == null ? 0 : e.enlaces.stream().filter(x -> x.vigente(ahora)).count());
+            if (e.sincronia != null) {
+                Map<String, Object> sc = new LinkedHashMap<>();
+                sc.put("servidor", e.sincronia.servidor);
+                sc.put("usuario", e.sincronia.usuario);
+                sc.put("ultima", e.sincronia.ultima);
+                sc.put("estado", e.sincronia.estado);
+                sc.put("error", e.sincronia.error);
+                sc.put("documentos", e.sincronia.docs.size());
+                m.put("sincronia", sc);
+            }
+        }
         return m;
     }
 
+    public java.util.Collection<Espacio> todos() { return repo.todos(); }
+
+    public void guardar(Espacio e) { repo.guardar(e); }
+
     /** CU-13 Crear espacio de trabajo. */
     public synchronized Espacio crear(Usuario u, String nombre) {
+        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no crean espacios. Crea una cuenta para tener los tuyos.");
         nombre = nombre == null ? "" : nombre.trim();
         if (nombre.isEmpty()) throw ErrorNom.invalido("Ponle un nombre al espacio", "nombre");
         if (nombre.length() > 60) throw ErrorNom.invalido("Máximo 60 caracteres", "nombre");
@@ -139,6 +160,7 @@ public class ServicioEspacios {
     public synchronized Map<String, Object> unirse(Usuario u, String id) {
         Espacio e = requerir(id);
         if (e.permisoDe(u.id) != null) return Map.of("estado", "miembro", "espacio", resumen(e, u));
+        if (u.esInvitado()) throw ErrorNom.prohibido("Tu cuenta de invitado solo sirve en el espacio donde entraste");
         if (!e.conexion.activa) throw ErrorNom.prohibido("Este espacio ya no está visible en la red");
         boolean yaPidio = e.solicitudes.stream().anyMatch(s -> s.usuarioId.equals(u.id));
         if (!yaPidio) {
@@ -186,6 +208,8 @@ public class ServicioEspacios {
                 .orElseThrow(() -> new ErrorNom(ErrorNom.NO_EXISTE, "El usuario \"" + nombreUsuario.trim() + "\" no existe", "usuario"));
         if (otro.id.equals(e.propietarioId))
             throw ErrorNom.invalido("El espacio no puede quedar sin dueño", "usuario");
+        if (otro.esInvitado() && !e.id.equals(otro.invitadoDe) && permiso != null)
+            throw ErrorNom.invalido("Esa es una cuenta de invitado de otro espacio", "usuario");
         if (permiso == Permiso.PROPIETARIO)
             throw ErrorNom.invalido("Cada espacio tiene un solo propietario", "permiso");
         if (permiso == null) {
@@ -206,6 +230,172 @@ public class ServicioEspacios {
         e.solicitudes.removeIf(s -> s.usuarioId.equals(usuarioId));
         repo.guardar(e);
         return accesos(u, id);
+    }
+
+
+    // ------------------------------------------------------------ formato por defecto (texto)
+
+    /** El propietario fija con que fuente, tamano e interlineado nacen los documentos de texto. */
+    public synchronized Map<String, Object> fijarFormatoBase(Usuario u, String id, Map<String, Object> f) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.PROPIETARIO);
+        Map<String, Object> r = null;
+        if (f != null && !f.isEmpty()) {
+            r = new LinkedHashMap<>();
+            Object fuente = f.get("fuente");
+            if (fuente instanceof String fs && !fs.isBlank()) {
+                if (fs.length() > 40 || !fs.matches("[\\p{L}\\p{N} ._-]+")) throw ErrorNom.invalido("Fuente no válida", "fuente");
+                r.put("fuente", fs.trim());
+            }
+            if (f.get("tam") instanceof Number n) {
+                double t = n.doubleValue();
+                if (t < 6 || t > 72) throw ErrorNom.invalido("El tamaño va de 6 a 72 puntos", "tam");
+                r.put("tam", Math.round(t * 2) / 2.0);
+            }
+            if (f.get("interlineado") instanceof Number n) {
+                double li = n.doubleValue();
+                if (li < 1 || li > 3) throw ErrorNom.invalido("El interlineado va de 1 a 3", "interlineado");
+                r.put("interlineado", Math.round(li * 100) / 100.0);
+            }
+            if (r.isEmpty()) r = null;
+        }
+        e.formatoBase = r;
+        repo.guardar(e);
+        difusor.avisarTodoEspacio(e.id, "espacio", Map.of("formatoBase", r == null ? Map.of() : r));
+        return resumen(e, u);
+    }
+
+    // ------------------------------------------------------------ enlaces para unirse (QR)
+
+    private Map<String, Object> enlacePublico(Espacio.EnlaceUnion x, long ahora) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("codigo", x.codigo);
+        m.put("permiso", x.permiso);
+        m.put("creado", x.creado);
+        m.put("caduca", x.caduca);
+        m.put("invitados", x.invitados);
+        m.put("usos", x.usos);
+        m.put("estado", x.revocado ? "revocado" : x.caduca <= ahora ? "caducado" : "vigente");
+        return m;
+    }
+
+    /** Un enlace (y su QR) para que otros entren sin pedir acceso. Caduca en 'horas'. */
+    public synchronized Map<String, Object> crearEnlace(Usuario u, String id, Permiso permiso, int horas, boolean invitados) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.PROPIETARIO);
+        if (permiso == null) permiso = Permiso.EDICION;
+        if (permiso == Permiso.PROPIETARIO) throw ErrorNom.invalido("Cada espacio tiene un solo propietario", "permiso");
+        if (horas < 1 || horas > 24 * 30) throw ErrorNom.invalido("El enlace dura de 1 hora a 30 días", "horas");
+        long ahora = System.currentTimeMillis();
+        if (e.enlaces == null) e.enlaces = new ArrayList<>();
+        // Se olvidan los que ya no sirven desde hace mas de una semana; maximo 30 por espacio.
+        e.enlaces.removeIf(x -> !x.vigente(ahora) && ahora - x.caduca > 7L * 86_400_000L);
+        if (e.enlaces.stream().filter(x -> x.vigente(ahora)).count() >= 30) throw ErrorNom.invalido("Hay demasiados enlaces vigentes: revoca alguno", null);
+        Espacio.EnlaceUnion x = new Espacio.EnlaceUnion();
+        String c;
+        do { c = cuentas.codigo(8); } while (buscarEnlace(c) != null);
+        x.codigo = c;
+        x.permiso = permiso;
+        x.creado = ahora;
+        x.caduca = ahora + horas * 3_600_000L;
+        x.invitados = invitados;
+        e.enlaces.add(x);
+        repo.guardar(e);
+        Map<String, Object> m = enlacePublico(x, ahora);
+        m.put("conexion", estadoConexion(e));
+        return m;
+    }
+
+    public Map<String, Object> enlaces(Usuario u, String id) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.PROPIETARIO);
+        long ahora = System.currentTimeMillis();
+        List<Map<String, Object>> l = new ArrayList<>();
+        if (e.enlaces != null) for (int i = e.enlaces.size() - 1; i >= 0; i--) l.add(enlacePublico(e.enlaces.get(i), ahora));
+        return Map.of("enlaces", l, "conexion", estadoConexion(e));
+    }
+
+    public synchronized Map<String, Object> revocarEnlace(Usuario u, String id, String codigo) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.PROPIETARIO);
+        Espacio.EnlaceUnion x = e.enlaces == null ? null : e.enlaces.stream().filter(y -> y.codigo.equalsIgnoreCase(codigo)).findFirst().orElse(null);
+        if (x == null) throw ErrorNom.noEncontrado("El enlace");
+        x.revocado = true;
+        repo.guardar(e);
+        return enlaces(u, id);
+    }
+
+    private Object[] buscarEnlace(String codigo) {
+        if (codigo == null) return null;
+        String c = codigo.trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+        for (Espacio e : repo.todos()) {
+            if (e.enlaces == null) continue;
+            for (Espacio.EnlaceUnion x : e.enlaces) if (x.codigo.equals(c)) return new Object[] { e, x };
+        }
+        return null;
+    }
+
+    private Object[] enlaceVigente(String codigo) {
+        Object[] r = buscarEnlace(codigo);
+        if (r == null) throw new ErrorNom(ErrorNom.NO_EXISTE, "Ese código no existe. Revisa que lo escribiste bien.");
+        Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
+        if (x.revocado) throw new ErrorNom(ErrorNom.PROHIBIDO, "El propietario revocó este enlace. Pídele uno nuevo.");
+        if (x.caduca <= System.currentTimeMillis()) throw new ErrorNom(ErrorNom.PROHIBIDO, "Este enlace ya caducó. Pídele uno nuevo al propietario.");
+        return r;
+    }
+
+    /** Publico: lo que dice un enlace antes de entrar (sin revelar el contenido del espacio). */
+    public Map<String, Object> infoEnlace(String codigo) {
+        Object[] r = enlaceVigente(codigo);
+        Espacio e = (Espacio) r[0];
+        Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("codigo", x.codigo);
+        m.put("espacio", e.nombre);
+        m.put("color", e.color);
+        m.put("propietario", cuentas.porId(e.propietarioId).map(y -> y.nombre).orElse("?"));
+        m.put("permiso", x.permiso);
+        m.put("invitados", x.invitados);
+        m.put("caduca", x.caduca);
+        return m;
+    }
+
+    /** Entrar con un enlace estando ya en una cuenta: queda como miembro con el permiso del enlace. */
+    public synchronized Map<String, Object> entrarConEnlace(Usuario u, String codigo) {
+        Object[] r = enlaceVigente(codigo);
+        Espacio e = (Espacio) r[0];
+        Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
+        Permiso actual = e.permisoDe(u.id);
+        if (u.esInvitado() && !e.id.equals(u.invitadoDe)) throw ErrorNom.prohibido("Tu cuenta de invitado solo sirve en el espacio donde entraste");
+        if (actual == null || !actual.alMenos(x.permiso)) {
+            e.accesos.put(u.id, x.permiso);
+            difusor.avisarTodoEspacio(e.id, "permiso", Map.of("usuarioId", u.id, "permiso", x.permiso.name()));
+        }
+        e.solicitudes.removeIf(sol -> sol.usuarioId.equals(u.id));
+        x.usos++;
+        repo.guardar(e);
+        return resumen(e, u);
+    }
+
+    /** Entrar con apodo, sin registrarse (si el enlace lo permite): crea la cuenta de invitado. */
+    public synchronized Map<String, Object> entrarComoInvitado(String codigo, String apodo) {
+        Object[] r = enlaceVigente(codigo);
+        Espacio e = (Espacio) r[0];
+        Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
+        if (!x.invitados) throw ErrorNom.prohibido("Este enlace pide una cuenta. Inicia sesión o crea una.");
+        Sesion s = cuentas.crearInvitado(apodo, e.id);
+        Usuario u = cuentas.porId(s.usuarioId).orElseThrow();
+        e.accesos.put(u.id, x.permiso);
+        x.usos++;
+        repo.guardar(e);
+        difusor.avisarTodoEspacio(e.id, "permiso", Map.of("usuarioId", u.id, "permiso", x.permiso.name()));
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("token", s.token);
+        m.put("expira", s.expira);
+        m.put("usuario", ServicioCuentas.publico(u));
+        m.put("preferencias", u.preferencias);
+        m.put("espacio", resumen(e, u));
+        return m;
     }
 
     /** CU-24 Consumo del espacio. */
