@@ -301,7 +301,67 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
 
 ---
 
-## Cómo quedó (7 de noviembre de 2026)
+## Cómo quedó (8 de noviembre de 2026)
+
+Las fases 8 y 9 están construidas en Spring, en el servidor del teléfono (`ApiTelefono`) y en la
+página; el APK (0.11.0) y el jar de `2-PAGINA-Servidor/` llevan todo.
+
+**Probado en local** (puerto 8099, computadora y ancho de celular, sin errores en la consola):
+- Presentaciones: tema, diseños, texto con formato por partes, tabla, gráfica, ícono, imagen
+  recortada en forma de círculo y en blanco y negro, animaciones por pasos, láser y pluma (también
+  en el proyector), tamaño 4:3, PNG de la diapositiva. Exportar a .pptx (python-pptx y LibreOffice
+  lo abren) e importar .pptx propios y de otros programas (marcadores, viñetas, grupos, imagen,
+  tabla, gráfica, fondo y notas).
+- Diagramas: 13 diagramas listos, flechas recta, en codo y curva con texto, cardinalidad y puntas
+  de herencia o composición, figuras UML y entidad-relación, íconos de redes, cuadrícula con ajuste,
+  texto a diagrama (flujo con decisiones, ciclo, línea del tiempo, organigrama, mapas), exportar a
+  SVG, PNG y .pptx (las figuras nuevas van como forma libre).
+- Afuera de los editores: papelera de 30 días (restaurar, borrar para siempre, vaciar), copiar,
+  mover a otro espacio, renombrar, carpetas (arrastrando la tarjeta), destacados, orden, buscar
+  dentro del contenido, plantillas del espacio y escolares, @menciones con aviso y enlace para ver
+  un documento sin cuenta (con su QR; el propietario lo quita).
+- Generar sin IA: buscar en Wikipedia, Open Library y Crossref, leer, hacer fichas (textual,
+  paráfrasis, resumen), fuentes llenadas por DOI, ISBN o dirección web, citas "(Autor, año, p. x)",
+  referencias en APA con cursivas y sangría francesa, armar reporte con portada, índice y fichas,
+  biblioteca del espacio para leer sin Internet, reporte de una encuesta (hoja, CSV o Excel) con
+  tablas y gráficas, combinar correspondencia, documento a presentación (con notas) y a mapa
+  mental, datos públicos de Wikidata. El recibo ya separa lo "citado con su fuente".
+- `pruebas/seguridad.py`: 168 de 168 (nuevas: papelera, copias, mover, carpetas, búsqueda,
+  menciones, enlace para ver, biblioteca y 20 pruebas de que leer una dirección web nunca toca
+  `localhost`, la red del salón ni los datos internos de la nube).
+
+**Arreglos de seguridad de esta sesión**: el dibujo de los íconos y los colores que vienen del
+documento ya no pueden meter código en la página (se limpian antes de pintarlos).
+
+**Antes de subir a Azure**: lo de esta sesión no cambia la base de datos (todo va en los archivos
+JSON del servidor; la biblioteca de cada espacio en `biblioteca/<espacio>.json`). El servidor
+necesita salida a Internet para Investigar y Wikidata (Azure la tiene). Sigue pendiente lo de la
+sesión anterior: `./desplegar.sh roles` para las columnas nuevas de usuarios.
+
+**Limitaciones conocidas**:
+- El service worker solo existe en https o en localhost (en `http://<ip-del-salón>` ayuda la app).
+- Al importar .pptx, los videos y el SmartArt no se traen (se avisa); las formas libres llegan como
+  rectángulos.
+- Investigar necesita Internet en el servidor; sin Internet queda la biblioteca del espacio.
+- La copia de trabajo `~/NOM-COLAB` no se actualizó en esta sesión (es más vieja que `~/NOM`).
+
+## Orden recomendado para la siguiente sesión
+
+1. Probar en el A55: la app 0.11.0, el teléfono como servidor con otra persona, el QR con la cámara
+   y Investigar con los datos del teléfono.
+2. Revisión de facilidad de uso de lo nuevo (menús Insertar, Investigar, papelera y carpetas) con
+   alguien que no conozca la app, de cualquier edad.
+3. Subir a Azure (después de `./desplegar.sh roles`) y probar Investigar desde la nube.
+4. Lo que quedó fuera en `PENDIENTES.md` (incrustar una hoja en una presentación, línea de tiempo
+   de animaciones, recuperar lo cortado en el celular).
+
+Al cerrar cada sesión: marcar las casillas, compilar (jar y APK si hubo cambios de interfaz),
+probar en local y hacer el commit con un mensaje en español.
+
+---
+
+## Antes: cómo quedó el 7 de noviembre de 2026
+
 
 Las 7 fases están construidas en Spring, en el servidor del teléfono (`ApiTelefono`) y en la página.
 
@@ -337,11 +397,11 @@ administrador) antes del despliegue. Opcional: `NOM_CUOTA_MB=50` para la cuota p
 - El service worker solo existe en https o en localhost. Quien entra por `http://<ip-del-salón>`
   no tiene la página guardada; ahí ayuda la app.
 - Al exportar a Office no van las gráficas ni las filas fijas (.xlsx), ni las notas del orador ni
-  las transiciones (.pptx).
+  las transiciones (.pptx). *(Resuelto en la fase 8.)*
 - El resumen al reconectar cuenta lo que ya estaba en el servidor al volver; si la otra persona
   también estaba sin conexión, sus cambios llegan después como cambios normales.
 
-## Orden recomendado para la siguiente sesión
+### Orden que se había recomendado el 7 de noviembre
 
 1. Probar en el A55: la app, el teléfono como servidor con otra persona y el QR con la cámara.
 2. Revisión de facilidad de uso de toda la interfaz (palabras, lugar de cada cosa, repetición,
