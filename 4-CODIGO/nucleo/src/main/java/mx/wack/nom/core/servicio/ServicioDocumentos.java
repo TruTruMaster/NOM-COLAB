@@ -982,6 +982,7 @@ public class ServicioDocumentos {
         final String codigo, docId, espacioId, usuarioId;
         volatile String pagina;
         volatile int paso;
+        volatile Map<String, Object> marcas;
         volatile long visto = System.currentTimeMillis();
 
         Proyeccion(String codigo, String docId, String espacioId, String usuarioId) {
@@ -1001,6 +1002,7 @@ public class ServicioDocumentos {
         m.put("codigo", p.codigo);
         m.put("pagina", p.pagina);
         m.put("paso", p.paso);
+        if (p.marcas != null) m.put("marcas", p.marcas);
         return m;
     }
 
@@ -1022,11 +1024,44 @@ public class ServicioDocumentos {
     public Map<String, Object> moverProyeccion(Usuario u, String docId, String pagina, int paso) {
         Proyeccion p = proyeccionDe(docId, u.id);
         if (p == null) { iniciarProyeccion(u, docId); p = proyeccionDe(docId, u.id); }
+        boolean otra = pagina != null && !pagina.equals(p.pagina);
         p.pagina = pagina;
         p.paso = Math.max(0, paso);
         p.visto = System.currentTimeMillis();
+        if (otra) p.marcas = null;   // los trazos de la pluma son de cada diapositiva
         difusor.avisarProyectores(p.codigo, "diapositiva", estadoProyeccion(p));
         return estadoProyeccion(p);
+    }
+
+    /**
+     * 8.3 Puntero láser y pluma: se reenvían a los proyectores (no se guardan en el documento).
+     * marcas = { puntero: { x, y } | null, trazos: [[x, y, x, y, …], …], color }. Con tope de tamaño.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> marcarProyeccion(Usuario u, String docId, Map<String, Object> marcas) {
+        Proyeccion p = proyeccionDe(docId, u.id);
+        if (p == null) throw new ErrorNom(ErrorNom.NO_EXISTE, "No estás presentando este documento en otra pantalla");
+        Map<String, Object> m = new LinkedHashMap<>();
+        Object pu = marcas == null ? null : marcas.get("puntero");
+        if (pu instanceof Map<?, ?> pm && pm.get("x") instanceof Number x && pm.get("y") instanceof Number y)
+            m.put("puntero", Map.of("x", x.doubleValue(), "y", y.doubleValue()));
+        List<List<Double>> trazos = new ArrayList<>();
+        if (marcas != null && marcas.get("trazos") instanceof List<?> l) {
+            for (Object t : l) {
+                if (trazos.size() >= 60) break;
+                if (!(t instanceof List<?> pts)) continue;
+                List<Double> tr = new ArrayList<>();
+                for (Object v : pts) { if (tr.size() >= 800) break; if (v instanceof Number n) tr.add(Math.round(n.doubleValue() * 10) / 10.0); }
+                if (tr.size() >= 2) trazos.add(tr);
+            }
+        }
+        m.put("trazos", trazos);
+        Object color = marcas == null ? null : marcas.get("color");
+        m.put("color", color instanceof String c && c.matches("#[0-9a-fA-F]{6}") ? c : "#F2385A");
+        p.marcas = m;
+        p.visto = System.currentTimeMillis();
+        difusor.avisarProyectores(p.codigo, "marcas", m);
+        return Map.of("ok", true);
     }
 
     public void terminarProyeccion(Usuario u, String docId) {

@@ -313,6 +313,8 @@ final class ApiTelefono {
             }
             if (m.equals("DELETE")) { documentos.terminarProyeccion(u, x.group(1)); return ok(Map.of("ok", true)); }
         }
+        if ((x = coincide("/api/documentos/" + ID + "/proyeccion/marcas", r)) != null && m.equals("PUT"))
+            return ok(documentos.marcarProyeccion(u, x.group(1), cuerpo(p)));
         if ((x = coincide("/api/documentos/" + ID + "/versiones", r)) != null) {
             if (m.equals("GET")) return ok(documentos.historial(u, x.group(1)));
             if (m.equals("POST")) return ok(documentos.guardarVersion(u, x.group(1), texto(cuerpo(p), "etiqueta")));

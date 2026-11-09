@@ -249,18 +249,18 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
   una columna a otra como en un periódico).
 
 ### 8.3 Presentación
-- [ ] Texto con formato dentro de los cuadros y figuras (negrita en una palabra, viñetas y
+- [x] Texto con formato dentro de los cuadros y figuras (negrita en una palabra, viñetas y
   numeración, tamaño y color por parte).
-- [ ] Fondo de diapositiva (color, degradado o imagen), temas y diseños de diapositiva.
-- [ ] Insertar tabla y gráfica en la diapositiva.
-- [ ] Tamaño de diapositiva: 16:9, 4:3, carta vertical y horizontal, cartel.
-- [ ] Animaciones: entrada, énfasis y salida; orden que elige la persona; al hacer clic, con la
+- [x] Fondo de diapositiva (color, degradado o imagen), temas y diseños de diapositiva.
+- [x] Insertar tabla y gráfica en la diapositiva.
+- [x] Tamaño de diapositiva: 16:9, 4:3, carta vertical y horizontal, cartel.
+- [x] Animaciones: entrada, énfasis y salida; orden que elige la persona; al hacer clic, con la
   anterior o después; retraso y duración.
-- [ ] Imágenes: recortar, foto dentro de una figura y filtros; los GIF se conservan.
-- [ ] Elementos: íconos para insertar (sin internet).
-- [ ] Exportar cada diapositiva como imagen (PNG).
-- [ ] Puntero láser y pluma al presentar (también en la pantalla del proyector).
-- [ ] Exportar a .pptx lo nuevo (fondos, texto con formato, tablas, notas) e **importar .pptx**.
+- [x] Imágenes: recortar, foto dentro de una figura y filtros; los GIF se conservan.
+- [x] Elementos: íconos para insertar (sin internet).
+- [x] Exportar cada diapositiva como imagen (PNG).
+- [x] Puntero láser y pluma al presentar (también en la pantalla del proyector).
+- [x] Exportar a .pptx lo nuevo (fondos, texto con formato, tablas, notas) e **importar .pptx**.
 
 ### 8.4 Diagrama
 - [ ] Flechas con texto, color, grosor, estilo, puntas y forma (recta, codo, curva).

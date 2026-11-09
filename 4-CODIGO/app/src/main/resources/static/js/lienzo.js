@@ -14,6 +14,8 @@
   const NOM = window.NOM;
   const { esc, ico, html, $, $$, aviso } = NOM;
   const ANCHO = 960, ALTO = 540;
+  /** 8.3 Tamaño de la diapositiva del documento (16:9, 4:3, carta, cartel…). */
+  const tamDoc = (d) => (NOM.diapo && d ? NOM.diapo.tam(d) : { w: ANCHO, h: ALTO });
   const PALETA = ["#CFE0FF", "#CDEFD9", "#FFE0BF", "#E4D9FF", "#FFD6DE", "#FFF1B8", "#E7E5EE", "#FFFFFF", "#5B5BD6", "#2B2A33"];
   const COLORES = [
     "#FFFFFF", "#E7E5EE", "#B7B4C2", "#6B6875", "#2B2A33", "#000000",
@@ -132,7 +134,8 @@
   NOM.geometria = { conector };
   NOM.figuras = { ruta, svgFigura, estiloFigura, FIGURAS, esLinea, enNegrita };
   // Lo que usa la pantalla del proyector (proyector.js) para pintar diapositivas.
-  NOM.lienzoVista = { htmlDiapositiva: (...a) => htmlDiapositiva(...a), pasosDe: (...a) => pasosDe(...a), bloquesPresentables: (...a) => bloquesPresentables(...a), ANCHO, ALTO };
+  NOM.lienzoVista = { htmlDiapositiva: (...a) => htmlDiapositiva(...a), pasosDe: (...a) => pasosDe(...a), bloquesPresentables: (...a) => bloquesPresentables(...a), ANCHO, ALTO, tam: tamDoc,
+    estadoAnimaciones: (...a) => estadoAnimaciones(...a), contenido: (b) => contenido(b) };
 
   /** Lo único que se guarda del texto de un cuadro: texto, saltos de línea y enlaces http(s). */
   function htmlSeguro(h) {
@@ -151,20 +154,42 @@
     })(t.content);
     return r;
   }
+  /** 8.3 Recorte, máscara (la foto dentro de una figura) y filtros de una imagen de la diapositiva. */
+  function imagenLibre(b) {
+    const s = [], marco = [];
+    if (b.radio && !b.mascara) marco.push(`border-radius:${+b.radio}px`);
+    if (b.bordeAncho && !b.mascara) marco.push(`border:${+b.bordeAncho}px ${b.bordeEstilo === "guiones" ? "dashed" : b.bordeEstilo === "puntos" ? "dotted" : "solid"} ${b.borde || "#2B2A33"}`);
+    if (b.mascara && b.w && b.h) marco.push(`clip-path:path('${ruta(b.mascara, b.w, b.h, 18)}')`);
+    const f = b.filtros || {};
+    const fl = [f.brillo != null && +f.brillo !== 100 ? `brightness(${+f.brillo}%)` : "", f.contraste != null && +f.contraste !== 100 ? `contrast(${+f.contraste}%)` : "",
+      f.saturacion != null && +f.saturacion !== 100 ? `saturate(${+f.saturacion}%)` : "", +f.gris ? `grayscale(${+f.gris}%)` : "", +f.sepia ? `sepia(${+f.sepia}%)` : "", +f.desenfoque ? `blur(${+f.desenfoque}px)` : ""].filter(Boolean).join(" ");
+    if (fl) s.push(`filter:${fl}`);
+    if (b.volteoH || b.volteoV) s.push(`transform:scale(${b.volteoH ? -1 : 1},${b.volteoV ? -1 : 1})`);
+    const r = b.recorte;
+    if (r && (r.iz || r.d || r.s || r.i)) {
+      // El recorte se dibuja con la imagen completa más grande, desplazada dentro del marco.
+      const fw = Math.max(0.05, 1 - (+r.iz || 0) - (+r.d || 0)), fh = Math.max(0.05, 1 - (+r.s || 0) - (+r.i || 0));
+      s.push(`position:absolute;max-width:none;width:${(100 / fw).toFixed(3)}%;height:${(100 / fh).toFixed(3)}%;left:${(-(+r.iz || 0) / fw * 100).toFixed(3)}%;top:${(-(+r.s || 0) / fh * 100).toFixed(3)}%;object-fit:fill`);
+      return `<div class="libre-imagen-marco" style="${marco.join(";")}"><img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="${s.join(";")}"></div>`;
+    }
+    if (b.mascara) return `<div class="libre-imagen-marco" style="${marco.join(";")}"><img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="object-fit:cover;border-radius:0;${s.join(";")}"></div>`;
+    return `<img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="${marco.concat(s).join(";")}">`;
+  }
   function contenido(b) {
-    if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${htmlSeguro(b.html)}</div>`;
+    const D = NOM.diapo;
+    if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${D ? D.htmlRico(b.html) : htmlSeguro(b.html)}</div>`;
     if (b.tipo === "forma") {
       const e = estiloFigura(b);
-      return `<div class="forma" data-figura="${esc(e.f)}">${svgFigura(b)}${e.lineal ? "" : `<div class="txt" data-ph="Texto" style="${estiloTexto(b, e.relleno)}">${esc(b.texto || "")}</div>`}</div>`;
+      const txt = b.html && D ? D.htmlRico(b.html) : esc(b.texto || "");
+      return `<div class="forma" data-figura="${esc(e.f)}">${svgFigura(b)}${e.lineal ? "" : `<div class="txt" data-ph="Texto" style="${estiloTexto(b, e.relleno)}">${txt}</div>`}</div>`;
     }
     if (b.tipo === "imagen") {
-      const s = [];
-      if (b.radio) s.push(`border-radius:${+b.radio}px`);
-      if (b.bordeAncho) s.push(`border:${+b.bordeAncho}px ${b.bordeEstilo === "guiones" ? "dashed" : b.bordeEstilo === "puntos" ? "dotted" : "solid"} ${b.borde || "#2B2A33"}`);
-      if (b.volteoH || b.volteoV) s.push(`transform:scale(${b.volteoH ? -1 : 1},${b.volteoV ? -1 : 1})`);
-      return `<img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="${s.join(";")}">`;
+      if (!b.src) return `<div class="libre-hueco">${NOM.ico("image", "ico-l")}<span>${esc(b.ph || "Toca dos veces para poner una imagen")}</span></div>`;
+      return imagenLibre(b);
     }
     if (b.tipo === "tabla") {
+      // Una tabla propia de la diapositiva (filas y columnas) o una hoja que vino de otro modo.
+      if (D && b.enDiapo) return D.tablaHtml(b);
       const ev = NOM.formulas.evaluador((c, f) => b["c:" + NOM.formulas.ref(c, f)]);
       let filas = "";
       for (let f = 0; f < 8; f++) {
@@ -174,6 +199,9 @@
       }
       return `<div class="libre-tabla"><table>${filas || "<tr><td>Tabla vacía</td></tr>"}</table></div>`;
     }
+    if (b.tipo === "grafica" && !b.hoja && D) return `<div class="libre-grafica">${D.graficaHtml(b)}</div>`;
+    if (b.tipo === "icono") return `<svg class="libre-icono" viewBox="0 0 24 24" fill="none" stroke="${esc(b.color || "#2B2A33")}" stroke-width="${+b.grosor || 2}" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${b.svg || ""}</svg>`;
+    if (b.tipo === "ecuacion") return `<div class="libre-ecuacion" style="${estiloTexto(b)}">${NOM.ecuaciones ? NOM.ecuaciones.html(b.tex || "", true) : esc(b.tex || "")}</div>`;
     return `<div class="libre-ajeno">${esc(b.tipo)}</div>`;
   }
   /** Estilo del contenedor del bloque: posición, capa, giro, opacidad. */
@@ -204,11 +232,12 @@
     const p = html(`<div class="menu lz-panel" role="dialog" aria-label="${esc(opc.titulo || "Opciones")}">${opc.titulo ? `<div class="menu-titulo">${esc(opc.titulo)}</div>` : ""}</div>`);
     if (typeof cuerpo === "string") p.insertAdjacentHTML("beforeend", cuerpo); else p.append(cuerpo);
     document.body.append(p);
-    const r = ancla.getBoundingClientRect();
+    // El ancla puede ser un botón o un punto de la pantalla ({ x, y }, desde la ruedita).
+    const r = ancla.getBoundingClientRect ? ancla.getBoundingClientRect() : { left: ancla.x - p.offsetWidth / 2, right: ancla.x, top: ancla.y - p.offsetHeight / 2, bottom: ancla.y - p.offsetHeight / 2 };
     p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left)) + "px";
-    p.style.top = (r.bottom + p.offsetHeight + 8 > innerHeight ? Math.max(8, r.top - p.offsetHeight - 6) : r.bottom + 6) + "px";
+    p.style.top = Math.max(8, r.bottom + p.offsetHeight + 8 > innerHeight ? Math.max(8, r.top - p.offsetHeight - 6) : r.bottom + 6) + "px";
     const cerrar = () => { p.remove(); document.removeEventListener("pointerdown", fuera, true); document.removeEventListener("keydown", esc2, true); opc.alCerrar && opc.alCerrar(); };
-    const fuera = (e) => { if (!p.contains(e.target) && !ancla.contains(e.target)) cerrar(); };
+    const fuera = (e) => { if (!p.contains(e.target) && !(ancla.contains && ancla.contains(e.target))) cerrar(); };
     const esc2 = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
     setTimeout(() => { document.addEventListener("pointerdown", fuera, true); document.addEventListener("keydown", esc2, true); }, 0);
     p.cerrar = cerrar;
@@ -239,6 +268,7 @@
   function crearLienzo(ed, cont, opc) {
     const doc = () => ed.doc;
     const acotado = !!opc.acotado;
+    const W = () => tamDoc(doc()).w, H = () => tamDoc(doc()).h;
     let vista = { x: 40, y: 40, z: 1 }, escala = 1;
     // 5.1 Mesa de trabajo: en la presentación se puede alejar y mover la vista alrededor de la diapositiva.
     let zoomD = 1, panD = { x: 0, y: 0 };
@@ -262,11 +292,11 @@
     }
     const puedoEditar = (b) => !motivoAjeno(b);
     const paginaAjena = () => { const d = duenoPagina(ed.pagina); return d && d !== yo() && !ed.esPropietario ? d : null; };
-    const fuera = (b) => acotado && b.x != null && (b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= ANCHO || b.y >= ALTO);
+    const fuera = (b) => acotado && b.x != null && (b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= W() || b.y >= H());
     let sel = new Set(), selConector = null, herramienta = null, editando = null, origenEnlace = null;
     let espacio = false, multiple = false;
     const capa = html(acotado
-      ? `<div class="escenario" data-escenario><div class="diapo" data-mundo><svg class="capa-conectores" data-svg width="${ANCHO}" height="${ALTO}"></svg><svg class="capa-guias" data-guias width="${ANCHO}" height="${ALTO}"></svg></div><div class="lz-marco" data-marco hidden></div></div>`
+      ? `<div class="escenario" data-escenario><div class="diapo" data-mundo><svg class="capa-conectores" data-svg width="${W()}" height="${H()}"></svg><svg class="capa-guias" data-guias width="${W()}" height="${H()}"></svg></div><div class="lz-marco" data-marco hidden></div></div>`
       : `<div class="pizarra" data-plano><div class="mundo" data-mundo><svg class="capa-conectores" data-svg width="1" height="1"></svg><svg class="capa-guias" data-guias width="1" height="1"></svg></div><div class="lz-marco" data-marco hidden></div></div>`);
     cont.append(capa);
     const superficie = capa;
@@ -303,10 +333,10 @@
     function aplicarVista() {
       if (acotado) {
         const r = superficie.getBoundingClientRect();
-        escala = Math.max(0.05, Math.min((r.width - 48) / ANCHO, (r.height - 48) / ALTO)) * zoomD;
+        escala = Math.max(0.05, Math.min((r.width - 48) / W(), (r.height - 48) / H())) * zoomD;
         mundo.style.transform = `scale(${escala})`;
-        mundo.style.left = (r.width - ANCHO * escala) / 2 + panD.x + "px";
-        mundo.style.top = (r.height - ALTO * escala) / 2 + panD.y + "px";
+        mundo.style.left = (r.width - W() * escala) / 2 + panD.x + "px";
+        mundo.style.top = (r.height - H() * escala) / 2 + panD.y + "px";
         if (zoomCtl) $("[data-zv]", zoomCtl).textContent = Math.round(zoomD * 100) + "%";
         capa.classList.toggle("alejado", zoomD < 0.999);
       } else {
@@ -350,8 +380,27 @@
     }
     const porId = (id) => bloques().find((b) => b.id === id);
     const unico = () => (sel.size === 1 ? [...sel][0] : null);
+    /** 8.3 La diapositiva toma el tamaño, el fondo y los colores del tema de su documento. */
+    function aplicarDiapo() {
+      if (!acotado || !NOM.diapo) return;
+      const T = tamDoc(doc()), te = NOM.diapo.tema(doc()), f = NOM.diapo.fondoDe(doc(), ed.pagina);
+      mundo.style.width = T.w + "px"; mundo.style.height = T.h + "px";
+      mundo.style.background = NOM.diapo.cssFondo(f) || "";
+      ["--t-titulo", "--t-texto", "--t-fuente-t", "--t-fuente", "--t-franja"].forEach((v) => mundo.style.removeProperty(v));
+      if (te) {
+        mundo.style.setProperty("--t-titulo", te.titulo); mundo.style.setProperty("--t-texto", te.texto);
+        if (te.fuenteT) mundo.style.setProperty("--t-fuente-t", NOM.textoRico ? NOM.textoRico.cssFuente(te.fuenteT) : te.fuenteT);
+        if (te.fuente) mundo.style.setProperty("--t-fuente", NOM.textoRico ? NOM.textoRico.cssFuente(te.fuente) : te.fuente);
+        if (te.franja) mundo.style.setProperty("--t-franja", te.franja);
+      }
+      mundo.classList.toggle("con-tema", !!te);
+      mundo.classList.toggle("con-franja", !!(te && te.franja));
+      [svg, guias].forEach((x) => { x.setAttribute("width", T.w); x.setAttribute("height", T.h); });
+    }
+    let ultimoTam = null;
     function render() {
       const bs = bloques();
+      if (acotado) { aplicarDiapo(); const t = W() + "x" + H(); if (t !== ultimoTam) { ultimoTam = t; aplicarVista(); } }
       $$(".bl", mundo).forEach((e) => e.remove());
       const mapa = {};
       for (const id of [...sel]) if (!bs.some((b) => b.id === id)) sel.delete(id);
@@ -456,15 +505,59 @@
       opc.alSeleccionar && opc.alSeleccionar(unico());
       ed.refrescarHerramientas();
     }
+    /** 8.3 Barra de formato mientras se escribe en un cuadro: negrita, color o tamaño de una parte,
+        viñetas, numeración y alineación (como en PowerPoint). */
+    const barraTexto = html(`<div class="lz-barra lz-barra-texto" role="toolbar" aria-label="Formato del texto" hidden></div>`);
+    capa.append(barraTexto);
+    function comando(c, v) {
+      try { document.execCommand("styleWithCSS", false, true); } catch (e) { /* no importa */ }
+      document.execCommand(c, false, v);
+    }
+    function tamanoParte(delta) {
+      const s0 = getSelection();
+      if (!s0.rangeCount) return;
+      const n = s0.anchorNode && (s0.anchorNode.nodeType === 1 ? s0.anchorNode : s0.anchorNode.parentElement);
+      const actual = n ? parseFloat(getComputedStyle(n).fontSize) || 22 : 22;
+      const nuevo = Math.max(8, Math.min(160, Math.round(actual + delta * Math.max(2, actual * 0.12))));
+      try { document.execCommand("styleWithCSS", false, false); } catch (e) { /* no importa */ }
+      document.execCommand("fontSize", false, "7");
+      const el = editando && mundo.querySelector(`[data-id="${editando}"] .txt, [data-id="${editando}"] .libre-texto`);
+      if (el) $$('font[size="7"]', el).forEach((f) => { const sp = document.createElement("span"); sp.style.fontSize = nuevo + "px"; while (f.firstChild) sp.append(f.firstChild); f.replaceWith(sp); });
+    }
+    function pintarBarraTexto(el) {
+      if (!el || ed.soloLectura) { barraTexto.hidden = true; return; }
+      const btn = (a, i, t) => `<button class="icono-btn" data-a="${a}" aria-label="${esc(t)}" data-micro="${esc(t)}">${i}</button>`;
+      barraTexto.innerHTML = [btn("bold", ico("bold"), "Negrita|Ctrl+B"), btn("italic", ico("italic"), "Cursiva|Ctrl+I"), btn("underline", ico("underline"), "Subrayado|Ctrl+U"), btn("strikeThrough", ico("strikethrough"), "Tachado"),
+        btn("color", ico("baseline"), "Color de esta parte"), btn("menos", `<b class="lz-a">A-</b>`, "Letra más chica"), btn("mas", `<b class="lz-a">A+</b>`, "Letra más grande"), '<span class="sep"></span>',
+        btn("insertUnorderedList", ico("list"), "Viñetas"), btn("insertOrderedList", ico("list-ordered"), "Numeración"), btn("justifyLeft", ico("align-left"), "Izquierda"), btn("justifyCenter", ico("align-center"), "Centro"),
+        btn("justifyRight", ico("align-right"), "Derecha"), btn("removeFormat", ico("remove-formatting"), "Quitar formato")].join("");
+      barraTexto.hidden = false;
+      const r = el.closest(".bl").getBoundingClientRect(), c = capa.getBoundingClientRect();
+      barraTexto.style.left = Math.max(8, Math.min(c.width - barraTexto.offsetWidth - 8, r.left - c.left + r.width / 2 - barraTexto.offsetWidth / 2)) + "px";
+      barraTexto.style.top = Math.max(8, r.top - c.top - barraTexto.offsetHeight - 12) + "px";
+    }
+    barraTexto.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) e.preventDefault(); e.stopPropagation(); });
+    barraTexto.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-a]");
+      if (!b) return;
+      const a = b.dataset.a;
+      if (a === "color") { const s0 = getSelection(), r0 = s0.rangeCount ? s0.getRangeAt(0).cloneRange() : null; paletaColores(b, null, (c) => { if (r0) { s0.removeAllRanges(); s0.addRange(r0); } if (c) comando("foreColor", c); }, { titulo: "Color del texto elegido" }); return; }
+      if (a === "mas" || a === "menos") { tamanoParte(a === "mas" ? 1 : -1); return; }
+      comando(a);
+    });
     function activarEdicion(el, todo) {
       el.contentEditable = "true";
       el.focus();
+      // Un cuadro de "puntos" (de un diseño de diapositiva) empieza como lista con viñetas.
+      const b0 = editando && doc().bloque(editando);
+      if (b0 && b0.lista && !el.textContent.trim() && !el.querySelector("li")) { el.innerHTML = "<ul><li><br></li></ul>"; const rr = document.createRange(); rr.setStart(el.querySelector("li"), 0); rr.collapse(true); const ss = getSelection(); ss.removeAllRanges(); ss.addRange(rr); todo = false; }
+      requestAnimationFrame(() => pintarBarraTexto(el));
       if (todo !== false) {
         const r = document.createRange(); r.selectNodeContents(el);
         if (!el.textContent) r.collapse(true);
         const s = getSelection(); s.removeAllRanges(); s.addRange(r);
       }
-      el.onblur = () => terminarEdicion();
+      el.onblur = () => setTimeout(() => { if (document.activeElement !== el && !barraTexto.contains(document.activeElement) && !document.querySelector(".lz-panel")) terminarEdicion(); }, 0);
       el.onpaste = (e) => {
         const t = (e.clipboardData && e.clipboardData.getData("text/plain") || "").trim();
         const s0 = getSelection();
@@ -481,9 +574,10 @@
       };
       el.onkeydown = (e) => {
         if (e.key === "Escape") { e.preventDefault(); el.blur(); }
-        // Ctrl+B / I / U: el formato es de todo el texto del cuadro. El que pone el navegador por su
-        // cuenta se veía mientras se escribía y se perdía al terminar (solo se guarda el texto).
+        // Ctrl+B / I / U: con texto elegido, solo esa parte (8.3); sin elegir nada, todo el cuadro.
         const k = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && { b: "tNegrita", i: "tCursiva", u: "tSubrayado" }[e.key.toLowerCase()];
+        const sl = getSelection();
+        if (k && sl.rangeCount && !sl.isCollapsed && el.contains(sl.anchorNode)) { e.preventDefault(); comando({ tNegrita: "bold", tCursiva: "italic", tSubrayado: "underline" }[k]); e.stopPropagation(); return; }
         if (k) {
           e.preventDefault();
           const b = editando && doc().bloque(editando);
@@ -509,22 +603,29 @@
     function terminarEdicion() {
       if (!editando) return;
       const id = editando; editando = null;
+      barraTexto.hidden = true;
       const el = mundo.querySelector(`[data-id="${id}"] .txt, [data-id="${id}"] .libre-texto`);
       if (!el) return;
       el.contentEditable = "false";
       const b = doc().bloque(id);
       if (!b) return;
-      if (b.tipo === "forma") { const t = el.innerText.trim(); if (t !== (b.texto || "")) doc().cambiar(id, { texto: t }); }
-      else { const h = htmlSeguro(el.innerHTML).replace(/(<br>)+$/, ""); if (h !== (b.html || "")) doc().cambiar(id, { html: h }); }
+      const D = NOM.diapo;
+      let h = D ? D.htmlRico(el.innerHTML) : htmlSeguro(el.innerHTML).replace(/(<br>)+$/, "");
+      if (D && !D.textoPlano(h)) h = "";
+      if (b.tipo === "forma") {
+        const t = D ? D.textoPlano(h) : el.innerText.trim();
+        const conFormato = D && /<(b|i|u|s|span|ul|ol|div|a|sub|sup)\b/.test(h);
+        if (t !== (b.texto || "") || (conFormato ? h : null) !== (b.html || null)) doc().cambiar(id, { texto: t, html: conFormato ? h : null });
+      } else if (h !== (b.html || "")) doc().cambiar(id, { html: h });
       pintarBarra();
     }
 
     // ------------------------------------------------------------ crear
-    const TAM = { texto: [420, 64], rect: [200, 110], elipse: [190, 120], rombo: [190, 130], nota: [180, 160], linea: [220, 24], "linea-flecha": [220, 24], flecha: [200, 100], "flecha-doble": [220, 100], estrella: [150, 145], corazon: [150, 135], burbuja: [220, 130] };
+    const TAM = { ecuacion: [460, 120], icono: [120, 120], tabla: [560, 240], grafica: [520, 300], texto: [420, 64], rect: [200, 110], elipse: [190, 120], rombo: [190, 130], nota: [180, 160], linea: [220, 24], "linea-flecha": [220, 24], flecha: [200, 100], "flecha-doble": [220, 100], estrella: [150, 145], corazon: [150, 135], burbuja: [220, 130] };
     function crear(tipo, extra, en) {
       const dp = paginaAjena();
       if (dp) { aviso(`Esta diapositiva es de ${ed.nombreDe(dp)}: solo esa persona (o el propietario del espacio) agrega cosas aquí`, { tipo: "info", ms: 3500 }); return null; }
-      const p = en || (acotado ? { x: ANCHO / 2, y: ALTO / 2 } : centroVista());
+      const p = en || (acotado ? { x: W() / 2, y: H() / 2 } : centroVista());
       const fig = extra && extra.figura;
       const tam = TAM[fig || tipo] || [170, 150];
       const id = NOM.DocCRDT.nuevoId();
@@ -546,7 +647,7 @@
       const img = await ed.pedirImagen();
       if (!img) return;
       const k = Math.min(1, 520 / img.w, 360 / img.h);
-      const c = acotado ? { x: ANCHO / 2, y: ALTO / 2 } : centroVista();
+      const c = acotado ? { x: W() / 2, y: H() / 2 } : centroVista();
       const id = NOM.DocCRDT.nuevoId();
       doc().cambiar(id, { tipo: "imagen", pagina: ed.pagina, orden: 0, src: img.src, x: Math.round(c.x - (img.w * k) / 2), y: Math.round(c.y - (img.h * k) / 2), w: Math.round(img.w * k), h: Math.round(img.h * k), z: Math.max(0, ...bloques().map((b) => b.z || 0)) + 1 });
       seleccionar(id);
@@ -658,7 +759,7 @@
     function alinear(modo) {
       const bs = editables();
       if (!bs.length) return;
-      const ref = bs.length > 1 ? cajaDe(bs) : acotado ? { x: 0, y: 0, w: ANCHO, h: ALTO } : null;
+      const ref = bs.length > 1 ? cajaDe(bs) : acotado ? { x: 0, y: 0, w: W(), h: H() } : null;
       if (!ref) return aviso("Selecciona dos o más figuras para alinearlas entre sí", { tipo: "info" });
       doc().lote(() => bs.forEach((b) => {
         const c = {
@@ -726,6 +827,9 @@
           btn("opacidad", ico("blend"), "Transparencia"),
           (formas.some((b) => ["rect", "burbuja"].includes(b.figura || "rect")) || imgs.length) ? btn("esquinas", ico("esquina"), "Redondear esquinas") : "",
           btn("sombra", ico("sombra"), "Sombra", `aria-pressed="${b0.sombra === true || (b0.sombra == null && b0.tipo === "forma" && !esLinea(b0.figura))}"`),
+          imgs.length === 1 && imgs[0].src ? btn("recortar", ico("scissors"), "Recortar") + btn("mascara", ico("shapes"), "Forma|La foto dentro de un círculo, estrella, corazón…") + btn("filtros", ico("wand-sparkles"), "Filtros|Brillo, contraste, blanco y negro…") : "",
+          bs.length === 1 && ((b0.tipo === "tabla" && b0.enDiapo) || (b0.tipo === "grafica" && !b0.hoja)) ? btn("datos", ico("table"), "Editar datos") : "",
+          bs.length === 1 && b0.tipo === "icono" ? btn("icono-color", `<span class="lz-color" style="--c:${esc(b0.color || "#2B2A33")}"><span></span></span>`, "Color del ícono") : "",
           '<span class="sep"></span>',
           btn("posicion", ico("al-centro-h"), "Posición|Alinear, distribuir y orden de capas."),
           btn("girar", ico("rotate-cw"), "Girar 90°"),
@@ -761,6 +865,16 @@
         case "duplicar": duplicar(); break;
         case "eliminar": eliminar(); break;
         case "comentar": NOM.comentarios && NOM.comentarios.nuevo(ed); break;
+        case "recortar": recortarImagen(b0.id); break;
+        case "mascara": mascaraImagen(b, b0.id); break;
+        case "filtros": filtrosImagen(b, b0.id); break;
+        case "datos": abrirBloque(b0.id); break;
+        case "icono-color": paletaColores(b, b0.color, (c) => {
+          if (!c) return;
+          const ics = editables().filter((x) => x.tipo === "icono");
+          cambiarSel({ color: c }, grupo);
+          ics.forEach((x) => NOM.diapo.iconoPng(x.svg, c, x.grosor).then((png) => { if (png && doc().vivo(x.id)) doc().cambiar(x.id, { png }, { deshacible: false }); }));
+        }, { titulo: "Color del ícono" }); break;
       }
     });
     function menuBorde(ancla, b0, grupo) {
@@ -775,6 +889,49 @@
         if (es) { $$("[data-e]", p).forEach((x) => x.setAttribute("aria-pressed", x === es)); cambiarSel({ bordeEstilo: es.dataset.e === "solido" ? null : es.dataset.e, bordeAncho: +g.value || 2 }, grupo); if (!+g.value) { g.value = 2; o.textContent = "2 px"; } }
         if (c) { cambiarSel({ borde: c.dataset.c, bordeAncho: +g.value || 2 }, grupo); if (!+g.value) { g.value = 2; o.textContent = "2 px"; } }
       });
+    }
+    /** 8.3 Recortar una imagen de la diapositiva (lo de fuera se esconde, el archivo no cambia). */
+    function recortarImagen(id) {
+      const b = doc().bloque(id);
+      if (!b || !b.src) return;
+      const r = Object.assign({ iz: 0, d: 0, s: 0, i: 0 }, b.recorte || {});
+      const cuerpo = html(`<form class="col"><div class="wd-recorte-vista"><div class="lz-recorte-prev" style="width:280px;height:${Math.round(280 * ((b.h || 1) / (b.w || 1)))}px"></div></div>
+        ${[["s", "Arriba"], ["i", "Abajo"], ["iz", "Izquierda"], ["d", "Derecha"]].map(([k, t]) => `<div class="lz-desl"><span>${t}</span><input type="range" min="0" max="45" step="1" value="${Math.round(r[k] * 100)}" data-k="${k}"><output>${Math.round(r[k] * 100)}%</output></div>`).join("")}</form>`);
+      const pie = html(`<div style="display:contents"><button class="btn" type="button" data-quitar>Sin recorte</button><span class="crece"></span><button class="btn" type="button" data-no>Cancelar</button><button class="btn primario" data-si>Recortar</button></div>`);
+      const hj = NOM.hoja({ titulo: "Recortar imagen", icono: "scissors", cuerpo, pie });
+      const prev = $(".lz-recorte-prev", cuerpo);
+      const ver = () => { prev.innerHTML = imagenLibre(Object.assign({}, b, { recorte: r, mascara: null, w: 280, h: prev.offsetHeight })); };
+      ver();
+      $$("[data-k]", cuerpo).forEach((x) => x.addEventListener("input", () => { r[x.dataset.k] = +x.value / 100; x.nextElementSibling.textContent = x.value + "%"; ver(); }));
+      $("[data-no]", pie).onclick = () => hj.cerrar();
+      $("[data-quitar]", pie).onclick = () => { doc().cambiar(id, { recorte: null }); hj.cerrar(); render(); };
+      $("[data-si]", pie).onclick = (e) => {
+        e.preventDefault();
+        // El marco toma la forma de lo que queda (no se estira la foto).
+        const antes = b.recorte || { iz: 0, d: 0, s: 0, i: 0 };
+        const fw0 = 1 - (antes.iz || 0) - (antes.d || 0), fh0 = 1 - (antes.s || 0) - (antes.i || 0), fw = 1 - r.iz - r.d, fh = 1 - r.s - r.i;
+        const w = Math.round((b.w / fw0) * fw), h = Math.round((b.h / fh0) * fh);
+        doc().cambiar(id, { recorte: r.iz || r.d || r.s || r.i ? r : null, w, h });
+        hj.cerrar(); render();
+      };
+    }
+    function filtrosImagen(ancla, id) {
+      const b = doc().bloque(id);
+      if (!b) return;
+      const f = Object.assign({ brillo: 100, contraste: 100, saturacion: 100, gris: 0, sepia: 0, desenfoque: 0 }, b.filtros || {});
+      const PRE = { normal: { brillo: 100, contraste: 100, saturacion: 100, gris: 0, sepia: 0, desenfoque: 0 }, bn: { gris: 100 }, sepia: { sepia: 80 }, vivido: { saturacion: 160, contraste: 110 }, suave: { brillo: 108, contraste: 90, saturacion: 80 }, oscuro: { brillo: 80, contraste: 115 } };
+      const p = panel(ancla, `<div class="fila lz-fila" style="flex-wrap:wrap">${[["normal", "Normal"], ["bn", "B/N"], ["sepia", "Sepia"], ["vivido", "Vívido"], ["suave", "Suave"], ["oscuro", "Oscuro"]].map(([k, t]) => `<button class="btn chico" data-pre="${k}">${t}</button>`).join("")}</div>
+        ${[["brillo", "Brillo", 30, 170, "%"], ["contraste", "Contraste", 30, 170, "%"], ["saturacion", "Color", 0, 200, "%"], ["gris", "Gris", 0, 100, "%"], ["sepia", "Sepia", 0, 100, "%"], ["desenfoque", "Desenfoque", 0, 10, " px"]].map(([k, t, mi, ma, u]) => `<div class="lz-desl"><span>${t}</span><input type="range" min="${mi}" max="${ma}" step="1" value="${f[k]}" data-f="${k}"><output>${f[k]}${u}</output></div>`).join("")}`, { titulo: "Filtros" });
+      const guardar = () => { const neutro = f.brillo === 100 && f.contraste === 100 && f.saturacion === 100 && !f.gris && !f.sepia && !f.desenfoque; doc().cambiar(id, { filtros: neutro ? null : Object.assign({}, f) }, { grupo: "filtros-" + id }); render(); };
+      $$("[data-f]", p).forEach((x) => x.addEventListener("input", () => { f[x.dataset.f] = +x.value; x.nextElementSibling.textContent = x.value + (x.dataset.f === "desenfoque" ? " px" : "%"); guardar(); }));
+      $$("[data-pre]", p).forEach((x) => (x.onclick = () => { Object.assign(f, PRE.normal, PRE[x.dataset.pre]); $$("[data-f]", p).forEach((y) => { y.value = f[y.dataset.f]; y.nextElementSibling.textContent = f[y.dataset.f] + (y.dataset.f === "desenfoque" ? " px" : "%"); }); guardar(); }));
+    }
+    const MASCARAS = [["", "Sin forma (rectángulo)"], ["elipse", "Círculo u óvalo"], ["rect", "Esquinas redondeadas"], ["rombo", "Rombo"], ["triangulo", "Triángulo"], ["hexagono", "Hexágono"], ["estrella", "Estrella"], ["corazon", "Corazón"], ["nube", "Nube"]];
+    function mascaraImagen(ancla, id) {
+      const b = doc().bloque(id);
+      if (!b) return;
+      const p = panel(ancla, `<div class="lz-figuras">${MASCARAS.map(([f, t]) => `<button data-m="${f}" aria-label="${esc(t)}" title="${esc(t)}" aria-pressed="${(b.mascara || "") === f}"><svg viewBox="-3 -3 46 36" aria-hidden="true">${f ? `<path d="${ruta(f, 40, 30, 7)}" fill="#CFE0FF" stroke="#3D72F2" stroke-width="2"/>` : `<rect width="40" height="30" fill="#CFE0FF" stroke="#3D72F2" stroke-width="2"/>`}</svg></button>`).join("")}</div>`, { titulo: "La foto dentro de una forma" });
+      p.addEventListener("click", (e) => { const x = e.target.closest("[data-m]"); if (!x) return; p.cerrar(); doc().cambiar(id, { mascara: x.dataset.m || null }); render(); });
     }
     function menuTexto(ancla, b0, grupo) {
       const tam = b0.tTam || (b0.tipo === "texto" ? (b0.estilo === "h1" ? 44 : b0.estilo === "h2" ? 30 : 22) : 16);
@@ -818,7 +975,7 @@
       const um = 7 / zoomActual();
       const xs = [], ys = [];
       bloques().forEach((b) => { if (b.tipo === "conector" || excluir.has(b.id)) return; xs.push(b.x, b.x + b.w / 2, b.x + b.w); ys.push(b.y, b.y + b.h / 2, b.y + b.h); });
-      if (acotado) { xs.push(0, ANCHO / 2, ANCHO); ys.push(0, ALTO / 2, ALTO); }
+      if (acotado) { xs.push(0, W() / 2, W()); ys.push(0, H() / 2, H()); }
       const buscar = (mios, objetivos) => {
         let mejor = null;
         mios.forEach((m) => objetivos.forEach((t) => { const d = t - m; if (Math.abs(d) <= um && (!mejor || Math.abs(d) < Math.abs(mejor.d))) mejor = { d, t }; }));
@@ -829,7 +986,7 @@
     }
     function pintarGuias(g) {
       if (!g || (g.gx == null && g.gy == null)) { guias.innerHTML = ""; return; }
-      const L = acotado ? 0 : -20000, R = acotado ? ANCHO : 20000, T = acotado ? 0 : -20000, D = acotado ? ALTO : 20000;
+      const L = acotado ? 0 : -20000, R = acotado ? W() : 20000, T = acotado ? 0 : -20000, D = acotado ? H() : 20000;
       guias.innerHTML = (g.gx != null ? `<line x1="${g.gx}" y1="${T}" x2="${g.gx}" y2="${D}"/>` : "") + (g.gy != null ? `<line x1="${L}" y1="${g.gy}" x2="${R}" y2="${g.gy}"/>` : "");
     }
 
@@ -1053,7 +1210,41 @@
     }
     superficie.addEventListener("pointerup", finGesto);
     superficie.addEventListener("pointercancel", finGesto);
-    superficie.addEventListener("dblclick", (e) => { const bl = e.target.closest(".bl"); if (bl) editar(bl.dataset.id); });
+    superficie.addEventListener("dblclick", (e) => { const bl = e.target.closest(".bl"); if (bl) abrirBloque(bl.dataset.id); });
+    /** Doble clic (o "Editar"): texto, datos de la tabla o gráfica, la imagen de un hueco o la ecuación. */
+    async function abrirBloque(id) {
+      const b = doc().bloque(id);
+      if (!b || ed.soloLectura) return;
+      if (!puedoEditar(b)) { aviso(motivoAjeno(b), { tipo: "info" }); return; }
+      if (b.tipo === "imagen" && !b.src) { const img = await ed.pedirImagen(); if (img) doc().cambiar(id, { src: img.src }); return; }
+      if ((b.tipo === "tabla" && b.enDiapo) || (b.tipo === "grafica" && !b.hoja)) { NOM.diapo.editarDatos({ bloque: b, grafica: b.tipo === "grafica", alGuardar: (c) => { doc().cambiar(id, c); render(); } }); return; }
+      if (b.tipo === "ecuacion") { editarEcuacion(id); return; }
+      editar(id);
+    }
+    /** 8.3 Ecuación en la diapositiva (mismo editor que en el texto). */
+    function editarEcuacion(id) {
+      const b = id ? doc().bloque(id) : null, E = NOM.ecuaciones;
+      if (!E) return;
+      const cuerpoH = html(`<form class="col"><div class="ecu-vista" data-vista></div>
+        <div class="campo"><label>Ecuación</label><div class="entrada"><textarea data-tex rows="2" spellcheck="false">${esc((b && b.tex) || "")}</textarea></div></div>
+        <div class="ecu-ayudas">${E.AYUDAS.map(([t, s2, n]) => `<button type="button" data-ins="${esc(t)}" aria-label="${esc(n)}" data-micro="${esc(n)}">${esc(s2)}</button>`).join("")}</div>
+        <div class="fila" style="flex-wrap:wrap"><span class="suave chico">Ejemplos:</span>${E.EJEMPLOS.map(([n, t]) => `<button type="button" class="btn chico" data-ej="${esc(t)}">${esc(n)}</button>`).join("")}</div></form>`);
+      const pie = html(`<div style="display:contents"><button class="btn" type="button" data-no>Cancelar</button><button class="btn primario" data-si>${b ? "Guardar" : "Insertar"}</button></div>`);
+      const hj = NOM.hoja({ titulo: "Ecuación", icono: "sigma", cuerpo: cuerpoH, pie, ancha: true });
+      const ta = $("[data-tex]", cuerpoH), vista = $("[data-vista]", cuerpoH);
+      const ver = () => { vista.innerHTML = ta.value.trim() ? E.html(ta.value, true) : `<span class="suave">Escribe la ecuación o usa los botones</span>`; };
+      ver(); ta.addEventListener("input", ver);
+      $$("[data-ins]", cuerpoH).forEach((x) => (x.onclick = () => { const t = x.dataset.ins, p = ta.selectionStart; ta.value = ta.value.slice(0, p) + t + ta.value.slice(ta.selectionEnd); const hu = ta.value.indexOf("□", p); if (hu >= 0) ta.setSelectionRange(hu, hu + 1); ta.focus(); ver(); }));
+      $$("[data-ej]", cuerpoH).forEach((x) => (x.onclick = () => { ta.value = x.dataset.ej; ver(); }));
+      $("[data-no]", pie).onclick = () => hj.cerrar();
+      $("[data-si]", pie).onclick = (ev) => {
+        ev.preventDefault();
+        const tex = ta.value.replace(/□/g, "").trim();
+        hj.cerrar();
+        if (!tex) return;
+        if (b) doc().cambiar(id, { tex }); else crear("ecuacion", { tex, tTam: 32 });
+      };
+    }
     if (!acotado) {
       superficie.addEventListener("wheel", (e) => {
         e.preventDefault();
@@ -1134,9 +1325,15 @@
           { texto: "Copiar", icono: "clipboard-copy", fn: () => copiar(false) },
           { texto: "Cortar", icono: "scissors", off: bloq, fn: () => copiar(true) },
           { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
-          { texto: "Comentar", icono: "message-square", off: !NOM.comentarios, fn: () => NOM.comentarios.nuevo(ed) },
+          (bs.length === 1 && b0.tipo === "imagen" && b0.src) ? { texto: "Imagen", icono: "image", sub: [
+            { texto: "Recortar", icono: "scissors", fn: () => recortarImagen(b0.id) },
+            { texto: "Forma", icono: "shapes", fn: () => mascaraImagen({ x: innerWidth / 2, y: innerHeight / 2 }, b0.id) },
+            { texto: "Filtros", icono: "wand-sparkles", fn: () => filtrosImagen({ x: innerWidth / 2, y: innerHeight / 2 }, b0.id) },
+            { texto: "Cambiar imagen", corto: "Cambiar", icono: "image", fn: async () => { const img = await ed.pedirImagen(); if (img) { doc().cambiar(b0.id, { src: img.src }); render(); } } }] }
+            : { texto: "Comentar", icono: "message-square", off: !NOM.comentarios, fn: () => NOM.comentarios.nuevo(ed) },
           { texto: "Otras", icono: "more-vertical", sub: [
-            { texto: "Editar texto", icono: "type", off: !(unico() && conTexto.length === 1), fn: () => editar(unico()) },
+            { texto: (b0.tipo === "tabla" && b0.enDiapo) || (b0.tipo === "grafica" && !b0.hoja) ? "Editar datos" : "Editar texto", icono: "type", off: !(unico() && (conTexto.length === 1 || (b0.tipo === "tabla" && b0.enDiapo) || (b0.tipo === "grafica" && !b0.hoja) || b0.tipo === "ecuacion")), fn: () => abrirBloque(unico()) },
+            { texto: "Comentar", icono: "message-square", off: !NOM.comentarios || (bs.length !== 1 || b0.tipo !== "imagen"), fn: () => NOM.comentarios.nuevo(ed) },
             { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo },
             { texto: "Capas", icono: "layers", fn: () => capas.abrir() },
             ...(ed.esPropietario ? [
@@ -1301,7 +1498,7 @@
       const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       if (e.key === "Delete" || e.key === "Backspace") { if (sel.size || selConector) { e.preventDefault(); eliminar(); } return; }
       if (e.key === "Escape") { if (gotero) { gotero = null; capa.classList.remove("gotero"); } herramienta = null; origenEnlace = null; multiple = false; opc.alUsarHerramienta && opc.alUsarHerramienta(); if (sel.size) { sel = new Set(); ed.seleccionar(null); render(); } return; }
-      if (e.key === "Enter" && unico()) { e.preventDefault(); editar(unico()); return; }
+      if (e.key === "Enter" && unico()) { e.preventDefault(); abrirBloque(unico()); return; }
       if (mod && k === "d") { e.preventDefault(); duplicar(); return; }
       if (mod && k === "a") { e.preventDefault(); seleccionarTodo(); return; }
       if (mod && k === "c") { if (sel.size) { e.preventDefault(); copiar(false); } return; }
@@ -1342,7 +1539,7 @@
       marcarComentarios(lista) { comentados = new Map(); (lista || []).forEach((c) => { if (!c.resuelto && c.ancla && c.ancla.tipo === "bloque") comentados.set(c.ancla.id, (comentados.get(c.ancla.id) || 0) + 1); }); render(); },
       anclaComentario() { const b = porId(unico() || [...sel][0]); if (!b) return null; const t = b.tipo === "forma" ? b.texto : b.tipo === "texto" ? NOM.formatos.textoPlano(b.html) : ""; return { tipo: "bloque", id: b.id, pagina: ed.pagina, cita: (t || ({ forma: "Figura", imagen: "Imagen", tabla: "Tabla", texto: "Texto" }[b.tipo] || "")).slice(0, 120) }; },
       irABloque(id) { if (!porId(id)) return false; seleccionar(id); return true; },
-      render, crear, imagen, eliminar, duplicar, capaZ: (arriba) => capaZ(arriba === true ? "frente" : arriba === false ? "fondo" : arriba), colorear, ajustar, alinear, distribuir, agrupar, desagrupar, bloquear, rotar, voltear,
+      render, crear, imagen, eliminar, duplicar, abrirBloque, editarEcuacion, capaZ: (arriba) => capaZ(arriba === true ? "frente" : arriba === false ? "fondo" : arriba), colorear, ajustar, alinear, distribuir, agrupar, desagrupar, bloquear, rotar, voltear,
       seleccion: () => unico() || [...sel][0] || null,
       cuantos: () => sel.size,
       fijarHerramienta(h) { herramienta = h; origenEnlace = null; capa.classList.toggle("herramienta", !!h); },
@@ -1389,12 +1586,13 @@
         const pags = doc().paginas();
         minis.innerHTML = pags.map((p, i) => {
           const du = lienzo.duenoPagina(p), cambios = ed.resaltando && ed.cambiosVisita && (ed.cambiosVisita.bloques || []).some((id) => doc().valor(id, "pagina") === p);
-          return `<button class="mini" data-p="${esc(p)}" aria-current="${p === ed.pagina}" aria-label="Diapositiva ${i + 1}"><span class="num">${i + 1}</span>
-            <div class="mini-cont">${htmlDiapositiva(doc(), p)}</div>${du ? `<span class="mini-dueno" style="--c:${esc(ed.colorDe(du))}">${esc(ed.nombreDe(du))}</span>` : ""}${cambios ? `<span class="mini-cambio" title="Cambió desde tu última visita"></span>` : ""}${doc().valor("_doc", "trans:" + p) ? `<span class="mini-trans" title="Con transición">${ico("sparkles", "ico-s")}</span>` : ""}</button>`;
+          const T = tamDoc(doc());
+          return `<button class="mini" data-p="${esc(p)}" aria-current="${p === ed.pagina}" aria-label="Diapositiva ${i + 1}" style="aspect-ratio:${T.w} / ${T.h}"><span class="num">${i + 1}</span>
+            <div class="mini-cont diapo-mini" style="${NOM.diapo ? NOM.diapo.estiloDiapo(doc(), p) : ""}">${htmlDiapositiva(doc(), p)}</div>${du ? `<span class="mini-dueno" style="--c:${esc(ed.colorDe(du))}">${esc(ed.nombreDe(du))}</span>` : ""}${cambios ? `<span class="mini-cambio" title="Cambió desde tu última visita"></span>` : ""}${doc().valor("_doc", "trans:" + p) ? `<span class="mini-trans" title="Con transición">${ico("sparkles", "ico-s")}</span>` : ""}</button>`;
         }).join("") + (ed.soloLectura ? "" : `<button class="btn plano" data-nueva data-micro="Nueva diapositiva|Agrega una diapositiva después de la actual.">${ico("plus")}</button>`);
         $$(".mini", minis).forEach((m) => {
           const c = $(".mini-cont", m);
-          const k = m.clientWidth / ANCHO || 0.17;
+          const k = m.clientWidth / tamDoc(doc()).w || 0.17;
           c.style.transform = `scale(${k})`;
           m.onclick = () => { ed.pagina = m.dataset.p; lienzo.render(); pintarNotas(); };
           m.oncontextmenu = (e) => { e.preventDefault(); if (!ed.soloLectura) menuDiapo(m, m.dataset.p); };
@@ -1411,7 +1609,7 @@
           }, { titulo: "Diapositiva" });
         }
         const n = $("[data-nueva]", minis);
-        if (n) n.onclick = () => { ed.pagina = ed.nuevaPagina(ed.pagina); lienzo.render(); };
+        if (n) n.onclick = () => menuNueva(n);
       }, 150);
       // El lienzo ya se pintó antes de que existiera esta función: sin esto la tira de miniaturas
       // quedaba vacía hasta el primer cambio.
@@ -1497,6 +1695,207 @@
         if (anc) NOM.menu(anc, items);
         else NOM.rueda.abrir(innerWidth / 2, innerHeight / 2, TRANS.map(([v, t]) => ({ texto: t, icono: v ? "sparkles" : "x", marcado: v === actual, fn: () => elegir(v) })).concat([{ texto: "En todas", icono: "copy", fn: () => elegir(actual, true) }]), { titulo: "Transición", modo: "clic" });
       }
+      // ---- 8.3 animaciones: la lista ordenada de la diapositiva ("anim:<página>" en _doc)
+      const listaAnim = () => listaAnimaciones(doc(), ed.pagina, bloquesPresentables(doc(), ed.pagina)).map((x) => Object.assign({}, x));
+      const guardarAnim = (l) => { doc().cambiar("_doc", { ["anim:" + ed.pagina]: l.map((x) => ({ id: x.id, tipo: x.tipo, efecto: x.efecto, inicio: x.inicio || "clic", retraso: +x.retraso || 0, dur: +x.dur || 500 })) }); pintarMinis(); };
+      const nombreBloque = (id) => {
+        const b = doc().bloque(id) || {};
+        const t = b.tipo === "texto" ? NOM.diapo.textoPlano(b.html) || b.ph || "Texto" : b.tipo === "forma" ? b.texto || "Figura" : { imagen: "Imagen", tabla: "Tabla", grafica: "Gráfica", icono: "Ícono", ecuacion: "Ecuación" }[b.tipo] || "Bloque";
+        return t.length > 28 ? t.slice(0, 27) + "…" : t;
+      };
+      function ponerAnim(id, tipo, efecto) {
+        const l = listaAnim().filter((x) => !(x.id === id && x.tipo === tipo));
+        if (efecto) l.push({ id, tipo, efecto, inicio: "clic", retraso: 0, dur: 500 });
+        guardarAnim(l);
+        aviso(efecto ? `${TIPO_ANIM[tipo]}: ${(EFECTOS[tipo].find((x) => x[0] === efecto) || ["", efecto])[1]} (paso ${l.filter((x) => (x.inicio || "clic") === "clic").length})` : "Animación quitada", { tipo: "ok", ms: 1800 });
+      }
+      function menuAnimacion(b) {
+        const id = lienzo.seleccion(), l = listaAnim();
+        const actual = (t) => (l.find((x) => x.id === id && x.tipo === t) || {}).efecto || "";
+        const items = [];
+        if (id && !ed.soloLectura) {
+          ["e", "n", "x"].forEach((t) => {
+            items.push({ titulo: TIPO_ANIM[t] });
+            EFECTOS[t].forEach(([v, tx]) => items.push({ texto: tx, marcado: actual(t) === v, fn: () => ponerAnim(id, t, actual(t) === v ? null : v) }));
+          });
+          items.push("-", { texto: "Quitar las animaciones de esto", icono: "x", fn: () => { guardarAnim(l.filter((x) => x.id !== id)); } });
+        } else items.push({ titulo: "Elige un bloque para animarlo" });
+        items.push({ texto: "Todas las animaciones de la diapositiva…", icono: "list-ordered", fn: dialogoAnimaciones });
+        NOM.menu(b, items);
+      }
+      /** El panel de animaciones: orden, cuándo empieza cada una, retraso y duración. */
+      function dialogoAnimaciones() {
+        let l = listaAnim();
+        const cuerpo = NOM.html(`<div class="col"><p class="suave chico" style="font-weight:650">Se reproducen de arriba abajo. "Al hacer clic" empieza un paso nuevo; "Con la anterior" y "Después de la anterior" van en el mismo paso.</p><div class="lista anim-lista" data-l></div></div>`);
+        const pintarL = () => {
+          $("[data-l]", cuerpo).innerHTML = l.length ? l.map((x, k) => `<div class="anim-fila" data-k="${k}">
+            <div class="fila" style="align-items:center"><b class="crece recorta">${k + 1}. ${esc(nombreBloque(x.id))}</b><span class="chip chico">${TIPO_ANIM[x.tipo]}</span>
+              <button class="icono-btn chico" data-mover="-1" aria-label="Subir" ${k === 0 ? "disabled" : ""}>${ico("arrow-up", "ico-s")}</button><button class="icono-btn chico" data-mover="1" aria-label="Bajar" ${k === l.length - 1 ? "disabled" : ""}>${ico("arrow-down", "ico-s")}</button><button class="icono-btn chico" data-quitar aria-label="Quitar">${ico("trash-2", "ico-s")}</button></div>
+            <div class="fila" style="flex-wrap:wrap"><select data-campo="efecto">${EFECTOS[x.tipo].map(([v, tx]) => `<option value="${v}" ${x.efecto === v ? "selected" : ""}>${tx}</option>`).join("")}</select>
+              <select data-campo="inicio">${[["clic", "Al hacer clic"], ["con", "Con la anterior"], ["despues", "Después de la anterior"]].map(([v, tx]) => `<option value="${v}" ${(x.inicio || "clic") === v ? "selected" : ""}>${tx}</option>`).join("")}</select>
+              <label class="chico">Retraso <input data-campo="retraso" type="number" min="0" max="20" step="0.1" value="${(+x.retraso || 0) / 1000}" style="width:64px"> s</label>
+              <label class="chico">Duración <input data-campo="dur" type="number" min="0.1" max="10" step="0.1" value="${(+x.dur || 500) / 1000}" style="width:64px"> s</label></div></div>`).join("")
+            : `<p class="suave">Esta diapositiva no tiene animaciones. Elige un bloque y toca Animación.</p>`;
+        };
+        pintarL();
+        cuerpo.addEventListener("click", (e) => {
+          const f = e.target.closest("[data-k]");
+          if (!f) return;
+          const k = +f.dataset.k, m = e.target.closest("[data-mover]");
+          if (m) { const j = k + +m.dataset.mover; [l[k], l[j]] = [l[j], l[k]]; pintarL(); }
+          if (e.target.closest("[data-quitar]")) { l.splice(k, 1); pintarL(); }
+        });
+        cuerpo.addEventListener("change", (e) => {
+          const f = e.target.closest("[data-k]"), c = e.target.dataset.campo;
+          if (!f || !c) return;
+          const x = l[+f.dataset.k];
+          x[c] = c === "retraso" || c === "dur" ? Math.round(parseFloat(e.target.value || "0") * 1000) : e.target.value;
+        });
+        const pie = NOM.html(`<div style="display:contents"><button class="btn" type="button" data-probar>${ico("play", "ico-s")} Ver cómo queda</button><span class="crece"></span><button class="btn" type="button" data-no>Cancelar</button><button class="btn primario" data-si>Guardar</button></div>`);
+        const h = NOM.hoja({ titulo: "Animaciones de la diapositiva", icono: "sparkles", cuerpo, pie, ancha: true });
+        $("[data-no]", pie).onclick = () => h.cerrar();
+        $("[data-si]", pie).onclick = (e) => { e.preventDefault(); if (!ed.soloLectura) guardarAnim(l); h.cerrar(); };
+        $("[data-probar]", pie).onclick = () => { if (!ed.soloLectura) guardarAnim(l); h.cerrar(); presentar(ed); };
+      }
+      /** 8.3 Nueva diapositiva con un diseño (portada, título y contenido, dos columnas…). */
+      function nuevaConDiseno(id) {
+        const D = NOM.diapo, dis = D.DISENOS.find((x) => x.id === id) || D.DISENOS[0];
+        const np = ed.nuevaPagina(ed.pagina), T = tamDoc(doc()), te = D.tema(doc());
+        doc().lote(() => dis.arma(T.w, T.h).forEach((b, i) => {
+          const c = Object.assign({}, b, { pagina: np, orden: i + 1, z: i + 1, x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) });
+          if (c.tipo === "texto") { c.html = c.html || ""; }
+          if (c.tipo === "tabla") c.enDiapo = true;
+          if (c.tipo === "forma") { c.color = te ? te.acentos[c.acento || 0] : "#3D72F2"; delete c.acento; }
+          doc().cambiar(NOM.DocCRDT.nuevoId(), c);
+        }));
+        ed.pagina = np; lienzo.render();
+      }
+      function menuNueva(b) {
+        const D = NOM.diapo;
+        if (!D) { ed.pagina = ed.nuevaPagina(ed.pagina); lienzo.render(); return; }
+        const p = NOM.html(`<div class="menu lz-disenos" role="dialog" aria-label="Nueva diapositiva"><div class="menu-titulo">Nueva diapositiva</div><div class="lz-disenos-lista">${D.DISENOS.map((d) => `<button data-d="${d.id}"><span class="lz-diseno-prev">${previaDiseno(d)}</span><small>${esc(d.t)}</small></button>`).join("")}</div></div>`);
+        document.body.append(p);
+        const r = b.getBoundingClientRect();
+        p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left)) + "px";
+        p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 6)) + "px";
+        const cerrar = () => { p.remove(); document.removeEventListener("pointerdown", fuera, true); };
+        const fuera = (e) => { if (!p.contains(e.target)) cerrar(); };
+        setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
+        p.addEventListener("click", (e) => { const x = e.target.closest("[data-d]"); if (x) { cerrar(); nuevaConDiseno(x.dataset.d); } });
+      }
+      /** Dibujo chiquito de cómo queda cada diseño. */
+      function previaDiseno(d) {
+        const T = tamDoc(doc()), k = 96 / T.w;
+        return `<svg viewBox="0 0 ${T.w} ${T.h}" width="96" height="${Math.round(T.h * k)}">${d.arma(T.w, T.h).map((b) => b.tipo === "imagen" ? `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="12" fill="#CFE0FF"/>`
+          : b.tipo === "tabla" ? `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="#9A97A6" stroke-width="8"/>`
+          : b.tipo === "forma" ? `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="#3D72F2"/>`
+          : `<rect x="${b.x}" y="${b.y + b.h * 0.3}" width="${b.w * (b.estilo === "h1" ? 0.8 : 0.9)}" height="${b.estilo === "p" ? b.h * 0.12 : b.h * 0.4}" rx="10" fill="${b.estilo === "p" ? "#B7B4C2" : "#4A4854"}"${b.tAlin === "centro" ? ` transform="translate(${b.w * 0.05} 0)"` : ""}/>`).join("")}</svg>`;
+      }
+      function menuInsertar(b) {
+        NOM.menu(b, [{ titulo: "Insertar" },
+          { texto: "Cuadro de texto", icono: "type", fn: () => lienzo.crear("texto") },
+          { texto: "Imagen…", icono: "image", fn: () => lienzo.imagen() },
+          { texto: "Tabla…", icono: "table", fn: () => NOM.diapo.editarDatos({ titulo: "Nueva tabla", bloque: { filas: 3, cols: 3, encabezado: true }, alGuardar: (c) => lienzo.crear("tabla", Object.assign({ enDiapo: true }, c)) }) },
+          { texto: "Gráfica…", icono: "bar-chart", fn: () => NOM.diapo.editarDatos({ titulo: "Nueva gráfica", grafica: true, bloque: { filas: 4, cols: 2, "c:A1": "", "c:B1": "Ventas", "c:A2": "Enero", "c:B2": "10", "c:A3": "Febrero", "c:B3": "14", "c:A4": "Marzo", "c:B4": "9" }, alGuardar: (c) => lienzo.crear("grafica", c) }) },
+          { texto: "Íconos y elementos…", icono: "shapes", fn: () => elegirIcono(b) },
+          { texto: "Ecuación…", icono: "sigma", fn: () => lienzo.editarEcuacion(null) },
+        ]);
+      }
+      /** 8.3 Biblioteca de íconos (funciona sin internet): buscar y tocar para insertar. */
+      function elegirIcono(b) {
+        const I = NOM.iconos;
+        if (!I) return aviso("La biblioteca de íconos no se cargó", { tipo: "aviso" });
+        const cuerpo = NOM.html(`<div class="col"><div class="entrada">${ico("search")}<input data-q placeholder="Buscar: libro, ciencia, flecha, persona…" autocomplete="off"></div>
+          <div class="segmentado" role="group" style="flex-wrap:wrap" data-cats>${["Todos", ...I.CATEGORIAS].map((c, i) => `<button type="button" data-cat="${esc(c)}" aria-pressed="${i === 0}">${esc(c)}</button>`).join("")}</div>
+          <div class="lz-iconos" data-lista></div></div>`);
+        const h = NOM.hoja({ titulo: "Íconos y elementos", icono: "shapes", cuerpo, ancha: true });
+        let cat = "Todos";
+        const pintar = () => {
+          const q = $("[data-q]", cuerpo).value.trim().toLowerCase();
+          const l = I.LISTA.filter((x) => (cat === "Todos" || x.c === cat) && (!q || x.n.includes(q) || x.k.includes(q))).slice(0, 240);
+          $("[data-lista]", cuerpo).innerHTML = l.map((x) => `<button type="button" data-i="${esc(x.id)}" aria-label="${esc(x.n)}" title="${esc(x.n)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${x.svg}</svg></button>`).join("") || `<p class="suave">No hay íconos con esa palabra.</p>`;
+        };
+        pintar();
+        $("[data-q]", cuerpo).addEventListener("input", pintar);
+        $("[data-cats]", cuerpo).addEventListener("click", (e) => { const x = e.target.closest("[data-cat]"); if (!x) return; cat = x.dataset.cat; $$("[data-cat]", cuerpo).forEach((y) => y.setAttribute("aria-pressed", y === x)); pintar(); });
+        $("[data-lista]", cuerpo).addEventListener("click", (e) => {
+          const x = e.target.closest("[data-i]");
+          if (!x) return;
+          const ic = I.LISTA.find((y) => y.id === x.dataset.i);
+          h.cerrar();
+          const te = NOM.diapo && NOM.diapo.tema(doc());
+          const colorIc = te ? te.acentos[0] : "#3D72F2";
+          const nuevoId = lienzo.crear("icono", { svg: ic.svg, nombre: ic.id, color: colorIc, grosor: 2 });
+          if (nuevoId) NOM.diapo.iconoPng(ic.svg, colorIc, 2).then((png) => { if (png && doc().vivo(nuevoId)) doc().cambiar(nuevoId, { png }, { deshacible: false }); });
+        });
+        void b;
+      }
+      /** 8.3 Diseño: tema, fondo de la diapositiva y tamaño. */
+      function menuDiseno(b) {
+        const D = NOM.diapo, te = doc().valor("_doc", "tema") || "", tm = doc().valor("_doc", "tamDiapo") || "16:9";
+        const cuerpo = NOM.html(`<div class="col">
+          <b>Tema</b><div class="lz-temas">${[["", { t: "Sin tema", fondo: { tipo: "color", color: "#FFFFFF" }, titulo: "#2B2A33", texto: "#4A4854" }], ...Object.entries(D.TEMAS)].map(([k, t]) => `<button type="button" data-tema="${k}" aria-pressed="${te === k}" style="background:${esc(D.cssFondo(t.fondo))}"><span style="color:${esc(t.titulo)};font-family:${esc(t.fuenteT ? NOM.textoRico.cssFuente(t.fuenteT) : "inherit")}">Aa</span><small style="color:${esc(t.texto)}">${esc(t.t)}</small></button>`).join("")}</div>
+          <b>Fondo de esta diapositiva</b>
+          <div class="fila" style="flex-wrap:wrap"><button type="button" class="btn chico" data-f="color">${ico("palette", "ico-s")} Color</button><button type="button" class="btn chico" data-f="degradado">${ico("blend", "ico-s")} Degradado</button>
+            <button type="button" class="btn chico" data-f="imagen">${ico("image", "ico-s")} Imagen</button><button type="button" class="btn chico" data-f="quitar">${ico("x", "ico-s")} Del tema</button>
+            <button type="button" class="btn chico" data-f="todas">${ico("copy", "ico-s")} Usar en todas</button></div>
+          <b>Tamaño</b><div class="entrada"><select data-tam>${Object.entries(D.TAMANOS).map(([k, t]) => `<option value="${k}" ${tm === k ? "selected" : ""}>${esc(t.t)} · ${t.w}×${t.h}</option>`).join("")}</select></div>
+          <p class="suave chico" style="font-weight:650">Al cambiar el tamaño, lo que ya está se acomoda en proporción.</p></div>`);
+        const h = NOM.hoja({ titulo: "Diseño", icono: "palette", cuerpo });
+        const p = ed.pagina;
+        cuerpo.addEventListener("click", async (e) => {
+          const t = e.target.closest("[data-tema]"), f = e.target.closest("[data-f]");
+          if (t) { doc().cambiar("_doc", { tema: t.dataset.tema || null }); $$("[data-tema]", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === t)); lienzo.render(); }
+          if (!f) return;
+          const k = "fondo:" + p, actual = doc().valor("_doc", k) || {};
+          if (f.dataset.f === "color") paletaColores(f, actual.color, (c) => { if (c) { doc().cambiar("_doc", { [k]: { tipo: "color", color: c } }); lienzo.render(); } }, { titulo: "Color de fondo" });
+          else if (f.dataset.f === "degradado") paletaColores(f, actual.c1, (c1) => { if (!c1) return; setTimeout(() => paletaColores(f, actual.c2, (c2) => { if (c2) { doc().cambiar("_doc", { [k]: { tipo: "degradado", c1, c2, angulo: 135 } }); lienzo.render(); } }, { titulo: "Segundo color del degradado" }), 50); }, { titulo: "Primer color del degradado" });
+          else if (f.dataset.f === "imagen") { const img = await ed.pedirImagen(); if (img) { doc().cambiar("_doc", { [k]: { tipo: "imagen", src: img.src, ajuste: "cubrir" } }); lienzo.render(); } }
+          else if (f.dataset.f === "quitar") { doc().cambiar("_doc", { [k]: null }); lienzo.render(); }
+          else if (f.dataset.f === "todas") { const fo = doc().valor("_doc", k) || null; doc().cambiar("_doc", Object.fromEntries(doc().paginas().map((x) => ["fondo:" + x, fo]))); aviso("Ese fondo quedó en todas las diapositivas", { tipo: "ok" }); lienzo.render(); }
+        });
+        $("[data-tam]", cuerpo).onchange = (e) => { cambiarTamano(e.target.value); h.cerrar(); };
+        void b;
+      }
+      /** Cambia el tamaño de las diapositivas y acomoda todo en proporción. */
+      function cambiarTamano(k) {
+        const D = NOM.diapo, A = tamDoc(doc()), N = D.TAMANOS[k];
+        if (!N || (A.w === N.w && A.h === N.h)) return;
+        const kx = N.w / A.w, ky = N.h / A.h, km = Math.min(kx, ky);
+        doc().lote(() => {
+          doc().cambiar("_doc", { tamDiapo: k });
+          doc().vivos().filter((b) => b.x != null && b.tipo !== "conector" && b.tipo !== "comentario").forEach((b) => {
+            const w = b.w * km, h = b.h * km, cx = (b.x + b.w / 2) * kx, cy = (b.y + b.h / 2) * ky;
+            const c = { x: Math.round(cx - w / 2), y: Math.round(cy - h / 2), w: Math.round(w), h: Math.round(h) };
+            if (b.tTam) c.tTam = Math.max(8, Math.round(b.tTam * km));
+            doc().cambiar(b.id, c);
+          });
+        });
+        lienzo.render();
+        aviso("Tamaño cambiado: " + N.t, { tipo: "ok" });
+      }
+      /** 8.3 Guardar la diapositiva (o todas) como imagen PNG. */
+      async function exportarImagen(todas) {
+        const nombre = (doc().valor("_doc", "nombre") || "presentacion").replace(/[\\/:*?"<>|]+/g, " ").trim();
+        try {
+          if (!todas) {
+            const png = await NOM.diapo.diapoPng(doc(), ed.pagina, 2), bin = atob(png.split(",")[1]), bytes = new Uint8Array(bin.length);
+            for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+            const i = doc().paginas().indexOf(ed.pagina) + 1;
+            NOM.formatos.descargarBytes(`${nombre} - diapositiva ${i}.png`, "image/png", bytes);
+            return;
+          }
+          aviso("Preparando las imágenes…", { ms: 1500 });
+          const archivos = [];
+          const pags = doc().paginas();
+          for (let i = 0; i < pags.length; i++) {
+            const png = await NOM.diapo.diapoPng(doc(), pags[i], 2), bin = atob(png.split(",")[1]), bytes = new Uint8Array(bin.length);
+            for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+            archivos.push({ nombre: `diapositiva-${String(i + 1).padStart(2, "0")}.png`, datos: bytes });
+          }
+          NOM.formatos.descargarBytes(nombre + " (imágenes).zip", "application/zip", NOM.ooxml.zip(archivos));
+        } catch (e) { aviso(e.message, { tipo: "error" }); }
+      }
       function menuPresentar(b) {
         NOM.menu(b, [
           { titulo: "Presentar" },
@@ -1511,14 +1910,12 @@
         { id: "texto", icono: "type", micro: "Cuadro de texto|Agrega un título o un párrafo a la diapositiva.", fn: () => lienzo.crear("texto") },
         { id: "figura", icono: "shapes", micro: "Figuras|Más de 20: flechas, estrellas, globos de diálogo…", fn: (e, b) => menuFiguras(lienzo, b) },
         { id: "imagen", icono: "image", micro: "Imagen|Desde tu equipo.", fn: () => lienzo.imagen(), mantenerFoco: false },
+        { id: "insertar", icono: "plus-square", micro: "Insertar|Tabla, gráfica, íconos y ecuación.", fn: (e, b) => menuInsertar(b) },
+        { id: "diseno", icono: "palette", micro: "Diseño|Tema, fondo y tamaño de las diapositivas.", fn: (e, b) => menuDiseno(b), off: () => ed.soloLectura },
         "|",
         { id: "color", icono: "palette", micro: "Color|Cambia el color de las figuras seleccionadas.", fn: (e, b) => menuColor(lienzo, b), off: () => !lienzo.seleccion() },
         { id: "alinear", icono: "al-centro-h", micro: "Alinear|En la diapositiva o entre las figuras elegidas.", fn: (e, b) => menuAlinear(lienzo, b), off: () => !lienzo.seleccion() },
-        { id: "animacion", icono: "sparkles", micro: "Animación|Cómo aparece el bloque al presentar.", off: () => !lienzo.seleccion(), fn: (e, b) => {
-          const id = lienzo.seleccion(); const actual = doc().valor(id, "animacion") || "";
-          NOM.menu(b, [{ titulo: "Al presentar, aparece…" },
-            ...[["", "Sin animación"], ["aparecer", "Desvanecido"], ["deslizar", "Deslizando hacia arriba"], ["zoom", "Con zoom"]].map(([v, t]) => ({ texto: t, marcado: v === actual, fn: () => doc().cambiar(id, { animacion: v }) }))]);
-        } },
+        { id: "animacion", icono: "sparkles", micro: "Animación|Entrada, énfasis y salida al presentar, en el orden que elijas.", fn: (e, b) => menuAnimacion(b) },
         { id: "frente", icono: "bring-to-front", micro: "Traer al frente||Ctrl+Mayús+]", fn: () => lienzo.capaZ("frente"), off: () => !lienzo.seleccion() },
         { id: "atras", icono: "send-to-back", micro: "Enviar al fondo||Ctrl+Mayús+[", fn: () => lienzo.capaZ("fondo"), off: () => !lienzo.seleccion() },
         { id: "borrar", icono: "trash-2", micro: "Eliminar|Quita los bloques seleccionados.|Supr", fn: () => lienzo.eliminar(), off: () => !lienzo.seleccion() },
@@ -1526,10 +1923,11 @@
         { id: "capas", icono: "layers", micro: "Capas|Ocultar, bloquear y ordenar lo de la diapositiva.", fn: () => lienzo.capas.abrir() },
         { id: "comentar", icono: "message-square", micro: "Comentar|Comenta lo elegido (o la diapositiva). Funciona sin Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed), clase: "solo-escritorio" },
         "|",
-        { id: "nueva", icono: "plus-square", micro: "Nueva diapositiva", fn: () => { ed.pagina = ed.nuevaPagina(ed.pagina); lienzo.render(); } },
+        { id: "nueva", icono: "file-plus", micro: "Nueva diapositiva|Elige un diseño: portada, título y contenido, dos columnas…", fn: (e, b) => menuNueva(b) },
         { id: "notas", icono: "sticky-note", micro: "Notas del orador|Solo tú las ves, en el modo presentador.", fn: () => alternarNotas(), activo: () => !notas.hidden },
         { id: "transicion", icono: "sparkles", micro: "Transición|Cómo entra esta diapositiva al presentar.", fn: (e, b) => menuTransicion(b) },
         { id: "presentar", icono: "play", micro: "Presentar|Aquí, en modo presentador o en otra pantalla (proyector).|F5", fn: (e, b) => menuPresentar(b) },
+        { id: "imagen-png", icono: "download", micro: "Guardar como imagen|Esta diapositiva o todas (PNG), para mandarlas por mensaje.", clase: "solo-escritorio", fn: (e, b) => NOM.menu(b, [{ titulo: "Guardar como imagen (PNG)" }, { texto: "Esta diapositiva", icono: "image", fn: () => exportarImagen(false) }, { texto: "Todas (en un .zip)", icono: "archive", fn: () => exportarImagen(true) }]) },
       ];
       this._teclaF5 = (e) => { if (e.key === "F5") { e.preventDefault(); presentar(ed); } };
       document.addEventListener("keydown", this._teclaF5);
@@ -1548,6 +1946,9 @@
         { texto: "Modo presentador", icono: "sticky-note", fn: () => presentar(NOM.editorActual, { presentador: true }), claves: "presentar notas orador" },
         { texto: "Presentar en otra pantalla (proyector)", icono: "cast", fn: () => presentar(NOM.editorActual, { presentador: true, proyectar: true }), claves: "proyector pantalla telefono" },
         { texto: "Capas", icono: "layers", fn: () => this._lienzo.capas.abrir(), claves: "ocultar bloquear orden" },
+        { texto: "Animaciones de la diapositiva", icono: "sparkles", fn: () => { const b = document.querySelector('[aria-label="Animación"]'); if (b) b.click(); }, claves: "animar entrada salida enfasis orden" },
+        { texto: "Diseño (tema, fondo y tamaño)", icono: "palette", fn: () => { const b = document.querySelector('[aria-label="Diseño"]'); if (b) b.click(); }, claves: "tema fondo tamaño 4:3 cartel" },
+        { texto: "Insertar tabla, gráfica o ícono", icono: "plus-square", fn: () => { const b = document.querySelector('.modo-PRESENTACION [aria-label="Insertar"]'); if (b) b.click(); }, claves: "tabla grafica icono ecuacion" },
       ];
     },
   };
@@ -1555,20 +1956,69 @@
   // ------------------------------------------------------------ una diapositiva como HTML (miniaturas, presentar, proyector)
   /** Lo que se presenta de una página: sin lo oculto ni lo que quedó en la mesa de trabajo (5.1). */
   function bloquesPresentables(doc, p) {
-    const fueraDe = (b) => b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= ANCHO || b.y >= ALTO;
+    const T = tamDoc(doc);
+    const fueraDe = (b) => b.x + b.w <= 0 || b.y + b.h <= 0 || b.x >= T.w || b.y >= T.h;
     return posiciones(doc.deLaPagina(p).filter((b) => b.tipo !== "conector" && !b.oculto), true).filter((b) => !fueraDe(b)).sort((a, b) => (a.z || 0) - (b.z || 0));
   }
-  /** Bloques animados de una página, en el orden en que aparecen. */
-  const pasosDe = (bs) => bs.filter((b) => b.animacion).sort((a, b) => a.y - b.y || a.x - b.x);
-  /** HTML de los bloques de una diapositiva. paso: cuántos bloques animados ya aparecieron (null = todos). */
-  function htmlDiapositiva(doc, p, paso) {
-    const bs = bloquesPresentables(doc, p), pasos = pasosDe(bs);
-    const visibles = paso == null ? null : new Set(pasos.slice(0, paso).map((b) => b.id));
-    const ultimo = paso ? pasos[paso - 1] : null;
+  // ------------------------------------------------------------ 8.3 animaciones
+  /** Efectos de animación: entrada, énfasis y salida. */
+  const EFECTOS = {
+    e: [["aparecer", "Desvanecer"], ["deslizar", "Desde abajo"], ["deslizar-arriba", "Desde arriba"], ["deslizar-izq", "Desde la izquierda"], ["deslizar-der", "Desde la derecha"], ["zoom", "Acercar"], ["rebotar", "Rebotar"], ["girar", "Girar"]],
+    n: [["pulso", "Pulso"], ["sacudir", "Sacudir"], ["vuelta", "Dar una vuelta"], ["crecer", "Crecer"], ["parpadear", "Parpadear"]],
+    x: [["desvanecer", "Desvanecer"], ["deslizar", "Hacia abajo"], ["alejar", "Alejar"], ["girar", "Girar"]],
+  };
+  const TIPO_ANIM = { e: "Entrada", n: "Énfasis", x: "Salida" };
+  /**
+   * La lista ordenada de animaciones de una página (como el panel de animaciones de PowerPoint):
+   * [{ id (bloque), tipo: "e"|"n"|"x", efecto, inicio: "clic"|"con"|"despues", retraso, dur }].
+   * Documentos de antes: los bloques con "animacion", de arriba abajo, al hacer clic.
+   */
+  function listaAnimaciones(doc, p, bs) {
+    const vivos = new Set(bs.map((b) => b.id));
+    const l = doc.valor("_doc", "anim:" + p);
+    if (Array.isArray(l)) return l.filter((x) => x && vivos.has(x.id) && x.efecto);
+    return bs.filter((b) => b.animacion).sort((a, b) => a.y - b.y || a.x - b.x).map((b) => ({ id: b.id, tipo: "e", efecto: b.animacion, inicio: "clic" }));
+  }
+  /** Pasos de la presentación: [0] lo que arranca solo al llegar, y uno por cada clic. Cada evento con su momento (t) y duración. */
+  function pasosAnim(lista) {
+    const pasos = [[]];
+    let ini = 0, fin = 0;
+    lista.forEach((x) => {
+      const dur = Math.max(100, Math.min(10000, +x.dur || 500)), ret = Math.max(0, Math.min(20000, +x.retraso || 0));
+      let t;
+      if ((x.inicio || "clic") === "clic") { pasos.push([]); t = ret; fin = 0; }
+      else if (x.inicio === "con") t = ini + ret;
+      else t = fin + ret;
+      pasos[pasos.length - 1].push(Object.assign({}, x, { t, dur }));
+      ini = t; fin = Math.max(fin, t + dur);
+    });
+    return pasos;
+  }
+  /** Cuántos clics tiene una diapositiva. */
+  const pasosDe = (doc, p) => pasosAnim(listaAnimaciones(doc, p, bloquesPresentables(doc, p))).length - 1;
+  /** Cómo está cada bloque en el paso k: oculto o no, y la animación que corre ahora. final: sin animar. */
+  function estadoAnimaciones(doc, p, k, final) {
+    const bs = bloquesPresentables(doc, p), pasos = pasosAnim(listaAnimaciones(doc, p, bs)), e = {};
+    const de = (id) => (e[id] = e[id] || { oculto: false, anim: [] });
+    pasos.forEach((ps, j) => ps.forEach((x) => {
+      const s = de(x.id);
+      if (x.tipo === "e") { if (j > k) s.oculto = true; else if (j === k && !final) s.anim.push(x); }
+      else if (x.tipo === "x") { if (j < k || (final && j === k)) s.oculto = true; else if (j === k) s.anim.push(x); }
+      else if (x.tipo === "n" && j === k && !final) s.anim.push(x);
+    }));
+    // Si hay una entrada más adelante y una salida antes, manda lo último que ya pasó.
+    return { estado: e, pasos: pasos.length - 1 };
+  }
+  /** HTML de los bloques de una diapositiva. paso: el paso de la presentación (null = todo visible, sin animar). */
+  function htmlDiapositiva(doc, p, paso, opc) {
+    const bs = bloquesPresentables(doc, p);
+    const est = paso == null ? null : estadoAnimaciones(doc, p, paso, opc && opc.final).estado;
     return bs.map((b) => {
-      const oculto = visibles && b.animacion && !visibles.has(b.id);
-      const anim = ultimo && ultimo.id === b.id ? " anim-" + b.animacion : "";
-      return `<div class="bl${clasesBloque(b)}${oculto ? " anim-oculto" : ""}${anim}" data-id="${esc(b.id)}" style="${estiloBloque(b)}overflow:hidden">${contenido(b)}</div>`;
+      const s = est && est[b.id];
+      if (s && s.oculto && !s.anim.length) return "";
+      // Varias animaciones del mismo bloque en el mismo paso (entrada y énfasis…) van juntas.
+      const st = s && s.anim.length ? `animation-name:${s.anim.map((x) => `a-${x.tipo}-${x.efecto}`).join(",")};animation-duration:${s.anim.map((x) => x.dur + "ms").join(",")};animation-delay:${s.anim.map((x) => x.t + "ms").join(",")};animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.8,.2,1);` : "";
+      return `<div class="bl${clasesBloque(b)}${s && s.anim.length ? " animando" : ""}" data-id="${esc(b.id)}" style="${estiloBloque(b)}overflow:hidden;${st}">${contenido(b)}</div>`;
     }).join("");
   }
 
@@ -1577,12 +2027,13 @@
    * Presenta en pantalla completa. opc.presentador: vista con notas, la siguiente diapositiva y el
    * tiempo (5.5). opc.proyectar: además la presentación se ve en otra pantalla (el navegador de la
    * computadora del proyector abre /proyectar?c=CÓDIGO, sin iniciar sesión) y la mueve este equipo.
+   * 8.3: animaciones por pasos, puntero láser (L), pluma (P) y borrar (E), que también se ven en el proyector.
    */
   function presentar(ed, opc) {
     opc = opc || {};
     const doc = ed.doc;
     const pags = () => doc.paginas();
-    let i = Math.max(0, pags().indexOf(ed.pagina)), paso = 0, pasos = [], codigo = null;
+    let i = Math.max(0, pags().indexOf(ed.pagina)), paso = 0, total = 0, codigo = null;
     const presentador = !!opc.presentador;
     const rep = html(`<div class="reproductor${presentador ? " presentador" : ""}" tabindex="0">
       ${presentador ? `<div class="pv-actual"><div class="diapo" data-d></div></div>
@@ -1591,21 +2042,24 @@
           <div class="pv-proy" data-proy hidden></div></aside>
         <div class="pv-ctl"><button class="btn" data-ant>${ico("chevron-left")} Anterior</button><span class="pv-tiempo" data-tiempo>0:00</span><span class="contador" data-c></span><button class="btn primario" data-sig-btn>Siguiente ${ico("chevron-right")}</button></div>`
         : `<div class="diapo" data-d></div><span class="contador" data-c></span>`}
+      <div class="pres-herr" data-herr><button class="icono-btn" data-h="laser" aria-label="Puntero láser" data-micro="Puntero láser||L">${ico("circle-dot")}</button><button class="icono-btn" data-h="pluma" aria-label="Pluma" data-micro="Pluma (dibujar sobre la diapositiva)||P">${ico("pencil")}</button><button class="icono-btn" data-h="borrar" aria-label="Borrar lo dibujado" data-micro="Borrar lo dibujado||E">${ico("eraser")}</button></div>
       <button class="icono-btn salir" aria-label="Salir">${ico("x")}</button></div>`);
     document.body.append(rep);
     const d = $("[data-d]", rep), sig = $("[data-sig]", rep);
     const inicio = Date.now();
     const reloj = presentador ? setInterval(() => { const s2 = Math.floor((Date.now() - inicio) / 1000); $("[data-tiempo]", rep).textContent = `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, "0")}`; }, 1000) : null;
-    function escalar(el, caja) {
+    function escalar(el, caja, p) {
+      if (NOM.diapo) NOM.diapo.aplicar(el, doc, p);
+      const T = tamDoc(doc);
       const r = caja ? caja.getBoundingClientRect() : { width: innerWidth, height: innerHeight, left: 0, top: 0 };
-      const k = Math.min(r.width / ANCHO, r.height / ALTO);
+      const k = Math.min(r.width / T.w, r.height / T.h);
       el.style.transform = `scale(${k})`;
-      el.style.left = (caja ? 0 : 0) + (r.width - ANCHO * k) / 2 + "px";
-      el.style.top = (r.height - ALTO * k) / 2 + "px";
+      el.style.left = (r.width - T.w * k) / 2 + "px";
+      el.style.top = (r.height - T.h * k) / 2 + "px";
     }
     function escala() {
-      escalar(d, presentador ? $(".pv-actual", rep) : null);
-      if (sig) escalar(sig, $(".pv-sig-caja", rep));
+      escalar(d, presentador ? $(".pv-actual", rep) : null, pags()[i]);
+      if (sig) { const n = pags()[i + 1]; const caja = $(".pv-sig-caja", rep); if (caja) caja.style.aspectRatio = `${tamDoc(doc).w} / ${tamDoc(doc).h}`; escalar(sig, caja, n || pags()[i]); }
     }
     const avisarProyector = NOM.throttle(() => {
       if (!codigo) return;
@@ -1618,10 +2072,11 @@
     }
     function pintar(revelarTodo, conTransicion) {
       const p = pags()[i];
-      const bs = bloquesPresentables(doc, p);
-      pasos = revelarTodo ? [] : pasosDe(bs);
-      paso = revelarTodo ? pasosDe(bs).length : 0;
-      d.innerHTML = htmlDiapositiva(doc, p, revelarTodo ? null : 0);
+      total = estadoAnimaciones(doc, p, 0).pasos;
+      paso = revelarTodo ? total : 0;
+      d.innerHTML = htmlDiapositiva(doc, p, paso, { final: !!revelarTodo });
+      borrarMarcas(false);
+      escala();
       if (conTransicion !== false) transicion();
       $("[data-c]", rep).textContent = `${i + 1} / ${pags().length}`;
       if (presentador) {
@@ -1634,16 +2089,61 @@
       avisarProyector();
     }
     function avanzar() {
-      if (paso < pasos.length) {
-        const b = pasos[paso++];
-        const el = d.querySelector(`[data-id="${CSS.escape(b.id)}"]`);
-        if (el) { el.classList.remove("anim-oculto"); el.classList.add("anim-" + b.animacion); }
+      if (paso < total) {
+        paso++;
+        d.innerHTML = htmlDiapositiva(doc, pags()[i], paso);
+        pintarMarcas();
         avisarProyector();
         return;
       }
       if (i < pags().length - 1) { i++; pintar(); } else salir();
     }
     function retroceder() { if (i > 0) { i--; pintar(true, false); } }
+
+    // ---- 8.3 puntero láser y pluma
+    let herramienta = null, trazos = [], trazo = null, puntero = null, colorPluma = "#F2385A";
+    const capaMarcas = () => {
+      let s = $(".pres-marcas", d);
+      if (!s) { const T = tamDoc(doc); s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "pres-marcas"); s.setAttribute("viewBox", `0 0 ${T.w} ${T.h}`); d.append(s); }
+      return s;
+    };
+    function pintarMarcas() {
+      const s = capaMarcas();
+      s.innerHTML = trazos.map((t) => `<polyline points="${t.join(" ")}" fill="none" stroke="${colorPluma}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join("")
+        + (puntero ? `<circle cx="${puntero.x}" cy="${puntero.y}" r="10" fill="#F2385A" fill-opacity=".85"/><circle cx="${puntero.x}" cy="${puntero.y}" r="22" fill="#F2385A" fill-opacity=".25"/>` : "");
+    }
+    const enviarMarcas = NOM.throttle(() => {
+      if (!codigo) return;
+      NOM.api.put(`/api/documentos/${ed.id}/proyeccion/marcas`, { puntero, trazos: trazos.slice(-60), color: colorPluma }).catch(() => {});
+    }, 90);
+    function borrarMarcas(avisar) { trazos = []; trazo = null; puntero = null; pintarMarcas(); if (avisar !== false) enviarMarcas(); }
+    function usar(h) {
+      herramienta = herramienta === h ? null : h;
+      if (h === "borrar") { herramienta = null; borrarMarcas(); }
+      if (herramienta !== "laser") { puntero = null; pintarMarcas(); enviarMarcas(); }
+      $$("[data-h]", rep).forEach((b) => b.setAttribute("aria-pressed", b.dataset.h === herramienta));
+      rep.classList.toggle("con-laser", herramienta === "laser");
+      rep.classList.toggle("con-pluma", herramienta === "pluma");
+    }
+    const enDiapo = (e) => {
+      const r = d.getBoundingClientRect(), T = tamDoc(doc);
+      return { x: Math.round(((e.clientX - r.left) / r.width) * T.w * 10) / 10, y: Math.round(((e.clientY - r.top) / r.height) * T.h * 10) / 10 };
+    };
+    d.addEventListener("pointerdown", (e) => {
+      if (!herramienta) return;
+      e.preventDefault(); e.stopPropagation();
+      if (herramienta === "pluma") { const q = enDiapo(e); trazo = [q.x, q.y]; trazos.push(trazo); d.setPointerCapture(e.pointerId); pintarMarcas(); enviarMarcas(); }
+      if (herramienta === "laser") { puntero = enDiapo(e); pintarMarcas(); enviarMarcas(); }
+    });
+    d.addEventListener("pointermove", (e) => {
+      if (herramienta === "laser") { puntero = enDiapo(e); pintarMarcas(); enviarMarcas(); }
+      else if (herramienta === "pluma" && trazo) { const q = enDiapo(e); trazo.push(q.x, q.y); if (trazo.length > 1600) trazo = null; pintarMarcas(); enviarMarcas(); }
+    });
+    const soltarPluma = () => { trazo = null; };
+    d.addEventListener("pointerup", soltarPluma);
+    d.addEventListener("pointercancel", soltarPluma);
+    $("[data-herr]", rep).addEventListener("click", (e) => { const b = e.target.closest("[data-h]"); if (b) { e.stopPropagation(); usar(b.dataset.h); } });
+
     function salir() {
       clearInterval(reloj);
       document.removeEventListener("keydown", tecla, true);
@@ -1655,27 +2155,33 @@
     }
     function tecla(e) {
       e.stopPropagation();
+      const k = e.key.toLowerCase();
       if (["ArrowRight", "ArrowDown", " ", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); avanzar(); }
       else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); retroceder(); }
-      else if (e.key === "Escape") salir();
+      else if (e.key === "Escape") { if (herramienta) usar(herramienta); else salir(); }
+      else if (k === "l") usar("laser");
+      else if (k === "p") usar("pluma");
+      else if (k === "e") usar("borrar");
     }
     rep.addEventListener("click", (e) => {
       if (e.target.closest(".salir")) return salir();
+      if (e.target.closest("[data-herr]")) return;
       if (e.target.closest("[data-ant]")) return retroceder();
       if (e.target.closest("[data-sig-btn]")) return avanzar();
+      if (herramienta) return;
       if (presentador && !e.target.closest(".pv-actual")) return;
       (e.clientX < innerWidth / 3 ? retroceder : avanzar)();
     });
-    // Deslizar con el dedo: a la izquierda avanza, a la derecha regresa.
+    // Deslizar con el dedo: a la izquierda avanza, a la derecha regresa (si no se está dibujando).
     let x0 = null;
-    rep.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") x0 = e.clientX; });
+    rep.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" && !herramienta) x0 = e.clientX; });
     rep.addEventListener("pointerup", (e) => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 60) { e.preventDefault(); (dx < 0 ? avanzar : retroceder)(); } });
     document.addEventListener("keydown", tecla, true);
     addEventListener("resize", escala);
     let wake = null;
     if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request("screen").then((w) => (wake = w)).catch(() => {});
     if (rep.requestFullscreen && !presentador) rep.requestFullscreen().catch(() => {});
-    escala(); pintar(); rep.focus();
+    pintar(); rep.focus();
     if (opc.proyectar) {
       const caja = $("[data-proy]", rep);
       caja.hidden = false;

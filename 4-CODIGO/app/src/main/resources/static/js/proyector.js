@@ -38,16 +38,31 @@
       <div class="proy-barra"><button class="btn chico" data-completa>${ico("maximize-2", "ico-s")} Pantalla completa</button><span class="chip" data-estado><span class="punto vivo"></span> En vivo</span></div>`;
     const d = $("[data-d]", cont);
     function escala() {
-      const k = Math.min(innerWidth / V.ANCHO, innerHeight / V.ALTO);
+      const T = V.tam ? V.tam(doc) : { w: V.ANCHO, h: V.ALTO };
+      if (NOM.diapo) NOM.diapo.aplicar(d, doc, pagina);
+      const k = Math.min(innerWidth / T.w, innerHeight / T.h);
       d.style.transform = `scale(${k})`;
-      d.style.left = (innerWidth - V.ANCHO * k) / 2 + "px";
-      d.style.top = (innerHeight - V.ALTO * k) / 2 + "px";
+      d.style.left = (innerWidth - T.w * k) / 2 + "px";
+      d.style.top = (innerHeight - T.h * k) / 2 + "px";
+    }
+    // 8.3 Puntero láser y trazos de la pluma de quien presenta.
+    let marcas = datos.marcas || null;
+    function pintarMarcas() {
+      let s = d.querySelector(".pres-marcas");
+      const T = V.tam ? V.tam(doc) : { w: V.ANCHO, h: V.ALTO };
+      if (!s) { s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "pres-marcas"); d.append(s); }
+      s.setAttribute("viewBox", `0 0 ${T.w} ${T.h}`);
+      const m = marcas || {}, c = /^#[0-9a-f]{6}$/i.test(m.color || "") ? m.color : "#F2385A";
+      s.innerHTML = (m.trazos || []).map((t) => `<polyline points="${t.map(Number).join(" ")}" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join("")
+        + (m.puntero ? `<circle cx="${+m.puntero.x}" cy="${+m.puntero.y}" r="10" fill="#F2385A" fill-opacity=".85"/><circle cx="${+m.puntero.x}" cy="${+m.puntero.y}" r="22" fill="#F2385A" fill-opacity=".25"/>` : "");
     }
     function pintar() {
       const pags = doc.paginas();
       if (!pags.includes(pagina)) pagina = pags[0];
       const nueva = pagina !== ultimaPagina;
       d.innerHTML = V.htmlDiapositiva(doc, pagina, paso);
+      escala();
+      pintarMarcas();
       if (nueva) {
         const t = doc.valor("_doc", "trans:" + pagina);
         d.classList.remove("trans-desvanecer", "trans-deslizar", "trans-empujar", "trans-zoom");
@@ -65,7 +80,8 @@
     const canal = api().eventos(`/api/proyeccion/${encodeURIComponent(codigo)}/eventos`, "proyector", {
       hola: () => { estado.innerHTML = `<span class="punto vivo"></span> En vivo`; },
       caido: () => { estado.innerHTML = `${ico("wifi-off", "ico-s")} Reconectando…`; },
-      diapositiva: (x) => { pagina = x.pagina || pagina; paso = x.paso || 0; pintar(); },
+      diapositiva: (x) => { if ((x.pagina || pagina) !== pagina) marcas = null; pagina = x.pagina || pagina; paso = x.paso || 0; if (x.marcas) marcas = x.marcas; pintar(); },
+      marcas: (x) => { marcas = x; pintarMarcas(); },
       ops: (x) => { doc.fusionarRemotas(x.ops || []); pintar(); },
       version: async () => { try { const r = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true }); doc.reemplazarEstado(r.estado); pintar(); } catch (e) { /* siguiente evento */ } },
       fin: () => { cont.innerHTML = `<div class="proy-espera"><svg class="logo"><use href="#logo"/></svg><h2>La presentación terminó</h2><p>Gracias.</p></div>`; },

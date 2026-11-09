@@ -139,6 +139,12 @@ public class DocumentosApi {
         return documentos.moverProyeccion(u, id, d.pagina(), d.paso() == null ? 0 : d.paso());
     }
 
+    /** 8.3 Puntero láser y pluma en la pantalla del proyector. */
+    @PutMapping("/{id}/proyeccion/marcas")
+    public Map<String, Object> marcarProyeccion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Map<String, Object> marcas) {
+        return documentos.marcarProyeccion(u, id, marcas);
+    }
+
     @DeleteMapping("/{id}/proyeccion")
     public Map<String, Object> terminarProyeccion(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
         documentos.terminarProyeccion(u, id);

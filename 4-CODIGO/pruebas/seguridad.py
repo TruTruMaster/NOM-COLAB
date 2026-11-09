@@ -159,6 +159,16 @@ try:
     prueba("5.5 Quien presenta obtiene un código", 200, pr[0])
     prueba("5.5 El proyector abre la presentación con el código (sin sesión)", 200, r("GET", f"/api/proyeccion/{(pr[1] or {}).get('codigo', 'X')}")[0])
     prueba("5.5 Un código de proyección inventado", 404, r("GET", "/api/proyeccion/ZZZ999")[0])
+    # 8.3 Láser y pluma: solo quien presenta dibuja en la pantalla del proyector, y con límites.
+    codigo_pr = (pr[1] or {}).get("codigo", "X")
+    muchos = {"puntero": {"x": 0.5, "y": 0.5}, "trazos": [[0.1, 0.2] * 500] * 90, "color": "red;<script>"}
+    prueba("8.3 Quien presenta marca con láser y pluma", 200, r("PUT", f"/api/documentos/{pres}/proyeccion/marcas", muchos, t=tk["alumno1"])[0])
+    mk = (r("GET", f"/api/proyeccion/{codigo_pr}")[1] or {}).get("marcas") or {}
+    prueba("8.3 …el proyector recibe el puntero", 0.5, (mk.get("puntero") or {}).get("x"))
+    prueba("8.3 …los trazos se recortan (máx. 60 de 800 números)", [60, 800], [len(mk.get("trazos") or []), len((mk.get("trazos") or [[]])[0])])
+    prueba("8.3 …un color inválido se cambia por el de la pluma", "#F2385A", mk.get("color"))
+    prueba("8.3 Quien no está presentando no puede marcar", 404, r("PUT", f"/api/documentos/{pres}/proyeccion/marcas", {"trazos": []}, t=tk["maestra"])[0])
+    prueba("8.3 Sin sesión no se marca", 401, r("PUT", f"/api/documentos/{pres}/proyeccion/marcas", {"trazos": []})[0])
 
     # Recuperar la contraseña con el código
     reg = r("POST", "/api/cuentas/registro", {"nombre": "recupera2", "contrasena": CL})

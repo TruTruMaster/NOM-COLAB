@@ -474,7 +474,10 @@ ${formas.join("\n")}
   async function importarPptx(archivo, nombre) {
     if (!NOM.ooxml.leerPptx) throw new Error("Este formato todavía no se puede abrir");
     const r = await NOM.ooxml.leerPptx(archivo);
-    return { nombre, modo: "PRESENTACION", ops: comoOps(r.bloques, r.paginas).concat(r.extra || []), aviso: r.aviso };
+    const ops = comoOps(r.bloques, r.paginas);
+    // Tamaño, fondos, transiciones y notas del orador van en los datos del documento.
+    if (r.doc && Object.keys(r.doc).length) ops.push(...NOM.DocCRDT.partir([{ id: "imp:d", bloque: "_doc", campos: r.doc, t: 2, n: "importar" }]));
+    return { nombre, modo: "PRESENTACION", ops, aviso: r.aviso };
   }
 
   /** Imagen local -> data URL comprimida (máx. 1600 px, JPEG 0.85) para no inflar el documento. */
@@ -485,7 +488,10 @@ ${formas.join("\n")}
       lector.onerror = () => mal(new Error("No se pudo leer la imagen"));
       lector.onload = () => {
         const img = new Image();
+        // 8.3 Los GIF se guardan tal cual (si se pasan por el canvas, dejan de moverse).
+        const gif = archivo.type === "image/gif" && archivo.size <= 4 * 1024 * 1024;
         img.onload = () => {
+          if (gif) { ok({ src: lector.result, w: img.width, h: img.height }); return; }
           const k = Math.min(1, 1600 / Math.max(img.width, img.height));
           const cv = document.createElement("canvas");
           cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
