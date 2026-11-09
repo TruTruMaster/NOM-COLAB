@@ -35,6 +35,11 @@ public class DocumentosApi {
     public record Proteccion(boolean protegido, String confirmacion) { }
     public record Entrega(Long limite) { }
     public record Diapositiva(String pagina, Integer paso) { }
+    public record Nombre(String nombre) { }
+    public record Copia(String espacioId, String nombre, Boolean plantilla) { }
+    public record Destino(String espacioId) { }
+    public record Carpeta(String carpeta) { }
+    public record Destacado(Boolean destacado) { }
 
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
@@ -53,6 +58,54 @@ public class DocumentosApi {
     public Map<String, Object> eliminar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
         documentos.eliminar(u, id);
         return Map.of("ok", true);
+    }
+
+    // ---- 8.5 papelera, nombre, copia, mover, carpeta, destacado y enlace para ver
+
+    @PostMapping("/{id}/restaurar")
+    public Documento restaurarDePapelera(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.sacarDePapelera(u, id);
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public Map<String, Object> borrarParaSiempre(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        documentos.borrarParaSiempre(u, id);
+        return Map.of("ok", true);
+    }
+
+    @PutMapping("/{id}/nombre")
+    public Documento renombrar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Nombre n) {
+        return documentos.renombrar(u, id, n.nombre());
+    }
+
+    @PostMapping("/{id}/copia")
+    public Documento copiar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Copia c) {
+        return documentos.copiar(u, id, c.espacioId(), c.nombre(), Boolean.TRUE.equals(c.plantilla()));
+    }
+
+    @PutMapping("/{id}/espacio")
+    public Documento mover(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Destino d) {
+        return documentos.mover(u, id, d.espacioId());
+    }
+
+    @PutMapping("/{id}/carpeta")
+    public Documento carpeta(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Carpeta c) {
+        return documentos.fijarCarpeta(u, id, c.carpeta());
+    }
+
+    @PutMapping("/{id}/destacado")
+    public Documento destacar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Destacado d) {
+        return documentos.destacar(u, id, Boolean.TRUE.equals(d.destacado()));
+    }
+
+    @PostMapping("/{id}/enlace-ver")
+    public Map<String, Object> crearEnlaceVer(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.crearEnlaceVer(u, id);
+    }
+
+    @DeleteMapping("/{id}/enlace-ver")
+    public Map<String, Object> quitarEnlaceVer(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.quitarEnlaceVer(u, id);
     }
 
     @PostMapping("/{id}/ops")

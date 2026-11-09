@@ -74,11 +74,16 @@ public class ServicioEspacios {
         m.put("permiso", e.permisoDe(u.id));
         m.put("propietario", cuentas.porId(e.propietarioId).map(x -> x.nombre).orElse("?"));
         m.put("miembros", e.accesos.size());
-        m.put("documentos", ds.size());
+        // 8.5 Lo que esta en la papelera y las plantillas no cuentan como documentos del espacio.
+        m.put("documentos", ds.stream().filter(x -> x.eliminado <= 0 && !x.plantilla).count());
+        if (e.permisoDe(u.id) != null && e.permisoDe(u.id).alMenos(Permiso.EDICION))
+            m.put("enPapelera", ds.stream().filter(x -> x.eliminado > 0).count());
+        m.put("avisos", e.avisos == null ? 0 : e.avisos.getOrDefault(u.id, List.of()).stream().filter(a -> !Boolean.TRUE.equals(a.get("leido"))).count());
         m.put("conexion", e.conexion.activa);
         m.put("conectados", difusor.conectadosPublico(e.id));
         m.put("solicitudes", e.permisoDe(u.id) == Permiso.PROPIETARIO ? e.solicitudes.size() : 0);
         m.put("actividad", ds.isEmpty() ? e.creado : Math.max(e.creado, ds.get(0).modificado));
+        m.put("carpetas", ds.stream().filter(x -> x.eliminado <= 0 && x.carpeta != null).map(x -> x.carpeta).distinct().sorted().toList());
         m.put("formatoBase", e.formatoBase);
         if (e.permisoDe(u.id) == Permiso.PROPIETARIO) {
             long ahora = System.currentTimeMillis();
@@ -98,6 +103,38 @@ public class ServicioEspacios {
     }
 
     public java.util.Collection<Espacio> todos() { return repo.todos(); }
+
+    // ------------------------------------------------------------ 8.5 avisos (menciones)
+
+    /** Guarda un aviso para una persona del espacio (se quedan los ultimos 40). */
+    public synchronized void agregarAviso(String espacioId, String usuarioId, Map<String, Object> aviso) {
+        Espacio e = requerir(espacioId);
+        if (e.permisoDe(usuarioId) == null) return;
+        if (e.avisos == null) e.avisos = new LinkedHashMap<>();
+        List<Map<String, Object>> l = e.avisos.computeIfAbsent(usuarioId, k -> new ArrayList<>());
+        aviso.put("id", cifrado.id());
+        aviso.put("t", System.currentTimeMillis());
+        aviso.put("espacioId", espacioId);
+        aviso.put("espacio", e.nombre);
+        aviso.put("leido", false);
+        l.add(0, aviso);
+        while (l.size() > 40) l.remove(l.size() - 1);
+        repo.guardar(e);
+    }
+
+    /** Los avisos de quien pregunta; al verlos quedan como leidos. */
+    public synchronized List<Map<String, Object>> avisos(Usuario u, String espacioId) {
+        Espacio e = requerir(espacioId);
+        exigir(e, u, Permiso.LECTURA);
+        List<Map<String, Object>> l = e.avisos == null ? List.of() : e.avisos.getOrDefault(u.id, List.of());
+        List<Map<String, Object>> r = new ArrayList<>();
+        for (Map<String, Object> a : l) r.add(new LinkedHashMap<>(a));
+        if (l.stream().anyMatch(a -> !Boolean.TRUE.equals(a.get("leido")))) {
+            l.forEach(a -> a.put("leido", true));
+            repo.guardar(e);
+        }
+        return r;
+    }
 
     public void guardar(Espacio e) { repo.guardar(e); }
 

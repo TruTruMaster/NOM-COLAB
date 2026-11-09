@@ -31,4 +31,27 @@ public class Documento {
     public boolean entregaCerrada;
     /** Recibos que se adjuntaron solos al cerrar la entrega: [{usuarioId, usuario, hash, generado}]. */
     public List<Map<String, Object>> entregaRecibos;
+    /** 8.5 Papelera: cuándo se mandó (0 = no está en la papelera) y quién. A los 30 días se borra solo. */
+    public long eliminado;
+    public String eliminadoPor;
+    /** 8.5 Carpeta dentro del espacio (null = sin carpeta). */
+    public String carpeta;
+    /** 8.5 Quiénes lo marcaron como destacado (en la lista cada quien ve solo su propia marca). */
+    public List<String> destacadoPor;
+    /** 8.5 Plantilla del espacio: sirve para crear documentos nuevos con el mismo contenido. */
+    public boolean plantilla;
+    /** 8.5 Enlace para ver el documento sin cuenta, en solo lectura (el propietario lo quita cuando quiere). */
+    public String enlaceVer;
+
+    /** Copia de los metadatos (para mandarle a cada persona solo lo que le toca ver). */
+    public Documento copia() {
+        Documento c = new Documento();
+        c.id = id; c.espacioId = espacioId; c.nombre = nombre; c.modo = modo; c.autorId = autorId;
+        c.creado = creado; c.modificado = modificado; c.version = version; c.pendienteVersion = pendienteVersion;
+        c.ultimaVersion = ultimaVersion; c.ultimoEditorId = ultimoEditorId; c.protegido = protegido;
+        c.entregaLimite = entregaLimite; c.entregaCerrada = entregaCerrada; c.entregaRecibos = entregaRecibos;
+        c.eliminado = eliminado; c.eliminadoPor = eliminadoPor; c.carpeta = carpeta; c.destacadoPor = destacadoPor;
+        c.plantilla = plantilla; c.enlaceVer = enlaceVer;
+        return c;
+    }
 }

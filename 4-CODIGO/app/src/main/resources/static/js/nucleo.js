@@ -169,6 +169,14 @@
     });
   }
 
+  /** 8.5 Un aviso (mención) puede llegar por varios canales abiertos: se muestra una sola vez. */
+  const avisosVistos = new Set();
+  function avisoNuevo(a) {
+    const k = a && (a.id || a.t + ":" + a.docId);
+    if (!k || avisosVistos.has(k)) return false;
+    avisosVistos.add(k);
+    return true;
+  }
   function pedirTexto(titulo, opc) {
     opc = opc || {};
     return new Promise((ok) => {
@@ -387,6 +395,6 @@
   Object.assign(NOM, { aplicarLetra, etiquetaEquipo, paleta, COLORES,
     enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
-    leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,
+    avisoNuevo, leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,
   });
 })();

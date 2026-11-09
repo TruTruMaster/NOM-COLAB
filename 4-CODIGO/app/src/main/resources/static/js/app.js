@@ -156,6 +156,8 @@
     const h = location.hash || "#/";
     let m;
     // Unirse con un código o QR (2.1) y la pantalla del proyector (5.5): con o sin cuenta.
+    // 8.5 Ver un solo documento con el enlace que creó el propietario: sin cuenta.
+    if ((m = h.match(/^#\/ver\/([^/?]+)/))) { await montar(NOM.vistaVer.abrir(raiz, decodeURIComponent(m[1]))); return; }
     if ((m = h.match(/^#\/unirse\/([^/?]+)/))) { await montar(NOM.union.pantalla(raiz, decodeURIComponent(m[1]))); return; }
     if ((m = h.match(/^#\/proyectar(?:\/([^/?]*))?\/?$/))) { await montar(NOM.proyector.abrir(raiz, decodeURIComponent(m[1] || ""))); return; }
     // Documentos de este equipo: se abren con o sin cuenta.

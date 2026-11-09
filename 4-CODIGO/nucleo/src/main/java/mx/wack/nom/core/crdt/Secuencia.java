@@ -409,6 +409,44 @@ public class Secuencia {
         return l;
     }
 
+    /**
+     * 8.5 El texto que se ve, en orden (para buscar dentro de los documentos). Arma el orden aparte,
+     * con el mismo algoritmo que el cliente, sin guardar nada en la secuencia.
+     */
+    @SuppressWarnings("unchecked")
+    public synchronized String textoVisible(int max) {
+        Map<String, Car> cs = caracteres();
+        final class Nd { final String id, n; final long t; final int cp; Nd(String id, long t, String n, int cp) { this.id = id; this.t = t; this.n = n; this.cp = cp; } }
+        Map<String, List<Nd>> hijos = new HashMap<>();
+        Set<String> vistos = new HashSet<>();
+        for (Map<String, Object> r : ins) {
+            long t = ((Number) r.get("t")).longValue();
+            String n = (String) r.get("n");
+            boolean objeto = r.get("e") != null;
+            int[] cps = (objeto ? " " : (String) r.get("x")).codePoints().toArray();
+            for (int i = 0; i < cps.length; i++) {
+                String id = (t + i) + "@" + n;
+                if (!vistos.add(id)) continue;
+                String iz = i == 0 ? (r.get("iz") == null ? "" : String.valueOf(r.get("iz"))) : (t + i - 1) + "@" + n;
+                hijos.computeIfAbsent(iz, z -> new ArrayList<>()).add(new Nd(id, t + i, n, cps[i]));
+            }
+        }
+        Comparator<Nd> hermanos = (x, y) -> x.t != y.t ? Long.compare(y.t, x.t) : y.n.compareTo(x.n);
+        hijos.values().forEach(l -> l.sort(hermanos));
+        StringBuilder sb = new StringBuilder();
+        java.util.ArrayDeque<Nd> pila = new java.util.ArrayDeque<>();
+        List<Nd> raiz = hijos.getOrDefault("", List.of());
+        for (int i = raiz.size() - 1; i >= 0; i--) pila.push(raiz.get(i));
+        while (!pila.isEmpty() && sb.length() < max) {
+            Nd nd = pila.pop();
+            Car c = cs.get(nd.id);
+            if (c == null || c.v) sb.appendCodePoint(nd.cp);
+            List<Nd> hs = hijos.get(nd.id);
+            if (hs != null) for (int i = hs.size() - 1; i >= 0; i--) pila.push(hs.get(i));
+        }
+        return sb.toString();
+    }
+
     /** Cuantos caracteres se ven (sin la marca final). */
     public int visibles() {
         int n = 0;

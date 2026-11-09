@@ -93,7 +93,10 @@ public class ServicioDocumentos {
     private static long num(Object o) { return o instanceof Number n ? n.longValue() : 0; }
 
     public Documento requerir(String id) {
-        return repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("El documento"));
+        Documento d = repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("El documento"));
+        // 8.5 Lo que esta en la papelera no se abre ni se edita (se restaura desde el espacio).
+        if (d.eliminado > 0) throw new ErrorNom(ErrorNom.NO_EXISTE, "Este documento está en la papelera del espacio", null, Map.of("papelera", true));
+        return d;
     }
 
     // ------------------------------------------------------------ permisos (con la fecha de entrega)
@@ -121,12 +124,27 @@ public class ServicioDocumentos {
     }
 
     public List<Documento> listar(Usuario u, String espacioId) {
-        espacios.exigir(espacios.requerir(espacioId), u, Permiso.LECTURA);
-        return repo.delEspacio(espacioId);
+        Permiso p = espacios.exigir(espacios.requerir(espacioId), u, Permiso.LECTURA);
+        List<Documento> r = new ArrayList<>();
+        for (Documento d : repo.delEspacio(espacioId)) if (d.eliminado <= 0) r.add(vistaPara(d, u, p));
+        return r;
     }
 
-    /** Sin revisar permisos (para la sincronizacion entre servidores). */
-    List<Documento> listarInterno(String espacioId) { return repo.delEspacio(espacioId); }
+    /** Sin revisar permisos (para la sincronizacion entre servidores). Sin lo de la papelera. */
+    List<Documento> listarInterno(String espacioId) {
+        return repo.delEspacio(espacioId).stream().filter(d -> d.eliminado <= 0).toList();
+    }
+
+    /**
+     * 8.5 Lo que cada persona ve de un documento: solo su propia marca de destacado y, si no es el
+     * propietario del espacio, sin el enlace publico ni los recibos de la entrega.
+     */
+    private static Documento vistaPara(Documento d, Usuario u, Permiso p) {
+        Documento c = d.copia();
+        c.destacadoPor = d.destacadoPor != null && d.destacadoPor.contains(u.id) ? List.of(u.id) : null;
+        if (p != Permiso.PROPIETARIO) { c.enlaceVer = null; c.entregaRecibos = null; }
+        return c;
+    }
 
     // ------------------------------------------------------------ cuota por cuenta (en la nube)
 
@@ -212,7 +230,7 @@ public class ServicioDocumentos {
         Permiso p = permiso(u, d, Permiso.LECTURA);
         Espacio e = espacios.requerir(d.espacioId);
         Map<String, Object> r = new LinkedHashMap<>();
-        r.put("documento", d);
+        r.put("documento", vistaPara(d, u, p));
         r.put("permiso", p);
         Map<String, Object> esp = new LinkedHashMap<>();
         esp.put("id", e.id);
@@ -306,6 +324,7 @@ public class ServicioDocumentos {
         if (ops == null || ops.isEmpty()) return Map.of("aplicadas", 0);
         boolean propietario = p == Permiso.PROPIETARIO;
         List<Operacion> aplicadas = new ArrayList<>();
+        List<String[]> conMencion = new ArrayList<>();
         List<String> rechazadas = new ArrayList<>();
         String motivo = null;
         EstadoDocumento est;
@@ -337,12 +356,16 @@ public class ServicioDocumentos {
                 sucios.add(docId);
                 if (cambioMeta) repo.guardar(d);
                 anotar(docId, u, cliente, dispositivo, aplicadas);
+                conMencion.addAll(comentariosConMencion(est, aplicadas));
                 if (cambioMeta) {
                     difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
                 }
             }
         }
         if (!aplicadas.isEmpty()) difusor.ops(docId, Map.of("ops", aplicadas, "cliente", cliente == null ? "" : cliente));
+        if (!conMencion.isEmpty()) {
+            try { avisarMenciones(u, d, e, conMencion); } catch (RuntimeException ex) { log.aviso("No se pudo avisar una mención en {}: {}", docId, ex.getMessage()); }
+        }
         if (rechazadas.isEmpty()) return Map.of("aplicadas", aplicadas.size(), "reloj", est.reloj);
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("aplicadas", aplicadas.size());
@@ -570,9 +593,11 @@ public class ServicioDocumentos {
         permiso(u, d, Permiso.EDICION);
         if (d.protegido)
             throw new ErrorNom(ErrorNom.CONFLICTO, "Este documento está protegido contra el borrado. Quita la protección para borrarlo.", null, Map.of("protegido", true));
-        repo.borrar(docId);
-        motores.remove(docId);
-        difusor.avisarDocumento(docId, "eliminado", Map.of("por", u.nombre));
+        // 8.5 Va a la papelera del espacio: se puede restaurar durante 30 dias.
+        d.eliminado = System.currentTimeMillis();
+        d.eliminadoPor = u.nombre;
+        repo.guardar(d);
+        difusor.avisarDocumento(docId, "eliminado", Map.of("por", u.nombre, "papelera", true));
         difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "eliminado", "id", d.id));
     }
 
@@ -652,7 +677,7 @@ public class ServicioDocumentos {
     public void revisarEntregas() {
         for (Espacio e : espacios.todos()) {
             for (Documento d : repo.delEspacio(e.id)) {
-                if (d.entregaLimite > 0 && !d.entregaCerrada && entregaVencida(d)) {
+                if (d.eliminado <= 0 && d.entregaLimite > 0 && !d.entregaCerrada && entregaVencida(d)) {
                     try { cerrarEntrega(d); } catch (RuntimeException ex) { log.error("No se pudo cerrar la entrega " + d.id, ex); }
                 }
             }
@@ -755,7 +780,7 @@ public class ServicioDocumentos {
         long ahora = System.currentTimeMillis();
         for (String id : new ArrayList<>(motores.keySet())) {
             repo.porId(id).ifPresent(d -> {
-                if (!d.pendienteVersion) return;
+                if (!d.pendienteVersion || d.eliminado > 0) return;
                 int min = cuentas.porId(d.ultimoEditorId == null ? d.autorId : d.ultimoEditorId)
                         .map(x -> x.preferencias.autoguardadoMin).orElse(5);
                 if (ahora - d.ultimaVersion < min * 60_000L) return;
@@ -768,6 +793,7 @@ public class ServicioDocumentos {
             });
         }
         revisarEntregas();
+        try { depurarPapelera(); } catch (RuntimeException ex) { log.error("No se pudo vaciar la papelera vencida", ex); }
         proyecciones.values().removeIf(p -> ahora - p.visto > 8 * 3_600_000L);
     }
 
@@ -1095,6 +1121,399 @@ public class ServicioDocumentos {
         Proyeccion p = proyeccionVigente(codigo);
         difusor.suscribirProyector(p.espacioId, p.docId, p.codigo, canal);
         try { canal.enviar("diapositiva", estadoProyeccion(p)); } catch (java.io.IOException ignorado) { }
+    }
+
+    // ------------------------------------------------------------ 8.5 papelera
+
+    /** Dias que un documento pasa en la papelera antes de borrarse solo. */
+    public static final int DIAS_PAPELERA = 30;
+    private static final long DIA = 86_400_000L;
+    private volatile long ultimaDepuracion;
+
+    private Documento requerirEnPapelera(String id) {
+        Documento d = repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("El documento"));
+        if (d.eliminado <= 0) throw new ErrorNom(ErrorNom.CONFLICTO, "Ese documento no está en la papelera");
+        return d;
+    }
+
+    /** Lo que hay en la papelera del espacio (lo ve quien puede editar). */
+    public List<Map<String, Object>> papelera(Usuario u, String espacioId) {
+        espacios.exigir(espacios.requerir(espacioId), u, Permiso.EDICION);
+        long ahora = System.currentTimeMillis();
+        List<Map<String, Object>> r = new ArrayList<>();
+        for (Documento d : repo.delEspacio(espacioId)) {
+            if (d.eliminado <= 0) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", d.id);
+            m.put("nombre", d.nombre);
+            m.put("modo", d.modo);
+            m.put("eliminado", d.eliminado);
+            m.put("eliminadoPor", d.eliminadoPor);
+            m.put("dias", Math.max(0, DIAS_PAPELERA - (ahora - d.eliminado) / DIA));
+            r.add(m);
+        }
+        r.sort((a, b) -> Long.compare(num(b.get("eliminado")), num(a.get("eliminado"))));
+        return r;
+    }
+
+    /** Saca un documento de la papelera (vuelve a su espacio tal como estaba). */
+    public Documento sacarDePapelera(Usuario u, String docId) {
+        Documento d = requerirEnPapelera(docId);
+        Espacio e = espacios.requerir(d.espacioId);
+        Permiso p = espacios.exigir(e, u, Permiso.EDICION);
+        d.eliminado = 0;
+        d.eliminadoPor = null;
+        repo.guardar(d);
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "creado", "id", d.id));
+        return vistaPara(d, u, p);
+    }
+
+    /** Borrar para siempre: solo el propietario del espacio. */
+    public void borrarParaSiempre(Usuario u, String docId) {
+        Documento d = requerirEnPapelera(docId);
+        espacios.exigir(espacios.requerir(d.espacioId), u, Permiso.PROPIETARIO);
+        borrarDeVerdad(d);
+    }
+
+    public Map<String, Object> vaciarPapelera(Usuario u, String espacioId) {
+        espacios.exigir(espacios.requerir(espacioId), u, Permiso.PROPIETARIO);
+        int n = 0;
+        for (Documento d : repo.delEspacio(espacioId)) if (d.eliminado > 0) { borrarDeVerdad(d); n++; }
+        return Map.of("borrados", n);
+    }
+
+    private void borrarDeVerdad(Documento d) {
+        synchronized (candado(d.id)) {
+            sucios.remove(d.id);
+            repo.borrar(d.id);
+        }
+        motores.remove(d.id);
+        usoCache.clear();
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "borrado", "id", d.id));
+    }
+
+    /** Lo que lleva mas de 30 dias en la papelera se borra solo (se revisa cada hora, con el autoguardado). */
+    public int depurarPapelera() {
+        long ahora = System.currentTimeMillis();
+        if (ahora - ultimaDepuracion < 3_600_000L) return 0;
+        ultimaDepuracion = ahora;
+        int n = 0;
+        for (Espacio e : espacios.todos())
+            for (Documento d : repo.delEspacio(e.id))
+                if (d.eliminado > 0 && ahora - d.eliminado > DIAS_PAPELERA * DIA) { borrarDeVerdad(d); n++; }
+        if (n > 0) log.info("Papelera: {} documentos de hace más de {} días se borraron", n, DIAS_PAPELERA);
+        return n;
+    }
+
+    // ------------------------------------------------------------ 8.5 nombre, copia, mover, carpetas, destacados
+
+    private static String nombreValido(String nombre) {
+        nombre = nombre == null ? "" : nombre.trim();
+        if (nombre.isEmpty()) throw ErrorNom.invalido("Escribe un nombre", "nombre");
+        if (nombre.length() > 120) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
+        return nombre;
+    }
+
+    /** Cambiar el nombre desde la lista (el nombre vive en el documento: se manda como cambio a quien lo tenga abierto). */
+    public Documento renombrar(Usuario u, String docId, String nombre) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.EDICION);
+        String nuevo = nombreValido(nombre);
+        Operacion op;
+        synchronized (candado(docId)) {
+            EstadoDocumento est = repo.estado(docId);
+            String n = nodoServidor();
+            long t = est.reloj + 1;
+            op = new Operacion(n + ":nom" + t, Operacion.DOC, Map.of("nombre", nuevo), t, n);
+            motor(docId).fusionar(est, op);
+            d.modificado = System.currentTimeMillis();
+            d.pendienteVersion = true;
+            sincronizarMeta(d, est);
+            sucios.add(docId);
+            repo.guardar(d);
+        }
+        difusor.ops(docId, Map.of("ops", List.of(op), "cliente", "servidor"));
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        return vistaPara(d, u, p);
+    }
+
+    /**
+     * Hacer una copia (en el mismo espacio o en otro donde la persona pueda editar). Tambien sirve
+     * para guardar un documento como plantilla del espacio y para crear uno nuevo desde una plantilla.
+     */
+    public Documento copiar(Usuario u, String docId, String espacioDestino, String nombre, boolean comoPlantilla) {
+        Documento origen = requerir(docId);
+        permiso(u, origen, Permiso.LECTURA);
+        String destinoId = espacioDestino == null || espacioDestino.isBlank() ? origen.espacioId : espacioDestino;
+        Espacio e = espacios.requerir(destinoId);
+        Permiso p = espacios.exigir(e, u, Permiso.EDICION);
+        revisarCuota(e);
+        String nuevo = nombre == null || nombre.isBlank()
+                ? (comoPlantilla || origen.plantilla ? origen.nombre : "Copia de " + origen.nombre) : nombre.trim();
+        if (nuevo.length() > 120) nuevo = nuevo.substring(0, 120);
+        EstadoDocumento est;
+        synchronized (candado(docId)) { est = repo.estado(docId).copia(); }
+        long ahora = System.currentTimeMillis();
+        Documento d = new Documento();
+        d.id = cifrado.id();
+        d.espacioId = destinoId;
+        d.nombre = nuevo;
+        d.modo = origen.modo;
+        d.autorId = u.id;
+        d.creado = ahora;
+        d.modificado = ahora;
+        d.ultimoEditorId = u.id;
+        d.plantilla = comoPlantilla;
+        d.carpeta = destinoId.equals(origen.espacioId) && !comoPlantilla && !origen.plantilla ? origen.carpeta : null;
+        String n = nodoServidor();
+        long t = est.reloj + 1;
+        motor(d.id).fusionar(est, new Operacion(n + ":copia" + t, Operacion.DOC, Map.of("nombre", nuevo), t, n));
+        sincronizarMeta(d, est);
+        repo.guardarEstado(d.id, est);
+        repo.guardar(d);
+        nuevaVersion(d, est, u, comoPlantilla ? "Plantilla hecha de «" + origen.nombre + "»"
+                : origen.plantilla ? "Desde la plantilla «" + origen.nombre + "»" : "Copia de «" + origen.nombre + "»");
+        usoCache.clear();
+        difusor.avisarEspacio(destinoId, "documentos", Map.of("accion", "creado", "id", d.id));
+        return vistaPara(d, u, p);
+    }
+
+    /** Mover a otro espacio (hay que poder editar en los dos). */
+    public Documento mover(Usuario u, String docId, String espacioDestino) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.EDICION);
+        Espacio destino = espacios.requerir(espacioDestino == null ? "" : espacioDestino);
+        Permiso enDestino = espacios.exigir(destino, u, Permiso.EDICION);
+        if (destino.id.equals(d.espacioId)) return vistaPara(d, u, p);
+        if ((d.protegido || d.entregaLimite > 0) && p != Permiso.PROPIETARIO)
+            throw ErrorNom.prohibido("Solo el propietario del espacio mueve un documento protegido o con fecha de entrega");
+        revisarCuota(destino);
+        String antes = d.espacioId;
+        d.espacioId = destino.id;
+        d.carpeta = null;
+        repo.guardar(d);
+        usoCache.clear();
+        difusor.avisarDocumento(docId, "movido", Map.of("espacioId", destino.id, "espacio", destino.nombre, "por", u.nombre));
+        difusor.avisarEspacio(antes, "documentos", Map.of("accion", "eliminado", "id", d.id));
+        difusor.avisarEspacio(destino.id, "documentos", Map.of("accion", "creado", "id", d.id));
+        return vistaPara(d, u, enDestino);
+    }
+
+    private static String carpetaValida(String c) {
+        if (c == null) return null;
+        c = c.trim().replaceAll("\\s+", " ");
+        if (c.isEmpty()) return null;
+        if (c.length() > 60) throw ErrorNom.invalido("El nombre de la carpeta es muy largo (máximo 60)", "carpeta");
+        return c;
+    }
+
+    /** Poner un documento en una carpeta del espacio (null o vacio: sin carpeta). */
+    public Documento fijarCarpeta(Usuario u, String docId, String carpeta) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.EDICION);
+        d.carpeta = carpetaValida(carpeta);
+        repo.guardar(d);
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        return vistaPara(d, u, p);
+    }
+
+    /** Renombrar una carpeta (o quitarla, con a = null): cambia en todos sus documentos. */
+    public Map<String, Object> renombrarCarpeta(Usuario u, String espacioId, String de, String a) {
+        espacios.exigir(espacios.requerir(espacioId), u, Permiso.EDICION);
+        String origen = carpetaValida(de), nueva = carpetaValida(a);
+        if (origen == null) throw ErrorNom.invalido("¿Qué carpeta?", "de");
+        int n = 0;
+        for (Documento d : repo.delEspacio(espacioId)) {
+            if (!origen.equals(d.carpeta)) continue;
+            d.carpeta = nueva;
+            repo.guardar(d);
+            n++;
+        }
+        difusor.avisarEspacio(espacioId, "documentos", Map.of("accion", "carpetas"));
+        return Map.of("documentos", n);
+    }
+
+    /** Destacado: una marca personal (cada quien ve solo la suya). */
+    public Documento destacar(Usuario u, String docId, boolean si) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.LECTURA);
+        List<String> l = d.destacadoPor == null ? new ArrayList<>() : new ArrayList<>(d.destacadoPor);
+        l.remove(u.id);
+        if (si) l.add(u.id);
+        d.destacadoPor = l.isEmpty() ? null : l;
+        repo.guardar(d);
+        return vistaPara(d, u, p);
+    }
+
+    // ------------------------------------------------------------ 8.5 buscar dentro de los documentos
+
+    /** Minusculas y sin acentos, letra por letra (asi las posiciones coinciden con el texto original). */
+    private static String normal(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 128) { b.append(Character.toLowerCase(c)); continue; }
+            String n = java.text.Normalizer.normalize(String.valueOf(c), java.text.Normalizer.Form.NFD);
+            b.append(Character.toLowerCase(n.isEmpty() ? c : n.charAt(0)));
+        }
+        return b.toString();
+    }
+
+    /** Todo el texto de un documento: letras del texto, celdas, figuras, notas y ecuaciones (sin comentarios). */
+    private static String textoBuscable(EstadoDocumento est) {
+        StringBuilder sb = new StringBuilder();
+        est.seq.forEach((b, sec) -> { if (est.vivo(b) && sb.length() < 400_000) sb.append(sec.textoVisible(200_000)).append('\n'); });
+        for (var en : est.bloques.entrySet()) {
+            if (sb.length() > 400_000) break;
+            String id = en.getKey();
+            if (!est.vivo(id) && !Operacion.DOC.equals(id)) continue;
+            if ("comentario".equals(est.valor(id, "tipo"))) continue;
+            en.getValue().forEach((k, r) -> {
+                Object v = r == null ? null : r.v;
+                String t = v instanceof String x ? x : v instanceof Number ? String.valueOf(v) : null;
+                if (t == null || t.isBlank()) return;
+                if (k.equals("texto") || k.equals("titulo") || k.equals("etiqueta") || k.equals("alt") || k.equals("tex") || k.startsWith("c:") || k.startsWith("nota:"))
+                    sb.append(t).append('\n');
+                else if (k.equals("html"))
+                    sb.append(t.replaceAll("<[^>]*>", " ").replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")).append('\n');
+            });
+        }
+        return sb.toString();
+    }
+
+    /** Busca en el nombre y en el contenido de los documentos del espacio (sin acentos ni mayusculas). */
+    public List<Map<String, Object>> buscar(Usuario u, String espacioId, String q) {
+        espacios.exigir(espacios.requerir(espacioId), u, Permiso.LECTURA);
+        String aguja = normal(q == null ? "" : q.trim().replaceAll("\\s+", " "));
+        if (aguja.length() < 2) return List.of();
+        if (aguja.length() > 80) aguja = aguja.substring(0, 80);
+        List<Map<String, Object>> r = new ArrayList<>();
+        for (Documento d : repo.delEspacio(espacioId)) {
+            if (d.eliminado > 0) continue;
+            String texto;
+            synchronized (candado(d.id)) { texto = textoBuscable(repo.estado(d.id)); }
+            String plano = normal(texto);
+            int i = plano.indexOf(aguja);
+            boolean enNombre = normal(d.nombre).contains(aguja);
+            if (i < 0 && !enNombre) continue;
+            int veces = 0;
+            for (int k = i; k >= 0 && veces < 99; k = plano.indexOf(aguja, k + aguja.length())) veces++;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", d.id);
+            m.put("nombre", d.nombre);
+            m.put("modo", d.modo);
+            m.put("modificado", d.modificado);
+            m.put("carpeta", d.carpeta);
+            m.put("plantilla", d.plantilla);
+            m.put("enNombre", enNombre);
+            m.put("veces", veces);
+            if (i >= 0) {
+                int a = Math.max(0, i - 60), b = Math.min(texto.length(), i + aguja.length() + 80);
+                m.put("antes", (a > 0 ? "…" : "") + texto.substring(a, i).replaceAll("\\s+", " "));
+                m.put("encontrado", texto.substring(i, i + aguja.length()));
+                m.put("despues", texto.substring(i + aguja.length(), b).replaceAll("\\s+", " ") + (b < texto.length() ? "…" : ""));
+            }
+            r.add(m);
+            if (r.size() >= 40) break;
+        }
+        // Primero donde aparece mas veces; luego lo mas reciente.
+        r.sort((x, y) -> num(y.get("veces")) != num(x.get("veces")) ? Long.compare(num(y.get("veces")), num(x.get("veces"))) : Long.compare(num(y.get("modificado")), num(x.get("modificado"))));
+        return r;
+    }
+
+    // ------------------------------------------------------------ 8.5 @menciones en comentarios
+
+    /** Comentarios (nuevos o editados) de este lote que tienen una @. */
+    private static List<String[]> comentariosConMencion(EstadoDocumento est, List<Operacion> ops) {
+        List<String[]> r = new ArrayList<>();
+        for (Operacion op : ops) {
+            if (op.campos() == null || !(op.campos().get("texto") instanceof String t) || t.indexOf('@') < 0) continue;
+            if (!"comentario".equals(est.valor(op.bloque(), "tipo"))) continue;
+            r.add(new String[] { op.bloque(), t });
+        }
+        return r;
+    }
+
+    /** Avisa a cada persona del espacio mencionada con @nombre (una vez por lote). */
+    private void avisarMenciones(Usuario autor, Documento d, Espacio e, List<String[]> textos) {
+        Map<String, String> nombres = new LinkedHashMap<>();
+        for (String uid : e.accesos.keySet()) cuentas.porId(uid).ifPresent(x -> nombres.put(uid, x.nombre));
+        Set<String> avisados = new HashSet<>();
+        for (String[] c : textos) {
+            String tl = c[1].toLowerCase(Locale.ROOT);
+            for (var en : nombres.entrySet()) {
+                String uid = en.getKey(), nom = en.getValue();
+                if (uid.equals(autor.id) || nom == null || nom.isBlank() || avisados.contains(uid)) continue;
+                String marca = "@" + nom.toLowerCase(Locale.ROOT);
+                for (int i = tl.indexOf(marca); i >= 0; i = tl.indexOf(marca, i + 1)) {
+                    int fin = i + marca.length();
+                    if (fin < tl.length() && (Character.isLetterOrDigit(tl.charAt(fin)) || tl.charAt(fin) == '_')) continue;
+                    avisados.add(uid);
+                    Map<String, Object> aviso = new LinkedHashMap<>();
+                    aviso.put("tipo", "mencion");
+                    aviso.put("docId", d.id);
+                    aviso.put("documento", d.nombre);
+                    aviso.put("modo", d.modo);
+                    aviso.put("comentario", c[0]);
+                    aviso.put("por", autor.nombre);
+                    aviso.put("color", autor.color);
+                    aviso.put("texto", c[1].length() > 160 ? c[1].substring(0, 159) + "…" : c[1]);
+                    espacios.agregarAviso(e.id, uid, aviso);
+                    difusor.avisarUsuario(uid, "aviso", aviso);
+                    break;
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ 8.5 enlace para ver un solo documento
+
+    /** El propietario del espacio crea (o vuelve a mostrar) el enlace para ver sin cuenta. */
+    public Map<String, Object> crearEnlaceVer(Usuario u, String docId) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.PROPIETARIO);
+        if (d.enlaceVer == null) {
+            d.enlaceVer = cifrado.token();
+            repo.guardar(d);
+        }
+        return Map.of("enlace", d.enlaceVer);
+    }
+
+    /** Quitar el enlace: quien lo tenga ya no puede abrirlo. */
+    public Map<String, Object> quitarEnlaceVer(Usuario u, String docId) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.PROPIETARIO);
+        d.enlaceVer = null;
+        repo.guardar(d);
+        return Map.of("ok", true);
+    }
+
+    /** Lo que ve quien abre el enlace: el documento en solo lectura, sin comentarios, partes ni notas del orador. */
+    public Map<String, Object> verPublico(String token) {
+        Documento d = null;
+        if (token != null && token.length() >= 20) {
+            for (Espacio e : espacios.todos()) {
+                for (Documento x : repo.delEspacio(e.id)) {
+                    if (x.enlaceVer != null && x.eliminado <= 0 && java.security.MessageDigest.isEqual(x.enlaceVer.getBytes(java.nio.charset.StandardCharsets.UTF_8), token.getBytes(java.nio.charset.StandardCharsets.UTF_8))) { d = x; break; }
+                }
+                if (d != null) break;
+            }
+        }
+        if (d == null) throw new ErrorNom(ErrorNom.NO_EXISTE, "Este enlace ya no sirve: el propietario lo quitó o el documento ya no existe");
+        EstadoDocumento copia;
+        synchronized (candado(d.id)) { copia = repo.estado(d.id).copia(); }
+        copia.bloques.entrySet().removeIf(en -> en.getValue().get("tipo") != null && "comentario".equals(en.getValue().get("tipo").v));
+        Map<String, Registro> meta = copia.bloques.get(Operacion.DOC);
+        if (meta != null) meta.keySet().removeIf(k -> k.startsWith("nota:") || k.startsWith("dueno:") || k.startsWith("anim:"));
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("nombre", d.nombre);
+        doc.put("modo", d.modo);
+        doc.put("modificado", d.modificado);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("documento", doc);
+        r.put("espacio", espacios.requerir(d.espacioId).nombre);
+        r.put("estado", copia);
+        return r;
     }
 
     // ------------------------------------------------------------ 6.5 sincronizar con otro servidor

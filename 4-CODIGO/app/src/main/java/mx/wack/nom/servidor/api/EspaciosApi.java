@@ -39,6 +39,7 @@ public class EspaciosApi {
     public record NuevoDocumento(String nombre, String modo, List<Operacion> ops) { }
     public record NuevoEnlace(String permiso, Integer horas, Boolean invitados) { }
     public record Sincronizar(String servidor, String usuario, String contrasena) { }
+    public record CambioCarpeta(String de, String a) { }
 
     private final ServicioEspacios espacios;
     private final ServicioDocumentos documentos;
@@ -176,6 +177,35 @@ public class EspaciosApi {
     public Map<String, Object> depurar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
                                        @RequestBody Depuracion d) {
         return espacios.depurar(u, id, d.conservar());
+    }
+
+    // ---- 8.5 papelera, buscar en el contenido, carpetas y avisos
+
+    @GetMapping("/{id}/papelera")
+    public List<Map<String, Object>> papelera(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.papelera(u, id);
+    }
+
+    @DeleteMapping("/{id}/papelera")
+    public Map<String, Object> vaciarPapelera(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.vaciarPapelera(u, id);
+    }
+
+    @GetMapping("/{id}/buscar")
+    public List<Map<String, Object>> buscar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "") String q) {
+        return documentos.buscar(u, id, q);
+    }
+
+    @PutMapping("/{id}/carpetas")
+    public Map<String, Object> renombrarCarpeta(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
+                                                @RequestBody CambioCarpeta c) {
+        return documentos.renombrarCarpeta(u, id, c.de(), c.a());
+    }
+
+    @GetMapping("/{id}/avisos")
+    public List<Map<String, Object>> avisos(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return espacios.avisos(u, id);
     }
 
     @GetMapping("/{id}/documentos")

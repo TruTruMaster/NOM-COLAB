@@ -186,6 +186,11 @@ public class Difusor {
         for (Suscriptor s : subs) if (s.proyector == null && s.espacioId.equals(espacioId)) enviar(s, evento, datos);
     }
 
+    /** 8.5 Un aviso para una persona, en todos los canales que tenga abiertos (espacios y documentos). */
+    public void avisarUsuario(String usuarioId, String evento, Object datos) {
+        for (Suscriptor s : subs) if (s.proyector == null && usuarioId.equals(s.usuarioId)) enviar(s, evento, datos);
+    }
+
     /** CU-17 3b: al revocar un acceso se cierra el canal de ese usuario. */
     public void expulsar(String espacioId, String usuarioId) {
         for (Suscriptor s : subs) {

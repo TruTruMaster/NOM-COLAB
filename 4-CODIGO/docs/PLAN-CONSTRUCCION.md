@@ -270,13 +270,13 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
   pescado, FODA, mapa conceptual, clases, casos de uso y entidad-relación).
 
 ### 8.5 Afuera de los editores
-- [ ] Papelera de 30 días: borrar manda a la papelera; restaurar o borrar para siempre.
-- [ ] Hacer una copia, mover a otro espacio y cambiar el nombre desde la lista.
-- [ ] Carpetas dentro del espacio, ordenar por nombre, fecha o tipo, y destacados.
-- [ ] Buscar dentro del contenido de los documentos.
-- [ ] Guardar un documento como plantilla del espacio, y plantillas escolares nuevas.
-- [ ] `@menciones` en los comentarios, con aviso a esa persona.
-- [ ] Enlace para ver un solo documento sin entrar al espacio (se puede revocar).
+- [x] Papelera de 30 días: borrar manda a la papelera; restaurar o borrar para siempre.
+- [x] Hacer una copia, mover a otro espacio y cambiar el nombre desde la lista.
+- [x] Carpetas dentro del espacio, ordenar por nombre, fecha o tipo, y destacados.
+- [x] Buscar dentro del contenido de los documentos.
+- [x] Guardar un documento como plantilla del espacio, y plantillas escolares nuevas.
+- [x] `@menciones` en los comentarios, con aviso a esa persona.
+- [x] Enlace para ver un solo documento sin entrar al espacio (se puede revocar).
 
 ## Fase 9. Generar sin IA (la app organiza y cita; la persona escribe)
 

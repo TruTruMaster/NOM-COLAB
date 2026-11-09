@@ -17,6 +17,62 @@
     return raiz.map((c) => Object.assign({}, c, { respuestas: todos.filter((r) => r.padre === c.id) }));
   };
   const yo = () => api().usuario() || {};
+
+  // ------------------------------------------------------------ 8.5 @menciones
+  /** El texto del comentario con las @menciones de miembros del espacio resaltadas (todo escapado). */
+  function conMenciones(ed, texto) {
+    let h = esc(texto).replace(/\n/g, "<br>");
+    const nombres = (ed.miembros || []).map((m) => m.nombre).filter(Boolean).sort((a, b) => b.length - a.length);
+    nombres.forEach((n) => {
+      const e = esc(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      h = h.replace(new RegExp("(^|[\\s(>])@(" + e + ")(?![\\p{L}\\p{N}_])", "giu"), (m, a, b) => `${a}<span class="mencion${b.toLowerCase() === String(yo().nombre || "").toLowerCase() ? " a-mi" : ""}">@${b}</span>`);
+    });
+    return h;
+  }
+  /**
+   * Al escribir "@" en un comentario salen los miembros del espacio para elegir a quién avisar
+   * (con el dedo o con las flechas y Enter). La persona mencionada recibe un aviso.
+   */
+  function sugerirMenciones(ed, ta) {
+    let caja = null, opciones = [], activo = 0;
+    const quitar = () => { if (caja) { caja.remove(); caja = null; } };
+    const sinAcentos = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const elegir = (m) => {
+      const antes = ta.value.slice(0, ta.selectionStart), despues = ta.value.slice(ta.selectionEnd);
+      const nuevo = antes.replace(/@([\p{L}\p{N}_.·-]*)$/u, "@" + m.nombre + " ");
+      ta.value = nuevo + despues;
+      ta.selectionStart = ta.selectionEnd = nuevo.length;
+      quitar();
+      ta.focus();
+    };
+    const pintar = () => {
+      if (!caja) return;
+      caja.innerHTML = opciones.map((m, i) => `<button type="button" class="mencion-op${i === activo ? " activa" : ""}" data-i="${i}">${avatar({ nombre: m.nombre, color: m.color })}<span>${esc(m.nombre)}</span></button>`).join("");
+    };
+    const revisar = async () => {
+      const m = /@([\p{L}\p{N}_.·-]*)$/u.exec(ta.value.slice(0, ta.selectionStart));
+      if (!m) { quitar(); return; }
+      if (!(ed.miembros || []).length && ed.cargarMiembros) await ed.cargarMiembros();
+      const q = sinAcentos(m[1]);
+      opciones = (ed.miembros || []).filter((x) => x.id !== yo().id && sinAcentos(x.nombre).startsWith(q)).slice(0, 6);
+      if (!opciones.length) { quitar(); return; }
+      activo = Math.min(activo, opciones.length - 1);
+      if (!caja) {
+        caja = html(`<div class="menciones-caja" role="listbox" aria-label="Mencionar a"></div>`);
+        ta.insertAdjacentElement("afterend", caja);
+        caja.addEventListener("pointerdown", (e) => { e.preventDefault(); const b = e.target.closest("[data-i]"); if (b) elegir(opciones[+b.dataset.i]); });
+      }
+      pintar();
+    };
+    ta.addEventListener("input", revisar);
+    ta.addEventListener("blur", () => setTimeout(quitar, 150));
+    ta.addEventListener("keydown", (e) => {
+      if (!caja) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); activo = (activo + (e.key === "ArrowDown" ? 1 : opciones.length - 1)) % opciones.length; pintar(); }
+      else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); elegir(opciones[activo]); }
+      else if (e.key === "Escape") { e.stopPropagation(); quitar(); }
+    });
+  }
   const puedeBorrar = (ed, c) => c.autorId === yo().id || ed.esPropietario;
 
   function pintarMarcas(ed) {
@@ -38,6 +94,8 @@
       ${ed.soloLectura ? "" : `<button class="btn chico" data-nuevo>${ico("plus", "ico-s")} Comentar</button>`}<button class="icono-btn" data-cerrar aria-label="Cerrar comentarios">${ico("x")}</button></div>
       <div class="cajon-cuerpo" data-lista></div></div>`;
     panel = { ed, cont: lateral.firstElementChild, enfoque: enfoque || null };
+    // 8.5 Con los nombres de los miembros se resaltan las @menciones.
+    if (ed.cargarMiembros && !(ed.miembros || []).length) ed.cargarMiembros().then(() => { if (abierto(ed)) pintar(); });
     $("[data-cerrar]", panel.cont).onclick = cerrar;
     const nb = $("[data-nuevo]", panel.cont); if (nb) nb.onclick = () => nuevo(ed);
     panel.cont.addEventListener("click", alClic);
@@ -59,7 +117,7 @@
     const tarjeta = (h) => `<article class="hilo${h.resuelto ? " resuelto" : ""}${panel.enfoque === h.id ? " enfocado" : ""}" data-h="${esc(h.id)}">
       ${h.ancla && h.ancla.cita ? `<button class="hilo-cita" data-ir title="Ir a lo comentado">${ico("quote", "ico-s")}<span class="recorta">${esc(h.ancla.cita)}</span></button>` : ""}
       ${[h].concat(h.respuestas).map((c) => `<div class="hilo-msj" data-c="${esc(c.id)}">${avatar({ nombre: c.autor, color: c.color })}<div class="crece"><b>${esc(c.autor)}</b> <small class="suave">${esc(haceCuanto(c.t || 0))}</small>
-        <p>${esc(c.texto).replace(/\n/g, "<br>")}</p></div>${puedeBorrar(ed, c) && !ed.soloLectura ? `<button class="icono-btn chico" data-borrar aria-label="Eliminar">${ico("trash-2", "ico-s")}</button>` : ""}</div>`).join("")}
+        <p>${conMenciones(ed, c.texto)}</p></div>${puedeBorrar(ed, c) && !ed.soloLectura ? `<button class="icono-btn chico" data-borrar aria-label="Eliminar">${ico("trash-2", "ico-s")}</button>` : ""}</div>`).join("")}
       ${ed.soloLectura ? "" : `<div class="fila hilo-acc">${h.resuelto ? `<button class="btn chico" data-reabrir>Reabrir</button>` : `<button class="btn chico" data-responder>${ico("reply", "ico-s")} Responder</button><button class="btn chico" data-resolver>${ico("check", "ico-s")} Resuelto</button>`}</div>
         <form class="hilo-resp" data-resp hidden><textarea name="texto" rows="2" placeholder="Tu respuesta…" maxlength="2000"></textarea><button class="btn chico primario">Enviar</button></form>`}
     </article>`;
@@ -89,7 +147,13 @@
     if (!id) return;
     const c = ed.doc.bloque(id) || {};
     if (e.target.closest("[data-ir]")) { const m = ed.modoApi.comentarios; if (!m || !m.irA(c.ancla || {})) aviso("Lo comentado ya no está (se borró)", { tipo: "info" }); return; }
-    if (e.target.closest("[data-responder]")) { const f = $("[data-resp]", h); f.hidden = false; $("textarea", f).focus(); return; }
+    if (e.target.closest("[data-responder]")) {
+      const f = $("[data-resp]", h), ta = $("textarea", f);
+      f.hidden = false;
+      if (!ta.dataset.menciones) { ta.dataset.menciones = "1"; sugerirMenciones(panel.ed, ta); }
+      ta.focus();
+      return;
+    }
     if (e.target.closest("[data-resolver]")) { ed.doc.cambiar(id, { resuelto: true }); return; }
     if (e.target.closest("[data-reabrir]")) { ed.doc.cambiar(id, { resuelto: null }); return; }
     const b = e.target.closest("[data-borrar]");
@@ -134,6 +198,8 @@
     const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>${ico("message-square", "ico-s")} Comentar</button></div>`);
     const h = NOM.hoja({ titulo: "Nuevo comentario", icono: "message-square", cuerpo, pie });
     setTimeout(() => cuerpo.texto.focus(), 60);
+    sugerirMenciones(ed, cuerpo.texto);
+    if (ed.cargarMiembros && !(ed.miembros || []).length) ed.cargarMiembros();
     const enviar = (e) => {
       e && e.preventDefault();
       const texto = cuerpo.texto.value.trim();

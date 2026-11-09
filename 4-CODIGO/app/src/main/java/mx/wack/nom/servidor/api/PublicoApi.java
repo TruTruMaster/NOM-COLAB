@@ -54,6 +54,12 @@ public class PublicoApi {
         return documentos.verificarRecibo(recibo);
     }
 
+    /** 8.5 Ver un solo documento con el enlace que creo el propietario (sin cuenta, solo lectura). */
+    @GetMapping("/api/ver/{token}")
+    public Map<String, Object> ver(@PathVariable String token) {
+        return documentos.verPublico(token);
+    }
+
     @GetMapping("/api/proyeccion/{codigo}")
     public Map<String, Object> proyeccion(@PathVariable String codigo) {
         return documentos.verProyeccion(codigo);

@@ -267,6 +267,14 @@
       guardado: (x) => { ultimoGuardado = x.numero; pintarEstado(doc.estadoSync, doc.pendientes.length); },
       permiso: (x) => { if (x.usuarioId === (api.usuario() || {}).id) cambiarPermiso(x.permiso); },
       eliminado: () => documentoEliminado(),
+      // 8.5 Lo movieron a otro espacio: se vuelve a abrir (ahora con los miembros de allá).
+      movido: (x) => { aviso(`${x.por} movió este documento a ${x.espacio}`, { tipo: "info", ms: 5000 }); setTimeout(() => window.dispatchEvent(new HashChangeEvent("hashchange")), 400); },
+      // 8.5 Alguien te mencionó en un comentario (de este u otro documento).
+      aviso: (a) => {
+        if (!a || a.tipo !== "mencion" || !NOM.avisoNuevo(a)) return;
+        const aqui = a.docId === docId;
+        aviso(`${a.por} te mencionó${aqui ? " en un comentario" : ` en “${a.documento}”`}`, { ms: 8000, accion: { texto: "Ver", fn: () => (aqui ? NOM.comentarios && NOM.comentarios.abrir(ed, raizDe(a.comentario)) : (location.hash = "#/doc/" + a.docId + "?comentario=" + encodeURIComponent(a.comentario || ""))) } });
+      },
       entrega: () => refrescarEntrega(true),
       documento: (x) => { if ("protegido" in x) { ed.protegido = !!x.protegido; pintarAvisos(); } },
       expulsado: (x) => { aviso(x.motivo, { tipo: "aviso" }); location.hash = "#/"; },
@@ -313,7 +321,7 @@
       avisadoEliminado = true;
       doc.detenido = true;
       const pie = html(`<div style="display:contents"><button class="btn" data-no>Salir</button><button class="btn primario" data-si>Guardar como nuevo</button></div>`);
-      const h = hoja({ titulo: "Este documento se eliminó", cuerpo: `<p style="font-weight:650">Otra persona eliminó el documento. Puedes guardar lo que tienes en pantalla como un documento nuevo del espacio.</p>`, pie });
+      const h = hoja({ titulo: "Este documento está en la papelera", cuerpo: `<p style="font-weight:650">Otra persona lo mandó a la papelera del espacio: quien edita lo puede restaurar desde ahí durante 30 días. También puedes guardar lo que tienes en pantalla como un documento nuevo.</p>`, pie });
       $("[data-no]", pie).onclick = () => { h.cerrar(); location.hash = "#/espacio/" + ed.espacio.id; };
       $("[data-si]", pie).onclick = async () => {
         // Todo, también el texto letra por letra (las secuencias).
@@ -630,18 +638,55 @@
       "-",
       { texto: "Invitar o ver miembros", icono: "user-plus", fn: () => NOM.vistaEspacios.accesos(ed.espacio) },
       { texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed) },
+      // 8.5 Copia, mover a otro espacio y plantilla del espacio.
+      ...(ed.soloLectura && !(NOM.app.espacios || []).some((x) => x.permiso !== "LECTURA") ? [] : ["-"]),
+      ...(ed.soloLectura ? [] : [
+        { texto: "Hacer una copia", icono: "copy-plus", fn: () => copiarDocumento(ed.espacio.id) },
+        { texto: "Guardar como plantilla del espacio", icono: "copy", fn: () => copiarDocumento(ed.espacio.id, true) },
+      ]),
+      ...((NOM.app.espacios || []).some((x) => x.id !== ed.espacio.id && x.permiso !== "LECTURA") ? [{ texto: ed.soloLectura ? "Copiar a otro de mis espacios…" : "Mover o copiar a otro espacio…", icono: "folder-input", fn: (ev) => otroEspacio(ev) }] : []),
       ...(ed.esPropietario ? [
         { titulo: "Como propietario del espacio" },
+        { texto: "Enlace para ver sin cuenta…", icono: "link-2", fn: () => NOM.vistaEspacios.enlaceVer({ id: docId, nombre: nombre.value || (datos.documento || {}).nombre || "Documento" }) },
         { texto: ed.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: ed.protegido ? "lock-open" : "lock", fn: () => proteger(!ed.protegido) },
         { texto: ed.entrega && ed.entrega.limite ? "Cambiar la fecha de entrega…" : "Entrega con fecha límite…", icono: "calendar", fn: dialogoEntrega },
       ] : []),
       { texto: "Preferencias", icono: "settings", fn: () => NOM.vistaEspacios.preferencias() },
-      ...(ed.soloLectura ? [] : ["-", { texto: "Eliminar documento", icono: "trash-2", peligro: true, fn: async () => {
+      ...(ed.soloLectura ? [] : ["-", { texto: "Mandar a la papelera", icono: "trash-2", peligro: true, fn: async () => {
         if (ed.protegido) return aviso("Este documento está protegido contra el borrado. Quita la protección para borrarlo.", { tipo: "aviso", ms: 5000 });
-        if (!(await confirmar("Eliminar documento", "Se eliminará para todos los miembros del espacio, con su historial.", { si: "Eliminar", peligro: true }))) return;
-        try { await api.delete(`/api/documentos/${docId}`); avisadoEliminado = true; location.hash = "#/espacio/" + ed.espacio.id; } catch (err) { aviso(err.message, { tipo: "error" }); }
+        if (!(await confirmar("Mandar a la papelera", "Sale de la lista para todos los miembros. Quien edita lo puede restaurar desde la papelera del espacio durante 30 días.", { si: "Mandar a la papelera", peligro: true }))) return;
+        try {
+          await api.delete(`/api/documentos/${docId}`);
+          avisadoEliminado = true;
+          location.hash = "#/espacio/" + ed.espacio.id;
+          aviso("Está en la papelera del espacio (30 días)", { tipo: "ok", ms: 6000, accion: { texto: "Deshacer", fn: async () => { try { await api.post(`/api/documentos/${docId}/restaurar`); location.hash = "#/doc/" + docId; } catch (e2) { aviso(e2.message, { tipo: "error" }); } } } });
+        } catch (err) { aviso(err.message, { tipo: "error" }); }
       } }]),
     ]);
+    /** 8.5 Copia del documento (o plantilla del espacio), en este espacio o en otro. */
+    async function copiarDocumento(espacioId, plantilla) {
+      doc.guardarYa && doc.guardarYa();
+      try {
+        const r = await api.post(`/api/documentos/${docId}/copia`, { espacioId, plantilla: !!plantilla });
+        aviso(plantilla ? "Guardado en las plantillas del espacio: sale al crear un documento nuevo" : `Copia creada: “${r.nombre}”`, { tipo: "ok", ms: 6000, accion: plantilla ? null : { texto: "Abrir", fn: () => (location.hash = "#/doc/" + r.id) } });
+      } catch (e) { aviso(e.message, { tipo: "error" }); }
+    }
+    function otroEspacio(ev) {
+      const otros = (NOM.app.espacios || []).filter((x) => x.id !== ed.espacio.id && x.permiso !== "LECTURA");
+      const ancla = (ev && ev.currentTarget) || $("[data-a=mas]", vista);
+      NOM.menu(ancla, [
+        ...(ed.soloLectura ? [] : [{ titulo: "Mover a…" }, ...otros.map((x) => ({ texto: x.nombre, icono: "folder-input", fn: async () => {
+          if (!(await confirmar("Mover a otro espacio", `El documento pasará a ${x.nombre}: lo verán sus miembros y dejará de estar en ${ed.espacio.nombre}.`, { si: "Mover" }))) return;
+          try { await api.put(`/api/documentos/${docId}/espacio`, { espacioId: x.id }); aviso(`Movido a ${x.nombre}`, { tipo: "ok" }); window.dispatchEvent(new HashChangeEvent("hashchange")); } catch (e) { aviso(e.message, { tipo: "error" }); }
+        } })), "-"]),
+        { titulo: "Copiar a…" }, ...otros.map((x) => ({ texto: x.nombre, icono: "copy-plus", fn: () => copiarDocumento(x.id) })),
+      ]);
+    }
+    /** La raíz del hilo de un comentario (las respuestas se abren en su hilo). */
+    function raizDe(id) {
+      const c = id && doc.bloque(id);
+      return c && c.padre ? c.padre : id || null;
+    }
 
     // Acciones de este documento para la paleta de comandos (Ctrl+K).
     ed.acciones = () => [
@@ -694,6 +739,9 @@
     pintarAvisos();
     if (ed.cambiosVisita) setTimeout(() => resaltarCambios(true), 300);
     if (!enLocal && NOM.comentarios) NOM.comentarios.montar(ed);
+    // 8.5 Desde un aviso de mención: se abre el hilo del comentario.
+    const enfocarComentario = (location.hash.match(/[?&]comentario=([^&]+)/) || [])[1];
+    if (enfocarComentario && NOM.comentarios && !enLocal) setTimeout(() => { if (doc.bloque(raizDe(decodeURIComponent(enfocarComentario)))) NOM.comentarios.abrir(ed, raizDe(decodeURIComponent(enfocarComentario))); }, 400);
     if (NOM.alAbrirEditor) NOM.alAbrirEditor(ed, tipo);
 
     // 3.4 Al irse, se avisa al servidor: lo que escriban otros desde aquí sí será "cambios desde tu visita".

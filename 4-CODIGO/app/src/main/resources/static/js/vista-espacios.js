@@ -92,7 +92,8 @@
       <div class="fila-e">
         <span class="icono-espacio" style="background:${esc(e.color)};--c:${esc(e.color)}">${inicial(e.nombre)}</span>
         <span class="fila">${e.conexion ? `<span class="chip ok" data-micro="Visible en el Wi-Fi|Quienes estén en el mismo Wi-Fi pueden encontrarlo."><span class="punto vivo"></span>En el Wi-Fi</span>` : ""}
-        ${e.solicitudes ? `<span class="chip aviso">${e.solicitudes} solicitud${e.solicitudes > 1 ? "es" : ""}</span>` : ""}</span>
+        ${e.solicitudes ? `<span class="chip aviso">${e.solicitudes} solicitud${e.solicitudes > 1 ? "es" : ""}</span>` : ""}
+        ${e.avisos ? `<span class="chip acento" data-micro="Menciones|Te mencionaron en comentarios de este espacio.">${ico("at-sign", "ico-s")} ${e.avisos}</span>` : ""}</span>
       </div>
       <div><div class="titulo recorta">${esc(e.nombre)}</div><div class="suave chico" style="font-weight:700">${esc(PERMISOS[e.permiso] || "")}${e.permiso !== "PROPIETARIO" ? " · de " + esc(e.propietario) : ""}</div></div>
       <div class="meta">
@@ -413,10 +414,14 @@
     const pie = html(`<div style="display:contents"><button type="button" class="btn" data-importar>${ico("upload")} Importar archivo</button><span class="crece solo-escritorio"></span><button class="btn primario" data-crear>Crear documento</button></div>`);
     const h = hoja({ titulo: esp ? "Nuevo documento" : "Nuevo documento (en este equipo)", cuerpo, pie, ancha: true });
     if (!esp) cuerpo.prepend(html(`<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar} se pierde, salvo que lo descargues.</span></div>`));
+    // 8.5 Las plantillas que guardó el equipo en este espacio salen primero (con su marca).
+    let listaEsp = esp && esp.lista ? esp.lista : null;
+    if (esp && !listaEsp) api.get(`/api/espacios/${esp.id}`).then((r) => { listaEsp = r.lista || []; pintarPlantillas(); }).catch(() => {});
     function pintarPlantillas() {
-      const ps = NOM.plantillas.delModo(modo);
-      if (!plantilla || plantilla.modo !== modo) plantilla = ps[0];
-      $("[data-plantillas]", cuerpo).innerHTML = ps.map((p) => `<button type="button" class="plantilla" data-p="${p.id}" aria-pressed="${p === plantilla}">${esc(p.nombre)}<small>${esc(p.desc)}</small></button>`).join("");
+      const propias = (listaEsp || []).filter((x) => x.plantilla && x.modo === modo).map((x) => ({ id: "esp:" + x.id, docId: x.id, modo: x.modo, nombre: x.nombre, desc: "Del espacio", delEspacio: true }));
+      const ps = propias.concat(NOM.plantillas.delModo(modo));
+      if (!plantilla || plantilla.modo !== modo || !ps.includes(plantilla)) plantilla = ps.find((p) => p.id === (plantilla || {}).id) || ps.find((p) => !p.delEspacio) || ps[0];
+      $("[data-plantillas]", cuerpo).innerHTML = ps.map((p) => `<button type="button" class="plantilla${p.delEspacio ? " del-espacio" : ""}" data-p="${esc(p.id)}" aria-pressed="${p === plantilla}">${p.delEspacio ? ico("copy-plus", "ico-s") + " " : ""}${esc(p.nombre)}<small>${esc(p.desc)}</small></button>`).join("");
       $$("[data-p]", cuerpo).forEach((b) => (b.onclick = () => { plantilla = ps.find((p) => p.id === b.dataset.p); pintarPlantillas(); }));
     }
     $$("[data-modo]", cuerpo).forEach((b) => (b.onclick = () => { modo = b.dataset.modo; $$("[data-modo]", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); pintarPlantillas(); }));
@@ -426,6 +431,12 @@
       const nombre = cuerpo.nombre.value.trim() || (plantilla && plantilla.nombre !== "En blanco" ? plantilla.nombre : "");
       $("[data-crear]", pie).disabled = true;
       try {
+        if (plantilla && plantilla.delEspacio && esp) {
+          const d = await api.post(`/api/documentos/${plantilla.docId}/copia`, { nombre: nombre || plantilla.nombre });
+          h.cerrar(true);
+          location.hash = "#/doc/" + d.id;
+          return;
+        }
         const ops = plantilla ? plantilla.crear() : [];
         if (!esp) { const d = NOM.local.crear(nombre, modo, ops); h.cerrar(true); location.hash = "#/local/" + d.id; return; }
         const d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre, modo, ops });
@@ -554,6 +565,9 @@
   async function espacio(cont, id) {
     cont.innerHTML = `<div class="esqueleto" style="height:90px;margin-bottom:24px"></div><div class="rejilla">${'<div class="esqueleto" style="height:200px"></div>'.repeat(4)}</div>`;
     let d, filtro = "TODOS", busqueda = "";
+    // 8.5 Carpeta elegida (null: todas), solo destacados, orden y búsqueda dentro del contenido.
+    let carpetaSel = null, soloDestacados = false, orden = NOM.leer("nom.orden.docs", "reciente"), carpetasNuevas = [];
+    let enContenido = null, consulta = 0;
     try { d = await api.get(`/api/espacios/${id}`); NOM.guardar(api.clave("cache.esp." + id), d); }
     catch (e) {
       d = NOM.leer(api.clave("cache.esp." + id), null);
@@ -581,7 +595,8 @@
         </div>
         <div class="fila" style="flex-wrap:wrap">
           <button class="btn ${dueno ? "primario-suave" : ""}" data-a="compartir" data-micro="Compartir|Invita con un código o QR, y elige quién puede editar o solo ver.">${ico(dueno ? "user-plus" : "users")} ${dueno ? "Invitar" : "Miembros"}</button>
-          <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Espacio usado, descargar todo y otras opciones.">${ico("more-horizontal")} Más</button>
+          <span data-avisos></span>
+          <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Papelera, espacio usado, descargar todo y otras opciones.">${ico("more-horizontal")} Más</button>
           ${edita ? `<button class="btn primario solo-escritorio" data-a="nuevo">${ico("plus")} Nuevo documento</button>` : ""}
         </div>
       </div>
@@ -590,8 +605,9 @@
           <button aria-pressed="true" data-f="TODOS">Todos</button>
           ${Object.keys(MODOS).map((m) => `<button aria-pressed="false" data-f="${m}" class="modo-${m}">${ico(MODOS[m].icono, "ico-s")}<span>${esc(MODOS[m].plural || MODOS[m].nombre)}</span></button>`).join("")}
         </div>
-        <div class="entrada" style="min-height:42px;width:min(320px,100%)">${ico("search")}<input placeholder="Buscar documento" data-buscar aria-label="Buscar documento"></div>
+        <div class="entrada" style="min-height:42px;width:min(320px,100%)">${ico("search")}<input placeholder="Buscar por nombre o por lo que dice" data-buscar aria-label="Buscar en los documentos"></div>
       </div>
+      <div class="fila-e carpetas-fila" data-carpetas></div>
       <div data-docs></div>`;
 
     const pintarRed = (activa) => {
@@ -605,49 +621,297 @@
     pintarRed(d.conexion);
     pintarConectados(d.conectados);
 
+    const yoId = () => (api.usuario() || {}).id;
+    const esDestacado = (x) => (x.destacadoPor || []).includes(yoId());
+    const sinAcentos = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const carpetasDe = () => [...new Set(d.lista.filter((x) => !x.plantilla && x.carpeta).map((x) => x.carpeta).concat(carpetasNuevas))].sort((a, b) => a.localeCompare(b, "es"));
+    function ordenar(l) {
+      const r = l.slice();
+      if (orden === "nombre") r.sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { numeric: true }));
+      else if (orden === "tipo") r.sort((a, b) => Object.keys(MODOS).indexOf(a.modo) - Object.keys(MODOS).indexOf(b.modo) || b.modificado - a.modificado);
+      else r.sort((a, b) => b.modificado - a.modificado);
+      // Los destacados van primero.
+      return r.filter(esDestacado).concat(r.filter((x) => !esDestacado(x)));
+    }
+    function chipsDoc(x) {
+      const c = [
+        x.protegido ? `<span class="chip chico" data-micro="Protegido|Nadie lo puede borrar hasta que el propietario quite la marca.">${ico("lock", "ico-s")} Protegido</span>` : "",
+        x.entregaLimite ? `<span class="chip chico ${Date.now() >= x.entregaLimite ? "aviso" : "acento"}">${ico("calendar", "ico-s")} ${Date.now() >= x.entregaLimite ? "Entrega cerrada" : "Entrega " + esc(new Date(x.entregaLimite).toLocaleDateString("es-MX", { day: "numeric", month: "short" }))}</span>` : "",
+        x.carpeta && carpetaSel == null ? `<span class="chip chico">${ico("folder", "ico-s")} ${esc(x.carpeta)}</span>` : "",
+        x.enlaceVer ? `<span class="chip chico" data-micro="Con enlace para ver|Cualquiera con el enlace lo ve, sin cuenta.">${ico("link-2", "ico-s")} Enlace</span>` : "",
+      ].filter(Boolean).join("");
+      return c ? `<span class="meta">${c}</span>` : "";
+    }
+    const tarjetaDoc = (x) => `
+        <a class="tarjeta doc-tarjeta clay modo-${esc(x.modo)}${x.plantilla ? " es-plantilla" : ""}" href="#/doc/${esc(x.id)}" data-doc="${esc(x.id)}"${edita && !x.plantilla ? ' draggable="true"' : ""}>
+          <div class="miniatura">${NOM.miniatura(x.modo)}${esDestacado(x) ? `<span class="doc-estrella" title="Destacado">${ico("star", "ico-s")}</span>` : ""}${x.plantilla ? `<span class="doc-plantilla">${ico("copy-plus", "ico-s")} Plantilla</span>` : ""}</div>
+          <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(x.nombre)}</span>
+            <span class="meta"><span>${ico(MODOS[x.modo].icono, "ico-s")} ${esc(MODOS[x.modo].nombre)}</span><span>${esc(haceCuanto(x.modificado))}</span></span>
+            ${chipsDoc(x)}</div>
+          <div class="acciones"><button class="icono-btn" data-menu="${esc(x.id)}" aria-label="Más opciones de ${esc(x.nombre)}">${ico("more-horizontal")}</button></div>
+        </a>`;
+    function pintarCarpetas() {
+      const c = $("[data-carpetas]", cont);
+      if (!c) return;
+      const docs = d.lista.filter((x) => !x.plantilla), cs = carpetasDe();
+      if (!docs.length) { c.innerHTML = ""; return; }
+      const n = (k) => docs.filter((x) => x.carpeta === k).length;
+      c.innerHTML = `<div class="chips-carpetas" role="group" aria-label="Carpetas">
+          <button type="button" class="chip-carpeta" data-carpeta="*" aria-pressed="${carpetaSel == null && !soloDestacados}">${ico("layout-grid", "ico-s")} Todo</button>
+          <button type="button" class="chip-carpeta" data-destacados aria-pressed="${soloDestacados}">${ico("star", "ico-s")} Destacados</button>
+          ${cs.map((k) => `<button type="button" class="chip-carpeta" data-carpeta="${esc(k)}" data-soltar="${esc(k)}" aria-pressed="${carpetaSel === k}">${ico("folder", "ico-s")} ${esc(k)} <small>${n(k)}</small></button>`).join("")}
+          ${edita ? `<button type="button" class="chip-carpeta tenue" data-nueva-carpeta data-micro="Nueva carpeta|Luego arrastra documentos a ella o usa «Mover a carpeta» en su menú.">${ico("folder-plus", "ico-s")} Nueva carpeta</button>` : ""}
+        </div>
+        <label class="orden-docs" data-micro="Ordenar|Los destacados siempre van primero.">${ico("arrow-up-down", "ico-s")}<select data-orden aria-label="Ordenar documentos"><option value="reciente">Recientes</option><option value="nombre">Por nombre</option><option value="tipo">Por tipo</option></select></label>`;
+      $("[data-orden]", c).value = orden;
+      $("[data-orden]", c).onchange = (e) => { orden = e.target.value; NOM.guardar("nom.orden.docs", orden); pintarDocs(); };
+      $$("[data-carpeta]", c).forEach((b) => {
+        b.onclick = () => { carpetaSel = b.dataset.carpeta === "*" ? null : b.dataset.carpeta; soloDestacados = false; pintarDocs(); };
+        if (b.dataset.carpeta !== "*" && edita) b.oncontextmenu = (e) => { e.preventDefault(); menuCarpeta(b, b.dataset.carpeta); };
+      });
+      $("[data-destacados]", c).onclick = () => { soloDestacados = !soloDestacados; carpetaSel = null; pintarDocs(); };
+      const nc = $("[data-nueva-carpeta]", c);
+      if (nc) nc.onclick = async () => {
+        const nombre = await NOM.pedirTexto("Nueva carpeta", { etiqueta: "Nombre de la carpeta", ph: "Por ejemplo: Tareas, Exposiciones…", max: 60, si: "Crear" });
+        if (!nombre) return;
+        if (!carpetasNuevas.includes(nombre)) carpetasNuevas.push(nombre);
+        carpetaSel = nombre; soloDestacados = false;
+        pintarDocs();
+        aviso("Carpeta lista: arrastra documentos aquí o usa «Mover a carpeta» en su menú", { ms: 4000 });
+      };
+      // Arrastrar una tarjeta sobre una carpeta la mete ahí (con el mouse).
+      $$("[data-soltar]", c).forEach((b) => {
+        b.ondragover = (e) => { if (e.dataTransfer.types.includes("text/nom-doc")) { e.preventDefault(); b.classList.add("soltar"); } };
+        b.ondragleave = () => b.classList.remove("soltar");
+        b.ondrop = (e) => { e.preventDefault(); b.classList.remove("soltar"); const id = e.dataTransfer.getData("text/nom-doc"); if (id) ponerEnCarpeta(d.lista.find((x) => x.id === id), b.dataset.soltar); };
+      });
+    }
+    function pintarResultados() {
+      if (busqueda.length < 3) return "";
+      if (enContenido == null) return `<h3 class="busqueda-titulo">${ico("file-search", "ico-s")} Dentro de los documentos</h3><div class="esqueleto" style="height:56px"></div>`;
+      const l = enContenido.filter((x) => x.encontrado);
+      if (!l.length) return `<h3 class="busqueda-titulo">${ico("file-search", "ico-s")} Dentro de los documentos</h3><p class="suave" style="font-weight:650">Ningún documento dice “${esc(busqueda)}”.</p>`;
+      return `<h3 class="busqueda-titulo">${ico("file-search", "ico-s")} Dentro de los documentos</h3><div class="lista-resultados">${l.map((x) => `<a class="resultado" href="#/doc/${esc(x.id)}">
+        <span class="resultado-ico modo-${esc(x.modo)}">${ico(MODOS[x.modo] ? MODOS[x.modo].icono : "file-text", "ico-s")}</span>
+        <span class="crece"><b>${esc(x.nombre)}</b>${x.plantilla ? ` <small class="chip chico">${ico("copy-plus", "ico-s")} Plantilla</small>` : ""}${x.veces > 1 ? ` <small class="suave">${x.veces} veces</small>` : ""}<span class="fragmento">${esc(x.antes || "")}<mark>${esc(x.encontrado || "")}</mark>${esc(x.despues || "")}</span></span></a>`).join("")}</div>`;
+    }
+    const buscarContenido = NOM.debounce(async () => {
+      if (busqueda.length < 3) return;
+      const n = ++consulta, q = busqueda;
+      try {
+        const r = await api.get(`/api/espacios/${id}/buscar?q=${encodeURIComponent(q)}`);
+        if (n !== consulta) return;
+        enContenido = r;
+      } catch (e) { if (n === consulta) enContenido = []; }
+      const c = $("[data-contenido]", cont);
+      if (c) c.innerHTML = pintarResultados();
+    }, 350);
+
     function pintarDocs() {
       const cont2 = $("[data-docs]", cont);
       if (!cont2) return;
-      const docs = d.lista.filter((x) => (filtro === "TODOS" || x.modo === filtro) && (!busqueda || x.nombre.toLowerCase().includes(busqueda)));
+      pintarCarpetas();
+      const normales = d.lista.filter((x) => !x.plantilla), plantillas = d.lista.filter((x) => x.plantilla);
+      const docs = ordenar(normales.filter((x) => (filtro === "TODOS" || x.modo === filtro) && (!busqueda || sinAcentos(x.nombre).includes(busqueda))
+        && (carpetaSel == null || x.carpeta === carpetaSel) && (!soloDestacados || esDestacado(x))));
       // Con el espacio vacío, el botón de abajo ya dice "Crear documento": el "+" flotante sobraría.
       NOM.app.fijarFab(edita && d.lista.length ? () => nuevoDocumento(d) : null);
       if (!d.lista.length) {
         cont2.innerHTML = `<div class="vacio"><div class="burbuja">${ico("file-text")}</div><h3>Este espacio está vacío</h3>
           <p>${edita ? "Crea el primer documento: un texto, una hoja de cálculo, una presentación o un diagrama." : "Cuando alguien cree un documento, aparecerá aquí."}</p>
-          ${edita ? `<button class="btn primario" data-v="nuevo">${ico("plus")} Crear documento</button>` : ""}</div>`;
+          ${edita ? `<button class="btn primario" data-v="nuevo">${ico("plus")} Crear documento</button>` : ""}
+          ${d.enPapelera ? `<p><button class="btn chico" data-v="papelera">${ico("trash-2", "ico-s")} Ver la papelera (${d.enPapelera})</button></p>` : ""}</div>`;
         const b = $("[data-v=nuevo]", cont2); if (b) b.onclick = () => nuevoDocumento(d);
+        const pp = $("[data-v=papelera]", cont2); if (pp) pp.onclick = () => papelera();
         return;
       }
-      if (!docs.length) { cont2.innerHTML = `<p class="suave" style="padding:24px 4px;font-weight:650">Nada coincide con tu búsqueda.</p>`; return; }
-      cont2.innerHTML = `<div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${docs.map((x) => `
-        <a class="tarjeta doc-tarjeta clay modo-${esc(x.modo)}" href="#/doc/${esc(x.id)}">
-          <div class="miniatura">${NOM.miniatura(x.modo)}</div>
-          <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(x.nombre)}</span>
-            <span class="meta"><span>${ico(MODOS[x.modo].icono, "ico-s")} ${esc(MODOS[x.modo].nombre)}</span><span>${esc(haceCuanto(x.modificado))}</span></span>
-            ${x.protegido || x.entregaLimite ? `<span class="meta">${x.protegido ? `<span class="chip chico" data-micro="Protegido|Nadie lo puede borrar hasta que el propietario quite la marca.">${ico("lock", "ico-s")} Protegido</span>` : ""}${x.entregaLimite ? `<span class="chip chico ${Date.now() >= x.entregaLimite ? "aviso" : "acento"}">${ico("calendar", "ico-s")} ${Date.now() >= x.entregaLimite ? "Entrega cerrada" : "Entrega " + esc(new Date(x.entregaLimite).toLocaleDateString("es-MX", { day: "numeric", month: "short" }))}</span>` : ""}</span>` : ""}</div>
-          ${edita ? `<div class="acciones"><button class="icono-btn" data-menu="${esc(x.id)}" aria-label="Más opciones">${ico("more-horizontal")}</button></div>` : ""}
-        </a>`).join("")}</div>`;
-      $$("[data-menu]", cont2).forEach((b) => (b.onclick = (e) => {
-        e.preventDefault(); e.stopPropagation();
-        const doc = d.lista.find((x) => x.id === b.dataset.menu);
-        NOM.menu(b, [
-          { texto: "Abrir", icono: "folder-open", fn: () => (location.hash = "#/doc/" + doc.id) },
-          ...(dueno ? [{ texto: doc.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: doc.protegido ? "lock-open" : "lock", fn: () => proteger(doc, !doc.protegido) }] : []),
+      let h = "";
+      if (!docs.length) {
+        h += `<p class="suave" style="padding:18px 4px;font-weight:650">${busqueda ? "Ningún nombre coincide." : soloDestacados ? "Aún no destacas documentos: usa la estrella en su menú (⋯)." : carpetaSel != null ? "Esta carpeta está vacía: arrastra documentos aquí o usa «Mover a carpeta» en su menú." : "Nada coincide con lo que elegiste."}</p>`;
+      } else h += `<div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${docs.map(tarjetaDoc).join("")}</div>`;
+      if (busqueda.length >= 3) h += `<div class="busqueda-contenido" data-contenido>${pintarResultados()}</div>`;
+      if (plantillas.length && !busqueda && carpetaSel == null && !soloDestacados) {
+        h += `<details class="plantillas-espacio"${NOM.leer("nom.plantillas.abiertas", false) ? " open" : ""}><summary>${ico("copy-plus", "ico-s")} Plantillas de este espacio <small>${plantillas.length}</small></summary>
+          <p class="suave chico" style="margin:4px 0 10px">Aparecen al crear un documento nuevo. Tócalas para usarlas.</p>
+          <div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">${ordenar(plantillas).map(tarjetaDoc).join("")}</div></details>`;
+      }
+      cont2.innerHTML = h;
+      const det = $(".plantillas-espacio", cont2);
+      if (det) det.ontoggle = () => NOM.guardar("nom.plantillas.abiertas", det.open);
+      $$("[data-doc]", cont2).forEach((a) => {
+        const x = d.lista.find((y) => y.id === a.dataset.doc);
+        if (x && x.plantilla) a.onclick = (e) => { if (e.target.closest("[data-menu]")) return; e.preventDefault(); usarPlantilla(x); };
+        a.ondragstart = (e) => { e.dataTransfer.setData("text/nom-doc", a.dataset.doc); e.dataTransfer.effectAllowed = "move"; };
+        // Clic derecho en una tarjeta: su menú (igual que el botón ⋯).
+        a.oncontextmenu = (e) => { e.preventDefault(); const b = $("[data-menu]", a); if (b) menuDoc(b, x); };
+      });
+      $$("[data-menu]", cont2).forEach((b) => (b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); menuDoc(b, d.lista.find((x) => x.id === b.dataset.menu)); }));
+    }
+
+    // ------------------------------------------------------------ 8.5 menú de cada documento
+    function menuDoc(ancla, doc) {
+      if (!doc) return;
+      const otros = (NOM.app.espacios || []).filter((e) => e.id !== d.id && e.permiso !== "LECTURA");
+      const destacado = esDestacado(doc);
+      NOM.menu(ancla, [
+        doc.plantilla
+          ? { texto: "Usar esta plantilla", icono: "file-plus", fn: () => usarPlantilla(doc) }
+          : { texto: "Abrir", icono: "folder-open", fn: () => (location.hash = "#/doc/" + doc.id) },
+        ...(doc.plantilla ? [{ texto: "Abrir para cambiarla", icono: "pencil", fn: () => (location.hash = "#/doc/" + doc.id) }] : []),
+        { texto: destacado ? "Quitar de destacados" : "Destacar", icono: destacado ? "star-off" : "star", fn: () => destacar(doc, !destacado) },
+        ...(edita ? [
           "-",
-          { texto: "Eliminar", icono: "trash-2", peligro: true, fn: async () => {
-            if (doc.protegido) return aviso("Está protegido contra el borrado. " + (dueno ? "Quita la protección primero." : "Solo el propietario del espacio puede quitar la protección."), { tipo: "aviso", ms: 4500 });
-            if (!(await confirmar("Eliminar documento", `“${doc.nombre}” y todo su historial se eliminarán para todos los miembros.`, { si: "Eliminar", peligro: true }))) return;
-            try { await api.delete(`/api/documentos/${doc.id}`); aviso("Documento eliminado", { tipo: "ok" }); } catch (err) { aviso(err.message, { tipo: "error" }); }
-          } },
-        ]);
-      }));
+          { texto: "Cambiar el nombre…", icono: "pencil-line", fn: () => renombrar(doc) },
+          { texto: "Hacer una copia", icono: "copy-plus", fn: () => copiar(doc) },
+          ...(!doc.plantilla ? [
+            { texto: "Mover a carpeta…", icono: "folder-input", fn: () => menuMoverCarpeta(ancla, doc) },
+            { texto: "Guardar como plantilla del espacio", icono: "copy", fn: () => comoPlantilla(doc) },
+          ] : []),
+        ] : []),
+        ...(otros.length ? [{ texto: edita ? "Mover a otro espacio…" : "Copiar a otro de mis espacios…", icono: "folder-input", fn: () => menuOtroEspacio(ancla, doc, otros, edita) }] : []),
+        ...(dueno ? [
+          "-",
+          { texto: doc.enlaceVer ? "Enlace para ver (activo)…" : "Enlace para ver sin cuenta…", icono: "link-2", fn: () => enlaceVer(doc) },
+          { texto: doc.protegido ? "Quitar la protección contra el borrado" : "Proteger contra el borrado", icono: doc.protegido ? "lock-open" : "lock", fn: () => proteger(doc, !doc.protegido) },
+        ] : []),
+        ...(edita ? [
+          "-",
+          { texto: "Mandar a la papelera", icono: "trash-2", peligro: true, fn: () => aPapelera(doc) },
+        ] : []),
+      ]);
+    }
+    async function accion(promesa, ok) {
+      try { const r = await promesa; if (ok) aviso(typeof ok === "function" ? ok(r) : ok, { tipo: "ok" }); await recargar(); return r; }
+      catch (e) { aviso(e.message, { tipo: "error", ms: 5000 }); return null; }
+    }
+    const destacar = (doc, si) => accion(api.put(`/api/documentos/${doc.id}/destacado`, { destacado: si }), si ? `“${doc.nombre}” está en tus destacados` : null);
+    async function renombrar(doc) {
+      const nombre = await NOM.pedirTexto("Cambiar el nombre", { etiqueta: "Nombre", valor: doc.nombre, max: 120, si: "Guardar" });
+      if (!nombre || nombre === doc.nombre) return;
+      accion(api.put(`/api/documentos/${doc.id}/nombre`, { nombre }), "Nombre cambiado");
+    }
+    const copiar = (doc) => accion(api.post(`/api/documentos/${doc.id}/copia`, {}), (r) => `Copia creada: “${r.nombre}”`);
+    const comoPlantilla = (doc) => accion(api.post(`/api/documentos/${doc.id}/copia`, { plantilla: true }), "Guardada en las plantillas del espacio: sale al crear un documento nuevo");
+    const ponerEnCarpeta = (doc, carpeta) => doc && accion(api.put(`/api/documentos/${doc.id}/carpeta`, { carpeta }), carpeta ? `“${doc.nombre}” está en ${carpeta}` : `“${doc.nombre}” ya no está en una carpeta`);
+    function menuMoverCarpeta(ancla, doc) {
+      const cs = carpetasDe().filter((c) => c !== doc.carpeta);
+      NOM.menu(ancla, [{ titulo: "Mover a carpeta" },
+        ...cs.map((c) => ({ texto: c, icono: "folder", fn: () => ponerEnCarpeta(doc, c) })),
+        ...(doc.carpeta ? [{ texto: "Sacar de la carpeta", icono: "folder-open", fn: () => ponerEnCarpeta(doc, null) }] : []),
+        "-",
+        { texto: "Nueva carpeta…", icono: "folder-plus", fn: async () => { const c = await NOM.pedirTexto("Nueva carpeta", { etiqueta: "Nombre de la carpeta", max: 60, si: "Mover aquí" }); if (c) ponerEnCarpeta(doc, c); } },
+      ]);
+    }
+    function menuCarpeta(ancla, carpeta) {
+      NOM.menu(ancla, [{ titulo: carpeta },
+        { texto: "Cambiar el nombre…", icono: "pencil-line", fn: async () => {
+          const a = await NOM.pedirTexto("Cambiar el nombre de la carpeta", { etiqueta: "Nombre", valor: carpeta, max: 60, si: "Guardar" });
+          if (!a || a === carpeta) return;
+          carpetasNuevas = carpetasNuevas.map((c) => (c === carpeta ? a : c));
+          if (carpetaSel === carpeta) carpetaSel = a;
+          accion(api.put(`/api/espacios/${d.id}/carpetas`, { de: carpeta, a }), "Carpeta renombrada");
+        } },
+        { texto: "Quitar la carpeta (los documentos se quedan)", icono: "folder-open", fn: () => {
+          carpetasNuevas = carpetasNuevas.filter((c) => c !== carpeta);
+          if (carpetaSel === carpeta) carpetaSel = null;
+          if (!d.lista.some((x) => x.carpeta === carpeta)) { pintarDocs(); return; }
+          accion(api.put(`/api/espacios/${d.id}/carpetas`, { de: carpeta, a: null }), "Carpeta quitada");
+        } },
+      ]);
+    }
+    function menuOtroEspacio(ancla, doc, otros, mover) {
+      NOM.menu(ancla, [{ titulo: mover ? "¿A qué espacio?" : "Copiar a…" },
+        ...otros.map((e) => ({ texto: e.nombre, icono: "layout-grid", fn: async () => {
+          if (mover) {
+            if (!(await confirmar("Mover a otro espacio", `“${doc.nombre}” pasará a ${e.nombre}: lo verán sus miembros y dejará de estar aquí.`, { si: "Mover" }))) return;
+            accion(api.put(`/api/documentos/${doc.id}/espacio`, { espacioId: e.id }), `Movido a ${e.nombre}`);
+          } else accion(api.post(`/api/documentos/${doc.id}/copia`, { espacioId: e.id }), `Copia creada en ${e.nombre}`);
+        } })),
+        ...(mover ? ["-", { texto: "Mejor copiarlo a otro espacio…", icono: "copy-plus", fn: () => menuOtroEspacio(ancla, doc, otros, false) }] : []),
+      ]);
+    }
+    async function usarPlantilla(doc) {
+      const nombre = await NOM.pedirTexto("Nuevo documento desde la plantilla", { etiqueta: "Nombre", valor: doc.nombre, max: 120, si: "Crear" });
+      if (nombre == null) return;
+      try { const r = await api.post(`/api/documentos/${doc.id}/copia`, { nombre: nombre || doc.nombre }); location.hash = "#/doc/" + r.id; }
+      catch (e) { aviso(e.message, { tipo: "error" }); }
+    }
+    async function aPapelera(doc) {
+      if (doc.protegido) return aviso("Está protegido contra el borrado. " + (dueno ? "Quita la protección primero." : "Solo el propietario del espacio puede quitar la protección."), { tipo: "aviso", ms: 4500 });
+      try {
+        await api.delete(`/api/documentos/${doc.id}`);
+        aviso(`“${doc.nombre}” está en la papelera (30 días)`, { tipo: "ok", ms: 6000, accion: { texto: "Deshacer", fn: () => accion(api.post(`/api/documentos/${doc.id}/restaurar`), "Restaurado") } });
+        recargar();
+      } catch (err) { aviso(err.message, { tipo: "error" }); }
+    }
+
+    // ------------------------------------------------------------ 8.5 papelera, enlace para ver y menciones
+    async function papelera() {
+      let l;
+      try { l = await api.get(`/api/espacios/${d.id}/papelera`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
+      const cuerpo = html(`<div class="col"><p class="suave" style="margin:0">Lo que se manda a la papelera se borra solo a los ${30} días. Mientras, cualquiera que edite lo puede restaurar${dueno ? "; solo tú (propietario) lo borras para siempre" : ""}.</p><div class="lista" data-l></div></div>`);
+      const pie = html(`<div style="display:contents">${dueno ? `<button class="btn peligro" type="button" data-vaciar>${ico("trash-2")} Vaciar la papelera</button>` : ""}<span class="crece"></span><button class="btn" type="button" data-cerrar>Cerrar</button></div>`);
+      const h = hoja({ titulo: "Papelera", icono: "trash-2", cuerpo, pie });
+      const pintar = () => {
+        $("[data-l]", cuerpo).innerHTML = l.length ? l.map((x) => `<div class="lista-item" data-id="${esc(x.id)}">${ico(MODOS[x.modo] ? MODOS[x.modo].icono : "file-text")}<span class="crece"><b>${esc(x.nombre)}</b><small>${esc(x.eliminadoPor || "")} · ${esc(haceCuanto(x.eliminado))} · se borra en ${x.dias} día${x.dias === 1 ? "" : "s"}</small></span>
+          <button class="btn chico" data-r>${ico("archive-restore", "ico-s")} Restaurar</button>${dueno ? `<button class="icono-btn" data-b aria-label="Borrar para siempre" data-micro="Borrar para siempre">${ico("x")}</button>` : ""}</div>`).join("")
+          : `<div class="vacio" style="padding:20px"><div class="burbuja">${ico("trash")}</div><h3>La papelera está vacía</h3></div>`;
+        const v = $("[data-vaciar]", pie); if (v) v.disabled = !l.length;
+      };
+      pintar();
+      $("[data-l]", cuerpo).onclick = async (e) => {
+        const it = e.target.closest("[data-id]");
+        if (!it) return;
+        const x = l.find((y) => y.id === it.dataset.id);
+        if (e.target.closest("[data-r]")) {
+          try { await api.post(`/api/documentos/${x.id}/restaurar`); l = l.filter((y) => y !== x); pintar(); aviso(`“${x.nombre}” volvió al espacio`, { tipo: "ok" }); recargar(); }
+          catch (err) { aviso(err.message, { tipo: "error" }); }
+        } else if (e.target.closest("[data-b]")) {
+          if (!(await confirmar("Borrar para siempre", `“${x.nombre}” y todo su historial se borran y no se pueden recuperar.`, { si: "Borrar para siempre", peligro: true }))) return;
+          try { await api.delete(`/api/documentos/${x.id}/definitivo`); l = l.filter((y) => y !== x); pintar(); recargar(); }
+          catch (err) { aviso(err.message, { tipo: "error" }); }
+        }
+      };
+      const v = $("[data-vaciar]", pie);
+      if (v) v.onclick = async () => {
+        if (!(await confirmar("Vaciar la papelera", `Se borran para siempre ${l.length} documento${l.length === 1 ? "" : "s"}.`, { si: "Vaciar", peligro: true }))) return;
+        try { await api.delete(`/api/espacios/${d.id}/papelera`); l = []; pintar(); recargar(); } catch (err) { aviso(err.message, { tipo: "error" }); }
+      };
+      $("[data-cerrar]", pie).onclick = () => h.cerrar();
+    }
+    const enlaceVer = (doc) => enlaceVerDoc(doc, recargar);
+    function pintarAvisos() {
+      const c = $("[data-avisos]", cont);
+      if (!c) return;
+      c.innerHTML = d.avisos ? `<button class="btn primario-suave" data-a="avisos" data-micro="Menciones|Alguien te escribió @${esc((api.usuario() || {}).nombre || "")} en un comentario.">${ico("at-sign")} Menciones <span class="insignia">${d.avisos}</span></button>` : "";
+      const b = $("[data-a=avisos]", c);
+      if (b) b.onclick = () => menciones();
+    }
+    async function menciones() {
+      let l;
+      try { l = await api.get(`/api/espacios/${d.id}/avisos`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
+      d.avisos = 0; pintarAvisos();
+      const cuerpo = html(`<div class="col"><div class="lista">${l.length ? l.map((a) => `<a class="lista-item" href="#/doc/${esc(a.docId)}${a.comentario ? "?comentario=" + encodeURIComponent(a.comentario) : ""}">${avatar({ nombre: a.por, color: a.color })}<span class="crece"><b>${esc(a.por)}</b> te mencionó en <b>${esc(a.documento)}</b><small>“${esc(a.texto)}” · ${esc(haceCuanto(a.t))}</small></span>${a.leido ? "" : '<span class="punto vivo"></span>'}</a>`).join("")
+        : `<div class="vacio" style="padding:20px"><div class="burbuja">${ico("at-sign")}</div><h3>Nadie te ha mencionado</h3><p>Cuando alguien escriba @${esc((api.usuario() || {}).nombre || "tu-nombre")} en un comentario, aparecerá aquí.</p></div>`}</div></div>`);
+      const h = hoja({ titulo: "Menciones", icono: "at-sign", cuerpo });
+      cuerpo.onclick = (e) => { if (e.target.closest("a")) h.cerrar(true); };
     }
     pintarDocs();
 
+    pintarAvisos();
     $$("[data-f]", cont).forEach((b) => (b.onclick = () => { filtro = b.dataset.f; $$("[data-f]", cont).forEach((x) => x.setAttribute("aria-pressed", x === b)); pintarDocs(); }));
-    $("[data-buscar]", cont).oninput = (e) => { busqueda = e.target.value.trim().toLowerCase(); pintarDocs(); };
+    $("[data-buscar]", cont).oninput = (e) => {
+      busqueda = sinAcentos(e.target.value.trim());
+      // 8.5 Con 3 letras o más también se busca dentro de lo que dicen los documentos.
+      enContenido = null;
+      pintarDocs();
+      if (busqueda.length >= 3) buscarContenido();
+    };
     $("[data-a=compartir]", cont).onclick = () => accesos(d);
     $("[data-a=mas-espacio]", cont).onclick = (e) => NOM.menu(e.currentTarget, [
+      ...(edita ? [{ texto: d.enPapelera ? `Papelera (${d.enPapelera})` : "Papelera", icono: "trash-2", fn: () => papelera() }] : []),
+      { texto: "Menciones", icono: "at-sign", fn: () => menciones() },
+      "-",
       { texto: "Descargar todo (Word, Excel y PowerPoint)", icono: "archive", fn: () => exportarTodo(d) },
       { texto: "Cuánto espacio ocupa", icono: "hard-drive", fn: () => almacenamiento(d) },
       ...(dueno ? [
@@ -660,7 +924,7 @@
     const bn = $("[data-a=nuevo]", cont); if (bn) bn.onclick = () => nuevoDocumento(d);
 
     async function recargar() {
-      try { const n = await api.get(`/api/espacios/${id}`); d = n; pintarRed(d.conexion); pintarConectados(d.conectados); pintarDocs(); } catch (e) { /* se reintenta con el siguiente evento */ }
+      try { const n = await api.get(`/api/espacios/${id}`); d = n; pintarRed(d.conexion); pintarConectados(d.conectados); pintarAvisos(); pintarDocs(); if (busqueda.length >= 3) buscarContenido(); } catch (e) { /* se reintenta con el siguiente evento */ }
     }
     async function proteger(doc, si) {
       let confirmacion = null;
@@ -678,8 +942,29 @@
       permiso: (x) => { if (x.usuarioId === (api.usuario() || {}).id) { aviso("Tu permiso cambió", { tipo: "info" }); espacio(cont, id); } },
       expulsado: (x) => { aviso(x.motivo, { tipo: "aviso" }); location.hash = "#/"; },
       rechazo: (e) => aviso(e.message, { tipo: "aviso", ms: 6000 }),
+      // 8.5 Alguien te mencionó en un comentario.
+      aviso: (a) => { if (a && a.tipo === "mencion" && NOM.avisoNuevo(a)) { aviso(`${a.por} te mencionó en “${a.documento}”`, { accion: { texto: "Ver", fn: () => (location.hash = "#/doc/" + a.docId) }, ms: 8000 }); recargar(); } },
     });
     return () => canal.cerrar();
+  }
+
+  /** 8.5 Enlace para ver un solo documento sin cuenta (el propietario lo crea y lo quita). */
+  async function enlaceVerDoc(doc, alCambiar) {
+    let r;
+    try { r = await api.post(`/api/documentos/${doc.id}/enlace-ver`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
+    const url = location.origin + location.pathname + "#/ver/" + r.enlace;
+    const cuerpo = html(`<div class="col"><p style="margin:0">Quien tenga este enlace ve <b>${esc(doc.nombre)}</b> en solo lectura, <b>sin cuenta</b> y sin los comentarios. Sirve para compartirlo con familias o con otro grupo. Lo puedes quitar cuando quieras.</p>
+      <div class="entrada">${ico("link-2")}<input readonly value="${esc(url)}" data-url aria-label="Enlace para ver"></div>
+      <div class="pv-qr" style="align-self:center">${NOM.qr ? NOM.qr.svg(url, { titulo: "QR para ver el documento" }) : ""}</div></div>`);
+    const pie = html(`<div style="display:contents"><button class="btn peligro" type="button" data-quitar>${ico("link-2-off")} Quitar el enlace</button><span class="crece"></span><button class="btn primario" type="button" data-copiar>${ico("copy")} Copiar enlace</button></div>`);
+    const h = hoja({ titulo: "Enlace para ver", icono: "link-2", cuerpo, pie });
+    $("[data-copiar]", pie).onclick = async () => {
+      try { await navigator.clipboard.writeText(url); aviso("Enlace copiado", { tipo: "ok" }); } catch (e) { $("[data-url]", cuerpo).select(); document.execCommand("copy"); aviso("Enlace copiado", { tipo: "ok" }); }
+    };
+    $("[data-quitar]", pie).onclick = async () => {
+      try { await api.delete(`/api/documentos/${doc.id}/enlace-ver`); h.cerrar(); aviso("Enlace quitado: ya no sirve", { tipo: "ok" }); if (alCambiar) alCambiar(); } catch (e) { aviso(e.message, { tipo: "error" }); }
+    };
+    if (alCambiar) alCambiar();
   }
 
   // ================================================================== 1.4 Formato por defecto del espacio
@@ -827,5 +1112,5 @@
     };
   }
 
-  NOM.vistaEspacios = { inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, formatoEspacio, sincronia, exportarTodo, PERMISOS };
+  NOM.vistaEspacios = { enlaceVer: enlaceVerDoc, inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, formatoEspacio, sincronia, exportarTodo, PERMISOS };
 })();

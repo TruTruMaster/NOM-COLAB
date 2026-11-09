@@ -270,7 +270,19 @@ ${partes}
       } else {
         const t = b.tipo === "forma" ? (b.html && NOM.diapo ? NOM.diapo.textoPlano(b.html) : b.texto) : b.tipo === "texto" ? (NOM.diapo ? NOM.diapo.textoPlano(b.html) : textoPlano(b.html)) : "";
         if (t) {
-          const ls = String(t).split("\n").slice(0, 40);
+          // Renglones como en el lienzo: se parte por palabras según el ancho de la figura.
+          const caben = Math.max(4, Math.floor(((e && e.f === "actor" ? b.w + 60 : b.w) - 20) / (fs * 0.56)));
+          const ls = [];
+          String(t).split("\n").forEach((renglon) => {
+            let l = "";
+            renglon.split(/\s+/).forEach((p) => {
+              if (!l) l = p;
+              else if ((l + " " + p).length <= caben) l += " " + p;
+              else { ls.push(l); l = p; }
+            });
+            ls.push(l);
+          });
+          ls.splice(40);
           const anchor = b.tAlin === "izq" ? ["start", b.x + 10] : b.tAlin === "der" ? ["end", b.x + b.w - 10] : ["middle", cx];
           // El actor lleva su nombre abajo; lo demás, centrado a lo alto.
           const y0 = e && e.f === "actor" ? b.y + b.h - (ls.length - 1) * lh - fs * 0.3 : cy - ((ls.length - 1) * lh) / 2 + fs * 0.35;

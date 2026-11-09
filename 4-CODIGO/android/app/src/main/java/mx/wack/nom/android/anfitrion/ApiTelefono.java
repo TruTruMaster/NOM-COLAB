@@ -161,6 +161,8 @@ final class ApiTelefono {
             return ok(espacios.entrarComoInvitado(x.group(1), texto(cuerpo(p), "apodo")));
         if (r.equals("/api/recibos/verificar") && m.equals("POST")) return ok(documentos.verificarRecibo(cuerpo(p)));
         if ((x = coincide("/api/proyeccion/" + ID, r)) != null && m.equals("GET")) return ok(documentos.verProyeccion(x.group(1)));
+        // 8.5 Ver un solo documento con su enlace (sin cuenta).
+        if ((x = coincide("/api/ver/" + ID, r)) != null && m.equals("GET")) return ok(documentos.verPublico(x.group(1)));
         if ((x = coincide("/api/proyeccion/" + ID + "/eventos", r)) != null && m.equals("GET")) {
             String codigo = x.group(1);
             return Respuesta.sse(canal -> documentos.suscribirProyeccion(codigo, canal));
@@ -257,6 +259,18 @@ final class ApiTelefono {
             Object c = cuerpo(p).get("conservar");
             return ok(espacios.depurar(u, x.group(1), c instanceof Number ? ((Number) c).intValue() : 0));
         }
+        // ---- 8.5 papelera, buscar, carpetas y avisos
+        if ((x = coincide("/api/espacios/" + ID + "/papelera", r)) != null) {
+            if (m.equals("GET")) return ok(documentos.papelera(u, x.group(1)));
+            if (m.equals("DELETE")) return ok(documentos.vaciarPapelera(u, x.group(1)));
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/buscar", r)) != null && m.equals("GET"))
+            return ok(documentos.buscar(u, x.group(1), p.consulta.getOrDefault("q", "")));
+        if ((x = coincide("/api/espacios/" + ID + "/carpetas", r)) != null && m.equals("PUT")) {
+            Map<String, Object> c = cuerpo(p);
+            return ok(documentos.renombrarCarpeta(u, x.group(1), texto(c, "de"), texto(c, "a")));
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/avisos", r)) != null && m.equals("GET")) return ok(espacios.avisos(u, x.group(1)));
         if ((x = coincide("/api/espacios/" + ID + "/documentos", r)) != null) {
             if (m.equals("GET")) return ok(documentos.listar(u, x.group(1)));
             if (m.equals("POST")) {
@@ -273,6 +287,24 @@ final class ApiTelefono {
                 documentos.eliminar(u, x.group(1));
                 return ok(Map.of("ok", true));
             }
+        }
+        // ---- 8.5 papelera, nombre, copia, mover, carpeta, destacado y enlace para ver
+        if ((x = coincide("/api/documentos/" + ID + "/restaurar", r)) != null && m.equals("POST")) return ok(documentos.sacarDePapelera(u, x.group(1)));
+        if ((x = coincide("/api/documentos/" + ID + "/definitivo", r)) != null && m.equals("DELETE")) {
+            documentos.borrarParaSiempre(u, x.group(1));
+            return ok(Map.of("ok", true));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/nombre", r)) != null && m.equals("PUT")) return ok(documentos.renombrar(u, x.group(1), texto(cuerpo(p), "nombre")));
+        if ((x = coincide("/api/documentos/" + ID + "/copia", r)) != null && m.equals("POST")) {
+            Map<String, Object> c = cuerpo(p);
+            return ok(documentos.copiar(u, x.group(1), texto(c, "espacioId"), texto(c, "nombre"), Boolean.TRUE.equals(c.get("plantilla"))));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/espacio", r)) != null && m.equals("PUT")) return ok(documentos.mover(u, x.group(1), texto(cuerpo(p), "espacioId")));
+        if ((x = coincide("/api/documentos/" + ID + "/carpeta", r)) != null && m.equals("PUT")) return ok(documentos.fijarCarpeta(u, x.group(1), texto(cuerpo(p), "carpeta")));
+        if ((x = coincide("/api/documentos/" + ID + "/destacado", r)) != null && m.equals("PUT")) return ok(documentos.destacar(u, x.group(1), Boolean.TRUE.equals(cuerpo(p).get("destacado"))));
+        if ((x = coincide("/api/documentos/" + ID + "/enlace-ver", r)) != null) {
+            if (m.equals("POST")) return ok(documentos.crearEnlaceVer(u, x.group(1)));
+            if (m.equals("DELETE")) return ok(documentos.quitarEnlaceVer(u, x.group(1)));
         }
         if ((x = coincide("/api/documentos/" + ID + "/ops", r)) != null && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);

@@ -23,6 +23,8 @@ public class Espacio {
     public List<EnlaceUnion> enlaces = new ArrayList<>();
     /** Copia del espacio en otro servidor (el telefono del salon con Azure o el servidor propio). */
     public Sincronia sincronia;
+    /** 8.5 Avisos de cada persona (menciones en comentarios): usuarioId -> los ultimos 40. */
+    public Map<String, List<Map<String, Object>>> avisos;
 
     public static class Conexion {
         public boolean activa;

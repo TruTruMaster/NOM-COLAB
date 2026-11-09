@@ -303,5 +303,5 @@
     };
   }
 
-  NOM.diagramas = { CATALOGO, elegir, desdeTexto, leerEsquema, leerLista, leerFechas, proceso, ciclo, lineaTiempo, organigrama, mapaMental, mapaConceptual, venn, espina, foda, flujo, clases, casosUso, entidadRelacion };
+  NOM.diagramas = { generar, EJEMPLOS: EJ, CATALOGO, elegir, desdeTexto, leerEsquema, leerLista, leerFechas, proceso, ciclo, lineaTiempo, organigrama, mapaMental, mapaConceptual, venn, espina, foda, flujo, clases, casosUso, entidadRelacion };
 })();
