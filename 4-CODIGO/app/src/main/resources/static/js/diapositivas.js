@@ -111,9 +111,24 @@
   }
   /** Texto plano de un cuadro con formato (para buscar, exportar a texto y comentarios). */
   function textoPlano(h) {
-    const d = document.createElement("div");
-    d.innerHTML = htmlRico(h).replace(/<br>/g, "\n").replace(/<\/(div|li)>/g, "$&\n");
-    return d.textContent.replace(/\n{3,}/g, "\n\n").trim();
+    // Cada bloque (renglón, viñeta) empieza en su propia línea, aunque el primero venga sin <div>
+    // ("Libro<div>- título</div>" es lo que deja el navegador al dar Enter después de escribir).
+    const t = document.createElement("template");
+    t.innerHTML = htmlRico(h);
+    const BLOQUES = new Set(["DIV", "P", "LI", "UL", "OL", "H1", "H2", "H3", "BLOCKQUOTE"]);
+    let r = "";
+    (function rec(n) {
+      for (let c = n.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) { r += c.nodeValue; continue; }
+        if (c.nodeType !== 1) continue;
+        if (c.tagName === "BR") { r += "\n"; continue; }
+        const bloque = BLOQUES.has(c.tagName);
+        if (bloque && r && !r.endsWith("\n")) r += "\n";
+        rec(c);
+        if (bloque && r && !r.endsWith("\n")) r += "\n";
+      }
+    })(t.content);
+    return r.replace(/\n{3,}/g, "\n\n").trim();
   }
   /**
    * Párrafos de un cuadro con formato, para PowerPoint: [{ al, lista: "v"|"n"|null, nivel, runs: [{ t, b, i, u, s, color, tam }] }].

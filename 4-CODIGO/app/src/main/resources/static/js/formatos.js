@@ -218,36 +218,68 @@ ${partes}
     return celdasDe(t).map((r) => r.map((v) => (/[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v)).join(",")).join("\r\n") + "\r\n";
   }
 
+  const n1 = (v) => Math.round(v * 10) / 10;
   function aSvg(doc, pagina) {
-    const bs = doc.deLaPagina(pagina).filter((b) => b.x != null && !b.oculto);
+    const bs = doc.deLaPagina(pagina).filter((b) => b.x != null && !b.oculto && b.tipo !== "conector");
     if (!bs.length) return null;
+    const E = NOM.esc, F = NOM.figuras;
     const minX = Math.min(...bs.map((b) => b.x)) - 40, minY = Math.min(...bs.map((b) => b.y)) - 40;
     const maxX = Math.max(...bs.map((b) => b.x + b.w)) + 40, maxY = Math.max(...bs.map((b) => b.y + b.h)) + 40;
     const porId = Object.fromEntries(bs.map((b) => [b.id, b]));
-    const lineas = doc.deLaPagina(pagina).filter((b) => b.tipo === "conector" && porId[b.desde] && porId[b.hasta]).map((c) => {
-      const p = NOM.geometria.conector(porId[c.desde], porId[c.hasta]);
-      return `<path d="M${p.x1},${p.y1} L${p.x2},${p.y2}" stroke="#4A4854" stroke-width="2" fill="none" marker-end="url(#f)"/>`;
-    });
+    // 8.4 Flechas con su forma, puntas, estilo y textos: el mismo dibujo que en el lienzo.
+    const lineas = doc.deLaPagina(pagina).filter((b) => b.tipo === "conector" && porId[b.desde] && porId[b.hasta]).map((c) => NOM.geometria.svgConector(c, porId[c.desde], porId[c.hasta]));
+    const luz = (c) => { const n = parseInt(String(c || "#ffffff").slice(1), 16) || 0; return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+    const fuente = 'font-family="Nunito, Arial, sans-serif"';
     const formas = bs.sort((a, b) => (a.z || 0) - (b.z || 0)).map((b) => {
       const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
       const giro = b.rot ? ` transform="rotate(${+b.rot} ${cx} ${cy})"` : "";
       const op = b.opacidad != null && b.opacidad < 1 ? ` opacity="${+b.opacidad}"` : "";
       const voltear = b.volteoH || b.volteoV ? ` translate(${b.volteoH ? b.w : 0} ${b.volteoV ? b.h : 0}) scale(${b.volteoH ? -1 : 1} ${b.volteoV ? -1 : 1})` : "";
-      let fig = "", fondo = null;
-      if (b.tipo === "forma" && NOM.figuras) {
-        const e = NOM.figuras.estiloFigura(b);
+      let fig = "", fondo = null, e = null;
+      if (b.tipo === "forma" && F) {
+        e = F.estiloFigura(b);
         fondo = e.relleno;
-        const dash = e.estilo === "guiones" ? ` stroke-dasharray="${e.ancho * 3} ${e.ancho * 2}"` : e.estilo === "puntos" ? ` stroke-dasharray="0 ${e.ancho * 2}" stroke-linecap="round"` : "";
-        fig = `<g transform="translate(${b.x} ${b.y})${voltear}"><path d="${NOM.figuras.ruta(e.f, b.w, b.h, e.radio)}" fill="${e.relleno || "none"}" stroke="${e.trazo || "none"}" stroke-width="${e.ancho}"${dash} stroke-linejoin="round"/></g>`;
-      } else if (b.tipo === "imagen") fig = `<image href="${NOM.esc(b.src)}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"${voltear ? ` transform="translate(${b.x} ${b.y})${voltear} translate(${-b.x} ${-b.y})"` : ""}/>`;
-      const txt = b.tipo === "forma" ? b.texto : b.tipo === "texto" ? textoPlano(b.html) : "";
-      const luz = (c) => { const n = parseInt(String(c || "#ffffff").slice(1), 16) || 0; return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+        const dash = e.estilo === "guiones" ? ` stroke-dasharray="${e.ancho * 3} ${e.ancho * 2}"` : e.estilo === "puntos" ? ` stroke-dasharray="0 ${e.ancho * 2}"` : "";
+        const tapa = e.estilo === "puntos" || e.f === "actor" ? "round" : "butt";
+        fig = `<g transform="translate(${b.x} ${b.y})${voltear}">${F.partesFigura(e, b.w, b.h).map((pz) => `<path d="${pz.d}" fill="${pz.relleno ? E(pz.relleno) : "none"}" stroke="${pz.trazo ? E(pz.trazo) : "none"}" stroke-width="${e.ancho}"${pz.trazo ? dash : ""} stroke-linejoin="round" stroke-linecap="${tapa}"/>`).join("")}</g>`;
+      } else if (b.tipo === "imagen" && b.src) fig = `<image href="${E(b.src)}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" preserveAspectRatio="none"${voltear ? ` transform="translate(${b.x} ${b.y})${voltear} translate(${-b.x} ${-b.y})"` : ""}/>`;
+      else if (b.tipo === "icono" && F) fig = `<svg x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" viewBox="0 0 24 24" fill="none" stroke="${E(b.color || "#2B2A33")}" stroke-width="${+b.grosor || 2}" stroke-linecap="round" stroke-linejoin="round">${F.iconoSeguro(b)}</svg>`;
       const colorT = b.tColor || (fondo && luz(fondo) < 0.5 ? "#FFFFFF" : "#1F1E26");
-      const anchor = b.tAlin === "izq" ? ["start", b.x + 10] : b.tAlin === "der" ? ["end", b.x + b.w - 10] : ["middle", cx];
-      return `<g${giro}${op}>${fig}${txt ? `<text x="${anchor[1]}" y="${cy}" text-anchor="${anchor[0]}" dominant-baseline="middle" font-family="Nunito, sans-serif" font-size="${b.tTam || (b.tipo === "texto" ? 22 : 16)}" font-weight="${NOM.figuras.enNegrita(b) ? 700 : 500}"${b.tCursiva ? ' font-style="italic"' : ""}${b.tSubrayado ? ' text-decoration="underline"' : ""} fill="${NOM.esc(colorT)}">${NOM.esc(txt)}</text>` : ""}</g>`;
+      const fs = +b.tTam || (b.tipo === "texto" ? 22 : 16), lh = fs * 1.3;
+      const peso = F && F.enNegrita(b) ? 700 : 500;
+      let txt = "";
+      if (e && F.COMPARTIMENTOS.has(e.f)) {
+        // Clase y entidad: nombre arriba y cada compartimento con su línea divisoria.
+        const ls = String(b.texto || "").split("\n").map((l) => l.replace(/\s+$/, ""));
+        const nombre = ls.shift() || "", resto = ls.filter((l) => l.trim() && !/^-{2,}$/.test(l.trim()));
+        const secs = e.f === "clase" ? [resto.filter((l) => !/\(.*\)/.test(l)), resto.filter((l) => /\(.*\)/.test(l))] : [resto];
+        const f2 = +b.tTam || 14, l2 = f2 * 1.35;
+        let y = b.y + 6 + l2;
+        txt += `<text x="${cx}" y="${y - 5}" text-anchor="middle" ${fuente} font-size="${f2}" font-weight="800" fill="${E(colorT)}">${E(nombre)}</text>`;
+        y += 6;
+        secs.forEach((sec) => {
+          if (y < b.y + b.h - 2) txt += `<line x1="${b.x}" y1="${y}" x2="${b.x + b.w}" y2="${y}" stroke="${E(e.trazo || "#2B2A33")}" stroke-width="2"/>`;
+          y += 5;
+          sec.forEach((l) => {
+            y += l2;
+            const clave = e.f === "entidad" && /^(PK\b|#)/i.test(l.trim());
+            if (y < b.y + b.h) txt += `<text x="${b.x + 10}" y="${y - 4}" ${fuente} font-size="${f2}" font-weight="600"${clave ? ' text-decoration="underline"' : ""} fill="${E(colorT)}">${E(clave ? l.trim().replace(/^(PK\s*:?\s*|#\s*)/i, "") : l)}</text>`;
+          });
+          y += sec.length ? 5 : 14;
+        });
+      } else {
+        const t = b.tipo === "forma" ? (b.html && NOM.diapo ? NOM.diapo.textoPlano(b.html) : b.texto) : b.tipo === "texto" ? (NOM.diapo ? NOM.diapo.textoPlano(b.html) : textoPlano(b.html)) : "";
+        if (t) {
+          const ls = String(t).split("\n").slice(0, 40);
+          const anchor = b.tAlin === "izq" ? ["start", b.x + 10] : b.tAlin === "der" ? ["end", b.x + b.w - 10] : ["middle", cx];
+          // El actor lleva su nombre abajo; lo demás, centrado a lo alto.
+          const y0 = e && e.f === "actor" ? b.y + b.h - (ls.length - 1) * lh - fs * 0.3 : cy - ((ls.length - 1) * lh) / 2 + fs * 0.35;
+          txt = `<text text-anchor="${anchor[0]}" ${fuente} font-size="${fs}" font-weight="${peso}"${b.tCursiva ? ' font-style="italic"' : ""}${b.tSubrayado ? ' text-decoration="underline"' : ""} fill="${E(colorT)}">${ls.map((l, i) => `<tspan x="${anchor[1]}" y="${n1(y0 + i * lh)}">${E(l)}</tspan>`).join("")}</text>`;
+        }
+      }
+      return `<g${giro}${op}>${fig}${txt}</g>`;
     });
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" width="${maxX - minX}" height="${maxY - minY}">
-<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4A4854"/></marker></defs>
 <rect x="${minX}" y="${minY}" width="100%" height="100%" fill="#fff"/>
 ${lineas.join("\n")}
 ${formas.join("\n")}
@@ -514,5 +546,5 @@ ${formas.join("\n")}
     });
   }
 
-  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, textoPlano, descargar, descargarBytes, MIME, limpioNombre };
+  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, aSvg, textoPlano, descargar, descargarBytes, MIME, limpioNombre };
 })();

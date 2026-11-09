@@ -30,6 +30,8 @@
     return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
   };
   const oscuro = (c) => luz(c) < 0.5;
+  /** Un color que viene del documento solo se usa si de verdad es un color (nada de texto suelto en el estilo). */
+  const colorCss = (c) => /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]{3,20})$/i.test(String(c || ""));
 
   // ------------------------------------------------------------ figuras
   const FIGURAS = [
@@ -39,12 +41,53 @@
     ["cruz", "Cruz"], ["paralelogramo", "Paralelogramo (entrada/salida)"], ["trapecio", "Trapecio"], ["cilindro", "Cilindro (base de datos)"],
     ["documento", "Documento"], ["nota", "Nota adhesiva"], ["linea", "Línea"], ["linea-flecha", "Línea con flecha"],
   ];
+  // 8.4 Figuras de UML y de entidad-relación: cada una nace con sus colores, su tamaño y un texto de
+  // ejemplo. La clase y la entidad acomodan su texto en compartimentos (nombre, atributos, métodos).
+  const FIGURAS_UML = [["clase", "Clase"], ["actor", "Actor"], ["caso-uso", "Caso de uso"], ["paquete", "Paquete"], ["componente", "Componente"], ["nodo", "Nodo"], ["inicio", "Inicio"], ["final", "Fin"], ["barra", "Bifurcación"]];
+  const FIGURAS_ER = [["entidad", "Entidad"], ["entidad-debil", "Entidad débil"], ["relacion", "Relación"], ["relacion-debil", "Relación débil"], ["atributo", "Atributo"], ["atributo-clave", "Atributo clave"], ["atributo-multi", "Multivaluado"], ["atributo-derivado", "Derivado"]];
+  const FIGURAS_RED = [["server", "Servidor"], ["monitor", "Computadora"], ["laptop", "Laptop"], ["smartphone", "Celular"], ["router", "Router"], ["wifi", "Wifi"], ["database", "Base de datos"], ["cloud", "Nube"], ["printer", "Impresora"], ["globe", "Internet"], ["lock", "Firewall"], ["hard-drive", "Disco"]];
+  const UML = { color: "#FFFFFF", borde: "#2B2A33", bordeAncho: 2, sombra: false };
+  const PRESETS = {
+    clase: Object.assign({ figura: "clase", texto: "Alumno\n- nombre: texto\n- grupo: texto\n+ inscribirse()", w: 210, h: 140 }, UML),
+    actor: Object.assign({ figura: "actor", texto: "Usuario", w: 80, h: 130 }, UML),
+    "caso-uso": Object.assign({ figura: "elipse", texto: "Iniciar sesión", w: 190, h: 80 }, UML),
+    paquete: Object.assign({ figura: "paquete", texto: "paquete", w: 200, h: 130 }, UML, { color: "#FFF8E1" }),
+    componente: Object.assign({ figura: "componente", texto: "Componente", w: 190, h: 90 }, UML),
+    nodo: Object.assign({ figura: "nodo", texto: "Servidor", w: 190, h: 120 }, UML, { color: "#E7E5EE" }),
+    inicio: { figura: "elipse", color: "#2B2A33", sombra: false, texto: "", w: 34, h: 34 },
+    final: Object.assign({ figura: "final", texto: "", w: 40, h: 40 }, UML),
+    barra: { figura: "rect", radio: 2, color: "#2B2A33", sombra: false, texto: "", w: 180, h: 10 },
+    entidad: Object.assign({ figura: "entidad", texto: "Alumno\nPK matrícula\nnombre\ngrupo", w: 180, h: 130 }, UML),
+    "entidad-debil": Object.assign({ figura: "entidad-debil", texto: "Calificación", w: 180, h: 80 }, UML),
+    relacion: Object.assign({ figura: "rombo", texto: "tiene", w: 160, h: 90 }, UML),
+    "relacion-debil": Object.assign({ figura: "relacion-debil", texto: "obtiene", w: 170, h: 96 }, UML),
+    atributo: Object.assign({ figura: "elipse", texto: "nombre", w: 140, h: 64 }, UML),
+    "atributo-clave": Object.assign({ figura: "elipse", texto: "matrícula", tSubrayado: true, w: 140, h: 64 }, UML),
+    "atributo-multi": Object.assign({ figura: "atributo-multi", texto: "teléfonos", w: 150, h: 68 }, UML),
+    "atributo-derivado": Object.assign({ figura: "elipse", texto: "edad", bordeEstilo: "guiones", w: 140, h: 64 }, UML),
+  };
+  /** Figuras que siempre llevan contorno (sin él no se entienden). */
+  const CON_CONTORNO = new Set(["clase", "entidad", "entidad-debil", "relacion-debil", "atributo-multi", "actor", "paquete", "componente", "nodo", "final"]);
+  /** Clase y entidad: el texto va en compartimentos. En la clase, las líneas con paréntesis son métodos. */
+  const COMPARTIMENTOS = new Set(["clase", "entidad"]);
+  function compartimentos(f, texto) {
+    const ls = String(texto || "").split("\n").map((l) => l.replace(/\s+$/, ""));
+    const nombre = ls.shift() || "";
+    const resto = ls.filter((l) => l.trim() && !/^-{2,}$/.test(l.trim()));
+    // En la entidad, "PK" o "#" al inicio marcan la clave: se subraya.
+    const fila = (l) => (f === "entidad" && /^(PK\b|#)/i.test(l.trim()) ? `<u>${esc(l.trim().replace(/^(PK\s*:?\s*|#\s*)/i, ""))}</u>` : esc(l));
+    if (f === "clase") {
+      const met = resto.filter((l) => /\(.*\)/.test(l)), atr = resto.filter((l) => !/\(.*\)/.test(l));
+      return `<div class="cm-nombre">${esc(nombre)}</div><div class="cm-sec">${atr.map(fila).join("<br>")}</div><div class="cm-sec">${met.map(fila).join("<br>")}</div>`;
+    }
+    return `<div class="cm-nombre">${esc(nombre)}</div><div class="cm-sec">${resto.map(fila).join("<br>")}</div>`;
+  }
   const n2 = (v) => +v.toFixed(2);
   /** Trazo SVG de una figura en una caja de w × h (radio: esquinas del rectángulo). */
   function ruta(f, w, h, r) {
     const p = (pts) => "M" + pts.map(([x, y]) => `${n2(x)},${n2(y)}`).join(" L") + " Z";
     switch (f) {
-      case "elipse": return `M0,${n2(h / 2)} A${n2(w / 2)},${n2(h / 2)} 0 1 0 ${n2(w)},${n2(h / 2)} A${n2(w / 2)},${n2(h / 2)} 0 1 0 0,${n2(h / 2)} Z`;
+      case "elipse": case "atributo-multi": case "final": return `M0,${n2(h / 2)} A${n2(w / 2)},${n2(h / 2)} 0 1 0 ${n2(w)},${n2(h / 2)} A${n2(w / 2)},${n2(h / 2)} 0 1 0 0,${n2(h / 2)} Z`;
       case "rombo": return p([[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]]);
       case "triangulo": return p([[w / 2, 0], [w, h], [0, h]]);
       case "triangulo-r": return p([[0, 0], [w, h], [0, h]]);
@@ -71,6 +114,19 @@
       case "cilindro": { const e = Math.min(h * 0.16, 36); return `M0,${n2(e)} A${n2(w / 2)},${n2(e)} 0 0 1 ${n2(w)},${n2(e)} V${n2(h - e)} A${n2(w / 2)},${n2(e)} 0 0 1 0,${n2(h - e)} Z M0,${n2(e)} A${n2(w / 2)},${n2(e)} 0 0 0 ${n2(w)},${n2(e)}`; }
       case "documento": return `M0,0 H${n2(w)} V${n2(h * 0.86)} C${n2(w * 0.75)},${n2(h * 0.7)} ${n2(w * 0.5)},${n2(h * 1.04)} ${n2(w * 0.25)},${n2(h * 0.92)} C${n2(w * 0.14)},${n2(h * 0.87)} ${n2(w * 0.06)},${n2(h * 0.86)} 0,${n2(h * 0.9)} Z`;
       case "nota": { const k = Math.min(w, h) * 0.16; return p([[0, 0], [w, 0], [w, h - k], [w - k, h], [0, h]]); }
+      case "clase": case "entidad": case "entidad-debil": return p([[0, 0], [w, 0], [w, h], [0, h]]);
+      case "relacion-debil": return p([[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]]);
+      case "actor": {
+        // Monito de palitos: cabeza, cuerpo, brazos y piernas (el nombre va abajo).
+        const cx = w / 2, r = Math.max(2, Math.min(w * 0.2, h * 0.1)), cy = r + 1, cad = h * 0.5, br = h * 0.3, pie = h * 0.72;
+        return `M${n2(cx + r)},${n2(cy)} A${n2(r)},${n2(r)} 0 1 0 ${n2(cx - r)},${n2(cy)} A${n2(r)},${n2(r)} 0 1 0 ${n2(cx + r)},${n2(cy)} Z M${n2(cx)},${n2(cy + r)} L${n2(cx)},${n2(cad)} M${n2(w * 0.16)},${n2(br)} L${n2(w * 0.84)},${n2(br)} M${n2(cx)},${n2(cad)} L${n2(w * 0.2)},${n2(pie)} M${n2(cx)},${n2(cad)} L${n2(w * 0.8)},${n2(pie)}`;
+      }
+      case "paquete": { const t = Math.min(24, h * 0.22), a = Math.min(w * 0.45, 120); return `M0,0 H${n2(a)} V${n2(t)} H${n2(w)} V${n2(h)} H0 Z`; }
+      case "componente": {
+        const k = Math.min(12, w * 0.08), bh = Math.min(14, h * 0.18), r1 = h * 0.22, r2 = h * 0.58;
+        return p([[k, 0], [w, 0], [w, h], [k, h]]) + " " + p([[0, r1], [k * 2, r1], [k * 2, r1 + bh], [0, r1 + bh]]) + " " + p([[0, r2], [k * 2, r2], [k * 2, r2 + bh], [0, r2 + bh]]);
+      }
+      case "nodo": { const d = Math.min(18, w * 0.12, h * 0.15); return p([[0, d], [w - d, d], [w - d, h], [0, h]]) + " " + p([[0, d], [d, 0], [w, 0], [w - d, d]]) + " " + p([[w - d, d], [w, 0], [w, h - d], [w - d, h]]); }
       case "linea": case "linea-flecha": return `M0,${n2(h / 2)} L${n2(w)},${n2(h / 2)}`;
       default: {
         const k = Math.max(0, Math.min(r == null ? 14 : r, w / 2, h / 2));
@@ -84,25 +140,39 @@
   function estiloFigura(b) {
     const f = b.figura || "rect", lineal = esLinea(f);
     const relleno = lineal || b.relleno === false ? null : b.color || "#E7E5EE";
-    const ancho = lineal ? (b.bordeAncho || 3) : +b.bordeAncho || 0;
+    const ancho = lineal ? (b.bordeAncho || 3) : +b.bordeAncho || (CON_CONTORNO.has(f) ? 2 : 0);
     const trazo = ancho ? b.borde || (lineal ? "#4A4854" : "#2B2A33") : null;
     return { f, lineal, relleno, ancho, trazo, radio: b.radio != null ? +b.radio : f === "rect" ? 14 : f === "burbuja" ? 14 : 0, estilo: b.bordeEstilo || "solido" };
   }
+  /** 8.4 Piezas de una figura: la principal (relleno y contorno) y sus adornos (doble borde, pestaña, centro). */
+  function partesFigura(e, w, h) {
+    const r = [{ d: ruta(e.f, w, h, e.radio), relleno: e.relleno, trazo: e.trazo }];
+    const contorno = (d) => r.push({ d, relleno: null, trazo: e.trazo });
+    const elipse = (x, y, ew, eh) => `M${n2(x)},${n2(y + eh / 2)} A${n2(ew / 2)},${n2(eh / 2)} 0 1 0 ${n2(x + ew)},${n2(y + eh / 2)} A${n2(ew / 2)},${n2(eh / 2)} 0 1 0 ${n2(x)},${n2(y + eh / 2)} Z`;
+    if (e.f === "entidad-debil") contorno(`M6,6 H${n2(w - 6)} V${n2(h - 6)} H6 Z`);
+    if (e.f === "relacion-debil") contorno(`M${n2(w / 2)},8 L${n2(w - 14)},${n2(h / 2)} L${n2(w / 2)},${n2(h - 8)} L14,${n2(h / 2)} Z`);
+    if (e.f === "atributo-multi") contorno(elipse(6, 6, w - 12, h - 12));
+    if (e.f === "final") r.push({ d: elipse(w * 0.22, h * 0.22, w * 0.56, h * 0.56), relleno: e.trazo || "#2B2A33", trazo: null });
+    if (e.f === "paquete") contorno(`M0,${n2(Math.min(24, h * 0.22))} H${n2(Math.min(w * 0.45, 120))}`);
+    return r;
+  }
   function svgFigura(b) {
     const w = Math.max(1, b.w || 1), h = Math.max(1, b.h || 1), e = estiloFigura(b);
-    const dash = e.estilo === "guiones" ? ` stroke-dasharray="${e.ancho * 3} ${e.ancho * 2}"` : e.estilo === "puntos" ? ` stroke-dasharray="0 ${e.ancho * 2}" stroke-linecap="round"` : "";
+    const dash = e.estilo === "guiones" ? ` stroke-dasharray="${e.ancho * 3} ${e.ancho * 2}"` : e.estilo === "puntos" ? ` stroke-dasharray="0 ${e.ancho * 2}"` : "";
+    const tapa = e.estilo === "puntos" || e.f === "actor" ? "round" : "butt";
     const voltear = b.volteoH || b.volteoV ? ` transform="translate(${b.volteoH ? w : 0} ${b.volteoV ? h : 0}) scale(${b.volteoH ? -1 : 1} ${b.volteoV ? -1 : 1})"` : "";
     let extra = "";
     if (e.f === "nota") { const k = Math.min(w, h) * 0.16; extra = `<path d="M${n2(w - k)},${n2(h)} L${n2(w - k)},${n2(h - k)} L${n2(w)},${n2(h - k)} Z" fill="rgba(0,0,0,.12)"/>`; }
     if (e.f === "linea-flecha") { const k = 6 + e.ancho * 2.2; extra = `<path d="M${n2(w - k)},${n2(h / 2 - k * 0.6)} L${n2(w)},${n2(h / 2)} L${n2(w - k)},${n2(h / 2 + k * 0.6)} Z" fill="${esc(e.trazo)}"/>`; }
-    return `<svg class="forma-svg" viewBox="0 0 ${n2(w)} ${n2(h)}" preserveAspectRatio="none" aria-hidden="true"><g${voltear}><path d="${ruta(e.f, w, h, e.radio)}" fill="${e.relleno ? esc(e.relleno) : "none"}" stroke="${e.trazo ? esc(e.trazo) : "none"}" stroke-width="${e.ancho}"${dash} stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${extra}</g></svg>`;
+    const piezas = partesFigura(e, w, h).map((pz) => `<path d="${pz.d}" fill="${pz.relleno ? esc(pz.relleno) : "none"}" stroke="${pz.trazo ? esc(pz.trazo) : "none"}" stroke-width="${e.ancho}"${pz.trazo ? dash : ""} stroke-linejoin="round" stroke-linecap="${tapa}" vector-effect="non-scaling-stroke"/>`).join("");
+    return `<svg class="forma-svg" viewBox="0 0 ${n2(w)} ${n2(h)}" preserveAspectRatio="none" aria-hidden="true"><g${voltear}>${piezas}${extra}</g></svg>`;
   }
   const ALIN = { izq: "left", centro: "center", der: "right" };
   /** ¿El texto se ve en negrita? Si no se eligió: las figuras y los títulos sí; un cuadro de texto normal, no. */
   const enNegrita = (b) => (b.tNegrita != null ? !!b.tNegrita : b.tipo === "forma" || b.estilo === "h1" || b.estilo === "h2");
   function estiloTexto(b, fondo) {
     const s = [];
-    if (b.tColor) s.push(`color:${b.tColor}`); else if (fondo && oscuro(fondo)) s.push("color:#fff");
+    if (b.tColor && colorCss(b.tColor)) s.push(`color:${b.tColor}`); else if (fondo && oscuro(fondo)) s.push("color:#fff");
     if (b.tTam) s.push(`font-size:${+b.tTam}px`);
     if (b.tNegrita === false) s.push("font-weight:500"); else if (b.tNegrita) s.push("font-weight:850");
     if (b.tCursiva) s.push("font-style:italic");
@@ -118,8 +188,8 @@
     const dx = hacia.x - cx, dy = hacia.y - cy;
     if (!dx && !dy) return { x: cx, y: cy };
     let k;
-    if (b.figura === "elipse") k = 1 / Math.sqrt((dx * dx) / ((b.w / 2) ** 2) + (dy * dy) / ((b.h / 2) ** 2));
-    else if (b.figura === "rombo") k = 1 / (Math.abs(dx) / (b.w / 2) + Math.abs(dy) / (b.h / 2));
+    if (b.figura === "elipse" || b.figura === "atributo-multi" || b.figura === "final") k = 1 / Math.sqrt((dx * dx) / ((b.w / 2) ** 2) + (dy * dy) / ((b.h / 2) ** 2));
+    else if (b.figura === "rombo" || b.figura === "relacion-debil") k = 1 / (Math.abs(dx) / (b.w / 2) + Math.abs(dy) / (b.h / 2));
     else k = Math.min(Math.abs((b.w / 2) / (dx || 1e-9)), Math.abs((b.h / 2) / (dy || 1e-9)));
     return { x: cx + dx * k, y: cy + dy * k };
   }
@@ -131,8 +201,95 @@
     return { x1: p1.x + ((p2.x - p1.x) / d) * 2, y1: p1.y + ((p2.y - p1.y) / d) * 2, x2: p2.x - ((p2.x - p1.x) / d) * sep, y2: p2.y - ((p2.y - p1.y) / d) * sep };
   }
   const girar = (x, y, grados) => { const a = (grados * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return { x: x * c - y * s, y: x * s + y * c }; };
-  NOM.geometria = { conector };
-  NOM.figuras = { ruta, svgFigura, estiloFigura, FIGURAS, esLinea, enNegrita };
+  // 8.4 Flechas: recta, en codo o curva; con puntas (de varios tipos), grosor, estilo y texto.
+  const LADOS = {
+    der: (b) => ({ x: b.x + b.w, y: b.y + b.h / 2, nx: 1, ny: 0 }), izq: (b) => ({ x: b.x, y: b.y + b.h / 2, nx: -1, ny: 0 }),
+    abajo: (b) => ({ x: b.x + b.w / 2, y: b.y + b.h, nx: 0, ny: 1 }), arriba: (b) => ({ x: b.x + b.w / 2, y: b.y, nx: 0, ny: -1 }),
+  };
+  /** Los lados que se miran: de lado a lado si están más separadas a lo ancho que a lo alto. */
+  function ladosEntre(a, b) {
+    const dx = b.x + b.w / 2 - (a.x + a.w / 2), dy = b.y + b.h / 2 - (a.y + a.h / 2);
+    const gx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w)), gy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+    const horiz = gx > 0 && gy > 0 ? gx >= gy : gx > 0 ? true : gy > 0 ? false : Math.abs(dx) >= Math.abs(dy);
+    return horiz ? (dx >= 0 ? ["der", "izq"] : ["izq", "der"]) : dy >= 0 ? ["abajo", "arriba"] : ["arriba", "abajo"];
+  }
+  const P2 = (q) => `${n2(q.x)},${n2(q.y)}`;
+  /** Recorrido de una flecha entre dos figuras: el trazo, sus puntas y el punto medio (para el texto). */
+  function rutaConector(a, b, c) {
+    c = c || {};
+    const forma = c.ruta || "recta", g = Math.max(1, +c.grosor || 2);
+    const pIni = c.puntas === "inicio" || c.puntas === "ambas", pFin = !c.puntas || c.puntas === "fin" || c.puntas === "ambas";
+    const L = 7 + g * 2.4, sepI = pIni ? 5 : 2, sepF = pFin ? 5 : 2;
+    let pts;
+    if (forma === "recta") {
+      const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 }, cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+      const p1 = borde(a, cb), p2 = borde(b, ca), d = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1, ux = (p2.x - p1.x) / d, uy = (p2.y - p1.y) / d;
+      pts = [{ x: p1.x + ux * sepI, y: p1.y + uy * sepI }, { x: p2.x - ux * sepF, y: p2.y - uy * sepF }];
+    } else {
+      const [la, lb] = ladosEntre(a, b), s0 = LADOS[la](a), t0 = LADOS[lb](b);
+      const p1 = { x: s0.x + s0.nx * sepI, y: s0.y + s0.ny * sepI }, p2 = { x: t0.x + t0.nx * sepF, y: t0.y + t0.ny * sepF };
+      if (forma === "codo") {
+        if (s0.nx) { const mx = (p1.x + p2.x) / 2; pts = [p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2]; }
+        else { const my = (p1.y + p2.y) / 2; pts = [p1, { x: p1.x, y: my }, { x: p2.x, y: my }, p2]; }
+      } else {
+        const k = Math.max(30, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.42);
+        pts = [p1, { x: p1.x + s0.nx * k, y: p1.y + s0.ny * k }, { x: p2.x + t0.nx * k, y: p2.y + t0.ny * k }, p2];
+      }
+    }
+    const n = pts.length, q = pts.map((x) => ({ x: x.x, y: x.y })), puntas = [];
+    const vecino = (i, paso) => { let j = i + paso; while (j > 0 && j < n - 1 && Math.hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y) < 0.5) j += paso; return pts[Math.max(0, Math.min(n - 1, j))]; };
+    const dir = (de, a2) => { const d = Math.hypot(a2.x - de.x, a2.y - de.y) || 1; return { x: (a2.x - de.x) / d, y: (a2.y - de.y) / d }; };
+    const tipo = c.tipoPunta || "triangulo";
+    // La línea se acorta para no salirse de la punta (las puntas abiertas no la tapan).
+    const corte = tipo === "abierta" ? 0 : tipo === "rombo" || tipo === "rombo-hueco" ? 1.6 : tipo === "circulo" ? 0.9 : 0.75;
+    const ponerPunta = (i, u) => {
+      puntas.push(punta(pts[i], u, L, tipo));
+      q[i] = { x: pts[i].x - u.x * L * corte, y: pts[i].y - u.y * L * corte };
+      if (forma === "curva") { const j = i === 0 ? 1 : n - 2; q[j] = { x: pts[j].x - u.x * L * corte, y: pts[j].y - u.y * L * corte }; }
+    };
+    if (pFin) ponerPunta(n - 1, dir(vecino(n - 1, -1), pts[n - 1]));
+    if (pIni) ponerPunta(0, dir(vecino(0, 1), pts[0]));
+    const d = forma === "curva" ? `M${P2(q[0])} C${P2(q[1])} ${P2(q[2])} ${P2(q[3])}` : "M" + q.map(P2).join(" L");
+    const medio = forma === "curva" ? { x: (pts[0].x + 3 * pts[1].x + 3 * pts[2].x + pts[3].x) / 8, y: (pts[0].y + 3 * pts[1].y + 3 * pts[2].y + pts[3].y) / 8 }
+      : forma === "codo" ? { x: (pts[1].x + pts[2].x) / 2, y: (pts[1].y + pts[2].y) / 2 } : { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    return { d, puntas, medio, pts, ini: pts[0], fin: pts[n - 1], dirIni: dir(vecino(0, 1), pts[0]), dirFin: dir(vecino(n - 1, -1), pts[n - 1]) };
+  }
+  /** Punta en tip (u: hacia dónde apunta): triángulo, triángulo hueco (herencia), abierta, rombo o círculo. */
+  function punta(tip, u, L, tipo) {
+    const v = { x: -u.y, y: u.x }, an = L * 0.42;
+    const en = (k, m) => `${n2(tip.x - u.x * L * k + v.x * an * m)},${n2(tip.y - u.y * L * k + v.y * an * m)}`;
+    if (tipo === "abierta") return { d: `M${en(1, 1)} L${n2(tip.x)},${n2(tip.y)} L${en(1, -1)}`, hueca: true, abierta: true };
+    if (tipo === "rombo" || tipo === "rombo-hueco") return { d: `M${n2(tip.x)},${n2(tip.y)} L${en(0.8, 0.85)} L${en(1.6, 0)} L${en(0.8, -0.85)} Z`, hueca: tipo === "rombo-hueco" };
+    if (tipo === "circulo") { const r = L * 0.42, cx = tip.x - u.x * r, cy = tip.y - u.y * r; return { d: `M${n2(cx + r)},${n2(cy)} A${n2(r)},${n2(r)} 0 1 0 ${n2(cx - r)},${n2(cy)} A${n2(r)},${n2(r)} 0 1 0 ${n2(cx + r)},${n2(cy)} Z`, hueca: false }; }
+    return { d: `M${n2(tip.x)},${n2(tip.y)} L${en(1, 1)} L${en(1, -1)} Z`, hueca: tipo === "hueco" };
+  }
+  /** SVG de una flecha (lo usan el lienzo, la diapositiva al presentar y lo que se exporta). */
+  function svgConector(c, a, b, opc) {
+    opc = opc || {};
+    const r = rutaConector(a, b, c), g = Math.max(1, +c.grosor || 2);
+    const col = c.color && colorCss(c.color) ? c.color : opc.color || "#4A4854", fondo = opc.fondo || "#FFFFFF", tinta = opc.tinta || "#1F1E26";
+    const dash = c.estilo === "guiones" ? `stroke-dasharray:${g * 4} ${g * 3};` : c.estilo === "puntos" ? `stroke-dasharray:0.1 ${g * 2.6};stroke-linecap:round;` : "";
+    let s = opc.toque ? `<path class="toque" d="${r.d}"/>` : "";
+    if (opc.sel) s += `<path class="halo" d="${r.d}" style="stroke:var(--m-diag);stroke-width:${g + 8}px;opacity:.28;fill:none"/>`;
+    s += `<path class="linea" d="${r.d}" style="stroke:${col};stroke-width:${g}px;fill:none;${dash}"/>`;
+    r.puntas.forEach((pt) => (s += `<path class="punta" d="${pt.d}" style="fill:${pt.abierta ? "none" : pt.hueca ? fondo : col};stroke:${col};stroke-width:${pt.hueca ? Math.max(1.5, g * 0.8) : 1}px;stroke-linejoin:round;stroke-linecap:round"/>`));
+    const etiqueta = (t, x, y, chico) => {
+      const tx = String(t).slice(0, 80), fs = chico ? 12 : 13, w = Math.min(340, tx.length * (chico ? 6.8 : 7.3) + (chico ? 10 : 18)), h = chico ? 20 : 24;
+      return `<g class="etq"><rect x="${n2(x - w / 2)}" y="${n2(y - h / 2)}" width="${n2(w)}" height="${h}" rx="${h / 2}" style="fill:${fondo};stroke:${chico ? "none" : col};stroke-width:1px"/><text x="${n2(x)}" y="${n2(y + fs * 0.35)}" text-anchor="middle" style="fill:${tinta};font:700 ${fs}px Nunito, system-ui, sans-serif">${esc(tx)}</text></g>`;
+    };
+    if (c.etiqueta) s += etiqueta(c.etiqueta, r.medio.x, r.medio.y);
+    // Textos cerca de cada punta (por ejemplo, la cardinalidad 1 y N).
+    const cerca = (pt, u, t) => etiqueta(t, pt.x - u.x * 24 - u.y * 14, pt.y - u.y * 24 + u.x * 14, true);
+    if (c.etqIni) s += cerca(r.ini, r.dirIni, c.etqIni);
+    if (c.etqFin) s += cerca(r.fin, r.dirFin, c.etqFin);
+    return s;
+  }
+  const ESTILOS_FLECHA = [["solido", "Sólida", "minus"], ["guiones", "Con guiones", "square-dashed"], ["puntos", "Con puntos", "more-horizontal"]];
+  const PUNTAS = [["fin", "Al final", "arrow-right"], ["inicio", "Al inicio", "arrow-left"], ["ambas", "En los dos lados", "arrow-left-right"], ["ninguna", "Sin punta", "minus"]];
+  const TIPOS_PUNTA = [["triangulo", "Triángulo"], ["abierta", "Abierta"], ["hueco", "Triángulo hueco (herencia)"], ["rombo", "Rombo (composición)"], ["rombo-hueco", "Rombo hueco (agregación)"], ["circulo", "Círculo"]];
+  const RUTAS = [["recta", "Recta", "move-right"], ["codo", "En codo", "corner-down-right"], ["curva", "Curva", "spline"]];
+  NOM.geometria = { conector, rutaConector, svgConector };
+  NOM.figuras = { iconoSeguro: (b) => iconoSeguro(b), ruta, svgFigura, estiloFigura, partesFigura, FIGURAS, FIGURAS_UML, FIGURAS_ER, FIGURAS_RED, PRESETS, COMPARTIMENTOS, compartimentos, esLinea, enNegrita };
   // Lo que usa la pantalla del proyector (proyector.js) para pintar diapositivas.
   NOM.lienzoVista = { htmlDiapositiva: (...a) => htmlDiapositiva(...a), pasosDe: (...a) => pasosDe(...a), bloquesPresentables: (...a) => bloquesPresentables(...a), ANCHO, ALTO, tam: tamDoc,
     estadoAnimaciones: (...a) => estadoAnimaciones(...a), contenido: (b) => contenido(b) };
@@ -175,13 +332,39 @@
     if (b.mascara) return `<div class="libre-imagen-marco" style="${marco.join(";")}"><img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="object-fit:cover;border-radius:0;${s.join(";")}"></div>`;
     return `<img class="libre-imagen" src="${esc(b.src)}" alt="${esc(b.alt || "")}" draggable="false" style="${marco.concat(s).join(";")}">`;
   }
+  /**
+   * El dibujo de un ícono: el de la biblioteca local si se conoce, o el guardado pero limpio (solo
+   * figuras con números: nada de scripts, enlaces ni objetos ajenos aunque alguien altere el documento).
+   */
+  const SVG_OK = { path: ["d"], circle: ["cx", "cy", "r"], ellipse: ["cx", "cy", "rx", "ry"], rect: ["x", "y", "width", "height", "rx", "ry"], line: ["x1", "y1", "x2", "y2"], polyline: ["points"], polygon: ["points"] };
+  const iconosLimpios = new Map();
+  function iconoSeguro(b) {
+    const lib = NOM.iconos && b && b.nombre ? NOM.iconos.LISTA.find((x) => x.id === b.nombre) : null;
+    const crudo = String((lib && lib.svg) || (b && b.svg) || "");
+    if (iconosLimpios.has(crudo)) return iconosLimpios.get(crudo);
+    let r = "";
+    try {
+      const d = new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${crudo}</svg>`, "image/svg+xml");
+      (function rec(n) {
+        for (const c of [...n.children]) {
+          const ok = SVG_OK[c.localName];
+          if (ok) r += `<${c.localName}` + ok.filter((a) => c.hasAttribute(a) && /^[-0-9.,\sMmLlHhVvCcSsQqTtAaZzEe]{0,4000}$/.test(c.getAttribute(a))).map((a) => ` ${a}="${c.getAttribute(a)}"`).join("") + "/>";
+          else if (c.localName === "g") rec(c);
+        }
+      })(d.documentElement);
+    } catch (e) { r = ""; }
+    if (iconosLimpios.size > 500) iconosLimpios.clear();
+    iconosLimpios.set(crudo, r);
+    return r;
+  }
   function contenido(b) {
     const D = NOM.diapo;
     if (b.tipo === "texto") return `<div class="libre-texto" data-estilo="${esc(b.estilo || "p")}" data-ph="${esc(b.ph || "Escribe aquí")}" style="${estiloTexto(b)}">${D ? D.htmlRico(b.html) : htmlSeguro(b.html)}</div>`;
     if (b.tipo === "forma") {
       const e = estiloFigura(b);
-      const txt = b.html && D ? D.htmlRico(b.html) : esc(b.texto || "");
-      return `<div class="forma" data-figura="${esc(e.f)}">${svgFigura(b)}${e.lineal ? "" : `<div class="txt" data-ph="Texto" style="${estiloTexto(b, e.relleno)}">${txt}</div>`}</div>`;
+      const cm = COMPARTIMENTOS.has(e.f);
+      const txt = cm ? compartimentos(e.f, b.texto) : b.html && D ? D.htmlRico(b.html) : esc(b.texto || "");
+      return `<div class="forma" data-figura="${esc(e.f)}"${cm ? ` style="--cm-borde:${esc(e.trazo || "#2B2A33")}"` : ""}>${svgFigura(b)}${e.lineal ? "" : `<div class="txt" data-ph="Texto" style="${estiloTexto(b, e.relleno)}">${txt}</div>`}</div>`;
     }
     if (b.tipo === "imagen") {
       if (!b.src) return `<div class="libre-hueco">${NOM.ico("image", "ico-l")}<span>${esc(b.ph || "Toca dos veces para poner una imagen")}</span></div>`;
@@ -200,7 +383,7 @@
       return `<div class="libre-tabla"><table>${filas || "<tr><td>Tabla vacía</td></tr>"}</table></div>`;
     }
     if (b.tipo === "grafica" && !b.hoja && D) return `<div class="libre-grafica">${D.graficaHtml(b)}</div>`;
-    if (b.tipo === "icono") return `<svg class="libre-icono" viewBox="0 0 24 24" fill="none" stroke="${esc(b.color || "#2B2A33")}" stroke-width="${+b.grosor || 2}" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${b.svg || ""}</svg>`;
+    if (b.tipo === "icono") return `<svg class="libre-icono" viewBox="0 0 24 24" fill="none" stroke="${esc(b.color || "#2B2A33")}" stroke-width="${+b.grosor || 2}" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${iconoSeguro(b)}</svg>`;
     if (b.tipo === "ecuacion") return `<div class="libre-ecuacion" style="${estiloTexto(b)}">${NOM.ecuaciones ? NOM.ecuaciones.html(b.tex || "", true) : esc(b.tex || "")}</div>`;
     return `<div class="libre-ajeno">${esc(b.tipo)}</div>`;
   }
@@ -328,6 +511,17 @@
     }
     const barra = html(`<div class="lz-barra" role="toolbar" aria-label="Opciones de la selección" hidden></div>`);
     capa.append(barra);
+    // 8.4 Cuadrícula con ajuste: preferencia de cada persona en este equipo (pizarrón: 24 px; diapositiva: 20 px).
+    const PASO = acotado ? 20 : 24;
+    let cuadricula = !!NOM.leer("nom.cuadricula", false);
+    const aRejilla = (v) => Math.round(v / PASO) * PASO;
+    capa.classList.toggle("con-cuadricula", cuadricula);
+    function fijarCuadricula(on) {
+      cuadricula = !!on;
+      NOM.guardar("nom.cuadricula", cuadricula);
+      capa.classList.toggle("con-cuadricula", cuadricula);
+      aviso(cuadricula ? "Las figuras se ajustan a la cuadrícula (con Alt, libres)" : "Ajuste a la cuadrícula apagado", { ms: 1800 });
+    }
 
     // ------------------------------------------------------------ transformaciones
     function aplicarVista() {
@@ -413,7 +607,11 @@
       });
       pintarConectores(bs, mapa);
       pintarCajaGrupo();
-      if (editando) { const el = mundo.querySelector(`[data-id="${editando}"] .txt, [data-id="${editando}"] .libre-texto`); if (el) activarEdicion(el, false); }
+      if (editando) {
+        const el = mundo.querySelector(`[data-id="${editando}"] .txt, [data-id="${editando}"] .libre-texto`), be = doc().bloque(editando);
+        if (el && be && be.tipo === "forma" && COMPARTIMENTOS.has(be.figura)) { el.textContent = be.texto || ""; el.classList.add("cm-editando"); }
+        if (el) activarEdicion(el, false);
+      }
       ed.pintarPresencia();
       pintarBarra();
       pintarMultiple();
@@ -438,12 +636,9 @@
     }
     function pintarConectores(bs, mapa) {
       const cs = bs.filter((b) => b.tipo === "conector" && mapa[b.desde] && mapa[b.hasta]);
-      const defs = `<defs><marker id="flecha" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--tinta-2);stroke:none"/></marker></defs>`;
-      svg.innerHTML = defs + cs.map((c) => {
-        const p = conector(mapa[c.desde], mapa[c.hasta]);
-        const d = `M${p.x1},${p.y1} L${p.x2},${p.y2}`;
-        return `<g data-conector="${esc(c.id)}" style="color:var(${c.id === selConector ? "--m-diag" : "--tinta-2"})"><path class="toque" d="${d}"/><path class="${c.id === selConector ? "sel" : ""}" d="${d}" marker-end="url(#flecha)"/></g>`;
-      }).join("");
+      // En el pizarrón la flecha toma la tinta del tema (claro u oscuro); en la diapositiva, gris oscuro.
+      const base = acotado ? { color: "#4A4854" } : { color: "var(--tinta-2)", fondo: "var(--sup-2)", tinta: "var(--tinta)" };
+      svg.innerHTML = cs.map((c) => `<g data-conector="${esc(c.id)}">${svgConector(c, mapa[c.desde], mapa[c.hasta], Object.assign({ sel: c.id === selConector, toque: true }, base))}</g>`).join("");
     }
     function moverVisual(id, b) {
       const el = mundo.querySelector(`.bl[data-id="${id}"]`);
@@ -598,6 +793,8 @@
       editando = id;
       barra.hidden = true;
       const el = mundo.querySelector(`[data-id="${id}"] .txt, [data-id="${id}"] .libre-texto`);
+      // 8.4 Clase y entidad: se editan como texto simple (una línea por atributo o método).
+      if (el && b.tipo === "forma" && COMPARTIMENTOS.has(b.figura)) { el.textContent = b.texto || ""; el.classList.add("cm-editando"); }
       if (el) activarEdicion(el);
     }
     function terminarEdicion() {
@@ -614,7 +811,7 @@
       if (D && !D.textoPlano(h)) h = "";
       if (b.tipo === "forma") {
         const t = D ? D.textoPlano(h) : el.innerText.trim();
-        const conFormato = D && /<(b|i|u|s|span|ul|ol|div|a|sub|sup)\b/.test(h);
+        const conFormato = D && !COMPARTIMENTOS.has(b.figura) && /<(b|i|u|s|span|ul|ol|div|a|sub|sup)\b/.test(h);
         if (t !== (b.texto || "") || (conFormato ? h : null) !== (b.html || null)) doc().cambiar(id, { texto: t, html: conFormato ? h : null });
       } else if (h !== (b.html || "")) doc().cambiar(id, { html: h });
       pintarBarra();
@@ -633,11 +830,55 @@
       const campos = Object.assign({ tipo, pagina: ed.pagina, orden: Date.now() % 1e9 / 1e6, x: Math.round(p.x - tam[0] / 2), y: Math.round(p.y - tam[1] / 2), w: tam[0], h: tam[1], z: zMax + 1 }, extra || {});
       if (tipo === "texto") Object.assign(campos, { html: "", estilo: acotado ? "h2" : "p" });
       if (tipo === "forma" && !campos.color && !esLinea(fig)) campos.color = fig === "nota" ? "#FFF1B8" : "#CFE0FF";
+      if (cuadricula) { campos.x = aRejilla(campos.x); campos.y = aRejilla(campos.y); }
+      const sinEditar = campos.sinEditar; delete campos.sinEditar;
       doc().cambiar(id, campos);
       sel = new Set([id]); ed.seleccionar(id);
       render();
-      if (tipo === "texto" || (tipo === "forma" && !esLinea(fig))) editar(id);
+      if (!sinEditar && (tipo === "texto" || (tipo === "forma" && !esLinea(fig)))) editar(id);
       return id;
+    }
+    /** 8.4 Figura lista de UML, entidad-relación o de redes (un ícono), en el punto dado o al centro. */
+    function crearPreset(clave, en) {
+      const p = en || (acotado ? { x: W() / 2, y: H() / 2 } : centroVista());
+      if (clave.startsWith("red:")) {
+        const ic = NOM.iconos && NOM.iconos.LISTA.find((x) => x.id === clave.slice(4));
+        if (!ic) return null;
+        const nuevoId = crear("icono", { svg: ic.svg, nombre: ic.id, color: "#2B2A33", grosor: 2, w: 90, h: 90, x: Math.round(p.x - 45), y: Math.round(p.y - 45), sinEditar: true }, p);
+        if (nuevoId && NOM.diapo) NOM.diapo.iconoPng(ic.svg, "#2B2A33", 2).then((png) => { if (png && doc().vivo(nuevoId)) doc().cambiar(nuevoId, { png }, { deshacible: false }); });
+        return nuevoId;
+      }
+      const pr = PRESETS[clave];
+      if (!pr) return null;
+      return crear("forma", Object.assign({}, pr, { x: Math.round(p.x - pr.w / 2), y: Math.round(p.y - pr.h / 2), sinEditar: !pr.texto }), p);
+    }
+    /**
+     * 8.4 Varios bloques de una vez (diagramas listos, texto a diagrama): centrados donde se pide y
+     * elegidos para moverlos juntos. uniones: [[índice desde, índice hasta, { ruta, puntas, etiqueta… }]].
+     */
+    function insertarBloques(lista, uniones, en) {
+      const dp = paginaAjena();
+      if (dp) { aviso(`Esta diapositiva es de ${ed.nombreDe(dp)}: solo esa persona (o el propietario del espacio) agrega cosas aquí`, { tipo: "info", ms: 3500 }); return []; }
+      if (!lista || !lista.length || ed.soloLectura) return [];
+      const x1 = Math.min(...lista.map((b) => b.x)), y1 = Math.min(...lista.map((b) => b.y));
+      const x2 = Math.max(...lista.map((b) => b.x + b.w)), y2 = Math.max(...lista.map((b) => b.y + b.h));
+      const c = en || (acotado ? { x: W() / 2, y: H() / 2 } : centroVista());
+      // En la diapositiva, lo que no cabe se achica para que quepa.
+      const k = acotado ? Math.min(1, (W() - 40) / (x2 - x1 || 1), (H() - 40) / (y2 - y1 || 1)) : 1;
+      let dx = c.x - ((x1 + x2) / 2) * k, dy = c.y - ((y1 + y2) / 2) * k;
+      if (cuadricula) { dx = aRejilla(dx); dy = aRejilla(dy); }
+      const zMax = Math.max(0, ...bloques().map((b) => b.z || 0)), base = Date.now() % 1e9 / 1e6;
+      const ids = lista.map(() => NOM.DocCRDT.nuevoId());
+      doc().lote(() => {
+        lista.forEach((b, i) => {
+          const campos = Object.assign({}, b, { pagina: ed.pagina, orden: base + i / 1000, z: zMax + 1 + i, x: Math.round(b.x * k + dx), y: Math.round(b.y * k + dy), w: Math.max(4, Math.round(b.w * k)), h: Math.max(4, Math.round(b.h * k)) });
+          if (k < 1) campos.tTam = Math.max(9, Math.round((b.tTam || (b.tipo === "texto" ? 22 : 16)) * k));
+          doc().cambiar(ids[i], campos);
+        });
+        (uniones || []).forEach(([a, b2, o]) => { if (ids[a] && ids[b2]) doc().cambiar(NOM.DocCRDT.nuevoId(), Object.assign({ tipo: "conector", desde: ids[a], hasta: ids[b2], pagina: ed.pagina, orden: 0 }, o || {})); });
+      });
+      seleccionar(ids);
+      return ids;
     }
     function centroVista() {
       const r = capa.getBoundingClientRect();
@@ -803,8 +1044,91 @@
     }
 
     // ------------------------------------------------------------ barra contextual (como la de Canva)
+    /** 8.4 Opciones de la flecha elegida: color, texto, grosor, estilo, puntas y forma. */
+    function pintarBarraConector() {
+      const c = doc().bloque(selConector) || {};
+      const btn = (a, i, t) => `<button class="icono-btn" data-a="${a}" aria-label="${esc(t.split("|")[0])}" data-micro="${esc(t)}">${i}</button>`;
+      if (!puedoEditar(c)) { barra.innerHTML = `<span class="lz-ajeno">${ico("lock", "ico-s")} ${esc(motivoAjeno(c) || "")}</span>`; barra.hidden = false; return; }
+      barra.innerHTML = [
+        `<button class="lz-color" data-a="c-color" aria-label="Color de la flecha" data-micro="Color de la flecha" style="--c:${esc(c.color || (acotado ? "#4A4854" : "var(--tinta-2)"))}"><span></span></button>`,
+        btn("c-texto", ico("type"), "Texto de la flecha|En medio o cerca de cada punta (1, N…). También con doble clic."),
+        btn("c-grosor", ico("minus"), "Grosor"),
+        btn("c-estilo", ico("square-dashed"), "Estilo|Sólida, con guiones o con puntos."),
+        btn("c-puntas", ico("arrow-left-right"), "Puntas|Dónde va la punta y de qué tipo (herencia, composición…)."),
+        btn("c-ruta", ico(c.ruta === "codo" ? "corner-down-right" : c.ruta === "curva" ? "spline" : "move-right"), "Forma|Recta, en codo o curva."),
+        btn("c-invertir", ico("repeat"), "Cambiar la dirección"),
+        '<span class="sep"></span>',
+        btn("c-eliminar", ico("trash-2"), "Eliminar|Supr"),
+      ].join("");
+      barra.hidden = false;
+    }
+    function cambiarConector(campos, id) {
+      id = id || selConector;
+      if (!id || !doc().vivo(id) || ed.soloLectura) return;
+      doc().cambiar(id, campos, { grupo: "flecha-" + id });
+      render();
+    }
+    function menuPuntas(ancla, c, id) {
+      NOM.menu(ancla, [{ titulo: "Dónde" }, ...PUNTAS.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.puntas || "fin") === v, fn: () => cambiarConector({ puntas: v === "fin" ? null : v }, id) })),
+        "-", { titulo: "Tipo de punta" }, ...TIPOS_PUNTA.map(([v, t]) => ({ texto: t, marcado: (c.tipoPunta || "triangulo") === v, fn: () => cambiarConector({ tipoPunta: v === "triangulo" ? null : v, puntas: (c.puntas || "fin") === "ninguna" ? null : c.puntas || null }, id) }))]);
+    }
+    function accionConector(a, ancla) {
+      const id = selConector, c = doc().bloque(id);
+      if (!c) return;
+      switch (a) {
+        case "color": paletaColores(ancla, c.color, (col) => cambiarConector({ color: col || null }, id), { titulo: "Color de la flecha", sinColor: "Automático" }); break;
+        case "texto": editarEtiqueta(id); break;
+        case "grosor": deslizador(ancla, "Grosor", +c.grosor || 2, 1, 12, 1, " px", (v) => cambiarConector({ grosor: v === 2 ? null : v }, id)); break;
+        case "estilo": NOM.menu(ancla, ESTILOS_FLECHA.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.estilo || "solido") === v, fn: () => cambiarConector({ estilo: v === "solido" ? null : v }, id) }))); break;
+        case "puntas": menuPuntas(ancla, c, id); break;
+        case "ruta": NOM.menu(ancla, RUTAS.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.ruta || "recta") === v, fn: () => cambiarConector({ ruta: v === "recta" ? null : v }, id) }))); break;
+        case "invertir": cambiarConector({ desde: c.hasta, hasta: c.desde, etqIni: c.etqFin || null, etqFin: c.etqIni || null }, id); break;
+        case "eliminar": eliminar(); break;
+      }
+    }
+    /** Texto de la flecha: en medio y, si se quiere, cerca de cada punta (cardinalidad 1, N, *…). */
+    function editarEtiqueta(id) {
+      const c = doc().bloque(id);
+      if (!c || ed.soloLectura) return;
+      if (!puedoEditar(c)) { aviso(motivoAjeno(c), { tipo: "info" }); return; }
+      const cuerpo = html(`<form class="col">
+        <div class="campo"><label for="fl-m">En medio</label><div class="entrada"><input id="fl-m" data-k="etiqueta" maxlength="80" placeholder="Por ejemplo: sí, no, tiene, después de…" value="${esc(c.etiqueta || "")}" autocomplete="off"></div></div>
+        <div class="fila" style="gap:10px"><div class="campo crece"><label for="fl-i">Cerca del inicio</label><div class="entrada"><input id="fl-i" data-k="etqIni" maxlength="12" placeholder="1" value="${esc(c.etqIni || "")}" autocomplete="off"></div></div>
+        <div class="campo crece"><label for="fl-f">Cerca del final</label><div class="entrada"><input id="fl-f" data-k="etqFin" maxlength="12" placeholder="N" value="${esc(c.etqFin || "")}" autocomplete="off"></div></div></div>
+        <p class="suave chico" style="margin:0">Los textos de las puntas sirven para la cardinalidad (1, N, 0..*) en diagramas de clases y de entidad-relación.</p></form>`);
+      const pie = html(`<div style="display:contents"><button class="btn" type="button" data-no>Cancelar</button><button class="btn primario" data-si>Listo</button></div>`);
+      const h = NOM.hoja({ titulo: "Texto de la flecha", icono: "type", cuerpo, pie });
+      setTimeout(() => { const x = $("#fl-m", cuerpo); if (x) { x.focus(); x.select(); } }, 60);
+      const guardar = (e) => {
+        e && e.preventDefault();
+        const campos = {};
+        $$("[data-k]", cuerpo).forEach((x) => (campos[x.dataset.k] = x.value.trim() || null));
+        h.cerrar();
+        if (doc().vivo(id)) { doc().cambiar(id, campos); render(); }
+      };
+      cuerpo.onsubmit = guardar;
+      $("[data-si]", pie).onclick = guardar;
+      $("[data-no]", pie).onclick = () => h.cerrar();
+    }
+    function accionesConector() {
+      const id = selConector, c = doc().bloque(id) || {};
+      const cc = (campos) => () => cambiarConector(campos, id);
+      const tonos = COLORES.filter((_, i) => [4, 8, 12, 19, 23, 27].includes(i));
+      return [
+        { texto: "Texto", icono: "type", fn: () => editarEtiqueta(id) },
+        { texto: "Color", icono: "palette", sub: tonos.map((col) => ({ texto: col, corto: " ", color: col, mantener: true, fn: cc({ color: col }) })) },
+        { texto: "Eliminar", icono: "trash-2", fn: eliminar },
+        { texto: "Grosor", icono: "minus", sub: [1, 2, 3, 5, 8].map((g) => ({ texto: g + " px", marcado: (+c.grosor || 2) === g, fn: cc({ grosor: g === 2 ? null : g }) })) },
+        { texto: "Estilo", icono: "square-dashed", sub: ESTILOS_FLECHA.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.estilo || "solido") === v, fn: cc({ estilo: v === "solido" ? null : v }) })) },
+        { texto: "Puntas", icono: "arrow-left-right", sub: PUNTAS.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.puntas || "fin") === v, fn: cc({ puntas: v === "fin" ? null : v }) }))
+          .concat([{ texto: "Tipo de punta", corto: "Tipo", icono: "shapes", sub: TIPOS_PUNTA.map(([v, t]) => ({ texto: t, marcado: (c.tipoPunta || "triangulo") === v, fn: cc({ tipoPunta: v === "triangulo" ? null : v }) })) }]) },
+        { texto: "Forma", icono: "spline", sub: RUTAS.map(([v, t, i]) => ({ texto: t, icono: i, marcado: (c.ruta || "recta") === v, fn: cc({ ruta: v === "recta" ? null : v }) })) },
+        { texto: "Invertir", icono: "repeat", fn: cc({ desde: c.hasta, hasta: c.desde, etqIni: c.etqFin || null, etqFin: c.etqIni || null }) },
+      ];
+    }
     function pintarBarra() {
-      if (ed.soloLectura || !sel.size || gesto || editando) { barra.hidden = true; return; }
+      if (ed.soloLectura || gesto || editando) { barra.hidden = true; return; }
+      if (!sel.size) { if (selConector && doc().vivo(selConector)) pintarBarraConector(); else barra.hidden = true; return; }
       const bs = seleccionados();
       if (!bs.length) { barra.hidden = true; return; }
       const formas = bs.filter((b) => b.tipo === "forma"), imgs = bs.filter((b) => b.tipo === "imagen"), textos = bs.filter((b) => b.tipo === "texto");
@@ -846,6 +1170,7 @@
     barra.addEventListener("click", (e) => {
       const b = e.target.closest("[data-a]");
       if (!b) return;
+      if (b.dataset.a.startsWith("c-")) { accionConector(b.dataset.a.slice(2), b); return; }
       const bs = editables(), b0 = bs[0] || {};
       const grupo = { grupo: "barra-" + [...sel].join(",") };
       switch (b.dataset.a) {
@@ -873,7 +1198,7 @@
           if (!c) return;
           const ics = editables().filter((x) => x.tipo === "icono");
           cambiarSel({ color: c }, grupo);
-          ics.forEach((x) => NOM.diapo.iconoPng(x.svg, c, x.grosor).then((png) => { if (png && doc().vivo(x.id)) doc().cambiar(x.id, { png }, { deshacible: false }); }));
+          ics.forEach((x) => NOM.diapo.iconoPng(iconoSeguro(x), c, x.grosor).then((png) => { if (png && doc().vivo(x.id)) doc().cambiar(x.id, { png }, { deshacible: false }); }));
         }, { titulo: "Color del ícono" }); break;
       }
     });
@@ -1131,8 +1456,10 @@
         if (!gesto.movido && Math.abs(dx) + Math.abs(dy) < 3 / zoomActual()) return;
         if (!gesto.movido) { gesto.movido = true; barra.hidden = true; }
         let mx = dx, my = dy;
-        const g = e.altKey ? null : imantar({ x: gesto.caja0.x + dx, y: gesto.caja0.y + dy, w: gesto.caja0.w, h: gesto.caja0.h }, new Set(gesto.ids));
+        // 8.4 Con la cuadrícula prendida, la esquina de lo que se mueve cae en ella (con Alt, libre).
+        const g = e.altKey || cuadricula ? null : imantar({ x: gesto.caja0.x + dx, y: gesto.caja0.y + dy, w: gesto.caja0.w, h: gesto.caja0.h }, new Set(gesto.ids));
         if (g) { mx += g.dx; my += g.dy; }
+        if (cuadricula && !e.altKey) { mx = aRejilla(gesto.caja0.x + dx) - gesto.caja0.x; my = aRejilla(gesto.caja0.y + dy) - gesto.caja0.y; }
         pintarGuias(g);
         gesto.b = {};
         gesto.ids.forEach((id) => { const b0 = gesto.b0[id]; gesto.b[id] = { x: Math.round(b0.x + mx), y: Math.round(b0.y + my), w: b0.w, h: b0.h }; moverVisual(id, gesto.b[id]); });
@@ -1150,6 +1477,12 @@
         const cxL = ax != null ? ax + Math.sign(loc.x - ax || 1) * w / 2 : 0, cyL = ay != null ? ay + Math.sign(loc.y - ay || 1) * h / 2 : 0;
         const cw = girar(cxL, cyL, b0.rot);
         const nb = { x: Math.round(c0.x + cw.x - w / 2), y: Math.round(c0.y + cw.y - h / 2), w: Math.round(w), h: Math.round(h) };
+        if (cuadricula && !e.altKey && !b0.rot) {
+          if (t.includes("e")) nb.w = Math.max(PASO, aRejilla(nb.x + nb.w) - nb.x);
+          if (t.includes("s")) nb.h = Math.max(PASO / 2, aRejilla(nb.y + nb.h) - nb.y);
+          if (t.includes("w")) { const der = nb.x + nb.w; nb.x = aRejilla(nb.x); nb.w = Math.max(PASO, der - nb.x); }
+          if (t.includes("n")) { const ab = nb.y + nb.h; nb.y = aRejilla(nb.y); nb.h = Math.max(PASO / 2, ab - nb.y); }
+        }
         gesto.b = nb;
         moverVisual(gesto.id, nb);
         conectoresVisuales({ [gesto.id]: nb });
@@ -1210,7 +1543,11 @@
     }
     superficie.addEventListener("pointerup", finGesto);
     superficie.addEventListener("pointercancel", finGesto);
-    superficie.addEventListener("dblclick", (e) => { const bl = e.target.closest(".bl"); if (bl) abrirBloque(bl.dataset.id); });
+    superficie.addEventListener("dblclick", (e) => {
+      const cn = e.target.closest("[data-conector]");
+      if (cn) { editarEtiqueta(cn.dataset.conector); return; }
+      const bl = e.target.closest(".bl"); if (bl) abrirBloque(bl.dataset.id);
+    });
     /** Doble clic (o "Editar"): texto, datos de la tabla o gráfica, la imagen de un hueco o la ecuación. */
     async function abrirBloque(id) {
       const b = doc().bloque(id);
@@ -1467,6 +1804,13 @@
       // La ruedita toma el gesto: lo que había empezado (mover, recuadro) se cancela.
       if (gesto) { const g = gesto; gesto = null; capa.classList.remove("arrastrando"); marco.hidden = true; pintarGuias(null); if (g.tipo === "mover") render(); }
       punteros.clear();
+      // 8.4 Ruedita de una flecha.
+      const cn = e.target.closest && e.target.closest("[data-conector]");
+      if (cn && doc().vivo(cn.dataset.conector)) {
+        terminarEdicion(); sel = new Set(); selConector = cn.dataset.conector; ed.seleccionar(null); render();
+        const l = accionesConector(); l.titulo = "Flecha";
+        return l;
+      }
       const bl = e.target.closest && e.target.closest(".bl");
       const p = aMundo(e);
       if (bl) {
@@ -1483,7 +1827,9 @@
         { texto: "Nota", icono: "sticky-note", fn: en((q) => crear("forma", { figura: "nota" }, q)) },
         { texto: "Pegar", icono: "clipboard-paste", off: !NOM._portaFiguras, fn: pegar },
         { texto: "Imagen", icono: "image", fn: imagen },
-        { texto: "Más figuras", corto: "Figuras", icono: "shapes", sub: [["rombo", "Rombo", "diamond"], ["estrella", "Estrella", "star"], ["flecha", "Flecha", "arrow-right"], ["burbuja", "Burbuja", "message-square"], ["linea-flecha", "Línea", "minus"], ["corazon", "Corazón", "heart"]].map(([f, t, i]) => ({ texto: t, icono: i, fn: en((q) => crear("forma", { figura: f }, q)) })) },
+        { texto: "Más figuras", corto: "Figuras", icono: "shapes", sub: [["rombo", "Rombo", "diamond"], ["estrella", "Estrella", "star"], ["flecha", "Flecha", "arrow-right"], ["burbuja", "Burbuja", "message-square"], ["linea-flecha", "Línea", "minus"], ["corazon", "Corazón", "heart"]].map(([f, t, i]) => ({ texto: t, icono: i, fn: en((q) => crear("forma", { figura: f }, q)) })).concat([
+          { texto: "Todas las figuras (UML, entidad-relación, redes)", corto: "Todas", icono: "shapes", fn: () => menuFiguras(lienzoApi, { x: e.clientX, y: e.clientY }, null, p) },
+          { texto: "Diagramas listos", corto: "Listos", icono: "workflow", fn: () => NOM.diagramas && NOM.diagramas.elegir(lienzoApi, p) }]) },
         acotado ? { texto: "Elegir todo", icono: "layout-grid", fn: seleccionarTodo } : { texto: "Ver todo", icono: "maximize-2", fn: ajustar },
       ];
     }, { izquierdo: true, tactil: true, titulo: "Lienzo", ignorar: (e) => !!(editando || (e.target.closest && (e.target.closest(".tirador, [data-girar], [data-enlazar], .lz-barra, .lz-multiple"))) || herramienta) });
@@ -1531,8 +1877,9 @@
     const hayDuenos = () => doc().vivos().some((b) => b.dueno) || Object.keys(doc().doc()).some((k) => k.startsWith("dueno:") && doc().valor("_doc", k));
     if (hayDuenos() && ed.cargarMiembros) ed.cargarMiembros().then(() => render());
 
-    return {
-      capas, asignarPagina, duenoPagina, paginaAjena,
+    const lienzoApi = {
+      capas, asignarPagina, duenoPagina, paginaAjena, crearPreset, insertarBloques, fijarCuadricula, cuadricula: () => cuadricula,
+      punto: () => (acotado ? { x: W() / 2, y: H() / 2 } : centroVista()), acotado,
       /** 3.4 Resalta los bloques que cambiaron otros (null lo quita). */
       resaltar(c) { resaltados = new Set(c && c.cambios ? c.cambios.bloques || [] : []); render(); },
       /** 7 Marca los bloques con comentarios abiertos. */
@@ -1551,15 +1898,35 @@
       },
       destruir() { document.removeEventListener("keydown", teclas); document.removeEventListener("keyup", teclas); ro.disconnect(); terminarEdicion(); capas.cerrar(); $$(".lz-panel").forEach((x) => x.remove()); },
     };
+    return lienzoApi;
   }
 
   function menuColor(lienzo, b) {
     paletaColores(b, null, (c) => c && lienzo.colorear(c), { titulo: "Color de la figura" });
   }
   /** Galería de figuras (como "Elementos" en Canva): vista previa real de cada una. */
-  function menuFiguras(lienzo, b, alElegir) {
-    const p = panel(b, `<div class="lz-figuras">${FIGURAS.map(([id, t]) => `<button data-f="${id}" aria-label="${esc(t)}" title="${esc(t)}"><svg viewBox="-3 -3 46 36" aria-hidden="true"><path d="${ruta(id, 40, 30, 7)}" style="fill:${esLinea(id) ? "none" : "var(--m-diag-tenue)"};stroke:var(--m-diag)" stroke-width="2" stroke-linejoin="round"/>${id === "linea-flecha" ? '<path d="M32,9 L40,15 L32,21" style="fill:none;stroke:var(--m-diag)" stroke-width="2"/>' : ""}</svg></button>`).join("")}</div>`, { titulo: "Figuras" });
-    p.addEventListener("click", (e) => { const x = e.target.closest("[data-f]"); if (!x) return; p.cerrar(); (alElegir || ((f) => lienzo.crear("forma", { figura: f })))(x.dataset.f); });
+  function menuFiguras(lienzo, b, alElegir, punto) {
+    const basicas = FIGURAS.map(([id, t]) => `<button data-f="${id}" aria-label="${esc(t)}" title="${esc(t)}"><svg viewBox="-3 -3 46 36" aria-hidden="true"><path d="${ruta(id, 40, 30, 7)}" style="fill:${esLinea(id) ? "none" : "var(--m-diag-tenue)"};stroke:var(--m-diag)" stroke-width="2" stroke-linejoin="round"/>${id === "linea-flecha" ? '<path d="M32,9 L40,15 L32,21" style="fill:none;stroke:var(--m-diag)" stroke-width="2"/>' : ""}</svg></button>`).join("");
+    // 8.4 UML, entidad-relación y redes: la vista previa es la figura real con sus proporciones.
+    const mini = (clave) => {
+      const pr = PRESETS[clave], k = Math.min(40 / pr.w, 30 / pr.h), w = pr.w * k, h = pr.h * k;
+      const lleno = pr.color === "#2B2A33";
+      const e = { f: pr.figura, relleno: "x", trazo: "x", radio: pr.radio != null ? pr.radio * k : pr.figura === "rect" ? 4 : 0 };
+      return `<g transform="translate(${n2((40 - w) / 2)} ${n2((30 - h) / 2)})">${partesFigura(e, w, h).map((pz) => `<path d="${pz.d}" style="fill:${pz.relleno ? (lleno || pz.trazo == null ? "var(--m-diag)" : "var(--m-diag-tenue)") : "none"};stroke:${pz.trazo ? "var(--m-diag)" : "none"}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"${pr.bordeEstilo === "guiones" ? ' stroke-dasharray="4 3"' : ""}/>`).join("")}</g>`;
+    };
+    const seccion = (lista) => lista.map(([id, t]) => `<button data-p="${id}" aria-label="${esc(t)}" title="${esc(t)}"><svg viewBox="-3 -3 46 36" aria-hidden="true">${mini(id)}</svg><small>${esc(t)}</small></button>`).join("");
+    const red = NOM.iconos ? FIGURAS_RED.map(([id, t]) => { const ic = NOM.iconos.LISTA.find((x) => x.id === id); return ic ? `<button data-r="${id}" aria-label="${esc(t)}" title="${esc(t)}"><svg viewBox="0 0 24 24" fill="none" stroke="var(--m-diag)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic.svg}</svg><small>${esc(t)}</small></button>` : ""; }).join("") : "";
+    const p = panel(b, `<div class="lz-figuras">${basicas}</div><div class="menu-titulo">UML</div><div class="lz-figuras con-nombre">${seccion(FIGURAS_UML)}</div>
+      <div class="menu-titulo">Entidad-relación</div><div class="lz-figuras con-nombre">${seccion(FIGURAS_ER)}</div>${red ? `<div class="menu-titulo">Redes</div><div class="lz-figuras con-nombre">${red}</div>` : ""}`, { titulo: "Figuras" });
+    p.classList.add("lz-panel-figuras");
+    p.addEventListener("click", (e) => {
+      const x = e.target.closest("[data-f]"), pr = e.target.closest("[data-p]"), r = e.target.closest("[data-r]");
+      if (!x && !pr && !r) return;
+      p.cerrar();
+      if (x) (alElegir || ((f) => lienzo.crear("forma", { figura: f }, punto)))(x.dataset.f);
+      else if (pr) lienzo.crearPreset(pr.dataset.p, punto);
+      else lienzo.crearPreset("red:" + r.dataset.r, punto);
+    });
   }
   function menuAlinear(lienzo, b) {
     const varios = lienzo.cuantos() > 1;
@@ -1567,6 +1934,35 @@
       { texto: "Izquierda", icono: "al-izq", fn: () => lienzo.alinear("izq") }, { texto: "Centro horizontal", icono: "al-centro-h", fn: () => lienzo.alinear("centro-h") }, { texto: "Derecha", icono: "al-der", fn: () => lienzo.alinear("der") },
       { texto: "Arriba", icono: "al-arriba", fn: () => lienzo.alinear("arriba") }, { texto: "Centro vertical", icono: "al-centro-v", fn: () => lienzo.alinear("centro-v") }, { texto: "Abajo", icono: "al-abajo", fn: () => lienzo.alinear("abajo") },
       ...(varios ? ["-", { texto: "Distribuir horizontalmente", icono: "distribuir-h", fn: () => lienzo.distribuir("h") }, { texto: "Distribuir verticalmente", icono: "distribuir-v", fn: () => lienzo.distribuir("v") }] : [])]);
+  }
+
+  /** 8.3 y 8.4 Biblioteca de íconos (funciona sin internet): buscar y tocar para insertar. */
+  function bibliotecaIconos(ed, lienzo) {
+    const I = NOM.iconos;
+    if (!I) return aviso("La biblioteca de íconos no se cargó", { tipo: "aviso" });
+    const cuerpo = NOM.html(`<div class="col"><div class="entrada">${ico("search")}<input data-q placeholder="Buscar: libro, ciencia, flecha, persona…" autocomplete="off"></div>
+      <div class="segmentado" role="group" style="flex-wrap:wrap" data-cats>${["Todos", ...I.CATEGORIAS].map((c, i) => `<button type="button" data-cat="${esc(c)}" aria-pressed="${i === 0}">${esc(c)}</button>`).join("")}</div>
+      <div class="lz-iconos" data-lista></div></div>`);
+    const h = NOM.hoja({ titulo: "Íconos y elementos", icono: "shapes", cuerpo, ancha: true });
+    let cat = "Todos";
+    const pintar = () => {
+      const q = $("[data-q]", cuerpo).value.trim().toLowerCase();
+      const l = I.LISTA.filter((x) => (cat === "Todos" || x.c === cat) && (!q || x.n.includes(q) || x.k.includes(q))).slice(0, 240);
+      $("[data-lista]", cuerpo).innerHTML = l.map((x) => `<button type="button" data-i="${esc(x.id)}" aria-label="${esc(x.n)}" title="${esc(x.n)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x.svg}</svg></button>`).join("") || `<p class="suave">No hay íconos con “${esc(q)}”.</p>`;
+    };
+    pintar();
+    $("[data-q]", cuerpo).addEventListener("input", pintar);
+    $("[data-cats]", cuerpo).addEventListener("click", (e) => { const x = e.target.closest("[data-cat]"); if (!x) return; cat = x.dataset.cat; $$("[data-cat]", cuerpo).forEach((y) => y.setAttribute("aria-pressed", y === x)); pintar(); });
+    $("[data-lista]", cuerpo).addEventListener("click", (e) => {
+      const x = e.target.closest("[data-i]");
+      if (!x) return;
+      const ic = I.LISTA.find((y) => y.id === x.dataset.i);
+      h.cerrar();
+      const te = NOM.diapo && NOM.diapo.tema(ed.doc);
+      const colorIc = lienzo.acotado ? (te ? te.acentos[0] : "#3D72F2") : "#2B2A33";
+      const nuevoId = lienzo.crear("icono", { svg: ic.svg, nombre: ic.id, color: colorIc, grosor: 2 });
+      if (nuevoId && NOM.diapo) NOM.diapo.iconoPng(ic.svg, colorIc, 2).then((png) => { if (png && ed.doc.vivo(nuevoId)) ed.doc.cambiar(nuevoId, { png }, { deshacible: false }); });
+    });
   }
 
   // ================================================================== Presentación
@@ -1798,38 +2194,13 @@
           { texto: "Tabla…", icono: "table", fn: () => NOM.diapo.editarDatos({ titulo: "Nueva tabla", bloque: { filas: 3, cols: 3, encabezado: true }, alGuardar: (c) => lienzo.crear("tabla", Object.assign({ enDiapo: true }, c)) }) },
           { texto: "Gráfica…", icono: "bar-chart", fn: () => NOM.diapo.editarDatos({ titulo: "Nueva gráfica", grafica: true, bloque: { filas: 4, cols: 2, "c:A1": "", "c:B1": "Ventas", "c:A2": "Enero", "c:B2": "10", "c:A3": "Febrero", "c:B3": "14", "c:A4": "Marzo", "c:B4": "9" }, alGuardar: (c) => lienzo.crear("grafica", c) }) },
           { texto: "Íconos y elementos…", icono: "shapes", fn: () => elegirIcono(b) },
+          { texto: "Figuras de UML y entidad-relación…", icono: "workflow", fn: () => menuFiguras(lienzo, b) },
+          { texto: "Diagrama listo (ciclo, línea del tiempo…)…", icono: "network", fn: () => NOM.diagramas && NOM.diagramas.elegir(lienzo) },
           { texto: "Ecuación…", icono: "sigma", fn: () => lienzo.editarEcuacion(null) },
         ]);
       }
       /** 8.3 Biblioteca de íconos (funciona sin internet): buscar y tocar para insertar. */
-      function elegirIcono(b) {
-        const I = NOM.iconos;
-        if (!I) return aviso("La biblioteca de íconos no se cargó", { tipo: "aviso" });
-        const cuerpo = NOM.html(`<div class="col"><div class="entrada">${ico("search")}<input data-q placeholder="Buscar: libro, ciencia, flecha, persona…" autocomplete="off"></div>
-          <div class="segmentado" role="group" style="flex-wrap:wrap" data-cats>${["Todos", ...I.CATEGORIAS].map((c, i) => `<button type="button" data-cat="${esc(c)}" aria-pressed="${i === 0}">${esc(c)}</button>`).join("")}</div>
-          <div class="lz-iconos" data-lista></div></div>`);
-        const h = NOM.hoja({ titulo: "Íconos y elementos", icono: "shapes", cuerpo, ancha: true });
-        let cat = "Todos";
-        const pintar = () => {
-          const q = $("[data-q]", cuerpo).value.trim().toLowerCase();
-          const l = I.LISTA.filter((x) => (cat === "Todos" || x.c === cat) && (!q || x.n.includes(q) || x.k.includes(q))).slice(0, 240);
-          $("[data-lista]", cuerpo).innerHTML = l.map((x) => `<button type="button" data-i="${esc(x.id)}" aria-label="${esc(x.n)}" title="${esc(x.n)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${x.svg}</svg></button>`).join("") || `<p class="suave">No hay íconos con esa palabra.</p>`;
-        };
-        pintar();
-        $("[data-q]", cuerpo).addEventListener("input", pintar);
-        $("[data-cats]", cuerpo).addEventListener("click", (e) => { const x = e.target.closest("[data-cat]"); if (!x) return; cat = x.dataset.cat; $$("[data-cat]", cuerpo).forEach((y) => y.setAttribute("aria-pressed", y === x)); pintar(); });
-        $("[data-lista]", cuerpo).addEventListener("click", (e) => {
-          const x = e.target.closest("[data-i]");
-          if (!x) return;
-          const ic = I.LISTA.find((y) => y.id === x.dataset.i);
-          h.cerrar();
-          const te = NOM.diapo && NOM.diapo.tema(doc());
-          const colorIc = te ? te.acentos[0] : "#3D72F2";
-          const nuevoId = lienzo.crear("icono", { svg: ic.svg, nombre: ic.id, color: colorIc, grosor: 2 });
-          if (nuevoId) NOM.diapo.iconoPng(ic.svg, colorIc, 2).then((png) => { if (png && doc().vivo(nuevoId)) doc().cambiar(nuevoId, { png }, { deshacible: false }); });
-        });
-        void b;
-      }
+      function elegirIcono(b) { bibliotecaIconos(ed, lienzo); void b; }
       /** 8.3 Diseño: tema, fondo de la diapositiva y tamaño. */
       function menuDiseno(b) {
         const D = NOM.diapo, te = doc().valor("_doc", "tema") || "", tm = doc().valor("_doc", "tamDiapo") || "16:9";
@@ -1948,6 +2319,8 @@
         { texto: "Capas", icono: "layers", fn: () => this._lienzo.capas.abrir(), claves: "ocultar bloquear orden" },
         { texto: "Animaciones de la diapositiva", icono: "sparkles", fn: () => { const b = document.querySelector('[aria-label="Animación"]'); if (b) b.click(); }, claves: "animar entrada salida enfasis orden" },
         { texto: "Diseño (tema, fondo y tamaño)", icono: "palette", fn: () => { const b = document.querySelector('[aria-label="Diseño"]'); if (b) b.click(); }, claves: "tema fondo tamaño 4:3 cartel" },
+        { texto: "Insertar un diagrama listo…", icono: "network", fn: () => NOM.diagramas && NOM.diagramas.elegir(this._lienzo), claves: "ciclo linea tiempo organigrama mapa mental venn foda espina pescado flujo" },
+        { texto: this._lienzo && this._lienzo.cuadricula() ? "Quitar el ajuste a la cuadrícula" : "Ajustar a la cuadrícula", icono: "magnet", fn: () => this._lienzo.fijarCuadricula(!this._lienzo.cuadricula()), claves: "cuadricula rejilla iman alinear" },
         { texto: "Insertar tabla, gráfica o ícono", icono: "plus-square", fn: () => { const b = document.querySelector('.modo-PRESENTACION [aria-label="Insertar"]'); if (b) b.click(); }, claves: "tabla grafica icono ecuacion" },
       ];
     },
@@ -2013,12 +2386,17 @@
   function htmlDiapositiva(doc, p, paso, opc) {
     const bs = bloquesPresentables(doc, p);
     const est = paso == null ? null : estadoAnimaciones(doc, p, paso, opc && opc.final).estado;
-    return bs.map((b) => {
+    // 8.4 Las flechas entre figuras (un diagrama dentro de la diapositiva) van debajo de todo.
+    const porId = Object.fromEntries(bs.map((b) => [b.id, b])), T = tamDoc(doc);
+    const oculto = (id) => est && est[id] && est[id].oculto && !est[id].anim.length;
+    const cs = doc.deLaPagina(p).filter((c) => c.tipo === "conector" && porId[c.desde] && porId[c.hasta] && !oculto(c.desde) && !oculto(c.hasta));
+    const flechas = cs.length ? `<svg class="capa-conectores" width="${T.w}" height="${T.h}" style="z-index:0" aria-hidden="true">${cs.map((c) => svgConector(c, porId[c.desde], porId[c.hasta])).join("")}</svg>` : "";
+    return flechas + bs.map((b) => {
       const s = est && est[b.id];
       if (s && s.oculto && !s.anim.length) return "";
       // Varias animaciones del mismo bloque en el mismo paso (entrada y énfasis…) van juntas.
       const st = s && s.anim.length ? `animation-name:${s.anim.map((x) => `a-${x.tipo}-${x.efecto}`).join(",")};animation-duration:${s.anim.map((x) => x.dur + "ms").join(",")};animation-delay:${s.anim.map((x) => x.t + "ms").join(",")};animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.8,.2,1);` : "";
-      return `<div class="bl${clasesBloque(b)}${s && s.anim.length ? " animando" : ""}" data-id="${esc(b.id)}" style="${estiloBloque(b)}overflow:hidden;${st}">${contenido(b)}</div>`;
+      return `<div class="bl${clasesBloque(b)}${s && s.anim.length ? " animando" : ""}" data-id="${esc(b.id)}" style="${estiloBloque(b)}overflow:${b.tipo === "forma" ? "visible" : "hidden"};${st}">${contenido(b)}</div>`;
     }).join("");
   }
 
@@ -2224,6 +2602,8 @@
         { id: "texto", icono: "type", micro: "Texto libre", fn: h("texto"), activo: activo("texto") },
         { id: "conector", icono: "spline", micro: "Conector|Toca una figura y luego otra para unirlas con una flecha.", fn: h("conector"), activo: activo("conector") },
         { id: "imagen", icono: "image", micro: "Imagen", fn: () => lienzo.imagen(), mantenerFoco: false },
+        { id: "iconos", icono: "star", micro: "Íconos|Más de 250 dibujos: personas, ciencia, redes… (sin internet).", fn: () => bibliotecaIconos(ed, lienzo), mantenerFoco: false },
+        { id: "listos", icono: "network", micro: "Diagramas listos|Ciclo, línea del tiempo, organigrama, mapa mental, Venn, FODA, espina de pescado, UML, entidad-relación…", fn: () => NOM.diagramas && NOM.diagramas.elegir(lienzo), mantenerFoco: false },
         "|",
         { id: "color", icono: "palette", micro: "Color|Cambia el color de las figuras seleccionadas.", fn: (e, b) => menuColor(lienzo, b), off: () => !lienzo.seleccion() },
         { id: "alinear", icono: "al-centro-h", micro: "Alinear y distribuir|Elige dos o más figuras.", fn: (e, b) => menuAlinear(lienzo, b), off: () => lienzo.cuantos() < 2 },
@@ -2231,6 +2611,7 @@
         { id: "duplicar", icono: "copy", micro: "Duplicar||Ctrl+D", fn: () => lienzo.duplicar(), off: () => !lienzo.seleccion() },
         { id: "borrar", icono: "trash-2", micro: "Eliminar|Borra las figuras y sus flechas.|Supr", fn: () => lienzo.eliminar(), off: () => !lienzo.seleccion() },
         { id: "capas", icono: "layers", micro: "Capas|Ocultar, bloquear y ordenar las figuras.", fn: () => lienzo.capas.abrir() },
+        { id: "cuadricula", icono: "magnet", micro: "Ajustar a la cuadrícula|Al mover o cambiar el tamaño, las figuras caen en los puntos (con Alt, libres).", fn: () => { lienzo.fijarCuadricula(!lienzo.cuadricula()); ed.refrescarHerramientas(); }, activo: () => lienzo.cuadricula() },
         { id: "comentar", icono: "message-square", micro: "Comentar|Comenta la figura elegida. Funciona sin Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed), clase: "solo-escritorio" },
       ];
       this.resaltarCambios = (c) => lienzo.resaltar(c);
@@ -2248,5 +2629,31 @@
       this.desmontar = () => { lienzo.destruir(); ed.lienzo.style.overflow = ""; };
     },
     herramientas() { return this._herr || []; },
+    acciones(ed) {
+      const l = this._lienzo;
+      if (!l || ed.soloLectura) return [];
+      return [
+        { texto: "Insertar un diagrama listo…", icono: "network", fn: () => NOM.diagramas && NOM.diagramas.elegir(l), claves: "plantilla ciclo linea tiempo organigrama mapa mental venn espina pescado ishikawa foda mapa conceptual clases casos uso entidad relacion flujo" },
+        { texto: "Convertir un texto en diagrama…", icono: "list-tree", fn: () => NOM.diagramas && NOM.diagramas.desdeTexto(l), claves: "lista esquema pasos generar automatico" },
+        { texto: "Figuras de UML, entidad-relación y redes…", icono: "shapes", fn: () => menuFiguras(l, { x: innerWidth / 2, y: innerHeight / 3 }), claves: "uml clase actor caso uso entidad relacion atributo red servidor router" },
+        { texto: "Íconos…", icono: "star", fn: () => bibliotecaIconos(ed, l), claves: "iconos dibujos elementos" },
+        { texto: l.cuadricula() ? "Quitar el ajuste a la cuadrícula" : "Ajustar a la cuadrícula", icono: "magnet", fn: () => { l.fijarCuadricula(!l.cuadricula()); ed.refrescarHerramientas(); }, claves: "cuadricula rejilla iman alinear" },
+      ];
+    },
   };
+
+  /** 8.4 Vista previa de varios bloques (galería de diagramas listos y texto a diagrama). */
+  function vistaPrevia(lista, uniones, ancho, alto) {
+    if (!lista.length) return `<div class="dg-previa" style="width:${ancho}px;height:${alto}px"></div>`;
+    const x1 = Math.min(...lista.map((b) => b.x)) - 12, y1 = Math.min(...lista.map((b) => b.y)) - 12;
+    const x2 = Math.max(...lista.map((b) => b.x + b.w)) + 12, y2 = Math.max(...lista.map((b) => b.y + b.h)) + 12;
+    const k = Math.min(ancho / (x2 - x1), alto / (y2 - y1), 1.2);
+    const bs = lista.map((b, i) => Object.assign({ id: "v" + i }, b));
+    const porId = Object.fromEntries(bs.map((b) => [b.id, b]));
+    const cs = (uniones || []).filter(([a, b2]) => porId["v" + a] && porId["v" + b2]).map(([a, b2, o]) => Object.assign({ desde: "v" + a, hasta: "v" + b2 }, o || {}));
+    return `<div class="dg-previa" style="width:${ancho}px;height:${alto}px"><div class="dg-previa-mundo" style="transform:translate(${n2((ancho - (x2 - x1) * k) / 2 - x1 * k)}px,${n2((alto - (y2 - y1) * k) / 2 - y1 * k)}px) scale(${n2(k)})">
+      <svg class="capa-conectores" width="1" height="1" aria-hidden="true">${cs.map((c) => svgConector(c, porId[c.desde], porId[c.hasta])).join("")}</svg>
+      ${bs.map((b, i) => `<div class="bl${clasesBloque(b)}" style="${estiloBloque(b, i)}">${contenido(b)}</div>`).join("")}</div></div>`;
+  }
+  NOM.lienzoVista.vistaPrevia = vistaPrevia;
 })();

@@ -209,7 +209,7 @@
 .lz-color { width: 36px; height: 36px; flex: none; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; cursor: pointer; }
 .lz-color:hover { background: var(--sup-hundida); }
 .lz-color span { width: 22px; height: 22px; border-radius: 7px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background-image: linear-gradient(45deg, transparent 46%, #E5484D 46%, #E5484D 54%, transparent 54%); background-color: var(--c); }
-.lz-color[style*="--c:#"] span { background-image: none; }
+.lz-color[style*="--c:#"] span, .lz-color[style*="--c:var("] span { background-image: none; }
 .lz-a { font-size: 17px; font-weight: 900; border-bottom: 3px solid var(--c); line-height: 1; padding: 0 3px; }
 .lz-panel { padding: 8px; width: 252px; min-width: 0; z-index: 160; }
 .lz-muestras { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; margin: 6px 0; }
@@ -984,3 +984,47 @@
 .anim-lista { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow: auto; }
 .anim-fila { border: 1px solid var(--borde); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--sup-2); }
 .anim-fila select, .anim-fila input { font: 650 13px var(--fuente); border: 1px solid var(--borde); border-radius: 8px; padding: 4px 6px; background: var(--sup); color: var(--tinta); }
+
+/* ------------------------------------------------------------ 8.4 Diagrama: flechas, UML, cuadrícula */
+.capa-conectores .punta { pointer-events: all; cursor: pointer; }
+.capa-conectores .halo { pointer-events: none; }
+.capa-conectores .etq { pointer-events: all; cursor: pointer; }
+.capa-conectores .etq text { pointer-events: none; user-select: none; }
+.pizarra.con-cuadricula { background-image: radial-gradient(circle, var(--tinta-suave) 1.5px, transparent 1.6px); }
+.escenario.con-cuadricula .diapo::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(to right, rgba(91, 91, 214, .16) 1px, transparent 1px), linear-gradient(to bottom, rgba(91, 91, 214, .16) 1px, transparent 1px);
+  background-size: 20px 20px; }
+/* Clase (UML) y entidad (E-R): nombre arriba y compartimentos con línea divisoria. */
+.forma[data-figura="clase"], .forma[data-figura="entidad"] { place-items: stretch; padding: 0; text-align: left; font-size: 14px; }
+.forma[data-figura="clase"] .txt, .forma[data-figura="entidad"] .txt { width: 100%; height: 100%; max-width: none; max-height: none; display: flex; flex-direction: column; white-space: normal; }
+.forma .txt.cm-editando { display: block; white-space: pre-wrap; padding: 8px 10px; font-weight: 600; }
+.cm-nombre { flex: 0 0 auto; text-align: center; font-weight: 850; padding: 6px 8px; }
+.cm-sec { flex: 0 0 auto; min-height: 14px; padding: 5px 10px; border-top: 2px solid var(--cm-borde, #2B2A33); font-weight: 600; white-space: pre-wrap; line-height: 1.35; }
+.cm-sec:last-child { flex: 1 1 auto; }
+.forma[data-figura="actor"] { place-items: end center; padding: 0 0 2px; }
+.forma[data-figura="actor"] .txt { max-width: none; white-space: nowrap; font-size: 14px; }
+.forma[data-figura="paquete"] { padding-top: 28px; }
+.forma[data-figura="componente"] { padding-left: 28px; }
+.forma[data-figura="nodo"] { padding: 22px 22px 6px 6px; }
+.forma[data-figura="final"] .txt, .forma[data-figura="final"] .txt:empty { display: none; }
+/* Galería de figuras con secciones (UML, entidad-relación, redes). */
+.lz-panel.lz-panel-figuras { width: 300px; max-height: min(78vh, 620px); overflow-y: auto; }
+.lz-panel-figuras .lz-figuras { grid-template-columns: repeat(6, 1fr); }
+.lz-figuras.con-nombre { grid-template-columns: repeat(4, 1fr); }
+.lz-figuras.con-nombre button { width: 64px !important; min-height: 58px !important; display: flex; flex-direction: column; gap: 2px; }
+.lz-figuras.con-nombre svg { width: 34px; height: 28px; }
+.lz-figuras.con-nombre small { font-size: 10.5px; line-height: 1.1; text-align: center; color: var(--tinta-suave); font-weight: 700; white-space: normal; }
+/* Vista previa de un diagrama (galería y texto a diagrama). */
+.dg-previa { position: relative; overflow: hidden; border-radius: 10px; background: #fff; pointer-events: none; }
+.dg-previa-mundo { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.dg-previa .capa-conectores { overflow: visible; }
+.dg-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.dg-tarjeta { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 14px; border: 1px solid var(--borde-fuerte); background: var(--sup-2); text-align: left; cursor: pointer; color: var(--tinta); }
+.dg-tarjeta:hover, .dg-tarjeta:focus-visible { border-color: var(--m-diag); box-shadow: 0 0 0 3px var(--m-diag-tenue); }
+.dg-tarjeta .dg-previa { width: 100% !important; border: 1px solid var(--borde); }
+.dg-tarjeta b { font-size: 14px; }
+.dg-tarjeta small { color: var(--tinta-suave); font-size: 12px; line-height: 1.3; }
+.dg-texto { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; }
+.dg-texto textarea { width: 100%; min-height: 260px; font: 14px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace; resize: vertical; }
+.dg-texto .dg-previa { width: 100% !important; border: 1px solid var(--borde-fuerte); }
+@media (max-width: 700px) { .dg-texto { grid-template-columns: 1fr; } .dg-galeria { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

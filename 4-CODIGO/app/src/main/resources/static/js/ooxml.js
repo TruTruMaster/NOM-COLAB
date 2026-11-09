@@ -1083,6 +1083,60 @@ ${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" 
   const color = (c, def) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c.slice(1).toUpperCase() : def);
   const luzHex = (c) => { const n = parseInt(String(c).replace("#", ""), 16) || 0; return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
 
+  // ------------------------------------------------------------ 8.4 trazos SVG como formas libres de PowerPoint
+  /** Arco SVG (de x1,y1 a x2,y2) → curvas de Bézier cúbicas (cada una de 90° como máximo). */
+  function arcoABezier(x1, y1, rx, ry, phi, fa, fs, x2, y2) {
+    if (!rx || !ry || (x1 === x2 && y1 === y2)) return [[x1, y1, x2, y2, x2, y2]];
+    rx = Math.abs(rx); ry = Math.abs(ry);
+    const f = (phi * Math.PI) / 180, cf = Math.cos(f), sf = Math.sin(f);
+    const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2, x1p = cf * dx + sf * dy, y1p = -sf * dx + cf * dy;
+    const lam = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry);
+    if (lam > 1) { const m = Math.sqrt(lam); rx *= m; ry *= m; }
+    const num = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p, den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+    let co = Math.sqrt(Math.max(0, num / (den || 1)));
+    if (+fa === +fs) co = -co;
+    const cxp = (co * rx * y1p) / ry, cyp = (-co * ry * x1p) / rx;
+    const cx = cf * cxp - sf * cyp + (x1 + x2) / 2, cy = sf * cxp + cf * cyp + (y1 + y2) / 2;
+    const ang = (ux, uy, vx, vy) => Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+    const t1 = ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+    let dt = ang((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+    if (!+fs && dt > 0) dt -= 2 * Math.PI; else if (+fs && dt < 0) dt += 2 * Math.PI;
+    const n = Math.max(1, Math.ceil(Math.abs(dt) / (Math.PI / 2) - 1e-9)), paso = dt / n, kk = (4 / 3) * Math.tan(paso / 4), out = [];
+    const pt = (ux, uy) => [cx + rx * ux * cf - ry * uy * sf, cy + rx * ux * sf + ry * uy * cf];
+    for (let j = 0; j < n; j++) {
+      const a1 = t1 + j * paso, a2 = a1 + paso, c1 = Math.cos(a1), s1 = Math.sin(a1), c2 = Math.cos(a2), s2 = Math.sin(a2);
+      const q1 = pt(c1 - kk * s1, s1 + kk * c1), q2 = pt(c2 + kk * s2, s2 - kk * c2), e = pt(c2, s2);
+      out.push([q1[0], q1[1], q2[0], q2[1], e[0], e[1]]);
+    }
+    return out;
+  }
+  /** Trazo SVG (M, L, H, V, C, Q, A, Z absolutos, como los que hace el lienzo) → camino de DrawingML. */
+  function caminoDrawingML(d, k) {
+    const toks = String(d).match(/[MLHVCQAZ]|-?\d*\.?\d+(?:e-?\d+)?/gi) || [];
+    let i = 0, cmd = null, x0 = 0, y0 = 0, px = 0, py = 0, r = "";
+    const num = () => +toks[i++];
+    const P = (a, b) => `<a:pt x="${Math.round(a * k)}" y="${Math.round(b * k)}"/>`;
+    while (i < toks.length) {
+      if (/^[MLHVCQAZ]$/i.test(toks[i])) cmd = toks[i++].toUpperCase();
+      if (cmd === "M") { px = num(); py = num(); x0 = px; y0 = py; r += `<a:moveTo>${P(px, py)}</a:moveTo>`; cmd = "L"; }
+      else if (cmd === "L") { px = num(); py = num(); r += `<a:lnTo>${P(px, py)}</a:lnTo>`; }
+      else if (cmd === "H") { px = num(); r += `<a:lnTo>${P(px, py)}</a:lnTo>`; }
+      else if (cmd === "V") { py = num(); r += `<a:lnTo>${P(px, py)}</a:lnTo>`; }
+      else if (cmd === "C") { const a = [num(), num(), num(), num(), num(), num()]; r += `<a:cubicBezTo>${P(a[0], a[1])}${P(a[2], a[3])}${P(a[4], a[5])}</a:cubicBezTo>`; px = a[4]; py = a[5]; }
+      else if (cmd === "Q") { const a = [num(), num(), num(), num()]; r += `<a:quadBezTo>${P(a[0], a[1])}${P(a[2], a[3])}</a:quadBezTo>`; px = a[2]; py = a[3]; }
+      else if (cmd === "A") { const a = [num(), num(), num(), num(), num(), num(), num()]; arcoABezier(px, py, a[0], a[1], a[2], a[3], a[4], a[5], a[6]).forEach((c) => (r += `<a:cubicBezTo>${P(c[0], c[1])}${P(c[2], c[3])}${P(c[4], c[5])}</a:cubicBezTo>`)); px = a[5]; py = a[6]; }
+      else if (cmd === "Z") { r += "<a:close/>"; px = x0; py = y0; cmd = null; }
+      else i++;
+    }
+    return r;
+  }
+  /** Forma libre de PowerPoint con las piezas de una figura (relleno y contorno por pieza). */
+  function custGeom(partes, w, h) {
+    const W = Math.max(1, Math.round(w * EMU)), H = Math.max(1, Math.round(h * EMU));
+    return `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst>${partes.map((pz) => `<a:path w="${W}" h="${H}"${pz.relleno ? "" : ' fill="none"'}${pz.trazo ? "" : ' stroke="0"'}>${caminoDrawingML(pz.d, EMU)}</a:path>`).join("")}</a:pathLst></a:custGeom>`;
+  }
+  const LIBRES = new Set(["clase", "entidad", "entidad-debil", "relacion-debil", "atributo-multi", "actor", "paquete", "componente", "nodo", "final"]);
+
   function pptx(doc, esDiagrama) {
     const medios = [], graficas = [], notas = [];
     const TD = esDiagrama || !NOM.diapo ? { w: ANCHO, h: ALTO } : NOM.diapo.tam(doc);
@@ -1160,6 +1214,28 @@ ${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" 
       const textoDe = (b, fondo) => ({ color: color(b.tColor, colorTema(b) || (fondo && luzHex(fondo) < 0.5 ? "FFFFFF" : "1F1E26")), fuente: b.tFuente || (te && (b.estilo === "h1" || b.estilo === "h2") ? te.fuenteT : te && te.fuente) || null, alin: b.tAlin, i: b.tCursiva, u: b.tSubrayado });
       const porId = Object.fromEntries(conPos.map((b) => [b.id, b]));
       const caja = (nid, nombre, b, cuerpo, descr) => `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="${nombre} ${nid}"${descr ? ` descr="${x(descr)}"` : ""}/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${pos(b)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>${cuerpo}</p:txBody></p:sp>`;
+      /** 8.4 Clase y entidad: nombre arriba y renglones fijos que caen entre las líneas divisorias. */
+      const compartimentosPptx = (b, e, opcT) => {
+        const ls = String(b.texto || "").split("\n").map((l) => l.replace(/\s+$/, ""));
+        const nombre = ls.shift() || "", resto = ls.filter((l) => l.trim() && !/^-{2,}$/.test(l.trim()));
+        const secs = e.f === "clase" ? [resto.filter((l) => !/\(.*\)/.test(l)), resto.filter((l) => /\(.*\)/.test(l))] : [resto];
+        const fs = +b.tTam || 14, L = fs * 1.35, pts = (px) => Math.max(0, Math.round(px * 0.75 * k * 100));
+        const run = (t, neg, sub) => `<a:r><a:rPr lang="es-MX" sz="${Math.round(fs * 0.75 * k * 100)}" b="${neg ? 1 : 0}"${sub ? ' u="sng"' : ""} dirty="0"><a:solidFill><a:srgbClr val="${(opcT && opcT.color) || "1F1E26"}"/></a:solidFill><a:latin typeface="${x((opcT && opcT.fuente) || "Calibri")}"/></a:rPr><a:t>${x(t)}</a:t></a:r>`;
+        const par = (contenido, antes, alin) => `<a:p><a:pPr algn="${alin}" marL="0" indent="0"><a:lnSpc><a:spcPts val="${pts(L)}"/></a:lnSpc><a:spcBef><a:spcPts val="${pts(antes)}"/></a:spcBef><a:buNone/></a:pPr>${contenido}</a:p>`;
+        let ps = par(run(nombre, true), 0, "ctr"), cursor = 6 + L, y = 12 + L;
+        const lineas = [];
+        secs.forEach((sec) => {
+          lineas.push(y);
+          sec.forEach((l, i) => {
+            const arriba = y + 5 + i * L, clave = e.f === "entidad" && /^(PK\b|#)/i.test(l.trim());
+            if (arriba + L > b.h) return;
+            ps += par(run(clave ? l.trim().replace(/^(PK\s*:?\s*|#\s*)/i, "") : l, false, clave), arriba - cursor, "l");
+            cursor = arriba + L;
+          });
+          y += 5 + sec.length * L + (sec.length ? 5 : 14);
+        });
+        return { parrafos: ps, lineas: lineas.filter((v) => v < b.h - 2) };
+      };
       const figuras = bs.map((b) => {
         const nid = id++;
         if (b.tipo === "texto") {
@@ -1176,11 +1252,27 @@ ${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" 
           if (geo === "line") {
             return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${nid}" name="Línea ${nid}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr>${pos(Object.assign({}, b, { y: b.y + b.h / 2, h: 0 }))}<a:prstGeom prst="line"><a:avLst/></a:prstGeom>${linea(b, e)}</p:spPr></p:cxnSp>`;
           }
-          const relleno = e.relleno ? `<a:solidFill><a:srgbClr val="${color(e.relleno, "CFE0FF")}">${alfa(b)}</a:srgbClr></a:solidFill>` : "<a:noFill/>";
+          // 8.4 Figuras de UML y entidad-relación: forma libre con el mismo trazo que en el lienzo.
+          const cm = NOM.figuras.COMPARTIMENTOS && NOM.figuras.COMPARTIMENTOS.has(e.f);
+          let geometria = `<a:prstGeom prst="${geo}"><a:avLst>${av}</a:avLst></a:prstGeom>`, rellenoCol = e.relleno;
           const opcT = textoDe(b, e.relleno), tam = b.tTam ? b.tTam / 1.333 : 16;
-          const cuerpo = b.html && NOM.diapo ? parrafosRicos(b.html, tam, b.tNegrita !== false, Object.assign({ alin: e.f === "nota" ? null : b.tAlin || "centro" }, opcT)) : parrafos(x(b.texto || ""), tam, b.tNegrita !== false, e.f !== "nota", opcT);
-          return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Figura ${nid}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${pos(b)}<a:prstGeom prst="${geo}"><a:avLst>${av}</a:avLst></a:prstGeom>${relleno}${linea(b, e)}${sombra(b)}</p:spPr>
-<p:txBody><a:bodyPr anchor="${e.f === "nota" ? "t" : "ctr"}" wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>${cuerpo}</p:txBody></p:sp>`;
+          let cuerpo = b.html && NOM.diapo ? parrafosRicos(b.html, tam, b.tNegrita !== false, Object.assign({ alin: e.f === "nota" ? null : b.tAlin || "centro" }, opcT)) : parrafos(x(b.texto || ""), tam, b.tNegrita !== false, e.f !== "nota", opcT);
+          let cuerpoPr = `<a:bodyPr anchor="${e.f === "nota" ? "t" : "ctr"}" wrap="square"><a:normAutofit/></a:bodyPr>`;
+          if (LIBRES.has(e.f) && NOM.figuras.partesFigura) {
+            let partes = NOM.figuras.partesFigura(e, b.w, b.h);
+            if (e.f === "final") { rellenoCol = e.trazo || "#2B2A33"; partes = [Object.assign({}, partes[0], { relleno: null }), partes[1]]; }
+            if (cm) {
+              const cp = compartimentosPptx(b, e, opcT);
+              partes = partes.concat(cp.lineas.map((y) => ({ d: `M0,${y} H${b.w}`, relleno: null, trazo: e.trazo })));
+              cuerpo = cp.parrafos;
+              cuerpoPr = `<a:bodyPr anchor="t" wrap="square" lIns="${E(10 * k)}" tIns="${E(6 * k)}" rIns="${E(10 * k)}" bIns="0"><a:noAutofit/></a:bodyPr>`;
+            } else if (e.f === "actor") cuerpoPr = '<a:bodyPr anchor="b" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr>';
+            else if (e.f === "paquete") cuerpoPr = `<a:bodyPr anchor="ctr" wrap="square" tIns="${E(Math.min(24, b.h * 0.22) * k)}"><a:normAutofit/></a:bodyPr>`;
+            geometria = custGeom(partes, b.w, b.h);
+          }
+          const relleno = rellenoCol ? `<a:solidFill><a:srgbClr val="${color(rellenoCol, "CFE0FF")}">${alfa(b)}</a:srgbClr></a:solidFill>` : "<a:noFill/>";
+          return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Figura ${nid}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${pos(b)}${geometria}${relleno}${linea(b, e)}${sombra(b)}</p:spPr>
+<p:txBody>${cuerpoPr}<a:lstStyle/>${cuerpo}</p:txBody></p:sp>`;
         }
         if (b.tipo === "imagen" || (b.tipo === "icono" && b.png)) {
           const rid = imagenRel(b.tipo === "icono" ? b.png : b.src);
@@ -1212,16 +1304,30 @@ ${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" 
 <a:tblGrid>${`<a:gridCol w="${Math.floor(ancho / cols)}"/>`.repeat(cols)}</a:tblGrid>${filas.map((f, fi) => `<a:tr h="${Math.floor(alto / filas.length)}">${Array.from({ length: cols }, (_, ci) => f[ci] || "").map((v) => `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="es-MX" sz="${Math.round(tam * k * 100)}" b="${cab && fi === 0 ? 1 : 0}" dirty="0">${cab && fi === 0 ? '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>' : ""}</a:rPr><a:t>${x(v)}</a:t></a:r></a:p></a:txBody><a:tcPr>${["lnL", "lnR", "lnT", "lnB"].map((l) => `<a:${l} w="9525"><a:solidFill><a:srgbClr val="B7B4C2"/></a:solidFill></a:${l}>`).join("")}${cab && fi === 0 ? `<a:solidFill><a:srgbClr val="${cCab}"/></a:solidFill>` : fi % 2 ? '<a:solidFill><a:srgbClr val="F6F5FA"/></a:solidFill>' : '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'}</a:tcPr></a:tc>`).join("")}</a:tr>`).join("")}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
         }
         if (b.tipo === "conector" && porId[b.desde] && porId[b.hasta]) {
-          const c = NOM.geometria.conector(porId[b.desde], porId[b.hasta]);
-          const x1 = c.x1 * k + dx, y1 = c.y1 * k + dy, x2 = c.x2 * k + dx, y2 = c.y2 * k + dy;
+          // 8.4 La flecha con su recorrido (recta, codo o curva), sus puntas y sus textos.
+          const r = NOM.geometria.rutaConector(porId[b.desde], porId[b.hasta], b);
+          const T2 = (q) => ({ x: q.x * k + dx, y: q.y * k + dy }), pts = r.pts.map(T2);
           const col = color(b.color, "4A4854"), estilo = b.estilo === "guiones" ? '<a:prstDash val="dash"/>' : b.estilo === "puntos" ? '<a:prstDash val="sysDot"/>' : "";
-          const puntas = (b.puntas || "fin") === "ninguna" ? "" : `${b.puntas === "ambas" || b.puntas === "inicio" ? '<a:headEnd type="triangle"/>' : ""}${b.puntas === "inicio" ? "" : '<a:tailEnd type="triangle"/>'}`;
-          let s2 = `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${nid}" name="Conector ${nid}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm${x2 < x1 ? ' flipH="1"' : ""}${y2 < y1 ? ' flipV="1"' : ""}><a:off x="${E(Math.min(x1, x2))}" y="${E(Math.min(y1, y2))}"/><a:ext cx="${E(Math.abs(x2 - x1))}" cy="${E(Math.abs(y2 - y1))}"/></a:xfrm>
-<a:prstGeom prst="${b.ruta === "codo" ? "bentConnector3" : "line"}"><a:avLst/></a:prstGeom><a:ln w="${Math.round((+b.grosor || 2) * 9525)}"><a:solidFill><a:srgbClr val="${col}"/></a:solidFill>${estilo}${puntas}</a:ln></p:spPr></p:cxnSp>`;
-          if (b.etiqueta) {
-            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, nid2 = id++;
-            s2 += caja(nid2, "Etiqueta", { x: (mx - 50 * k - dx) / k, y: (my - 14 * k - dy) / k, w: 100, h: 28 }, `<a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="es-MX" sz="${Math.round(12 * k * 100)}" b="1" dirty="0"/><a:t>${x(b.etiqueta)}</a:t></a:r></a:p>`);
+          const tipo = { abierta: "arrow", hueco: "triangle", rombo: "diamond", "rombo-hueco": "diamond", circulo: "oval" }[b.tipoPunta] || "triangle";
+          const pIni = b.puntas === "ambas" || b.puntas === "inicio", pFin = !b.puntas || b.puntas === "fin" || b.puntas === "ambas";
+          const ln = `<a:ln w="${Math.round((+b.grosor || 2) * k * 9525)}"><a:solidFill><a:srgbClr val="${col}"/></a:solidFill>${estilo}${pIni ? `<a:headEnd type="${tipo}"/>` : ""}${pFin ? `<a:tailEnd type="${tipo}"/>` : ""}</a:ln>`;
+          let s2;
+          if ((b.ruta || "recta") === "recta") {
+            const p1 = pts[0], p2 = pts[pts.length - 1];
+            s2 = `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${nid}" name="Conector ${nid}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm${p2.x < p1.x ? ' flipH="1"' : ""}${p2.y < p1.y ? ' flipV="1"' : ""}><a:off x="${E(Math.min(p1.x, p2.x))}" y="${E(Math.min(p1.y, p2.y))}"/><a:ext cx="${E(Math.abs(p2.x - p1.x))}" cy="${E(Math.abs(p2.y - p1.y))}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom>${ln}</p:spPr></p:cxnSp>`;
+          } else {
+            // En codo o curva: una forma libre abierta con el mismo recorrido que en el lienzo.
+            const x0 = Math.min(...pts.map((q) => q.x)), y0 = Math.min(...pts.map((q) => q.y));
+            const w = Math.max(1, Math.max(...pts.map((q) => q.x)) - x0), h = Math.max(1, Math.max(...pts.map((q) => q.y)) - y0);
+            const L = (q) => `<a:pt x="${E(q.x - x0)}" y="${E(q.y - y0)}"/>`;
+            const camino = b.ruta === "curva" ? `<a:moveTo>${L(pts[0])}</a:moveTo><a:cubicBezTo>${L(pts[1])}${L(pts[2])}${L(pts[3])}</a:cubicBezTo>` : `<a:moveTo>${L(pts[0])}</a:moveTo>${pts.slice(1).map((q) => `<a:lnTo>${L(q)}</a:lnTo>`).join("")}`;
+            s2 = `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Conector ${nid}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${E(x0)}" y="${E(y0)}"/><a:ext cx="${E(w)}" cy="${E(h)}"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="${E(w)}" h="${E(h)}" fill="none">${camino}</a:path></a:pathLst></a:custGeom><a:noFill/>${ln}</p:spPr></p:sp>`;
           }
+          const etq = (t, q, ancho, tamL, neg) => caja(id++, "Etiqueta", { x: (q.x - dx) / k - ancho / 2, y: (q.y - dy) / k - 14, w: ancho, h: 28 }, `<a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="es-MX" sz="${Math.round(tamL * k * 100)}" b="${neg ? 1 : 0}" dirty="0"/><a:t>${x(t)}</a:t></a:r></a:p>`).replace("<a:noFill/>", '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
+          if (b.etiqueta) s2 += etq(b.etiqueta, T2(r.medio), Math.max(60, String(b.etiqueta).length * 8 + 24), 12, true);
+          const cerca = (pt, u) => T2({ x: pt.x - u.x * 24 - u.y * 14, y: pt.y - u.y * 24 + u.x * 14 });
+          if (b.etqIni) s2 += etq(b.etqIni, cerca(r.ini, r.dirIni), 50, 11, false);
+          if (b.etqFin) s2 += etq(b.etqFin, cerca(r.fin, r.dirFin), 50, 11, false);
           return s2;
         }
         return "";

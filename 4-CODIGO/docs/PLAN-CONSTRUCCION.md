@@ -263,10 +263,10 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
 - [x] Exportar a .pptx lo nuevo (fondos, texto con formato, tablas, notas) e **importar .pptx**.
 
 ### 8.4 Diagrama
-- [ ] Flechas con texto, color, grosor, estilo, puntas y forma (recta, codo, curva).
-- [ ] Figuras UML y entidad-relación (clase, actor, caso de uso, entidad, relación…).
-- [ ] Cuadrícula con ajuste.
-- [ ] Diagramas precargados (ciclo, línea del tiempo, organigrama, mapa mental, Venn, espina de
+- [x] Flechas con texto, color, grosor, estilo, puntas y forma (recta, codo, curva).
+- [x] Figuras UML y entidad-relación (clase, actor, caso de uso, entidad, relación…).
+- [x] Cuadrícula con ajuste.
+- [x] Diagramas precargados (ciclo, línea del tiempo, organigrama, mapa mental, Venn, espina de
   pescado, FODA, mapa conceptual, clases, casos de uso y entidad-relación).
 
 ### 8.5 Afuera de los editores

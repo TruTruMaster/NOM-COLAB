@@ -63,7 +63,8 @@
   function svg(d, clase, opc) {
     opc = typeof opc === "string" ? { titulo: opc } : opc || {};
     const W = opc.ancho || 420, H = opc.alto || 240;
-    const col = Array.isArray(opc.colores) ? opc.colores : (PALETAS[opc.colores] || PALETAS.clasica).c;
+    // Los colores pueden venir del documento: solo se aceptan colores #RRGGBB (nada de texto suelto en el SVG).
+    const col = (Array.isArray(opc.colores) && opc.colores.length ? opc.colores : (PALETAS[opc.colores] || PALETAS.clasica).c).map((c) => (/^#[0-9a-f]{3,8}$/i.test(String(c)) ? c : "#5B5BD6"));
     const C = (i) => col[i % col.length];
     const estilo = opc.autonomo ? `<style>.graf-titulo{font:800 13px Nunito,Arial,sans-serif;fill:#2B2A33}.graf-eje{font:650 10px Nunito,Arial,sans-serif;fill:#6B6875}.graf-ley{font:700 11px Nunito,Arial,sans-serif;fill:#4A4854}.graf-reja{stroke:#E7E5EE}.graf-cero{stroke:#B7B4C2}</style><rect width="${W}" height="${H}" fill="#fff"/>` : "";
     const abre = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"${opc.autonomo ? ` width="${W}" height="${H}"` : ""} class="graf" role="img" aria-label="${esc(opc.titulo || "Gráfica")}">${estilo}`;
