@@ -638,6 +638,14 @@
       "-",
       { texto: "Invitar o ver miembros", icono: "user-plus", fn: () => NOM.vistaEspacios.accesos(ed.espacio) },
       { texto: "Recibo de mi trabajo", icono: "shield-check", fn: () => NOM.recibo.mostrar(ed) },
+      // Fase 9: lo que se arma con el contenido (sin inventar nada).
+      ...(NOM.datos && tipo === "TEXTO" ? [
+        { titulo: "Convertir" },
+        { texto: "En una presentación", icono: "presentation", fn: () => NOM.datos.aPresentacion(ed) },
+        { texto: "En un mapa mental", icono: "brain", fn: () => NOM.datos.aMapaMental(ed) },
+        ...(ed.soloLectura ? [] : [{ texto: "Combinar correspondencia…", icono: "mail", fn: () => NOM.datos.combinarCorrespondencia(ed) }]),
+      ] : []),
+      ...(NOM.datos && tipo === "HOJA" ? [{ texto: "Hacer un reporte con estos datos", icono: "bar-chart", fn: () => NOM.datos.reporteDeDatos(ed) }] : []),
       // 8.5 Copia, mover a otro espacio y plantilla del espacio.
       ...(ed.soloLectura && !(NOM.app.espacios || []).some((x) => x.permiso !== "LECTURA") ? [] : ["-"]),
       ...(ed.soloLectura ? [] : [

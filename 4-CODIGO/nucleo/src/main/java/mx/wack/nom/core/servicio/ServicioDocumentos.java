@@ -502,8 +502,11 @@ public class ServicioDocumentos {
                 Object k = op.s().get("k");
                 if ("i".equals(k) && op.s().get("x") instanceof String x) {
                     int n = x.codePointCount(0, x.length());
-                    escritas += n;
-                    if (cito) citadas += n; else if (pego) pegadas += n; else tecleadas += n;
+                    // Fase 9: lo que arma la app (portada, preguntas guía, referencias) no lo escribió nadie.
+                    if (!reacomodo) {
+                        escritas += n;
+                        if (cito) citadas += n; else if (pego) pegadas += n; else tecleadas += n;
+                    }
                 } else if ("v".equals(k) && Boolean.FALSE.equals(op.s().get("v")) && op.s().get("r") instanceof List<?> r) {
                     for (Object o : r) if (o instanceof List<?> rango && rango.size() == 3 && rango.get(1) instanceof Number a && rango.get(2) instanceof Number b) borradas += (int) (b.longValue() - a.longValue() + 1);
                 } else if ("f".equals(k)) campos.add("formato");

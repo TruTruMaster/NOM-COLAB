@@ -1093,3 +1093,29 @@
 .mencion-op { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; border: 0; background: transparent; color: var(--tinta); font: inherit; font-weight: 750; text-align: left; cursor: pointer; }
 .mencion-op.activa, .mencion-op:hover { background: var(--sup-hundida); }
 .mencion-op .avatar { width: 24px; height: 24px; font-size: 11px; }
+
+/* ------------------------------------------------------------ Fase 9: Investigar, fichas y fuentes */
+.investigar-cajon .inv-pestanas { margin: 8px 12px 0; }
+.chips-donde { display: flex; flex-wrap: wrap; gap: 6px; }
+.inv-ayuda { color: var(--tinta-suave); font-size: 13.5px; line-height: 1.5; padding: 4px 2px; }
+.inv-ayuda p { margin: 0 0 8px; }
+.inv-res, .inv-ficha, .inv-fuente { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 14px; background: var(--sup-2); border: 1px solid var(--borde); }
+.inv-res b { font-size: 14.5px; }
+.inv-res p, .inv-ficha p, .inv-fuente p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--tinta-2); overflow-wrap: anywhere; }
+.inv-fuente p { padding-left: 1.6em; text-indent: -1.6em; }
+.inv-tema { margin: 10px 0 2px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); }
+.inv-tema small { font-weight: 800; background: var(--sup-hundida); border-radius: 999px; padding: 0 7px; }
+.ficha-textual { background: #E0ECFF; color: #1E3A8A; } .ficha-parafrasis { background: #DDF5E6; color: #1D7A4C; } .ficha-resumen { background: #FFF0D6; color: #8A4B00; }
+.inv-lectura { display: flex; flex-direction: column; gap: 8px; }
+.inv-lectura h4 { margin: 4px 0 0; font-size: 17px; }
+.inv-pista { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--tinta-suave); margin: 0; }
+.inv-texto { font-size: 14px; line-height: 1.6; color: var(--tinta); user-select: text; -webkit-user-select: text; }
+.inv-texto p { margin: 0 0 10px; }
+.inv-texto h5 { margin: 14px 0 6px; font-size: 14.5px; }
+.inv-ficha.inv-lectura-fija { position: sticky; }
+.inv-lectura .inv-ficha, .inv-lectura [data-ficha] { position: sticky; bottom: 8px; align-self: center; box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .4); }
+.ficha-original blockquote { margin: 4px 0 0; padding: 8px 12px; border-left: 4px solid var(--borde-fuerte); background: var(--sup-hundida); border-radius: 0 10px 10px 0; font-size: 13.5px; max-height: 160px; overflow: auto; }
+.fuente-previa { background: var(--sup-hundida); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.fuente-previa p { margin: 0; padding-left: 1.6em; text-indent: -1.6em; font-size: 14px; }
+.autor-fila .entrada { min-width: 0; }
+@media (max-width: 760px) { .autor-fila { flex-wrap: wrap; } .autor-fila .entrada { flex: 1 1 40%; } }

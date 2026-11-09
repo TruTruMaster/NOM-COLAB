@@ -42,7 +42,8 @@ public record Operacion(String id, String bloque, Map<String, Object> campos, lo
     /** Cita textual insertada desde una fuente (panel Investigar o fichas). */
     public boolean citada() { return m != null && "c".equals(m.get("o")); }
 
-    /** Solo mueve lo que ya estaba (insertar o borrar filas y columnas, ordenar). */
+    /** Solo mueve lo que ya estaba (insertar o borrar filas y columnas, ordenar) o lo armó la app
+        (portada, preguntas guía y referencias del reporte): no lo escribió nadie. */
     public boolean reacomodo() { return m != null && "r".equals(m.get("o")); }
 
     public boolean valida() {

@@ -164,17 +164,61 @@
   }
   const P = () => NOM.figuras.PRESETS;
   const fig = (clave, x, y, extra) => { const pr = P()[clave]; return Object.assign({ tipo: "forma" }, pr, { x, y }, extra || {}); };
-  /** Diagrama de flujo de ejemplo: inicio, datos, una decisión con sí y no, y fin. */
-  function flujo() {
-    const b = [
-      forma("elipse", 0, 0, 180, 64, "Inicio", { color: CLAROS[1] }),
-      forma("paralelogramo", -10, 120, 200, 72, "Leer la edad", { color: CLAROS[5] }),
-      forma("rombo", -20, 250, 220, 120, "¿Edad ≥ 18?", { color: CLAROS[2] }),
-      forma("rect", -260, 430, 200, 72, "Puede votar", { color: CLAROS[0] }),
-      forma("rect", 240, 430, 200, 72, "Todavía no puede votar", { color: CLAROS[3] }),
-      forma("elipse", 0, 570, 180, 64, "Fin", { color: CLAROS[1] }),
-    ];
-    return { bloques: b, uniones: [[0, 1], [1, 2], [2, 3, { ruta: "codo", etiqueta: "Sí" }], [2, 4, { ruta: "codo", etiqueta: "No" }], [3, 5, { ruta: "codo" }], [4, 5, { ruta: "codo" }]] };
+  /**
+   * Diagrama de flujo desde un texto: un paso por línea; una pregunta («¿…?») es una decisión y
+   * debajo, con sangría, van sus caminos «Sí: …» y «No: …» (cada uno puede tener más pasos con más
+   * sangría). Los dos caminos se juntan en el siguiente paso.
+   */
+  function flujo(txt) {
+    const lineas = String(txt || "").split(/\r?\n/).map((l) => ({ n: (l.replace(/\t/g, "    ").match(/^\s*/) || [""])[0].length, t: l.replace(/^\s*(?:[-*•·+]|\d+[.)])?\s*/, "").trim() })).filter((l) => l.t);
+    if (!lineas.length) return { bloques: [], uniones: [] };
+    const base = Math.min(...lineas.map((l) => l.n));
+    // Pasos de arriba y, en cada decisión, sus caminos.
+    const pasos = [];
+    for (let i = 0; i < lineas.length; i++) {
+      const l = lineas[i];
+      if (l.n > base) continue;
+      const paso = { t: l.t, caminos: [] };
+      let k = i + 1;
+      while (k < lineas.length && lineas[k].n > base) {
+        const m = /^(s[ií]|no|verdadero|falso|v|f)\s*[:\-–]\s*(.*)$/i.exec(lineas[k].t);
+        if (m) paso.caminos.push({ etiqueta: /^(s[ií]|verdadero|v)$/i.test(m[1]) ? "Sí" : "No", pasos: m[2] ? [m[2]] : [], n: lineas[k].n });
+        else if (paso.caminos.length) paso.caminos[paso.caminos.length - 1].pasos.push(lineas[k].t);
+        k++;
+      }
+      pasos.push(paso);
+    }
+    const W = 200, H = 76, GY = 64, bloques = [], uniones = [];
+    const figura = (t, i, total) => (/[?¿]/.test(t) ? "rombo" : /^(inicio|comienz|empez|fin\b|final|termina)/i.test(t) || ((i === 0 || i === total - 1) && t.split(" ").length <= 2) ? "elipse"
+      : /^(leer|lee|escrib|mostrar|muestra|imprim|pedir|pide|captur|ingres|entrada|salida)/i.test(t) ? "paralelogramo" : "rect");
+    const color = { elipse: CLAROS[1], rombo: CLAROS[2], paralelogramo: CLAROS[5], rect: CLAROS[0] };
+    const poner = (t, x, y, fig) => bloques.push(forma(fig, x - (fig === "rombo" ? 120 : W / 2), y, fig === "rombo" ? 240 : W, fig === "rombo" ? 120 : H, corto(t, 70), { color: color[fig] })) - 1;
+    let y = 0, pendientes = [];   // [índice, etiqueta]: lo que debe unirse con el siguiente paso
+    pasos.forEach((p, i) => {
+      const fig = p.caminos.length ? "rombo" : figura(p.t, i, pasos.length);
+      const k = poner(p.t, 0, y, fig);
+      pendientes.forEach(([a, et]) => uniones.push([a, k, Object.assign({ ruta: "codo" }, et ? { etiqueta: et } : {})]));
+      pendientes = [];
+      y += (fig === "rombo" ? 120 : H) + GY;
+      if (!p.caminos.length) { pendientes.push([k, null]); return; }
+      // Sí a la izquierda, No a la derecha; cada camino baja con sus pasos.
+      const lados = p.caminos.slice(0, 2);
+      let fondo = y;
+      lados.forEach((c, j) => {
+        const x = lados.length === 1 ? -260 : j === 0 ? -260 : 260;
+        let yy = y, ant = k, et = c.etiqueta;
+        c.pasos.forEach((t) => {
+          const q = poner(t, x, yy, figura(t, 1, 3));
+          uniones.push([ant, q, Object.assign({ ruta: "codo" }, et ? { etiqueta: et } : {})]);
+          et = null; ant = q; yy += H + GY;
+        });
+        if (c.pasos.length) pendientes.push([ant, null]); else pendientes.push([k, c.etiqueta]);
+        fondo = Math.max(fondo, yy);
+      });
+      if (lados.length === 1) pendientes.push([k, lados[0].etiqueta === "Sí" ? "No" : "Sí"]);
+      y = fondo;
+    });
+    return { bloques, uniones };
   }
   /** Diagrama de clases de ejemplo: herencia (triángulo hueco) y una asociación con cardinalidad. */
   function clases() {
@@ -217,6 +261,7 @@
 
   // ------------------------------------------------------------ catálogo (con un ejemplo cada uno)
   const EJ = {
+    flujo: "Inicio\nLeer la edad\n¿La edad es 18 o más?\n  Sí: Puede votar\n  No: Todavía no puede votar\nFin",
     pasos: "Investigar el tema\nHacer un esquema\nEscribir el borrador\nRevisar con el equipo\nEntregar",
     ciclo: "Evaporación\nCondensación\nPrecipitación\nEscurrimiento",
     tiempo: "1810: Inicia la Independencia\n1821: Consumación de la Independencia\n1857: Constitución de 1857\n1910: Inicia la Revolución\n1917: Constitución de 1917",
@@ -228,7 +273,7 @@
     foda: "Fortalezas\n  Equipo unido\nOportunidades\n  Concurso de ciencias\nDebilidades\n  Poco presupuesto\nAmenazas\n  Poco tiempo",
   };
   const CATALOGO = [
-    { id: "flujo", t: "Diagrama de flujo", d: "Inicio, pasos, una decisión con sí y no, y fin.", hacer: flujo },
+    { id: "flujo", t: "Diagrama de flujo", d: "Un paso por línea; una «¿pregunta?» con «Sí:» y «No:» debajo.", texto: true, hacer: (t) => flujo(t) },
     { id: "pasos", t: "Proceso por pasos", d: "Una cosa después de otra.", texto: true, hacer: (t) => proceso(leerLista(t)) },
     { id: "ciclo", t: "Ciclo", d: "Pasos que se repiten (como el ciclo del agua).", texto: true, hacer: (t) => ciclo(leerLista(t)) },
     { id: "tiempo", t: "Línea del tiempo", d: "Fechas y lo que pasó. Escribe «fecha: suceso».", texto: true, hacer: (t) => lineaTiempo(leerFechas(t)) },

@@ -103,6 +103,18 @@ final class Repositorios {
             espacios.put(e.id, e);
             almacen.escribir("espacios.json", espacios);
         }
+
+        @SuppressWarnings("unchecked")
+        @Override public synchronized List<Map<String, Object>> biblioteca(String espacioId) {
+            Object l = almacen.leer("biblioteca/" + espacioId + ".json", null);
+            List<Map<String, Object>> r = new ArrayList<>();
+            if (l instanceof List) for (Object o : (List<Object>) l) if (o instanceof Map) r.add((Map<String, Object>) o);
+            return r;
+        }
+
+        @Override public synchronized void guardarBiblioteca(String espacioId, List<Map<String, Object>> fuentes) {
+            almacen.escribir("biblioteca/" + espacioId + ".json", fuentes);
+        }
     }
 
     // ================================================================== documentos, estados y versiones

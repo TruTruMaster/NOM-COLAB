@@ -21,6 +21,7 @@ import mx.wack.nom.core.servicio.Nodo;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioFuentes;
 import mx.wack.nom.core.servicio.ServicioSincronia;
 
 /**
@@ -39,9 +40,11 @@ final class ApiTelefono {
     private final Descubrimiento descubrimiento;
     private final Nodo nodo;
     private final ServicioSincronia sincronia;
+    private final ServicioFuentes fuentes;
 
     ApiTelefono(ServicioCuentas cuentas, ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor,
-                Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia) {
+                Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia, ServicioFuentes fuentes) {
+        this.fuentes = fuentes;
         this.cuentas = cuentas;
         this.espacios = espacios;
         this.documentos = documentos;
@@ -258,6 +261,22 @@ final class ApiTelefono {
         if ((x = coincide("/api/espacios/" + ID + "/almacenamiento/depurar", r)) != null && m.equals("POST")) {
             Object c = cuerpo(p).get("conservar");
             return ok(espacios.depurar(u, x.group(1), c instanceof Number ? ((Number) c).intValue() : 0));
+        }
+        // ---- Fase 9: fuentes para investigar y citar, y la biblioteca del espacio
+        if (r.equals("/api/fuentes/web") && m.equals("GET")) return ok(fuentes.web(u, p.consulta.getOrDefault("url", "")));
+        if (r.equals("/api/fuentes/doi") && m.equals("GET")) return ok(fuentes.porDoi(u, p.consulta.getOrDefault("doi", "")));
+        if (r.equals("/api/fuentes/isbn") && m.equals("GET")) return ok(fuentes.porIsbn(u, p.consulta.getOrDefault("isbn", "")));
+        if (r.equals("/api/fuentes/buscar") && m.equals("GET")) return ok(fuentes.buscar(u, p.consulta.getOrDefault("q", ""), p.consulta.getOrDefault("donde", "wikipedia")));
+        if (r.equals("/api/fuentes/wikipedia") && m.equals("GET")) return ok(fuentes.wikipedia(u, p.consulta.getOrDefault("titulo", "")));
+        if (r.equals("/api/fuentes/datos") && m.equals("GET")) return ok(fuentes.conjuntos());
+        if ((x = coincide("/api/fuentes/datos/" + ID, r)) != null && m.equals("GET")) return ok(fuentes.wikidata(u, x.group(1)));
+        if ((x = coincide("/api/espacios/" + ID + "/biblioteca", r)) != null) {
+            if (m.equals("GET")) { String q = p.consulta.getOrDefault("q", ""); return ok(q.isBlank() ? fuentes.biblioteca(u, x.group(1)) : fuentes.buscarEnBiblioteca(u, x.group(1), q)); }
+            if (m.equals("POST")) return ok(fuentes.guardarEnBiblioteca(u, x.group(1), cuerpo(p)));
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/biblioteca/" + ID, r)) != null) {
+            if (m.equals("GET")) return ok(fuentes.deBiblioteca(u, x.group(1), x.group(2)));
+            if (m.equals("DELETE")) return ok(fuentes.quitarDeBiblioteca(u, x.group(1), x.group(2)));
         }
         // ---- 8.5 papelera, buscar, carpetas y avisos
         if ((x = coincide("/api/espacios/" + ID + "/papelera", r)) != null) {

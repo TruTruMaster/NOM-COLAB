@@ -32,6 +32,7 @@ import mx.wack.nom.core.servicio.Difusor;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
+import mx.wack.nom.core.servicio.ServicioFuentes;
 import mx.wack.nom.core.servicio.ServicioSincronia;
 
 /**
@@ -132,7 +133,9 @@ public class ServicioAnfitrion extends Service {
         // 6.5: copia de los espacios conectados con Azure o con el servidor propio (cuando hay Internet).
         ServicioSincronia sincronia = new ServicioSincronia(espacios, documentos, Json.YO, nodo);
 
-        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo, sincronia));
+        // Fase 9: fuentes para investigar (cuando el teléfono tiene Internet) y la biblioteca del espacio.
+        ServicioFuentes fuentes = new ServicioFuentes(espacios, espaciosRepo, Json.YO, cifrado);
+        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo, sincronia, fuentes));
         puerto = http.iniciar(8080);
         nodo.fijarPuerto(puerto);
 

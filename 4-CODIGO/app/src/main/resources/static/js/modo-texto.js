@@ -1371,6 +1371,103 @@
       };
       this.sugerencias = { lista: sugerencias, resolver: resolverSugerencia, activo: () => modoSug, alternar: alternarSugerencias };
 
+      // ------------------------------------------------------------ Fase 9: lo que usan las citas, las fichas y "Armar reporte"
+      /** Tokens de un párrafo: { tramos: [{ x, a } | { e }], a: atributos del párrafo }. */
+      const tokensDe = (tramos, base) => {
+        const t = [];
+        (tramos || []).forEach((tr) => {
+          if (tr.e) { t.push({ c: OBJ, obj: tr.e }); return; }
+          cps(tr.x || "").forEach((c) => t.push(c === "\n" ? { c: "\n", pa: {} } : { c, a: Object.assign({}, base || {}, tr.a || {}) }));
+        });
+        return t;
+      };
+      /** Inserta párrafos completos en la posición i (al inicio de un párrafo o partiéndolo). Cada
+          párrafo lleva su propia marca de la bitácora (meta): { o: "c" } citado, { o: "r" } armado por la app. */
+      function insertarParrafosEn(i, ps, grupo) {
+        let pos = i;
+        const pi = parrafoEn(pos), p = psPintado[pi], paActual = S().attrs(p.mark);
+        // A media línea: el párrafo se parte y la primera parte se queda con su formato.
+        if (pos > p.ini) pos = insertarEn(pos, [{ c: "\n", pa: Object.assign({}, paActual) }], grupo);
+        ps.forEach((x) => { pos = insertarEn(pos, tokensDe(x.tramos).concat([{ c: "\n", pa: Object.assign({}, x.a || {}) }]), grupo, x.meta); });
+        return pos;
+      }
+      this.textoApi = {
+        /** Inserta texto con formato donde quedó el cursor (reemplaza lo elegido). */
+        insertarTramos(tramos, meta) {
+          if (ed.soloLectura) return false;
+          sincronizar();
+          const s = leerSel() || { ini: visPintado.length, fin: visPintado.length, col: true }, cur = attrsEnCursor();
+          comando(() => {
+            if (!s.col) borrarRango(s.ini, s.fin, grupoEscritura());
+            const toks = [];
+            (tramos || []).forEach((tr) => cps(tr.x || "").forEach((c) => toks.push(c === "\n" ? { c: "\n", pa: Object.assign({}, cur.pa, { hecho: null }) } : { c, a: Object.assign({}, cur.a, tr.a || {}) })));
+            const fin = insertarEn(s.ini, toks, grupoEscritura(), meta);
+            finEdicion = fin;
+            return { sel: [fin, fin] };
+          });
+          seguirAlCursor();
+          return true;
+        },
+        /** Párrafos donde está el cursor, o al final del documento (opc.alFinal). */
+        insertarParrafos(ps, opc) {
+          if (ed.soloLectura || !ps || !ps.length) return false;
+          opc = opc || {};
+          sincronizar();
+          const s = leerSel();
+          comando(() => {
+            const grupo = "parrafos-" + Date.now();
+            let i;
+            if (opc.alFinal || !s) {
+              // Al final: si el último párrafo tiene algo, primero se cierra con su propio formato.
+              const u = psPintado[psPintado.length - 1];
+              i = visPintado.length;
+              if (u.fin > u.ini) i = insertarEn(i, [{ c: "\n", pa: Object.assign({}, S().attrs(u.mark)) }], grupo);
+            } else { if (!s.col) borrarRango(s.ini, s.fin, grupo); i = s.ini; }
+            const fin = insertarParrafosEn(i, ps, grupo);
+            return { sel: [fin, fin] };
+          });
+          seguirAlCursor();
+          return true;
+        },
+        /** Cambia lo que hay debajo de un título (hasta el siguiente título del mismo nivel o mayor);
+            si no existe, lo agrega al final con ese título. Sirve para "Referencias". */
+        reemplazarSeccion(titulo, ps, opc) {
+          if (ed.soloLectura) return false;
+          opc = opc || {};
+          sincronizar();
+          const norm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+          const nombres = (Array.isArray(titulo) ? titulo : [titulo]).map(norm);
+          const nivel = (pa) => ({ titulo: 0, h1: 1, h2: 2, h3: 3 }[pa.estilo] ?? 9);
+          const texto = (p) => visPintado.slice(p.ini, p.fin).map((x) => (x.e ? "" : x.c)).join("");
+          let h = -1;
+          for (let k = psPintado.length - 1; k >= 0; k--) { const pa = S().attrs(psPintado[k].mark); if (nivel(pa) < 9 && nombres.includes(norm(texto(psPintado[k])))) { h = k; break; } }
+          if (h < 0) return this.insertarParrafos([{ tramos: [{ x: Array.isArray(titulo) ? titulo[0] : titulo }], a: opc.encabezado || { estilo: "h1" }, meta: { o: "r" } }].concat(ps), { alFinal: true });
+          const nv = nivel(S().attrs(psPintado[h].mark));
+          let fin = psPintado.length;
+          for (let k = h + 1; k < psPintado.length; k++) if (nivel(S().attrs(psPintado[k].mark)) <= nv) { fin = k; break; }
+          comando(() => {
+            const grupo = "seccion-" + Date.now();
+            const ini = psPintado[h].fin + 1;
+            if (fin < psPintado.length) {
+              borrarRango(ini, psPintado[fin].ini, grupo);
+              const pos = insertarParrafosEn(ini, ps, grupo);
+              return { sel: [pos, pos] };
+            }
+            // La sección llega hasta el final: se borra y se escribe de nuevo después del título.
+            if (ini <= visPintado.length) borrarRango(Math.min(ini, visPintado.length), visPintado.length, grupo);
+            let pos = psPintado[h].fin;
+            const u = psPintado[psPintado.length - 1];
+            if (h === psPintado.length - 1) pos = insertarEn(u.fin, [{ c: "\n", pa: Object.assign({}, S().attrs(u.mark)) }], grupo);
+            else pos = Math.min(ini, visPintado.length);
+            pos = insertarParrafosEn(pos, ps, grupo);
+            return { sel: [pos, pos] };
+          });
+          return true;
+        },
+        /** El texto del párrafo donde está el cursor (para proponer el tema de una ficha). */
+        enCursor: () => { const s = leerSel(); return s ? { ini: s.ini, fin: s.fin } : null; },
+      };
+
       // ------------------------------------------------------------ Enter, saltos y objetos
       function enter() {
         sincronizar();
@@ -2742,6 +2839,11 @@
           { texto: "Fecha de hoy", icono: "calendar", fn: () => insertarTexto(new Date().toLocaleDateString("es-MX", { dateStyle: "long" })) },
           { texto: "Símbolo…", icono: "omega", fn: () => menuSimbolos(b) },
           "-",
+          // Fase 9: citas y referencias en APA, y un reporte armado con las fichas.
+          { texto: "Cita de una fuente…", icono: "quote", fn: () => NOM.citas && NOM.citas.abrir(ed, "fuentes") },
+          { texto: "Referencias en APA", icono: "list-ordered", fn: () => NOM.citas && NOM.citas.insertarReferencias(ed) },
+          { texto: "Armar reporte con mis fichas…", icono: "list-tree", fn: () => NOM.citas && NOM.citas.armarReporte(ed) },
+          "-",
           { texto: "Contenido de un archivo de Word…", icono: "file-up", fn: insertarWord },
         ]);
       }
@@ -3002,6 +3104,7 @@
         { id: "buscar", icono: "search", micro: "Buscar y reemplazar||Ctrl+F", fn: () => buscar(false) },
         { id: "sugerir", icono: "pen-line", micro: "Modo sugerencia|Lo que escribas o borres queda propuesto; el equipo lo acepta o lo rechaza.", fn: () => alternarSugerencias(), clase: "solo-escritorio" },
         { id: "comentar", icono: "message-square", micro: "Comentar|Comenta el texto elegido. Funciona aunque no haya Internet.", fn: () => NOM.comentarios && NOM.comentarios.nuevo(ed) },
+        { id: "investigar", icono: "book-open", micro: "Investigar|Busca en Wikipedia, libros y artículos; haz fichas y cita en APA. Tú escribes; la app pone las citas.", fn: () => NOM.citas && NOM.citas.abrir(ed) },
         { id: "mas-texto", icono: "more-vertical", micro: "Más|Tachado, superíndice, configurar página, encabezado y pie, esquema…", fn: (e, b) => menuMas(b) },
       ];
       // Doble clic en la brocha: modo fijo.
@@ -3172,6 +3275,19 @@
     herramientas() { return this._herr || []; },
     acciones() {
       const a = [];
+      if (NOM.citas && this.textoApi) {
+        const ed = NOM.editorActual;
+        a.push({ texto: "Investigar (Wikipedia, libros y artículos)", icono: "book-open", fn: () => NOM.citas.abrir(ed), claves: "buscar fuentes fichas citar wikipedia libros articulos investigacion" });
+        a.push({ texto: "Fichas de trabajo", icono: "notebook-pen", fn: () => NOM.citas.abrir(ed, "fichas"), claves: "ficha textual parafrasis resumen" });
+        a.push({ texto: "Agregar una fuente o citar", icono: "quote", fn: () => NOM.citas.abrir(ed, "fuentes"), claves: "cita apa doi isbn bibliografia referencia" });
+        a.push({ texto: "Poner las referencias en APA", icono: "list-ordered", fn: () => NOM.citas.insertarReferencias(ed), claves: "bibliografia apa referencias lista" });
+        a.push({ texto: "Armar reporte con mis fichas", icono: "list-tree", fn: () => NOM.citas.armarReporte(ed), claves: "reporte investigacion portada indice secciones" });
+        if (NOM.datos) {
+          a.push({ texto: "Convertir en presentación", icono: "presentation", fn: () => NOM.datos.aPresentacion(ed), claves: "diapositivas exposicion generar" });
+          a.push({ texto: "Convertir en mapa mental", icono: "brain", fn: () => NOM.datos.aMapaMental(ed), claves: "diagrama esquema ideas generar" });
+          a.push({ texto: "Combinar correspondencia", icono: "mail", fn: () => NOM.datos.combinarCorrespondencia(ed), claves: "cartas constancias diplomas campos hoja combinar" });
+        }
+      }
       if (this.sugerencias) a.push({ texto: this.sugerencias.activo() ? "Apagar el modo sugerencia" : "Modo sugerencia (proponer cambios)", icono: "pen-line", fn: () => this.sugerencias.alternar(), claves: "sugerir control de cambios revisar" });
       return a;
     },

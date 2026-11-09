@@ -44,11 +44,12 @@
         <div><b>${n(t.minutosActivos)}</b><span>minutos activos</span></div>
         <div><b>${n(t.letrasTecleadas)}</b><span>letras tecleadas</span></div>
         <div><b>${n(t.letrasPegadas)}</b><span>letras pegadas</span></div>
+        ${t.letrasCitadas != null ? `<div><b>${n(t.letrasCitadas)}</b><span>citadas con su fuente</span></div>` : ""}
         <div><b>${n(t.porcentajeTecleado)}%</b><span>de lo escrito fue tecleado</span></div>
       </section>
       <h2>Sesiones de trabajo (${n(t.sesiones)})</h2>
-      ${ses.length ? `<table class="recibo-tabla"><thead><tr><th>Fecha</th><th>Horario</th><th>Minutos</th><th>Dispositivo</th><th>Tecleadas</th><th>Pegadas</th><th>Borradas</th></tr></thead><tbody>
-        ${ses.map((s) => `<tr><td>${esc(fecha(s.inicio))}</td><td>${esc(hora(s.inicio))}–${esc(hora(s.fin))}</td><td>${n(s.minutosActivos)}</td><td>${esc(s.dispositivo)}</td><td>${n(s.letrasTecleadas)}</td><td>${n(s.letrasPegadas)}</td><td>${n(s.letrasBorradas)}</td></tr>`).join("")}
+      ${ses.length ? `<table class="recibo-tabla"><thead><tr><th>Fecha</th><th>Horario</th><th>Minutos</th><th>Dispositivo</th><th>Tecleadas</th><th>Pegadas</th>${t.letrasCitadas != null ? "<th>Citadas</th>" : ""}<th>Borradas</th></tr></thead><tbody>
+        ${ses.map((s) => `<tr><td>${esc(fecha(s.inicio))}</td><td>${esc(hora(s.inicio))}–${esc(hora(s.fin))}</td><td>${n(s.minutosActivos)}</td><td>${esc(s.dispositivo)}</td><td>${n(s.letrasTecleadas)}</td><td>${n(s.letrasPegadas)}</td>${t.letrasCitadas != null ? `<td>${n(s.letrasCitadas)}</td>` : ""}<td>${n(s.letrasBorradas)}</td></tr>`).join("")}
         </tbody></table>` : `<p>No hay sesiones registradas para esta persona en este documento.</p>`}
       <h2>Pegados grandes (más de 40 letras)</h2>
       ${peg.length ? `<table class="recibo-tabla"><thead><tr><th>Fecha</th><th>Hora</th><th>Letras</th></tr></thead><tbody>${peg.map((p) => `<tr><td>${esc(fecha(p.t))}</td><td>${esc(hora(p.t))}</td><td>${n(p.letras)}</td></tr>`).join("")}</tbody></table>`
@@ -57,7 +58,7 @@
       <p>${textoVersiones(r.versiones || {})}</p>
       <h2>Huella digital</h2>
       <p class="recibo-huella">${esc(r.hash)}</p>
-      <p class="recibo-nota">La huella es el SHA-256 de todo lo de arriba. Para comprobar el recibo, abre NOM-COLAB → Historial → <b>Verificar un recibo</b> y elige el archivo .json: si alguien cambió una sola cifra, la huella ya no coincide. Lo tecleado y lo pegado lo anota el editor al momento; el texto pegado nunca se guarda.</p>
+      <p class="recibo-nota">La huella es el SHA-256 de todo lo de arriba. Para comprobar el recibo, abre NOM-COLAB → Historial → <b>Verificar un recibo</b> y elige el archivo .json: si alguien cambió una sola cifra, la huella ya no coincide. Lo tecleado, lo pegado y lo citado con su fuente (desde las fichas y el panel Investigar) lo anota el editor al momento; el texto pegado nunca se guarda.</p>
     </article>`;
   }
 

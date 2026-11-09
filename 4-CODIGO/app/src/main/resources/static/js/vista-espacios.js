@@ -411,7 +411,7 @@
         <div class="modo-opciones">${Object.keys(MODOS).map((m) => `<button type="button" class="modo-opcion modo-${m}" data-modo="${m}" aria-pressed="${m === modo}" data-micro="${esc(MODOS[m].nombre)}|${esc(MODOS[m].micro)} El tipo queda fijo para conservar su formato."><span class="modo-insignia">${ico(MODOS[m].icono, "ico-l")}</span>${esc(MODOS[m].nombre)}</button>`).join("")}</div></div>
       <div class="col" style="gap:8px"><span class="etiqueta">Plantilla</span><div class="plantillas" data-plantillas></div></div>
     </form>`);
-    const pie = html(`<div style="display:contents"><button type="button" class="btn" data-importar>${ico("upload")} Importar archivo</button><span class="crece solo-escritorio"></span><button class="btn primario" data-crear>Crear documento</button></div>`);
+    const pie = html(`<div style="display:contents"><button type="button" class="btn" data-importar>${ico("upload")} Importar archivo</button>${esp && NOM.datos ? `<button type="button" class="btn" data-mas-crear aria-label="Más formas de crear" data-micro="Más|Reporte desde datos (CSV o Excel) y datos públicos.">${ico("more-horizontal")}</button>` : ""}<span class="crece solo-escritorio"></span><button class="btn primario" data-crear>Crear documento</button></div>`);
     const h = hoja({ titulo: esp ? "Nuevo documento" : "Nuevo documento (en este equipo)", cuerpo, pie, ancha: true });
     if (!esp) cuerpo.prepend(html(`<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar} se pierde, salvo que lo descargues.</span></div>`));
     // 8.5 Las plantillas que guardó el equipo en este espacio salen primero (con su marca).
@@ -446,6 +446,11 @@
     };
     cuerpo.onsubmit = crear;
     $("[data-crear]", pie).onclick = crear;
+    const masCrear = $("[data-mas-crear]", pie);
+    if (masCrear) masCrear.onclick = () => NOM.menu(masCrear, [{ titulo: "Crear desde…" },
+      { texto: "Reporte desde datos (CSV o Excel)…", icono: "bar-chart", fn: async () => { const f = await NOM.formatos.elegirArchivo(".csv,.tsv,.xlsx"); if (!f) return; h.cerrar(true); NOM.datos.reporteDeDatos({ espacio: esp, local: false }, { archivo: f }); } },
+      { texto: "Datos públicos (Wikidata)…", icono: "globe", fn: () => { h.cerrar(true); NOM.datos.datosPublicos(esp); } },
+    ]);
     $("[data-importar]", pie).onclick = async () => {
       const f = await NOM.formatos.elegirArchivo(NOM.formatos.IMPORTABLES.join(","));
       if (!f) return;

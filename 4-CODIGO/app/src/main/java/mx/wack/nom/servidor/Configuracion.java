@@ -63,6 +63,12 @@ public class Configuracion {
         };
     }
 
+    /** Fase 9: buscar y leer fuentes (Wikipedia, libros, artículos, páginas web) y la biblioteca del espacio. */
+    @Bean
+    public mx.wack.nom.core.servicio.ServicioFuentes servicioFuentes(ServicioEspacios espacios, RepositorioEspacios repo, CodecJson json, Cifrado cifrado) {
+        return new mx.wack.nom.core.servicio.ServicioFuentes(espacios, repo, json, cifrado);
+    }
+
     @Bean
     public ServicioSincronia servicioSincronia(ServicioEspacios espacios, ServicioDocumentos documentos, CodecJson json, NodoLocal nodo) {
         return new ServicioSincronia(espacios, documentos, json, nodo);

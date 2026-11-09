@@ -13,7 +13,7 @@ presentar en otra pantalla y la fecha límite de entrega.
 Imprime cada prueba y termina con error si alguna falla.
 Los roles de la base de Azure SQL se prueban aparte con azure/desplegar.sh roles.
 """
-import json, os, shutil, subprocess, time, urllib.request
+import json, os, shutil, subprocess, time, urllib.request, urllib.parse
 import sys, tempfile
 AQUI = os.path.dirname(os.path.abspath(__file__))
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, "..", "app", "target", "nom-colab.jar")
@@ -258,6 +258,45 @@ try:
     prueba("8.5 Un editor no vacía la papelera", 403, r("DELETE", f"/api/espacios/{salon}/papelera", t=tk["alumno1"])[0])
     prueba("8.5 El propietario vacía la papelera", 200, r("DELETE", f"/api/espacios/{salon}/papelera", t=tk["maestra"])[0])
     prueba("8.5 …y ya no se puede restaurar", 404, r("POST", f"/api/documentos/{bdoc}/restaurar", t=tk["maestra"])[0])
+
+    # Fase 9: leer una dirección web nunca toca la red interna; la biblioteca respeta los permisos
+    web = lambda url, t=tk["alumno1"]: r("GET", "/api/fuentes/web?url=" + urllib.parse.quote(url, safe=""), t=t)[0]
+    prueba("9 Sin sesión no se leen direcciones", 401, r("GET", "/api/fuentes/web?url=https%3A%2F%2Fexample.com")[0])
+    prueba("9 No lee el propio servidor (localhost)", 403, web("http://localhost/"))
+    prueba("9 No lee 127.0.0.1", 403, web("http://127.0.0.1/"))
+    prueba("9 No lee 127.0.0.1 escrito como número (2130706433)", 403, web("http://2130706433/"))
+    prueba("9 No lee 0.0.0.0", 403, web("http://0.0.0.0/"))
+    prueba("9 No lee la red del salón (192.168.x)", 403, web("http://192.168.1.10/"))
+    prueba("9 No lee redes privadas (10.x)", 403, web("http://10.0.0.1/"))
+    prueba("9 No lee 172.16.x", 403, web("http://172.16.5.4/"))
+    prueba("9 No lee los datos internos de la nube (169.254.169.254)", 403, web("http://169.254.169.254/latest/meta-data/"))
+    prueba("9 No lee la red compartida del proveedor (100.64.x)", 403, web("http://100.64.0.1/"))
+    prueba("9 No lee ::1 (IPv6 del propio equipo)", 403, web("http://[::1]/"))
+    prueba("9 No lee ::ffff:127.0.0.1", 403, web("http://[::ffff:127.0.0.1]/"))
+    prueba("9 No lee fd00:: (IPv6 privada)", 403, web("http://[fd00::1]/"))
+    prueba("9 No lee nombres .local", 403, web("http://impresora.local/"))
+    prueba("9 Solo los puertos 80 y 443", 400, web("http://127.0.0.1:8092/api/red/info"))
+    prueba("9 Ni con un puerto raro en un sitio público", 400, web("http://example.com:22/"))
+    prueba("9 Solo http y https (file:)", 400, web("file:///etc/passwd"))
+    prueba("9 Solo http y https (ftp:)", 400, web("ftp://example.com/"))
+    prueba("9 Sin usuario ni contraseña en la dirección", 400, web("http://usuario:clave@example.com/"))
+    prueba("9 Un DOI inválido", 400, r("GET", "/api/fuentes/doi?doi=hola", t=tk["alumno1"])[0])
+    prueba("9 Un ISBN inválido", 400, r("GET", "/api/fuentes/isbn?isbn=123", t=tk["alumno1"])[0])
+    prueba("9 Un conjunto de datos que no existe", 400, r("GET", "/api/fuentes/datos/borrar-todo", t=tk["alumno1"])[0])
+    fte = {"fuente": {"tipo": "libro", "titulo": "Cien años de soledad", "autores": [{"familia": "García Márquez", "nombres": "Gabriel"}], "anio": "1967", "editorial": "Sudamericana", "otro": "x"}, "texto": "Muchos años después, frente al pelotón de fusilamiento…"}
+    prueba("9 Quien no es del espacio no ve su biblioteca", 403, r("GET", f"/api/espacios/{salon}/biblioteca", t=tok["lectora"])[0])
+    prueba("9 Un lector no agrega a la biblioteca", 403, r("POST", f"/api/espacios/{salon}/biblioteca", fte, tk["visitante"])[0])
+    prueba("9 Una fuente sin título ni dirección no se guarda", 400, r("POST", f"/api/espacios/{salon}/biblioteca", {"fuente": {"tipo": "libro"}}, tk["alumno1"])[0])
+    bib = r("POST", f"/api/espacios/{salon}/biblioteca", fte, tk["alumno1"])
+    prueba("9 Un editor guarda una fuente con su texto", 200, bib[0])
+    fid = (bib[1] or {}).get("id", "X")
+    prueba("9 …los campos desconocidos no se guardan", None, ((bib[1] or {}).get("fuente") or {}).get("otro"))
+    prueba("9 Un lector ve la biblioteca", 1, len(r("GET", f"/api/espacios/{salon}/biblioteca", t=tk["visitante"])[1] or []))
+    prueba("9 …y busca en sus textos (sin Internet)", 1, len(r("GET", f"/api/espacios/{salon}/biblioteca?q=peloton", t=tk["visitante"])[1] or []))
+    prueba("9 …y lee el texto guardado", True, "pelotón" in ((r("GET", f"/api/espacios/{salon}/biblioteca/{fid}", t=tk["visitante"])[1] or {}).get("texto") or ""))
+    prueba("9 Guardar la misma fuente no la repite", 1, (r("POST", f"/api/espacios/{salon}/biblioteca", fte, tk["alumno2"]), len(r("GET", f"/api/espacios/{salon}/biblioteca", t=tk["alumno1"])[1] or []))[1])
+    prueba("9 Un lector no la quita", 403, r("DELETE", f"/api/espacios/{salon}/biblioteca/{fid}", t=tk["visitante"])[0])
+    prueba("9 Un editor la quita", 200, r("DELETE", f"/api/espacios/{salon}/biblioteca/{fid}", t=tk["alumno1"])[0])
 
     # 3.6 Entrega con fecha límite
     edoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Tarea 1", "modo": "TEXTO", "ops": []}, tk["alumno1"])[1]["id"]

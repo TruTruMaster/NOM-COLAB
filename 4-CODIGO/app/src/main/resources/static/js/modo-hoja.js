@@ -1809,6 +1809,7 @@
     herramientas() { return this._herr || []; },
     acciones() {
       return [
+        ...(NOM.datos ? [{ texto: "Hacer un reporte con estos datos", icono: "bar-chart", fn: () => NOM.datos.reporteDeDatos(NOM.editorActual), claves: "encuesta google forms resumen graficas frecuencias estadistica" }] : []),
         { texto: "Insertar fila o columna", icono: "between-horizontal-start", fn: () => { const b = document.querySelector('[data-micro^="Insertar o eliminar filas"]'); if (b) b.click(); }, claves: "fila columna insertar eliminar borrar" },
         { texto: "Formato de celdas", icono: "settings", atajo: "Ctrl 1", fn: () => document.querySelector("[data-rejilla]") && document.querySelector("[data-rejilla]").dispatchEvent(new KeyboardEvent("keydown", { key: "1", ctrlKey: true, bubbles: true })), claves: "moneda porcentaje decimales fecha alinear bordes relleno" },
       ];

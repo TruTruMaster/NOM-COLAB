@@ -280,24 +280,24 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
 
 ## Fase 9. Generar sin IA (la app organiza y cita; la persona escribe)
 
-- [ ] Fuentes y citas: formulario (libro, artículo, página web, video…), autollenado por DOI,
+- [x] Fuentes y citas: formulario (libro, artículo, página web, video…), autollenado por DOI,
   ISBN o dirección web, cita "(Autor, año)" en el texto y lista de referencias en APA con sangría
   francesa.
-- [ ] Recibo: columna "citado con fuente" junto a tecleado y pegado.
-- [ ] Panel Investigar: Wikipedia en español, libros y artículos; fichas de trabajo (textual,
+- [x] Recibo: columna "citado con fuente" junto a tecleado y pegado.
+- [x] Panel Investigar: Wikipedia en español, libros y artículos; fichas de trabajo (textual,
   paráfrasis y resumen) con su referencia.
-- [ ] Armar reporte: portada, índice, secciones con preguntas guía, fichas en su sección y
+- [x] Armar reporte: portada, índice, secciones con preguntas guía, fichas en su sección y
   bibliografía.
-- [ ] Biblioteca del espacio: fuentes guardadas en el servidor para investigar sin internet.
-- [ ] Ruta del servidor que lee los datos de una dirección web, con protección (no lee la red
+- [x] Biblioteca del espacio: fuentes guardadas en el servidor para investigar sin internet.
+- [x] Ruta del servidor que lee los datos de una dirección web, con protección (no lee la red
   local, ni `localhost`, ni los datos internos de la nube) y sus pruebas en `seguridad.py`.
-- [ ] Datos → reporte: de una hoja o un CSV/XLSX, un documento con resumen, frecuencias y
+- [x] Datos → reporte: de una hoja o un CSV/XLSX, un documento con resumen, frecuencias y
   gráficas (por ejemplo, una encuesta de Google Forms).
-- [ ] Combinar correspondencia: plantilla con `{{campos}}` + hoja = un documento por fila.
-- [ ] Documento → presentación y documento → mapa mental.
-- [ ] Texto → diagrama (flujo, organigrama, mapa mental, línea del tiempo y ciclo) con acomodo
+- [x] Combinar correspondencia: plantilla con `{{campos}}` + hoja = un documento por fila.
+- [x] Documento → presentación y documento → mapa mental.
+- [x] Texto → diagrama (flujo, organigrama, mapa mental, línea del tiempo y ciclo) con acomodo
   automático.
-- [ ] Tablas de datos públicos desde Wikidata (experimento).
+- [x] Tablas de datos públicos desde Wikidata (experimento).
 
 ---
 

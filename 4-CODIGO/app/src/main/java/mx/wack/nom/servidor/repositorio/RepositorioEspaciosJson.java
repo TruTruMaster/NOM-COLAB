@@ -36,4 +36,12 @@ public class RepositorioEspaciosJson implements RepositorioEspacios {
         espacios.put(e.id, e);
         almacen.escribir(ARCHIVO, espacios);
     }
+
+    @Override public synchronized List<Map<String, Object>> biblioteca(String espacioId) {
+        return almacen.leer("biblioteca/" + espacioId + ".json", new TypeReference<java.util.ArrayList<Map<String, Object>>>() { }, new java.util.ArrayList<>());
+    }
+
+    @Override public synchronized void guardarBiblioteca(String espacioId, List<Map<String, Object>> fuentes) {
+        almacen.escribir("biblioteca/" + espacioId + ".json", fuentes);
+    }
 }
