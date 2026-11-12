@@ -16,8 +16,11 @@ import fidelidad as F
 warnings.simplefilter("ignore")
 SALIDA = F.CACHE / "office-ediciones"
 
+# La edición de cada caso se escribe dentro de este programa (donde dice /*EDICION*/) antes de
+# mandarlo a la página: la página no deja armar programas a partir de texto (política de
+# contenido, sin 'unsafe-eval'), y no hay por qué aflojarla para una prueba.
 JS = r"""
-async ([b64, nombre, edicion]) => {
+async ([b64, nombre]) => {
   const bin = atob(b64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   const aB64 = (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
@@ -27,7 +30,9 @@ async ([b64, nombre, edicion]) => {
     let doc = NOM.formatos.docDeOps(imp.nombre, imp.modo, imp.ops);
     const ext = nombre.split(".").pop().toLowerCase();
     const exportar = (d) => (ext === "docx" ? NOM.ooxml.docx(d) : ext === "xlsx" ? NOM.ooxml.xlsx(d) : NOM.ooxml.pptx(d, false));
-    r.info = await (new Function("doc", "NOM", "return (async () => {" + edicion + "})()"))(doc, NOM);
+    r.info = await (async (doc, NOM) => {
+/*EDICION*/
+    })(doc, NOM);
     r.salida = aB64(await exportar(doc));
     // y lo mismo pasando por el formato propio: editar, guardar .nom, abrirlo y exportar
     const nom = NOM.formatos.aNomBytes(doc);
@@ -324,7 +329,7 @@ def main():
                 for nombre in archivos:
                     orig = F.CORPUS / ext / nombre
                     if not orig.exists(): print(f"   (falta {nombre})"); continue
-                    r = pag.evaluate(JS, [base64.b64encode(orig.read_bytes()).decode(), nombre, edicion])
+                    r = pag.evaluate(JS.replace("/*EDICION*/", edicion), [base64.b64encode(orig.read_bytes()).decode(), nombre])
                     if r.get("error"): mal += 1; print(f"   MAL  {nombre}: {r['error'][:300]}"); continue
                     for sufijo, clave in (("", "salida"), (".desde-nom", "salidaNom")):
                         sale = SALIDA / (Path(nombre).stem + "." + re.sub(r"\W+", "-", titulo)[:24] + sufijo + "." + ext)

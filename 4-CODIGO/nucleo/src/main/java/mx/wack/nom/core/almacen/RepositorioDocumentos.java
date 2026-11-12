@@ -16,7 +16,10 @@ public interface RepositorioDocumentos {
 
     EstadoDocumento estado(String docId);
     void guardarEstado(String docId, EstadoDocumento estado);
+    /** Lo que el estado ocupa guardado (en la computadora va comprimido): es lo que cuenta para la cuota. */
     long bytesEstado(String docId);
+    /** Lo que el estado mide sin comprimir: para el tope de tamano de un documento. */
+    default long bytesEstadoReal(String docId) { return bytesEstado(docId); }
 
     List<Version> historial(String docId);
     Map<String, Map<String, Object>> fotoVersion(String docId, int numero);

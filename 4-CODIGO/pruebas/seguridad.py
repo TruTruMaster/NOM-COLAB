@@ -15,11 +15,14 @@ prueba sesión, validación, bloqueo y los roles de cada espacio (Propietario, P
 lectura y sin acceso). También lo de noviembre de 2026: protección contra el borrado, partes con
 dueño (párrafo, figura, diapositiva y plantilla del maestro), enlaces para unirse que caducan y se
 revocan, invitados con apodo, recibos de proceso de escritura, recuperar la contraseña,
-presentar en otra pantalla y la fecha límite de entrega.
+presentar en otra pantalla y la fecha límite de entrega. Y lo de la versión 0.12.1: cabeceras
+de seguridad, cambiar la contraseña, borrar la cuenta, boletos de un solo uso para el canal en
+vivo, bloqueo de intentos por red, tope de cuentas nuevas por hora, almacenamiento de la cuenta y
+que los documentos se guarden comprimidos (y sigan abriendo tras reiniciar el servidor).
 Imprime cada prueba y termina con error si alguna falla.
 Los roles de la base de Azure SQL se prueban aparte con azure/desplegar.sh roles.
 """
-import json, os, shutil, subprocess, time, urllib.request, urllib.parse
+import glob, gzip, json, os, shutil, subprocess, time, urllib.request, urllib.parse
 import sys, tempfile
 AQUI = os.path.dirname(os.path.abspath(__file__))
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, "..", "app", "target", "nom-colab.jar")
@@ -27,22 +30,39 @@ D = tempfile.mkdtemp(prefix="nomcolab-pruebas-")
 JAVA = shutil.which("java") or "java"
 EXTERNO = os.environ.get("NOM_BASE", "").rstrip("/")
 P = 8092; B = EXTERNO or f"http://localhost:{P}"
-srv = None if EXTERNO else subprocess.Popen([JAVA, "-jar", JAR],
-    env=dict(os.environ, NOM_PUERTO=str(P), NOM_DATOS=D, NOM_DESCUBRIMIENTO="false"), stdout=open(os.path.join(D, "servidor.log"), "w"), stderr=subprocess.STDOUT)
-def r(m, u, b=None, t=None):
+def arrancar():
+    return None if EXTERNO else subprocess.Popen([JAVA, "-jar", JAR],
+        env=dict(os.environ, NOM_PUERTO=str(P), NOM_DATOS=D, NOM_DESCUBRIMIENTO="false", NOM_CUOTA_MB="200"), stdout=open(os.path.join(D, "servidor.log"), "a"), stderr=subprocess.STDOUT)
+def esperar():
+    for _ in range(90):
+        try: urllib.request.urlopen(B + "/api/red/info", timeout=2); return
+        except Exception: time.sleep(1)
+srv = arrancar()
+def r(m, u, b=None, t=None, de=None):
+    """de: la dirección de red que se simula (solo se cree cuando la petición llega del propio equipo)."""
     h = {"Content-Type": "application/json"}
     if t: h["Authorization"] = "Bearer " + t
+    if de: h["X-Forwarded-For"] = de
     q = urllib.request.Request(B + u, method=m, data=json.dumps(b).encode() if b is not None else None, headers=h)
     try:
         with urllib.request.urlopen(q, timeout=30) as x:
             c = x.read(); return x.status, (json.loads(c) if c[:1] in b"{[" else None)
     except urllib.error.HTTPError as e: return e.code, None
+def cabeceras(u):
+    try:
+        with urllib.request.urlopen(B + u, timeout=30) as x: return {k.lower(): v for k, v in x.headers.items()}
+    except urllib.error.HTTPError as e: return {k.lower(): v for k, v in e.headers.items()}
+def canal(u):
+    """Abre un canal en vivo y lo cierra en cuanto contesta: devuelve el código y el tipo de contenido."""
+    try:
+        x = urllib.request.urlopen(urllib.request.Request(B + u, headers={"Accept": "text/event-stream"}), timeout=15)
+        try: return x.status, (x.headers.get("Content-Type") or "").split(";")[0]
+        finally: x.close()
+    except urllib.error.HTTPError as e: return e.code, ""
 res = []
 def prueba(nombre, esperado, obtenido): res.append((nombre, esperado, obtenido, str(esperado) == str(obtenido)))
 try:
-    for _ in range(90):
-        try: urllib.request.urlopen(B + "/api/red/info", timeout=2); break
-        except Exception: time.sleep(1)
+    esperar()
     CL = "Clave-Segura-123"
     for n in ("duena", "lectora", "editora", "ajena"): r("POST", "/api/cuentas/registro", {"nombre": n, "contrasena": CL})
     tok = {n: r("POST", "/api/cuentas/sesion", {"nombre": n, "contrasena": CL})[1]["token"] for n in ("duena", "lectora", "editora", "ajena")}
@@ -308,6 +328,129 @@ try:
     prueba("9 Un lector no la quita", 403, r("DELETE", f"/api/espacios/{salon}/biblioteca/{fid}", t=tk["visitante"])[0])
     prueba("9 Un editor la quita", 200, r("DELETE", f"/api/espacios/{salon}/biblioteca/{fid}", t=tk["alumno1"])[0])
 
+    # ================================================================ versión 0.12.1
+    # Cabeceras de seguridad
+    cp, ca = cabeceras("/"), cabeceras("/api/red/info")
+    prueba("12.1 La página dice que no se adivinen tipos de archivo", "nosniff", cp.get("x-content-type-options"))
+    prueba("12.1 …que no se meta dentro de otra página", "SAMEORIGIN", cp.get("x-frame-options"))
+    prueba("12.1 …y que no se diga de dónde viene", "no-referrer", cp.get("referrer-policy"))
+    prueba("12.1 …y solo corre programas de este servidor", True, "script-src 'self'" in cp.get("content-security-policy", "") and "object-src 'none'" in cp.get("content-security-policy", ""))
+    prueba("12.1 La API también lleva las cabeceras", ["nosniff", "no-referrer"], [ca.get("x-content-type-options"), ca.get("referrer-policy")])
+
+    # Cambiar la contraseña sabiendo la actual
+    r("POST", "/api/cuentas/registro", {"nombre": "cambia", "contrasena": CL})
+    c1 = r("POST", "/api/cuentas/sesion", {"nombre": "cambia", "contrasena": CL})[1]["token"]
+    c2 = r("POST", "/api/cuentas/sesion", {"nombre": "cambia", "contrasena": CL})[1]["token"]
+    NV = "Otra-Clave-Nueva-9"
+    prueba("12.1 Cambiar la contraseña pide sesión", 401, r("PUT", "/api/cuentas/contrasena", {"actual": CL, "nueva": NV})[0])
+    prueba("12.1 …y la contraseña actual correcta", 400, r("PUT", "/api/cuentas/contrasena", {"actual": "no-es-esta", "nueva": NV}, c1)[0])
+    prueba("12.1 …y una nueva de 8 o más", 400, r("PUT", "/api/cuentas/contrasena", {"actual": CL, "nueva": "corta"}, c1)[0])
+    prueba("12.1 Un invitado no tiene contraseña que cambiar", 403, r("PUT", "/api/cuentas/contrasena", {"actual": "x", "nueva": NV}, ti)[0])
+    cam = r("PUT", "/api/cuentas/contrasena", {"actual": CL, "nueva": NV}, c1)
+    prueba("12.1 Con la actual correcta, cambia", 200, cam[0])
+    c3 = (cam[1] or {}).get("token")
+    prueba("12.1 …y da una sesión nueva para ese equipo", 200, r("GET", "/api/cuentas/yo", t=c3)[0])
+    prueba("12.1 …las demás sesiones se cierran", [401, 401], [r("GET", "/api/espacios", t=c1)[0], r("GET", "/api/espacios", t=c2)[0]])
+    prueba("12.1 …la contraseña vieja ya no entra", 401, r("POST", "/api/cuentas/sesion", {"nombre": "cambia", "contrasena": CL})[0])
+    prueba("12.1 …la nueva sí", 200, r("POST", "/api/cuentas/sesion", {"nombre": "cambia", "contrasena": NV})[0])
+
+    # Boletos de un solo uso para el canal en vivo (el token ya no va en la dirección)
+    prueba("12.1 Pedir un boleto pide sesión", 401, r("POST", "/api/cuentas/boleto", {})[0])
+    bol = lambda t: (r("POST", "/api/cuentas/boleto", {}, t)[1] or {}).get("boleto", "")
+    b1 = bol(tk["maestra"])
+    prueba("12.1 Con sesión se obtiene un boleto", True, len(b1) >= 20 and b1 != tk["maestra"])
+    prueba("12.1 El canal en vivo abre con el boleto", [200, "text/event-stream"], list(canal(f"/api/espacios/{salon}/eventos?boleto={b1}&cliente=prueba-b")))
+    prueba("12.1 …y el mismo boleto no sirve dos veces", 401, canal(f"/api/espacios/{salon}/eventos?boleto={b1}&cliente=prueba-b")[0])
+    prueba("12.1 Un boleto inventado no abre nada", 401, canal(f"/api/espacios/{salon}/eventos?boleto=inventado&cliente=prueba-b")[0])
+    prueba("12.1 El boleto de otra persona no da su permiso (espacio ajeno)", 403, canal(f"/api/espacios/{salon}/eventos?boleto={bol(tok['duena'])}&cliente=prueba-b")[0])
+    prueba("12.1 Sin boleto ni token el canal no abre", 401, canal(f"/api/espacios/{salon}/eventos?cliente=prueba-b")[0])
+    boleto_viejo = bol(tk["maestra"]); t_boleto = time.time()   # se prueba que vence, más abajo
+
+    # Almacenamiento de la cuenta: cuánto ocupa lo suyo y cuánto tiene permitido
+    prueba("12.1 Ver el almacenamiento pide sesión", 401, r("GET", "/api/cuentas/almacenamiento")[0])
+    time.sleep(2)   # el estado de los documentos se escribe en segundo plano
+    alm = r("GET", "/api/cuentas/almacenamiento", t=tk["maestra"])[1] or {}
+    prueba("12.1 La cuenta ve cuánto ocupa y su límite", True, alm.get("uso", 0) > 0 and alm.get("documentos", 0) >= 3 and (EXTERNO != "" or alm.get("cuota") == 200 * 1024 * 1024))
+    prueba("12.1 …solo de los espacios que son suyos", [salon], [e["id"] for e in alm.get("espacios", [])])
+    alm1 = r("GET", "/api/cuentas/almacenamiento", t=tk["alumno1"])[1] or {}
+    prueba("12.1 …lo que escribe en espacios ajenos no le cuenta", [0, []], [alm1.get("uso"), alm1.get("espacios")])
+
+    if not EXTERNO:
+        # Los documentos se guardan comprimidos en el servidor
+        estados = glob.glob(os.path.join(D, "docs", "*", "estado.json"))
+        prueba("12.1 El estado de los documentos se guarda comprimido", True, len(estados) > 0 and all(open(f, "rb").read(2) == b"\x1f\x8b" for f in estados))
+        fotos = glob.glob(os.path.join(D, "docs", "*", "v", "*.json"))
+        r("POST", f"/api/documentos/{pres}/versiones", {"etiqueta": "Para la prueba"}, tk["maestra"])
+        fotos = glob.glob(os.path.join(D, "docs", "*", "v", "*.json"))
+        prueba("12.1 …y las fotos de sus versiones también", True, len(fotos) > 0 and all(open(f, "rb").read(2) == b"\x1f\x8b" for f in fotos))
+
+        # Bloqueo de intentos por red: quien falla desde su red no deja fuera al dueño
+        r("POST", "/api/cuentas/registro", {"nombre": "asediada", "contrasena": CL})
+        mala, buena = "203.0.113.5", "198.51.100.7"
+        cods = [r("POST", "/api/cuentas/sesion", {"nombre": "asediada", "contrasena": "mala"}, de=mala)[0] for _ in range(6)]
+        prueba("12.1 6 intentos fallidos desde una red la bloquean ahí", 423, cods[-1])
+        prueba("12.1 …ni con la contraseña correcta entra desde esa red", 423, r("POST", "/api/cuentas/sesion", {"nombre": "asediada", "contrasena": CL}, de=mala)[0])
+        prueba("12.1 …pero su dueño entra desde otra red", 200, r("POST", "/api/cuentas/sesion", {"nombre": "asediada", "contrasena": CL}, de=buena)[0])
+        prueba("12.1 …y desde el propio equipo", 200, r("POST", "/api/cuentas/sesion", {"nombre": "asediada", "contrasena": CL})[0])
+
+        # Tope de cuentas nuevas por hora desde una misma red
+        granja = "203.0.113.77"
+        regs = [r("POST", "/api/cuentas/registro", {"nombre": f"granja{i}", "contrasena": CL}, de=granja)[0] for i in range(31)]
+        prueba("12.1 Una red crea hasta 30 cuentas por hora", [201] * 30, regs[:30])
+        prueba("12.1 …la 31 se rechaza", 429, regs[30])
+        prueba("12.1 …otra red sí puede crear la suya", 201, r("POST", "/api/cuentas/registro", {"nombre": "vecina", "contrasena": CL}, de="198.51.100.8")[0])
+        prueba("12.1 …y el propio equipo no tiene tope", 201, r("POST", "/api/cuentas/registro", {"nombre": "delequipo", "contrasena": CL})[0])
+
+    # Borrar la cuenta
+    r("POST", "/api/cuentas/registro", {"nombre": "borrable", "contrasena": CL})
+    sb = r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[1]
+    tb, ub = sb["token"], sb["usuario"]["id"]
+    eb = r("POST", "/api/espacios", {"nombre": "Se va conmigo"}, tb)[1]["id"]
+    r("PUT", f"/api/espacios/{eb}/accesos", {"usuario": "alumno1", "permiso": "EDICION"}, tb)
+    db = r("POST", f"/api/espacios/{eb}/documentos", {"nombre": "Mío", "modo": "TEXTO", "ops": []}, tb)[1]["id"]
+    r("PUT", f"/api/espacios/{salon}/accesos", {"usuario": "borrable", "permiso": "EDICION"}, tk["maestra"])
+    dsalon = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Lo dejé en el salón", "modo": "TEXTO", "ops": []}, tb)[1]["id"]
+    miembros = lambda: [a.get("id") for a in ((r("GET", f"/api/espacios/{salon}/accesos", t=tk["maestra"])[1] or {}).get("miembros") or [])]
+    cuantos = lambda: (r("GET", f"/api/espacios/{salon}", t=tk["maestra"])[1] or {}).get("miembros")
+    antes = cuantos()
+    prueba("12.1 (antes) está en el salón de la maestra", True, ub in miembros())
+    prueba("12.1 Borrar la cuenta pide sesión", 401, r("POST", "/api/cuentas/eliminar", {"contrasena": CL})[0])
+    prueba("12.1 …y la contraseña", 400, r("POST", "/api/cuentas/eliminar", {}, tb)[0])
+    prueba("12.1 …la correcta", 400, r("POST", "/api/cuentas/eliminar", {"contrasena": "no-es-esta"}, tb)[0])
+    prueba("12.1 Un invitado no borra cuentas", 403, r("POST", "/api/cuentas/eliminar", {"contrasena": "x"}, ti)[0])
+    prueba("12.1 (tras los intentos) la cuenta sigue ahí", 200, r("GET", f"/api/documentos/{db}", t=tb)[0])
+    bo = r("POST", "/api/cuentas/eliminar", {"contrasena": CL}, tb)
+    prueba("12.1 Con su contraseña, la cuenta se borra", [200, 1, 1], [bo[0], (bo[1] or {}).get("espacios"), (bo[1] or {}).get("documentos")])
+    prueba("12.1 …su sesión deja de servir", 401, r("GET", "/api/espacios", t=tb)[0])
+    prueba("12.1 …ya no puede entrar", 401, r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[0])
+    prueba("12.1 …su espacio ya no existe para quien estaba invitado", 404, r("GET", f"/api/espacios/{eb}", t=tk["alumno1"])[0])
+    prueba("12.1 …ni sus documentos", 404, r("GET", f"/api/documentos/{db}", t=tk["alumno1"])[0])
+    prueba("12.1 …sale de los espacios de otros", [False, antes - 1], [ub in miembros(), cuantos()])
+    prueba("12.1 …pero lo que escribió ahí se queda", 200, r("GET", f"/api/documentos/{dsalon}", t=tk["maestra"])[0])
+    prueba("12.1 …y su nombre queda libre", 201, r("POST", "/api/cuentas/registro", {"nombre": "borrable", "contrasena": CL})[0])
+    prueba("12.1 …la cuenta nueva no hereda nada", [], r("GET", "/api/espacios", t=r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[1]["token"])[1])
+
+    if not EXTERNO:
+        # Reiniciar el servidor: lo guardado comprimido abre igual, y también un estado sin
+        # comprimir como los que dejaron las versiones anteriores.
+        time.sleep(2)
+        f_pres = os.path.join(D, "docs", pres, "estado.json")
+        srv.terminate(); srv.wait(60)
+        plano = gzip.open(f_pres, "rb").read()
+        open(f_pres, "wb").write(plano)
+        srv = arrancar(); esperar()
+        tm = r("POST", "/api/cuentas/sesion", {"nombre": "maestra", "contrasena": CL})[1]["token"]
+        bl2 = (r("GET", f"/api/documentos/{pres}", t=tm)[1] or {}).get("estado", {}).get("bloques", {})
+        prueba("12.1 Tras reiniciar, un estado sin comprimir (versión anterior) abre", 300, ((bl2.get("fig1") or {}).get("x") or {}).get("v"))
+        xs2 = [e["x"] for e in (r("GET", f"/api/documentos/{tdoc}", t=tm)[1] or {}).get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", [])]
+        prueba("12.1 …y uno comprimido también", True, " uno" in xs2)
+        prueba("12.1 …con sus versiones", True, len(r("GET", f"/api/documentos/{pres}/versiones", t=tm)[1] or []) >= 1 and r("GET", f"/api/documentos/{pres}/versiones/1", t=tm)[0] == 200)
+        r("POST", f"/api/documentos/{pres}/ops", lote("m1", {"bloque": "fig1", "campos": {"x": 301}}), tm)
+        time.sleep(2.5)
+        prueba("12.1 …y al volver a guardarse queda comprimido", b"\x1f\x8b", open(f_pres, "rb").read(2))
+        tk["maestra"] = tm
+        tk["alumno1"] = r("POST", "/api/cuentas/sesion", {"nombre": "alumno1", "contrasena": CL})[1]["token"]
+
     # 3.6 Entrega con fecha límite
     edoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Tarea 1", "modo": "TEXTO", "ops": []}, tk["alumno1"])[1]["id"]
     prueba("3.6 Un editor no fija la fecha de entrega", 403, r("PUT", f"/api/documentos/{edoc}/entrega", {"limite": int(time.time() * 1000) + 3600_000}, tk["alumno1"])[0])
@@ -319,6 +462,8 @@ try:
         prueba("3.6 Al pasar la fecha, el alumno ya no puede escribir", 403, r("POST", f"/api/documentos/{edoc}/ops", lote("a1", {"bloque": "cuerpo", "s": {"k": "i", "iz": None, "x": "tarde"}}), tk["alumno1"])[0])
         prueba("3.6 …y lo abre en solo lectura", "LECTURA", (r("GET", f"/api/documentos/{edoc}", t=tk["alumno1"])[1] or {}).get("permiso"))
         prueba("3.6 El propietario sí puede", 200, r("POST", f"/api/documentos/{edoc}/ops", lote("m1", {"bloque": "_doc", "campos": {"nota": "revisado"}}), tk["maestra"])[0])
+        if not EXTERNO or time.time() - t_boleto > 31:
+            prueba("12.1 Un boleto sin usar vence a los 30 segundos", 401, canal(f"/api/espacios/{salon}/eventos?boleto={boleto_viejo}&cliente=prueba-b")[0])
 finally:
     if srv: srv.kill(); srv.wait(30)
     shutil.rmtree(D, ignore_errors=True)

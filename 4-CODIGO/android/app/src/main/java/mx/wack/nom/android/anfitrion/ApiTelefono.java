@@ -91,13 +91,21 @@ final class ApiTelefono {
         return Respuesta.json(500, Map.of("error", "Ocurrio un error inesperado. Intenta de nuevo."));
     }
 
-    /** FiltroSesion: token en "Authorization: Bearer …" o en ?token= (EventSource). */
-    private Usuario usuario(Peticion p) {
+    /**
+     * FiltroSesion: el token va en "Authorization: Bearer …"; el canal en vivo (EventSource) trae un
+     * boleto de un solo uso en ?boleto= (o, las apps anteriores, el token en ?token=).
+     */
+    private String token(Peticion p) {
         String token = null;
         String cab = p.cabecera("authorization");
         if (cab != null && cab.startsWith("Bearer ")) token = cab.substring(7).trim();
+        if (token == null && p.consulta.get("boleto") != null) token = cuentas.canjearBoleto(p.consulta.get("boleto")).orElse(null);
         if (token == null) token = p.consulta.get("token");
         if (token == null || token.isBlank()) throw new ErrorNom(ErrorNom.SIN_SESION, "Inicia sesion para continuar");
+        return token;
+    }
+
+    private Usuario usuario(String token) {
         return cuentas.usuarioDeToken(token)
                 .orElseThrow(() -> new ErrorNom(ErrorNom.SIN_SESION, "Tu sesion expiro. Inicia sesion de nuevo."));
     }
@@ -152,12 +160,12 @@ final class ApiTelefono {
         if (r.equals("/api/red/info") && m.equals("GET")) return ok(info());
         if (r.equals("/api/cuentas/registro") && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);
-            Usuario u = cuentas.registrar(texto(c, "nombre"), texto(c, "contrasena"), texto(c, "empresa"));
+            Usuario u = cuentas.registrar(texto(c, "nombre"), texto(c, "contrasena"), texto(c, "empresa"), p.origen);
             return creado(Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u)));
         }
         if (r.equals("/api/cuentas/recuperar") && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);
-            return ok(Map.of("recuperacion", cuentas.recuperar(texto(c, "nombre"), texto(c, "codigo"), texto(c, "nueva")), "mensaje", "Listo: ya puedes entrar con tu contraseña nueva"));
+            return ok(Map.of("recuperacion", cuentas.recuperar(texto(c, "nombre"), texto(c, "codigo"), texto(c, "nueva"), p.origen), "mensaje", "Listo: ya puedes entrar con tu contraseña nueva"));
         }
         // Enlaces para unirse (QR), recibos y proyeccion: sin sesion (como en ConfigWeb).
         if ((x = coincide("/api/enlaces/" + ID, r)) != null && m.equals("GET")) return ok(espacios.infoEnlace(x.group(1)));
@@ -174,7 +182,7 @@ final class ApiTelefono {
         if (r.equals("/api/cuentas/sesion")) {
             if (m.equals("POST")) {
                 Map<String, Object> c = cuerpo(p);
-                Sesion s = cuentas.iniciarSesion(texto(c, "nombre"), texto(c, "contrasena"));
+                Sesion s = cuentas.iniciarSesion(texto(c, "nombre"), texto(c, "contrasena"), p.origen);
                 return ok(yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira));
             }
             if (m.equals("DELETE")) {
@@ -184,10 +192,22 @@ final class ApiTelefono {
             }
         }
 
-        Usuario u = usuario(p);
+        final String token = token(p);
+        Usuario u = usuario(token);
 
         // ---- cuentas
         if (r.equals("/api/cuentas/yo") && m.equals("GET")) return ok(yo(u, null, 0));
+        if (r.equals("/api/cuentas/contrasena") && m.equals("PUT")) {
+            Map<String, Object> c = cuerpo(p);
+            Sesion s = cuentas.cambiarContrasena(u, texto(c, "actual"), texto(c, "nueva"), p.origen);
+            return ok(yo(u, s.token, s.expira));
+        }
+        if (r.equals("/api/cuentas/eliminar") && m.equals("POST")) {
+            cuentas.confirmarParaBorrar(u, texto(cuerpo(p), "contrasena"), p.origen);
+            return ok(documentos.eliminarCuenta(u));
+        }
+        if (r.equals("/api/cuentas/boleto") && m.equals("POST")) return ok(Map.of("boleto", cuentas.boleto(token)));
+        if (r.equals("/api/cuentas/almacenamiento") && m.equals("GET")) return ok(documentos.almacenamientoDe(u));
         if (r.equals("/api/cuentas/preferencias") && m.equals("PUT")) {
             Object c = p.json();
             return ok(cuentas.guardarPreferencias(u, c == null ? null : Json.aObjeto(c, Preferencias.class)));

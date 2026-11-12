@@ -156,11 +156,63 @@ se reparten las visitas y cada uno tiene sus propios datos.
   de un espacio cambia permisos (*Puede editar* / *Solo lectura*) o quita el acceso.
 - Cualquiera con la dirección puede **crear una cuenta**, pero solo ve sus propios espacios y
   los que le compartan.
-- Contraseñas con PBKDF2 + sal; bloqueo de 15 min al 6.º intento fallido.
+- Contraseñas con PBKDF2 + sal. El bloqueo de 15 min al 6.º intento fallido es **por red**:
+  quien falla desde su red queda fuera desde ahí, pero no deja fuera al dueño de la cuenta, que
+  entra desde la suya (más de 50 fallos en una hora desde todos lados sí bloquean la cuenta).
+- Tope de cuentas nuevas por hora: 30 desde una misma red y 300 en total
+  (`NOM_REGISTROS_HORA_RED` y `NOM_REGISTROS_HORA`; 0 = sin tope). Lo del propio equipo no cuenta.
+- Cada quien puede **cambiar su contraseña** (cierra sus otras sesiones) y **borrar su cuenta**
+  (con sus espacios y documentos) desde el menú de la cuenta.
+- La página manda cabeceras de seguridad: solo corre programas del propio servidor, no se deja
+  meter dentro de otra página y por HTTPS pide volver siempre por HTTPS.
+- El canal en vivo se abre con un boleto de un solo uso (30 s): el token de la sesión ya no
+  aparece en ninguna dirección ni en las bitácoras del túnel.
 - Conviene que la computadora tenga el sistema actualizado y que nadie más use esa cuenta.
 - El servidor está en modo "red local" (la app lo encuentra sola en el mismo Wi-Fi), así que
   `/api/red/info` muestra la IP interna de la casa (`192.168.x.x`), que no sirve desde afuera.
   Para ocultarla, agregar `Environment=NOM_DESCUBRIMIENTO=false` al servicio.
+
+## Almacenamiento: qué se guarda y cuánto
+
+- En el servidor solo se guardan **documentos de NOM-COLAB** (textos, hojas, presentaciones y
+  diagramas). No hay forma de subir otros archivos: lo que se importa de Word, Excel o
+  PowerPoint se convierte al formato propio (el original va dentro del documento, recomprimido).
+- En disco van **comprimidos**: el estado de cada documento (`docs/<id>/estado.json`) y las
+  fotos de sus versiones (`docs/<id>/v/<n>.json`) se escriben con gzip, con el mismo nombre de
+  archivo. Los datos de versiones anteriores (sin comprimir) se abren igual y se comprimen la
+  siguiente vez que se guardan. Para ver uno a mano: `zcat estado.json | head -c 300`.
+- **Límite por cuenta**: `NOM_CUOTA_MB` (en la Pi, 200 MB; 0 = sin límite). Cuenta lo de los
+  espacios de los que la cuenta es propietaria (documentos y versiones, ya comprimidos). Cada
+  quien ve cuánto lleva en el inicio ("Guardados en… · X de 200 MB") y en "En el servidor".
+- No hay respaldo en el Drive de cada persona: el servidor guarda todo, con ese límite.
+
+## Copia de los respaldos de la Raspberry en otro equipo
+
+La Pi hace su respaldo diario (02:00, guarda 14) en su propia tarjeta. Para que un daño de la
+tarjeta no se lleve datos y respaldos a la vez, la laptop trae cada día el más nuevo:
+
+| Archivo | Para qué |
+|---|---|
+| `4-CODIGO/servidor-propio/pi/traer-respaldos.sh` | Copia por `scp` el respaldo más nuevo de `pi5:/var/lib/nomcolab/respaldos/`, comprueba que llegó completo y guarda los últimos 30 |
+| `~/nomcolab-servidor/respaldos-pi/` | Donde quedan (solo los puede leer el usuario) |
+| `~/.config/systemd/user/nomcolab-traer-respaldos.{service,timer}` | Diario a las 09:30; si la laptop estaba apagada, al prenderla |
+
+Instalarlo en otro equipo (necesita `ssh pi5` con llave):
+
+```sh
+mkdir -p ~/nomcolab-servidor && cp 4-CODIGO/servidor-propio/pi/traer-respaldos.sh ~/nomcolab-servidor/
+cp 4-CODIGO/servidor-propio/nomcolab-traer-respaldos.* ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now nomcolab-traer-respaldos.timer
+~/nomcolab-servidor/traer-respaldos.sh      # una vez, para probar
+```
+
+Restaurar en la Pi: `scp` del respaldo a la Pi, `doas nomcolab-pi apagar`, descomprimirlo en
+`/var/lib/nomcolab` (`tar -xzf datos-….tar.gz`, deja la carpeta `datos`) y `doas nomcolab-pi prender`.
+
+**Cifrado del disco de la Pi: decidido que no** (11 de noviembre de 2026). Los datos van sin
+cifrar en la tarjeta: la Pi no sale de casa y tiene que arrancar sola. Cifrarlos "desde el
+programa" con una llave guardada en la misma tarjeta no protegería nada. Las contraseñas sí van
+protegidas (PBKDF2 + sal) y los respaldos solo los leen `root` y el grupo `adm`.
 
 ## Pasarlo a la Raspberry Pi
 

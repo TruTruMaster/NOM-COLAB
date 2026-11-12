@@ -33,6 +33,7 @@ primer error) y deja capturas en la carpeta de salida: se revisan a ojo. Al fina
 | `prueba_datos` | Reporte de una encuesta, combinar correspondencia, documento a presentación y a mapa mental, flujo desde texto, Wikidata | Internet (Wikidata) |
 | `prueba_biblioteca` | Biblioteca del espacio (guardar con texto y leerla), reporte desde un CSV, Investigar en el celular | Internet |
 | `prueba_red` | La red de punta a punta: dos páginas, el navegador de un celular y la interfaz del APK (cargada desde archivos) contra un servidor; misma cuenta en app y página, en vivo en todos los sentidos, sin conexión y de regreso, reabrir sin red con cambios pendientes, registrarse desde la app, aviso de versión | — |
+| `prueba_cuentas_equipo` | Cuentas y lo guardado en el equipo: dos cuentas en un mismo navegador, restablecer y cambiar la contraseña sin perder lo local (se recupera con la anterior), almacenamiento a la vista, dónde se guarda lo nuevo, boletos del canal en vivo, aviso de red local y borrar la cuenta | — (no va en la tanda por omisión: tarda unos 4 min) |
 | `prueba_fuentes_api` | Las rutas de fuentes (Wikipedia, libros, artículos, DOI, ISBN, página web, Wikidata) | Internet |
 
 `nomprueba.py` tiene lo común: crear cuentas, espacios y documentos por la API, y abrir el

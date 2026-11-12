@@ -18,6 +18,19 @@
       location.hash = "#/"; ruta();
     },
     cerrarSesion,
+    /** ¿Quedó en este equipo algo guardado con una contraseña anterior? (lo fija vistaCuentas.ofrecerRecuperar) */
+    viejaPendiente: false,
+    /** Vuelve a pintar la pantalla actual (por ejemplo, tras recuperar documentos de este equipo). */
+    refrescar() { ruta(); },
+    /** La cuenta ya se borró en el servidor: se borra de este equipo todo lo suyo y se vuelve a la entrada. */
+    async cuentaBorrada(usuarioId) {
+      try { await NOM.boveda.olvidarCuenta(usuarioId); } catch (e) { console.error(e); }
+      NOM.quitar("nom.viejaPospuesta." + usuarioId);
+      NOM.quitar("nom.ultimoNombre");
+      api.limpiarSesion();
+      app.espacios = [];
+      if (location.hash === "#/" || !location.hash) ruta(); else location.hash = "#/";
+    },
   });
 
   api.alExpirar = async () => {
@@ -39,6 +52,7 @@
         <button class="riel-buscar" type="button" data-a="paleta" aria-label="Buscar o ir a (Ctrl+K)">${ico("search")}<span class="crece">Buscar o ir a…</span><kbd>Ctrl K</kbd></button>
         <a class="riel-item" href="#/" ${actual === "inicio" ? 'aria-current="page"' : ""}>${ico("house")} Inicio</a>
         <a class="riel-item" href="#/dispositivo" ${actual === "dispositivo" ? 'aria-current="page"' : ""} data-micro="${esc(NOM.etiquetaEquipo())}|Lo guardado aquí para abrirlo sin Internet y cuánto ocupa.${api.empaquetada ? " También: compartir sin Internet desde este teléfono." : ""}">${ico(api.empaquetada ? "smartphone" : "hard-drive")} ${esc(NOM.etiquetaEquipo())}</a>
+        ${sinCuenta || u.invitado ? "" : `<button class="riel-item" data-a="almacen" data-micro="En el servidor|Lo de tus espacios: cuánto ocupa en ${esc(NOM.vistaEspacios.nombreServidor())} y cuánto te queda.">${ico("cloud")} En el servidor</button>`}
         ${sinCuenta ? `
         <div class="clay" style="margin-top:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
           <b style="font-size:14px">Sin cuenta</b>
@@ -74,6 +88,7 @@
     raiz.append(c);
     $$("[data-a=unirse]", c).forEach((b) => (b.onclick = NOM.vistaEspacios.unirse));
     $$("[data-a=nuevo]", c).forEach((b) => (b.onclick = NOM.vistaEspacios.nuevoEspacio));
+    $$("[data-a=almacen]", c).forEach((b) => (b.onclick = () => NOM.vistaEspacios.miAlmacenamiento()));
     $$("[data-a=ir-cuenta]", c).forEach((b) => (b.onclick = () => irACuentas("registro")));
     $$("[data-a=cuenta]", c).forEach((b) => (b.onclick = () => NOM.menu(b, sinCuenta ? [
       { titulo: "Sin cuenta" },
@@ -84,10 +99,15 @@
     ] : [
       { titulo: u.nombre + (u.empresa ? " · " + u.empresa : "") },
       { texto: NOM.etiquetaEquipo(), icono: api.empaquetada ? "smartphone" : "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
+      ...(u.invitado ? [] : [{ texto: "En el servidor (tu almacenamiento)", icono: "cloud", fn: () => NOM.vistaEspacios.miAlmacenamiento() }]),
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
       ...(api.empaquetada ? [{ texto: "Cambiar dónde trabaja tu equipo", icono: "server", fn: () => { api.fijarServidor(""); cerrarSesion(true); } }] : []),
+      // Los invitados no tienen contraseña ni cuenta que borrar.
+      ...(u.invitado ? [] : [{ texto: "Cambiar contraseña…", icono: "key-round", fn: NOM.vistaCuentas.cambiarContrasena }]),
+      ...(app.viejaPendiente ? [{ texto: "Recuperar lo de mi contraseña anterior…", icono: "hard-drive", fn: () => NOM.vistaCuentas.ofrecerRecuperar(true, true) }] : []),
       "-",
       { texto: "Cerrar sesión", icono: "log-out", peligro: true, fn: () => cerrarSesion() },
+      ...(u.invitado ? [] : [{ texto: "Borrar mi cuenta…", icono: "trash-2", peligro: true, fn: NOM.vistaCuentas.borrarCuenta }]),
     ])));
     $("[data-fab]", c).onclick = () => fab && fab();
     pintarRielEspacios(actual);
@@ -252,6 +272,8 @@
       if (u.id && (await NOM.boveda.reanudar(u.id) || (secreto && await NOM.boveda.abrir(u.id, secreto).catch(() => false)))) {
         api.migrarClaves();
         app.espacios = NOM.leer(api.clave("cache.espacios"), []);
+        // ¿Quedó algo guardado con una contraseña anterior? Se recuerda como mucho una vez al día.
+        setTimeout(() => NOM.vistaCuentas.ofrecerRecuperar(false).catch((e) => console.error(e)), 1500);
       } else {
         api.delete("/api/cuentas/sesion", undefined, { ms: 3000, sin401: true }).catch(() => {});
         api.limpiarSesion();

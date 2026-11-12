@@ -685,3 +685,71 @@ documento). No decía qué se veía en el editor. Se armó un Word con combinaci
   descargar); columnas de verdad en pantalla; probar en el A55. Los respaldos de la Raspberry se
   guardan en la misma Raspberry: falta sacar una copia a otro equipo.
 
+
+## 53. Seguridad, cuentas y almacenamiento (0.12.1)
+Revisión del 11 de noviembre de 2026 de todo lo que toca a las cuentas, a dónde se guarda cada
+cosa y a la seguridad, con dos cuentas en un mismo navegador. Lo que ya estaba bien no se tocó: la
+copia de cada equipo va cifrada por cuenta, una cuenta no ve nada de otra (ni sin conexión), el
+HTML metido a la fuerza no se ejecuta y las contraseñas van con sal y PBKDF2.
+
+- **Restablecer la contraseña ya no destruye lo que solo estaba en el equipo.** Antes, al entrar
+  con la contraseña nueva, la copia cifrada con la anterior se borraba sin avisar (documentos de
+  "Guardado en este equipo" y cambios sin enviar). Ahora se aparta, todavía cifrada, y al entrar
+  se ofrece recuperarla escribiendo la contraseña anterior (o borrarla, o dejarlo para después;
+  queda también en el menú de la cuenta). Los cambios sin enviar recuperados se mandan al servidor.
+- **Cambiar la contraseña desde la cuenta** (menú de la cuenta): pide la actual, cierra las demás
+  sesiones y lo guardado en ese equipo sigue abriendo sin pedir nada. En los otros equipos se pide
+  la anterior una vez.
+- **Borrar la cuenta** (menú de la cuenta): dice qué se borra, pide la contraseña y escribir el
+  nombre. Se borran sus espacios con sus documentos y versiones, sale de los espacios de otros (lo
+  que escribió ahí se queda), su nombre queda libre y en ese equipo no queda nada suyo.
+- **Se ve dónde está guardado cada cosa.** En el inicio, bajo "Tus espacios": "Guardados en
+  NOM-COLAB en Internet · 12 MB de 200 MB", con su barra; al tocarlo, el detalle por espacio. En
+  la barra lateral, "En el servidor" junto a "Guardado en este equipo". "Nuevo documento" e
+  "Importar" del inicio preguntan dónde: en un espacio (queda en el servidor y se ve en todos los
+  equipos; es la opción por omisión) o solo en ese equipo.
+- **Decidido por el dueño: no habrá respaldo en el Drive de cada persona.** El servidor guarda
+  todo, con un límite por cuenta (200 MB en la Raspberry) que cada quien ve, y solo guarda
+  documentos de NOM-COLAB, comprimidos: no hay forma de subir otros archivos. Para que eso sea
+  cierto también en el disco, el estado de cada documento y las fotos de sus versiones se
+  escriben con gzip (`AlmacenJson`); lo guardado por versiones anteriores se abre igual y se
+  comprime al volver a guardarse. El tope de 25 MB por documento sigue midiendo el contenido sin
+  comprimir.
+- **Bloqueo de intentos por red.** Seis fallos bloquean 15 minutos a la red desde la que se
+  falló, no al dueño de la cuenta que entra desde la suya (antes, quien supiera un nombre de
+  usuario podía tenerlo bloqueado). Más de 50 fallos en una hora desde todos lados sí bloquean la
+  cuenta. Detrás del túnel se usa la dirección real que manda Cloudflare.
+- **Tope de cuentas nuevas:** 30 por hora desde una misma red y 300 en total.
+- **Cabeceras de seguridad** en todas las respuestas y política de contenido en la página (solo
+  corren los programas del propio servidor). La app lleva la misma política dentro de
+  `index.html`. De paso: los errores del servidor salen siempre como JSON (al canal en vivo, que
+  pide otro tipo de contenido, un 401 se le convertía en 500).
+- **El canal en vivo ya no lleva el token de la sesión en la dirección:** abre con un boleto de un
+  solo uso que dura 30 segundos. Los servidores anteriores siguen funcionando con la app nueva.
+- **Aviso de "Conexión sin cifrar"** en la pantalla de entrada cuando se entra por la red local
+  (http): ahí no hay forma de dar un certificado de confianza.
+- **App de Android:** sin respaldo del sistema (ni en la nube ni al pasar a otro teléfono) y el
+  APK que se publica ya no es de depuración (`assembleRelease`): otra app o una computadora por
+  USB no pueden leer sus datos. Va firmado con la misma llave de siempre
+  (`~/.android/debug.keystore` de la laptop), así que se instala encima de la anterior. **Hay que
+  guardar copia de ese archivo**: sin él nadie puede publicar una actualización.
+- **El teléfono como servidor** tiene lo mismo: rutas nuevas, bloqueo por red, cabeceras y boletos.
+- **Detrás de Azure** la dirección real de cada quien también se toma de la cabecera que manda la
+  plataforma (llega desde una dirección "de enlace", 169.254.x.x); sin eso, todos contarían como
+  una sola red y el tope de 30 cuentas por hora sería para todos juntos.
+- **El jar se empaqueta limpio** (`mvn clean package`): el anterior todavía cargaba un archivo
+  de la pantalla de administración que se quitó en octubre (`vista-admin.js`, sin uso).
+- **Respaldos de la Raspberry fuera de la Raspberry:** la laptop trae cada día el más nuevo
+  (`servidor-propio/pi/traer-respaldos.sh`, temporizador `nomcolab-traer-respaldos`, guarda 30 en
+  `~/nomcolab-servidor/respaldos-pi/`).
+- **Decidido por el dueño: el disco de la Raspberry no se cifra.** No sale de casa y tiene que
+  arrancar sola; una llave guardada en la misma tarjeta no protegería nada.
+- **Pruebas:** `pruebas/seguridad.py` pasó de 171 a 226 casos (226 de 226 contra el jar; 206 de
+  206 contra el teléfono como servidor, en el emulador de Android 15 con el APK publicable).
+  Nueva `pruebas/interfaz/prueba_cuentas_equipo.py` (57 de 57: dos cuentas en un navegador,
+  restablecer y cambiar la contraseña, recuperar lo del equipo, almacenamiento, borrar la cuenta,
+  boletos y el aviso de red local). Con las cabeceras puestas siguen pasando todas las demás;
+  `pruebas/office/ediciones.py` armaba sus ediciones con texto evaluado dentro de la página, cosa
+  que la política ya no deja, y ahora las escribe en el propio programa de la prueba.
+  La política de contenido de la app se probó en el WebView del emulador (sin una sola
+  violación); en el A55 todavía no.

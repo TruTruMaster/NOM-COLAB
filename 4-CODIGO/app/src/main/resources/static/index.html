@@ -9,6 +9,11 @@
   <meta name="supported-color-schemes" content="light dark">
   <meta name="darkreader-lock">
   <meta name="google" content="notranslate">
+  <!-- Política de contenido para la app de Android, que carga esta página desde sus propios
+       archivos (file:) y no recibe la cabecera del servidor: solo corren los programas que vienen
+       con la app. En el navegador manda la cabecera del servidor (FiltroCabeceras), que es igual
+       pero sin "file:". -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob: https: http:; font-src 'self' file: data:; media-src 'self' file: data: blob:; connect-src 'self' https: http:; worker-src 'self'; manifest-src 'self' file:; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>NOM-COLAB</title>
   <link rel="icon" href="img/icono.svg" type="image/svg+xml">
   <link rel="icon" href="img/icono-192.png" sizes="192x192" type="image/png">

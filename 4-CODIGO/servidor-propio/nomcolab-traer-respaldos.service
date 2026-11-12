@@ -1,0 +1,7 @@
+[Unit]
+Description=Trae a este equipo el respaldo más nuevo de NOM-COLAB que hizo la Raspberry
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/nomcolab-servidor/traer-respaldos.sh

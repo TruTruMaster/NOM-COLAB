@@ -101,6 +101,12 @@ public class CuentasApi {
         return Map.of("boleto", cuentas.boleto(token));
     }
 
+    /** Cuanto ocupa en este servidor lo de la cuenta abierta y cuanto tiene permitido. */
+    @GetMapping("/almacenamiento")
+    public Map<String, Object> almacenamiento(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u) {
+        return documentos.almacenamientoDe(u);
+    }
+
     @PutMapping("/preferencias")
     public Preferencias preferencias(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @RequestBody Preferencias p) {
         return cuentas.guardarPreferencias(u, p);

@@ -97,11 +97,43 @@
     api[m] = (ruta, cuerpo, opc) => api.pedir(m.toUpperCase(), ruta, m === "get" || m === "delete" ? undefined : (cuerpo === undefined ? {} : cuerpo), opc);
   });
 
-  /** EventSource con el token en la URL (EventSource no admite cabeceras). */
+  /**
+   * Canal en vivo (EventSource). No admite cabeceras, así que se identifica en la dirección; para
+   * que ahí no viaje el token de la sesión (las direcciones acaban en bitácoras), antes de cada
+   * conexión se pide un boleto de un solo uso. Un servidor de una versión anterior no los da
+   * (responde 404): con ese se sigue mandando el token, y se recuerda para no volver a preguntar.
+   */
+  const sinBoletos = new Set();
+  async function direccionCanal(ruta, cliente) {
+    const base = api.servidor(), fin = "&cliente=" + encodeURIComponent(cliente || "");
+    // La pantalla del proyector se abre con su código, sin sesión: no lleva boleto ni token.
+    if (!api.token() || ruta.startsWith("/api/proyeccion/")) return base + ruta + "?" + fin.slice(1);
+    if (!sinBoletos.has(base)) {
+      try {
+        const r = await api.post("/api/cuentas/boleto", {}, { ms: 6000, sin401: true });
+        if (r && r.boleto) return base + ruta + "?boleto=" + encodeURIComponent(r.boleto) + fin;
+      } catch (e) {
+        if (e.estado === 404 || e.estado === 405) sinBoletos.add(base);
+        else throw e;
+      }
+    }
+    return base + ruta + "?token=" + encodeURIComponent(api.token() || "") + fin;
+  }
+
   api.eventos = function (ruta, cliente, manejadores) {
-    const url = api.servidor() + ruta + "?token=" + encodeURIComponent(api.token() || "") + "&cliente=" + encodeURIComponent(cliente || "");
     let es, cerrado = false, reintento = 1000, timer;
-    const abrir = () => {
+    const reintentar = () => { timer = setTimeout(abrir, reintento); reintento = Math.min(reintento * 2, 4000); };
+    const abrir = async () => {
+      let url;
+      try { url = await direccionCanal(ruta, cliente); }
+      catch (e) {
+        if (cerrado) return;
+        // Sin boleto no hay canal: sesión vencida (se avisa) o red caída (se reintenta).
+        if (e.estado === 401) { cerrado = true; api.alExpirar && api.alExpirar(e); return; }
+        manejadores.caido && manejadores.caido();
+        return reintentar();
+      }
+      if (cerrado) return;
       es = new EventSource(url);
       es.addEventListener("hola", (e) => { reintento = 1000; marcarRed(true); manejadores.hola && manejadores.hola(JSON.parse(e.data)); });
       Object.keys(manejadores).forEach((ev) => {
@@ -113,15 +145,16 @@
         es.close();
         manejadores.caido && manejadores.caido();
         // Puede ser red caída, sesión vencida o espacio lleno: se pregunta al servidor qué pasó.
-        sondear().finally(() => { timer = setTimeout(abrir, reintento); reintento = Math.min(reintento * 2, 4000); });
+        sondear().finally(() => { if (!cerrado) reintentar(); });
       };
     };
     async function sondear() {
-      // Se pide el mismo canal con fetch solo para leer el código de estado y se corta.
+      // Se pide el mismo canal con fetch solo para leer el código de estado y se corta. Aquí la
+      // sesión sí va en la cabecera (fetch puede mandarla): el boleto ya se gastó.
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), 4000);
       try {
-        const r = await fetch(url, { headers: { Accept: "text/event-stream" }, signal: ctl.signal });
+        const r = await fetch(api.servidor() + ruta + "?cliente=" + encodeURIComponent(cliente || ""), { headers: Object.assign({ Accept: "text/event-stream" }, api.token() ? { Authorization: "Bearer " + api.token() } : {}), signal: ctl.signal });
         if (!r.ok) {
           let cuerpo = null;
           try { cuerpo = await r.json(); } catch (x) { /* sin cuerpo */ }

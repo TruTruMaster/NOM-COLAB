@@ -328,7 +328,39 @@ reales de Microsoft (`pruebas/office/corpus.sh`, `fidelidad.py`, `ediciones.py`)
 - [ ] Probar en el A55 (app y navegador) importar, editar, exportar y `.nom`.
 - [x] Raspberry Pi: servicios s6 supervisados (`servidor-propio/pi/`), respaldo diario, `nomcolab-pi`.
 - [x] Subir el jar nuevo a la Pi (11 de noviembre: 0.12.0, con `nomcolab-pi actualizar`) y LOG.
-- [ ] `nomcolab pi …` desde la laptop y una copia de los respaldos de la Pi en otro equipo.
+- [ ] `nomcolab pi …` desde la laptop.
+- [x] Una copia de los respaldos de la Pi en otro equipo (fase 11).
+
+## Fase 11. Seguridad, cuentas y almacenamiento (11 de noviembre de 2026, versión 0.12.1)
+
+Sale de la revisión de seguridad, cuentas y almacenamiento del 11 de noviembre. El detalle de
+cada punto está en `LOG.md`, entrada 53.
+
+- [x] Servidor: bloqueo de intentos por cuenta y por red, tope de cuentas nuevas por hora,
+  cambiar contraseña, borrar cuenta (y espacios), boletos de un uso para el canal en vivo,
+  cabeceras de seguridad.
+- [x] Lo mismo en el teléfono como servidor (`ApiTelefono`, `ServidorHttp`).
+- [x] Casos nuevos en `pruebas/seguridad.py` (226 con el jar, 206 con el teléfono).
+- [x] Bóveda: no perder lo local al restablecer o cambiar la contraseña (se pide la anterior).
+- [x] Interfaz: cambiar contraseña y borrar cuenta.
+- [x] Que se vea qué está en el servidor y qué solo en el equipo, y cuánto lleva usado la cuenta;
+  importar y crear en un espacio.
+- [x] Canal en vivo con boleto en vez del token en la dirección.
+- [x] Política de contenido también en la app (probada en el WebView del emulador de Android 15;
+  falta verla en el A55).
+- [x] Aviso de conexión sin cifrar en red local.
+- [x] Android: sin respaldo del sistema y APK que no es de depuración, con la misma firma.
+- [x] Copia de los respaldos de la Raspberry en otro equipo (la laptop, diario).
+- [x] Decidido por el dueño: el disco de la Raspberry no se cifra; no habrá respaldo en el Drive
+  de cada persona (el servidor guarda todo, con límite por cuenta a la vista, y solo documentos
+  de NOM-COLAB comprimidos: el estado y las versiones se guardan con gzip).
+- [x] Versión 0.12.1 (interfaz 13), todas las pruebas, publicar servidor y app juntos, LOG.
+
+Sigue pendiente de antes (no es de esta fase): columnas de verdad en pantalla, tabuladores con
+puntos, texto vertical y bordes por celda en Word; comentarios, formato condicional, gráficas e
+imágenes de Excel en pantalla; probar en el A55 (también la política de contenido de la app y el
+APK publicable). `~/NOM-COLAB` (la "copia de trabajo") lleva sin sincronizarse desde el 22 de
+octubre: se trabaja directo en `~/NOM`.
 
 ## Cómo quedó (8 de noviembre de 2026)
 

@@ -93,6 +93,8 @@ final class ServidorHttp {
         final Map<String, String> cabeceras = new LinkedHashMap<>();
         final Map<String, String> consulta = new LinkedHashMap<>();
         byte[] cuerpo = new byte[0];
+        /** Dirección de red de quien llama (null si es este mismo teléfono): para los límites contra el abuso. */
+        String origen;
 
         String cabecera(String nombre) { return cabeceras.get(nombre.toLowerCase(Locale.ROOT)); }
 
@@ -196,6 +198,8 @@ final class ServidorHttp {
                 Peticion p;
                 try { p = leer(in); } catch (java.net.SocketTimeoutException e) { return; }
                 if (p == null) return;
+                java.net.InetAddress de = sock.getInetAddress();
+                p.origen = de == null || de.isLoopbackAddress() ? null : de.getHostAddress();
                 if (!atender(p, in, out, sock)) return;
             }
         } catch (IOException ignorado) {
@@ -294,6 +298,7 @@ final class ServidorHttp {
             case 409: return "Conflict";
             case 413: return "Payload Too Large";
             case 423: return "Locked";
+            case 429: return "Too Many Requests";
             default: return c >= 500 ? "Internal Server Error" : "OK";
         }
     }
@@ -301,12 +306,23 @@ final class ServidorHttp {
     static final String CORS = "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
             + "Access-Control-Allow-Headers: *\r\nAccess-Control-Max-Age: 3600\r\n";
 
+    /** Las mismas cabeceras de seguridad que pone la computadora (FiltroCabeceras). */
+    static final String SEGURAS = "X-Content-Type-Options: nosniff\r\nX-Frame-Options: SAMEORIGIN\r\nReferrer-Policy: no-referrer\r\n"
+            + "Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()\r\n";
+    /** La política de contenido de la página (igual que FiltroCabeceras.CSP); la API no la lleva. */
+    static final String CSP = "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            + "img-src 'self' data: blob: https: http:; font-src 'self' data:; media-src 'self' data: blob:; "
+            + "connect-src 'self' https: http:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "
+            + "base-uri 'self'; form-action 'self'; frame-ancestors 'self'\r\n";
+
     private static void responder(OutputStream out, int codigo, String tipo, byte[] cuerpo, boolean mantener, boolean cors) throws IOException {
         StringBuilder h = new StringBuilder("HTTP/1.1 ").append(codigo).append(' ').append(razon(codigo)).append("\r\n");
         if (tipo != null) h.append("Content-Type: ").append(tipo).append("\r\n");
         h.append("Content-Length: ").append(cuerpo == null ? 0 : cuerpo.length).append("\r\n");
         h.append("Cache-Control: no-cache\r\n");
-        if (cors) h.append(CORS);
+        h.append(SEGURAS);
+        // "cors" marca las respuestas de la API; lo demás es la página y lleva la política de contenido.
+        if (cors) h.append(CORS); else h.append(CSP);
         h.append(mantener ? "Connection: keep-alive\r\n" : "Connection: close\r\n");
         h.append("\r\n");
         out.write(h.toString().getBytes(StandardCharsets.UTF_8));
@@ -335,7 +351,7 @@ final class ServidorHttp {
             try {
                 if (!empezo) {
                     out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream;charset=UTF-8\r\nCache-Control: no-cache\r\n"
-                            + CORS + "Connection: keep-alive\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                            + SEGURAS + CORS + "Connection: keep-alive\r\n\r\n").getBytes(StandardCharsets.UTF_8));
                     empezo = true;
                 }
                 out.write(t.getBytes(StandardCharsets.UTF_8));

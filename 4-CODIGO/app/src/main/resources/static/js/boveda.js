@@ -9,7 +9,12 @@
      (para no pedir la contraseña en cada recarga). Al cerrar sesión o al vencer, se borra:
      desde ese momento los datos de la cuenta son ilegibles para cualquiera en el equipo.
    - En memoria se mantiene una copia descifrada para que leer/guardar sigan siendo inmediatos;
-     cada escritura se cifra y se persiste en segundo plano. */
+     cada escritura se cifra y se persiste en segundo plano.
+   - Si la contraseña cambia con la sesión abierta, la llave de datos se envuelve otra vez con la
+     nueva (cambiarContrasena) y no se pierde nada. Si cambió sin esta bóveda abierta (se restableció
+     con el código de recuperación, o se cambió en otro equipo), la contraseña nueva no la abre: lo
+     que solo vivía en este equipo (documentos de aquí y cambios sin enviar) se aparta, todavía
+     cifrado, bajo "vieja.<cuenta>.<tanda>." y se recupera escribiendo la contraseña anterior. */
 (function () {
   "use strict";
   const NOM = window.NOM;
@@ -77,9 +82,9 @@
         alg = cuenta.alg;
       } catch (e) {
         // La contraseña ya la validó el servidor; si no abre, la bóveda es de una contraseña
-        // anterior: sus datos son irrecuperables y se empieza una nueva.
-        console.warn("Bóveda ilegible con esta contraseña; se crea una nueva", e);
-        await borrarDatosDe(usuarioId);
+        // anterior. No se borra: se aparta para recuperarla con esa contraseña, y se empieza otra.
+        console.warn("Bóveda de una contraseña anterior: se aparta y se crea una nueva", e);
+        await apartar(usuarioId, cuenta);
         cuenta = null;
       }
     }
@@ -140,6 +145,129 @@
     for (const [k] of await todos("datos")) if (k.startsWith(p)) await del("datos", k);
   }
 
+  // ------------------------------------------------------------ lo guardado con una contraseña anterior
+  const VIEJA = "vieja.";
+  /** Lo único que no está también en el servidor: los documentos de este equipo y lo no enviado. */
+  const valioso = (resto) => resto.startsWith("local.") || resto.startsWith("cola.");
+  /** Una cola sin cambios cifrada ("[]") mide 2 bytes más la etiqueta: no hay nada que rescatar. */
+  const vacio = (sobre) => !sobre || !sobre.ct || sobre.ct.length <= (sobre.alg === "gcm" ? 18 : 34);
+
+  /** Aparta, sin descifrar, lo que la contraseña nueva no abre. Las copias de consulta se borran. */
+  async function apartar(usuarioId, cuenta) {
+    const p = "nom.u." + usuarioId + ".", tanda = Date.now().toString(36);
+    let n = 0;
+    const destino = VIEJA + usuarioId + "." + tanda + ".";
+    for (const [k, sobre] of await todos("datos")) {
+      if (!k.startsWith(p)) continue;
+      const resto = k.slice(p.length);
+      // El índice de documentos acompaña a los documentos, pero solo no cuenta como algo que rescatar.
+      if (resto === "local.docs") await put("datos", destino + resto, sobre);
+      else if (valioso(resto) && !(resto.startsWith("cola.") && vacio(sobre))) { await put("datos", destino + resto, sobre); n++; }
+      await del("datos", k);
+    }
+    // Sin documentos ni cambios no hay nada que recuperar: tampoco se guarda la llave vieja.
+    if (n) await put("cuentas", VIEJA + usuarioId + "." + tanda, cuenta);
+    else await del("datos", destino + "local.docs");
+    await del("cuentas", usuarioId);
+  }
+
+  /** Tandas apartadas de la cuenta abierta: [{ tanda, cuenta, registros: [[resto, sobre]] }]. */
+  async function viejas() {
+    if (!uid) return [];
+    const p = VIEJA + uid + ".", r = new Map();
+    for (const [k, cuenta] of await todos("cuentas")) if (typeof k === "string" && k.startsWith(p)) r.set(k.slice(p.length), { tanda: k.slice(p.length), cuenta, registros: [] });
+    for (const [k, sobre] of await todos("datos")) {
+      if (!k.startsWith(p)) continue;
+      const i = k.indexOf(".", p.length), t = r.get(k.slice(p.length, i));
+      if (t) t.registros.push([k.slice(i + 1), sobre]);
+    }
+    return [...r.values()];
+  }
+
+  /** Cuántos documentos de este equipo y cuántos con cambios sin enviar quedaron de una contraseña anterior. */
+  async function porRecuperar() {
+    let docs = 0, colas = 0;
+    try {
+      for (const t of await viejas()) for (const [resto] of t.registros) {
+        if (resto.startsWith("local.doc.")) docs++; else if (resto.startsWith("cola.")) colas++;
+      }
+    } catch (e) { console.warn("No se pudo revisar la bóveda anterior", e); }
+    return { docs, colas, hay: docs + colas > 0 };
+  }
+
+  async function borrarTanda(t) {
+    const p = VIEJA + uid + "." + t.tanda;
+    for (const [resto] of t.registros) await del("datos", p + "." + resto);
+    await del("cuentas", p);
+  }
+
+  /**
+   * Con la contraseña anterior: descifra lo apartado y lo pasa a la bóveda actual. Los documentos
+   * de este equipo vuelven a la lista y los cambios sin enviar se ponen antes de los de ahora.
+   * Lanza un error si la contraseña no abre ninguna de las tandas apartadas.
+   */
+  async function recuperarCon(contrasenaAnterior) {
+    if (!uid) throw new Error("Primero inicia sesión");
+    const p = prefijo(), res = { docs: 0, cambios: 0, quedan: 0 };
+    let abiertas = 0;
+    for (const t of await viejas()) {
+      let k;
+      try { k = await C.descifrar(await C.llaveDeContrasena(contrasenaAnterior, t.cuenta.sal, t.cuenta.alg), t.cuenta.envuelta); }
+      catch (e) { res.quedan++; continue; }
+      abiertas++;
+      const leer = async (sobre) => { try { return JSON.parse(C.texto(await C.descifrar(k, sobre))); } catch (e) { return undefined; } };
+      const indiceViejo = new Map();
+      for (const [resto, sobre] of t.registros) if (resto === "local.docs") ((await leer(sobre)) || []).forEach((d) => d && d.id && indiceViejo.set(d.id, d));
+      const indice = NOM.leer(p + "local.docs", []) || [];
+      for (const [resto, sobre] of t.registros) {
+        const v = await leer(sobre);
+        if (v === undefined) continue;
+        if (resto.startsWith("local.doc.")) {
+          const id = resto.slice("local.doc.".length);
+          if (!memoria.has(p + resto)) NOM.guardar(p + resto, v);
+          if (!indice.some((d) => d.id === id)) {
+            const doc = (v.bloques && v.bloques._doc) || {};
+            indice.push(indiceViejo.get(id) || { id, nombre: (doc.nombre && doc.nombre.v) || "Documento recuperado", modo: (doc.modo && doc.modo.v) || "TEXTO", creado: Date.now(), modificado: Date.now() });
+          }
+          res.docs++;
+        } else if (resto.startsWith("cola.") && Array.isArray(v) && v.length) {
+          const ahora = NOM.leer(p + resto, []) || [], ya = new Set(ahora.map((o) => o && o.id));
+          const antes = v.filter((o) => o && !ya.has(o.id));
+          NOM.guardar(p + resto, antes.concat(ahora));
+          res.cambios += antes.length;
+        }
+      }
+      if (res.docs) NOM.guardar(p + "local.docs", indice);
+      await vaciar();
+      await borrarTanda(t);
+    }
+    if (!abiertas) throw new Error("Esa no es la contraseña con la que se guardaron");
+    return res;
+  }
+
+  /** Borra para siempre lo apartado (la persona decidió no recuperarlo). */
+  async function descartarVieja() { for (const t of await viejas()) await borrarTanda(t); }
+
+  /**
+   * La contraseña cambió con la sesión abierta: la misma llave de datos se envuelve con la nueva,
+   * así lo guardado en este equipo sigue abriendo.
+   */
+  async function cambiarContrasena(nueva) {
+    if (!uid || !llave) return false;
+    const sal = C.azar(16), kek = await C.llaveDeContrasena(nueva, sal, alg);
+    await put("cuentas", uid, { sal, alg, envuelta: await C.cifrar(kek, llave, alg) });
+    return true;
+  }
+
+  /** Borra de este equipo todo lo de una cuenta (al borrar la cuenta): datos, llaves y lo apartado. */
+  async function olvidarCuenta(usuarioId) {
+    if (uid === usuarioId) { [...pendientes.values()].forEach(clearTimeout); pendientes.clear(); memoria.clear(); uid = null; llave = null; alg = null; }
+    await borrarDatosDe(usuarioId);
+    for (const [k] of await todos("datos")) if (k.startsWith(VIEJA + usuarioId + ".")) await del("datos", k);
+    for (const [k] of await todos("cuentas")) if (k === usuarioId || (typeof k === "string" && k.startsWith(VIEJA + usuarioId + "."))) await del("cuentas", k);
+    await del("sesion", usuarioId);
+  }
+
   // ------------------------------------------------------------ escritura en segundo plano
   function programar(k) {
     clearTimeout(pendientes.get(k));
@@ -186,6 +314,7 @@
 
   NOM.boveda = {
     abrir, reanudar, cerrar, vaciar,
+    porRecuperar, recuperarCon, descartarVieja, cambiarContrasena, olvidarCuenta,
     activa: () => uid,
     cifrado: () => (alg === "gcm" ? "AES-256-GCM" : alg === "ctr" ? "AES-256-CTR + HMAC-SHA256" : null),
     /** Claves de la cuenta abierta que empiezan con este prefijo. */
@@ -195,7 +324,7 @@
     /** Bytes de otras cuentas guardados en este equipo (ilegibles para la cuenta actual). */
     async ajenos() {
       let n = 0;
-      for (const [k, s] of await todos("datos")) if (!uid || !k.startsWith(prefijo())) n += (s.ct ? s.ct.length : 0) + 40;
+      for (const [k, s] of await todos("datos")) if (!uid || !(k.startsWith(prefijo()) || k.startsWith(VIEJA + uid + "."))) n += (s.ct ? s.ct.length : 0) + 40;
       return n;
     },
   };

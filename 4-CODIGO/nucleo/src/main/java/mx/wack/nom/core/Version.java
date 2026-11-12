@@ -12,9 +12,9 @@ package mx.wack.nom.core;
  */
 public final class Version {
     /** La misma que versionName del APK. */
-    public static final String APP = "0.12.0";
+    public static final String APP = "0.12.1";
     /** Nivel de la interfaz y del formato de documentos. 12 = archivo de origen de Office dentro del documento. */
-    public static final int INTERFAZ = 12;
+    public static final int INTERFAZ = 13;
 
     private Version() { }
 }

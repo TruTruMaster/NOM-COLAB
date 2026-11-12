@@ -34,6 +34,7 @@
       <div data-recientes></div>
       <section class="seccion">
         <div class="fila-e"><h2>Tus espacios</h2><span class="chip" data-cuantos></span></div>
+        <div data-almacen-linea></div>
         <div class="rejilla" data-espacios>${'<div class="esqueleto" style="height:150px"></div>'.repeat(3)}</div>
       </section>
       <section class="seccion" data-locales></section>`;
@@ -84,6 +85,96 @@
       return;
     }
     rej.innerHTML = lista.map(tarjetaEspacio).join("");
+    pintarAlmacen($("[data-almacen-linea]", cont));
+  }
+
+  // ================================================================== Dónde se guarda cada cosa
+  /** Cómo se llama, para la persona, el servidor donde viven sus espacios. */
+  function nombreServidor() {
+    if (NOM.anfitrion && NOM.anfitrion.esLocal && NOM.anfitrion.esLocal()) return "este teléfono (comparte sin Internet)";
+    const dir = api.empaquetada ? api.servidor() : location.origin;
+    const equipo = (dir.replace(/^https?:\/\//i, "").match(/^\[[^\]]*\]|^[^/:]+/) || [""])[0].toLowerCase();
+    if (/(^|\.)nomcolab\.dpdns\.org$|azurewebsites\.net$|\.ts\.net$/.test(equipo)) return "NOM-COLAB en Internet";
+    if (/^(localhost|127(\.\d+){3}|\[::1\])$/.test(equipo)) return "este equipo (es el servidor)";
+    return "el equipo " + equipo;
+  }
+
+  /** Uso y cuota de la cuenta en el servidor; null si no se pudo saber (sin red o servidor anterior). */
+  async function usoServidor() {
+    try { return await api.get("/api/cuentas/almacenamiento", undefined, { ms: 8000 }); } catch (e) { return null; }
+  }
+  const textoUso = (a) => (a.cuota > 0 ? `${bytes(a.uso)} de ${bytes(a.cuota)}` : `${bytes(a.uso)} · sin límite aquí`);
+  const claseUso = (a) => (a.cuota > 0 && a.uso >= a.cuota ? "error" : a.cuota > 0 && a.uso > a.cuota * 0.8 ? "aviso" : "");
+
+  /** Bajo "Tus espacios": dónde están guardados y cuánto lleva usado la cuenta. */
+  async function pintarAlmacen(caja) {
+    if (!caja || (api.usuario() || {}).invitado) return;
+    const a = await usoServidor();
+    if (!a || !caja.isConnected) return;
+    const b = html(`<button type="button" class="almacen-linea clay" data-micro="Tu almacenamiento|Cuánto ocupan tus espacios en el servidor y cuánto te queda. Toca para ver el detalle.">
+      <span class="modo-insignia" style="background:var(--acento-tenue);color:var(--acento-tinta)">${ico("cloud")}</span>
+      <span class="crece"><b>Guardados en ${esc(nombreServidor())}</b><small>Los ves en cualquier equipo con tu cuenta. Aquí solo se guardan documentos de NOM-COLAB, comprimidos.</small></span>
+      <span class="almacen-uso"><span class="chip ${claseUso(a)}" data-uso>${esc(textoUso(a))}</span>${a.cuota > 0 ? `<span class="barra-uso"><i style="width:${Math.min(100, Math.max(1, (a.uso / a.cuota) * 100))}%"></i></span>` : ""}</span>
+    </button>`);
+    b.onclick = () => miAlmacenamiento(a);
+    caja.innerHTML = ""; caja.append(b);
+  }
+
+  /** Detalle del almacenamiento de la cuenta: por espacio, cuánto queda y cómo liberar. */
+  async function miAlmacenamiento(ya) {
+    const cuerpo = html(`<div class="col"><div class="esqueleto" style="height:160px"></div></div>`);
+    const h = hoja({ titulo: "Tu almacenamiento", icono: "cloud", cuerpo, ancha: true });
+    const a = (ya && ya.espacios ? ya : null) || await usoServidor();
+    if (!a) { cuerpo.innerHTML = `<div class="alerta error">${ico("wifi-off")}<span>No se pudo consultar el servidor. Revisa la conexión e intenta de nuevo.</span></div>`; return; }
+    const libre = a.cuota > 0 ? Math.max(0, a.cuota - a.uso) : 0;
+    const max = Math.max(1, ...a.espacios.map((e) => e.bytes));
+    const locales = NOM.local.lista().length;
+    cuerpo.innerHTML = `
+      <div class="clay col" style="padding:16px 18px;gap:10px">
+        <div class="fila-e" style="flex-wrap:wrap;gap:8px"><div><div style="font-size:26px;font-weight:900">${esc(bytes(a.uso))}${a.cuota > 0 ? ` <span class="suave" style="font-size:16px;font-weight:800">de ${esc(bytes(a.cuota))}</span>` : ""}</div>
+          <div class="suave chico" style="font-weight:700">${a.cuota > 0 ? (libre > 0 ? "Te quedan " + esc(bytes(libre)) : "Ya no queda espacio") : "Este servidor no pone límite por cuenta"} · ${a.documentos} documento${a.documentos === 1 ? "" : "s"} en ${a.espacios.length} espacio${a.espacios.length === 1 ? "" : "s"} tuyo${a.espacios.length === 1 ? "" : "s"}</div></div>
+          <span class="chip ${claseUso(a)}">${ico("cloud", "ico-s")} ${esc(nombreServidor())}</span></div>
+        ${a.cuota > 0 ? `<div class="barra-uso"><i style="width:${Math.min(100, Math.max(1, (a.uso / a.cuota) * 100))}%"></i></div>` : ""}
+        ${a.cuota > 0 && a.uso >= a.cuota ? `<div class="alerta error">${ico("triangle-alert")}<span>Lleno: los cambios nuevos se quedan en cada equipo hasta que liberes espacio.</span></div>` : ""}
+      </div>
+      <div class="lista">
+        <div class="lista-item">${ico("file-text")}<span class="crece"><b>Solo documentos de NOM-COLAB</b><small>Textos, hojas, presentaciones y diagramas, guardados comprimidos en nuestro propio formato. Lo que importas de Word, Excel o PowerPoint se convierte a ese formato; no es un disco para otros archivos.</small></span></div>
+        <div class="lista-item">${ico("users")}<span class="crece"><b>Cuenta lo de tus espacios</b><small>Los documentos y sus versiones, también lo que escriben ahí las personas que invitas. Lo que tú escribes en espacios de otros ocupa el lugar de su propietario.</small></span></div>
+        <div class="lista-item">${ico(api.empaquetada ? "smartphone" : "hard-drive")}<span class="crece"><b>Lo de “${esc(NOM.etiquetaEquipo())}” no cuenta</b><small>${locales ? `Tienes ${locales} documento${locales === 1 ? "" : "s"} que vive${locales === 1 ? "" : "n"} solo en este equipo: no ocupa${locales === 1 ? "" : "n"} lugar en el servidor, pero tampoco se ve${locales === 1 ? "" : "n"} en tus otros equipos.` : "Las copias para trabajar sin conexión viven en cada equipo y no ocupan lugar en el servidor."}</small></span><a class="btn chico" href="#/dispositivo" data-ir-equipo>Ver</a></div>
+      </div>
+      <div><span class="etiqueta">Tus espacios</span>
+      <div class="lista" style="margin-top:8px">${a.espacios.slice().sort((x, y) => y.bytes - x.bytes).map((e) => `
+        <button type="button" class="lista-item" data-esp="${esc(e.id)}" style="text-align:left;width:100%;flex-wrap:wrap">
+          <span class="crece"><b>${esc(e.nombre)}</b><small>${esc(bytes(e.bytes))} · ${e.documentos} documento${e.documentos === 1 ? "" : "s"} y su historial</small>
+            <span class="barra-uso" style="margin-top:6px"><i style="width:${Math.max(2, (e.bytes / max) * 100)}%"></i></span></span>${ico("chevron-right")}
+        </button>`).join("") || `<p class="suave" style="font-weight:650">Todavía no tienes espacios propios: lo que guardes en un espacio tuyo aparecerá aquí.</p>`}</div></div>
+      ${a.espacios.length ? `<p class="suave chico" style="font-weight:650">${ico("info", "ico-s")} Para liberar espacio, abre un espacio: ahí puedes borrar versiones antiguas y vaciar su papelera.</p>` : ""}`;
+    $$("[data-esp]", cuerpo).forEach((b) => (b.onclick = () => { h.cerrar(true); almacenamiento({ id: b.dataset.esp }); }));
+    const ir = $("[data-ir-equipo]", cuerpo); if (ir) ir.onclick = () => h.cerrar(true);
+  }
+
+  /**
+   * Con cuenta: ¿dónde se guarda lo nuevo? Por omisión en un espacio (queda en el servidor y se ve
+   * en todos los equipos); la otra opción es dejarlo solo en este equipo. Devuelve el espacio,
+   * "local" o null si se cancela. Sin espacios donde escribir (o sin red) no pregunta: local.
+   */
+  async function elegirDestino(titulo) {
+    if (!api.token()) return "local";
+    let espacios = NOM.app.espacios || [];
+    try { espacios = await api.get("/api/espacios", undefined, { ms: 5000 }); } catch (e) { if (e.red) return "local"; }
+    const editables = espacios.filter((e) => e.permiso !== "LECTURA");
+    if (!editables.length) return "local";
+    return new Promise((listo) => {
+      let elegido = null;
+      const cuerpo = html(`<div class="col">
+        <p class="suave" style="font-weight:650">En un espacio queda guardado en ${esc(nombreServidor())} y lo ves en todos tus equipos.</p>
+        <div class="lista">${editables.map((e, i) => `<button type="button" class="lista-item" data-esp="${esc(e.id)}" style="text-align:left;width:100%" ${i ? "" : "autofocus"}><span class="icono-espacio" style="width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;background:${esc(e.color)}">${inicial(e.nombre)}</span><span class="crece"><b>${esc(e.nombre)}</b><small>${ico("cloud", "ico-s")} En el servidor · ${esc(PERMISOS[e.permiso] || "")}</small></span>${ico("chevron-right")}</button>`).join("")}
+          <button type="button" class="lista-item" data-local style="text-align:left;width:100%"><span class="modo-insignia" style="width:36px;height:36px;border-radius:12px">${ico(api.empaquetada ? "smartphone" : "hard-drive")}</span><span class="crece"><b>Solo en este equipo</b><small>Cifrado con tu contraseña. No se ve en tus otros equipos ni lo ve nadie más.</small></span>${ico("chevron-right")}</button>
+        </div></div>`);
+      const h = hoja({ titulo: titulo || "¿Dónde lo guardamos?", icono: "cloud", cuerpo, alCerrar: () => listo(elegido) });
+      $$("[data-esp]", cuerpo).forEach((b) => (b.onclick = () => { elegido = editables.find((e) => e.id === b.dataset.esp); h.cerrar(true); }));
+      $("[data-local]", cuerpo).onclick = () => { elegido = "local"; h.cerrar(true); };
+    });
   }
 
   function tarjetaEspacio(e) {
@@ -413,7 +504,9 @@
     </form>`);
     const pie = html(`<div style="display:contents"><button type="button" class="btn" data-importar>${ico("upload")} Importar archivo</button>${esp && NOM.datos ? `<button type="button" class="btn" data-mas-crear aria-label="Más formas de crear" data-micro="Más|Reporte desde datos (CSV o Excel) y datos públicos.">${ico("more-horizontal")}</button>` : ""}<span class="crece solo-escritorio"></span><button class="btn primario" data-crear>Crear documento</button></div>`);
     const h = hoja({ titulo: esp ? "Nuevo documento" : "Nuevo documento (en este equipo)", cuerpo, pie, ancha: true });
-    if (!esp) cuerpo.prepend(html(`<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar} se pierde, salvo que lo descargues.</span></div>`));
+    if (!esp) cuerpo.prepend(html(api.token()
+      ? `<div class="alerta aviso">${ico("hard-drive")}<span>Este documento se guarda <b>solo ${NOM.aqui().en}</b>, cifrado con tu contraseña: no se ve en tus otros equipos. Después puedes pasarlo a un espacio.</span></div>`
+      : `<div class="alerta aviso">${ico("hard-drive")}<span>Sin cuenta, el documento se guarda <b>solo ${NOM.aqui().en}</b>. Si ${NOM.aqui().borrar} se pierde, salvo que lo descargues.</span></div>`));
     // 8.5 Las plantillas que guardó el equipo en este espacio salen primero (con su marca).
     let listaEsp = esp && esp.lista ? esp.lista : null;
     if (esp && !listaEsp) api.get(`/api/espacios/${esp.id}`).then((r) => { listaEsp = r.lista || []; pintarPlantillas(); }).catch(() => {});
@@ -501,14 +594,24 @@
         : `<div class="vacio"><div class="burbuja">${ico("file-text")}</div><h3>Aún no tienes documentos</h3>
             <p style="max-width:44ch">Puede ser un texto, una hoja de cálculo, una presentación o un diagrama.</p>
             <button class="btn primario" data-nuevo-local>${ico("plus")} Crear documento</button></div>`}`;
-    $$("[data-nuevo-local]", cont).forEach((b) => (b.onclick = () => nuevoDocumento(null)));
+    $$("[data-nuevo-local]", cont).forEach((b) => (b.onclick = async () => {
+      const donde = conCuenta ? await elegirDestino("¿Dónde creamos el documento?") : "local";
+      if (donde) nuevoDocumento(donde === "local" ? null : donde);
+    }));
     const mover = $("[data-mover-local]", cont);
     if (mover) mover.onclick = () => { const n = NOM.local.moverACuenta(); aviso(`${n} documento(s) ahora están cifrados en tu cuenta`, { tipo: "ok" }); seccionLocal(cont, conCuenta); };
     const imp = $("[data-importar-local]", cont);
     if (imp) imp.onclick = async () => {
       const f = await NOM.formatos.elegirArchivo(NOM.formatos.IMPORTABLES.join(","));
       if (!f) return;
-      try { const r = await NOM.formatos.importar(f); const d = NOM.local.crear(r.nombre, r.modo, r.ops); location.hash = "#/local/" + d.id; aviso(r.aviso || `“${r.nombre}” importado`, { tipo: r.aviso ? "aviso" : "ok" }); }
+      const donde = conCuenta ? await elegirDestino("¿Dónde guardamos lo importado?") : "local";
+      if (!donde) return;
+      try {
+        const r = await NOM.formatos.importar(f);
+        if (donde === "local") { const d = NOM.local.crear(r.nombre, r.modo, r.ops); location.hash = "#/local/" + d.id; }
+        else { const d = await api.post(`/api/espacios/${donde.id}/documentos`, { nombre: r.nombre, modo: r.modo, ops: NOM.DocCRDT.partir(r.ops) }, { ms: 60000 }); location.hash = "#/doc/" + d.id; }
+        aviso(r.aviso || `“${r.nombre}” importado${donde === "local" ? "" : " en " + donde.nombre}`, { tipo: r.aviso ? "aviso" : "ok", ms: 5000 });
+      }
       catch (e) { aviso(e.message, { tipo: "error", ms: 6000 }); }
     };
     $$("[data-menu-local]", cont).forEach((b) => (b.onclick = (e) => {
@@ -1117,5 +1220,5 @@
     };
   }
 
-  NOM.vistaEspacios = { enlaceVer: enlaceVerDoc, inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, formatoEspacio, sincronia, exportarTodo, PERMISOS };
+  NOM.vistaEspacios = { miAlmacenamiento, elegirDestino, nombreServidor, enlaceVer: enlaceVerDoc, inicio, inicioSinCuenta, subirLocal, espacio, nuevoEspacio, unirse, accesos, almacenamiento, conexion, nuevoDocumento, preferencias, formatoEspacio, sincronia, exportarTodo, PERMISOS };
 })();

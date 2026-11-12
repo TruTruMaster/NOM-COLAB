@@ -23,6 +23,11 @@ import tools.jackson.databind.json.JsonMapper;
  * Respaldos rotativos: antes de reemplazar un archivo se guarda la version anterior como
  * .resp1 (y la de antes pasa a .resp2 y .resp3), como mucho una vez cada 10 minutos por archivo.
  * Si un archivo no se puede leer (danado), se usa el respaldo mas reciente que si se lea.
+ *
+ * Lo pesado (el estado de cada documento y las fotos de sus versiones) se guarda comprimido
+ * (gzip, con el mismo nombre de archivo): ocupa varias veces menos y eso es lo que cuenta para la
+ * cuota de cada cuenta. Al leer se reconoce solo si un archivo viene comprimido o no, asi que los
+ * datos de versiones anteriores se abren igual y se comprimen la siguiente vez que se guardan.
  */
 @Component
 public class AlmacenJson {
@@ -66,11 +71,39 @@ public class AlmacenJson {
     }
 
     public <T> T leer(String relativa, TypeReference<T> tipo, T siFalta) {
-        return leerCon(ruta(relativa), f -> json.readValue(f, tipo), siFalta);
+        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
     }
 
     public <T> T leer(String relativa, Class<T> tipo, T siFalta) {
-        return leerCon(ruta(relativa), f -> json.readValue(f, tipo), siFalta);
+        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
+    }
+
+    /** ¿Va comprimido? El estado de los documentos y las fotos de sus versiones. */
+    static boolean comprimido(String relativa) {
+        return relativa.startsWith("docs/") && (relativa.endsWith("/estado.json") || relativa.contains("/v/"));
+    }
+
+    /** Abre un archivo, venga comprimido (empieza con 1F 8B) o como JSON tal cual. */
+    private static java.io.InputStream abrir(java.io.File f) throws IOException {
+        java.io.BufferedInputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(f), 64 * 1024);
+        try {
+            in.mark(2);
+            int a = in.read(), b = in.read();
+            in.reset();
+            return a == 0x1F && b == 0x8B ? new java.util.zip.GZIPInputStream(in, 64 * 1024) : in;
+        } catch (IOException e) {
+            in.close();
+            throw e;
+        }
+    }
+
+    /**
+     * gzip con el nivel que se pida. Las fotos de versiones se escriben una sola vez: van al
+     * maximo. El estado se reescribe mientras alguien edita: un nivel medio, varias veces mas
+     * rapido y casi igual de chico (importa en una Raspberry).
+     */
+    private static final class Gzip extends java.util.zip.GZIPOutputStream {
+        Gzip(java.io.OutputStream out, int nivel) throws IOException { super(out, 64 * 1024); def.setLevel(nivel); }
     }
 
     /** Guarda la version actual como .resp1 (corriendo las anteriores) si ya toca. */
@@ -89,7 +122,9 @@ public class AlmacenJson {
         try {
             Files.createDirectories(p.getParent());
             Path tmp = p.resolveSibling(p.getFileName() + ".tmp");
-            json.writeValue(tmp.toFile(), valor);
+            if (comprimido(relativa)) {
+                try (java.io.OutputStream out = new Gzip(new java.io.FileOutputStream(tmp.toFile()), relativa.contains("/v/") ? 9 : 5)) { json.writeValue(out, valor); }
+            } else json.writeValue(tmp.toFile(), valor);
             // Las fotos de versiones y los recibos no se reescriben: no necesitan respaldo.
             if (!relativa.contains("/v/") && !relativa.startsWith("recibos/")) rotar(p);
             try {
@@ -106,6 +141,24 @@ public class AlmacenJson {
         try {
             Path p = ruta(relativa);
             return Files.exists(p) ? Files.size(p) : 0;
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    /** Lo que mide el contenido sin comprimir (gzip lo anota en sus ultimos cuatro bytes). */
+    public long tamanoReal(String relativa) {
+        Path p = ruta(relativa);
+        try {
+            if (!Files.exists(p)) return 0;
+            try (java.io.RandomAccessFile f = new java.io.RandomAccessFile(p.toFile(), "r")) {
+                long n = f.length();
+                if (n < 18 || f.read() != 0x1F || f.read() != 0x8B) return n;
+                f.seek(n - 4);
+                long a = f.read(), b = f.read(), c = f.read(), d = f.read();
+                // El largo va modulo 4 GB; un estado nunca es mas chico que su archivo comprimido.
+                return Math.max(n, a | b << 8 | c << 16 | d << 24);
+            }
         } catch (IOException e) {
             return 0;
         }

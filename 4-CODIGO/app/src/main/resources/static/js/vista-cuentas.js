@@ -36,6 +36,7 @@
   function recuperar(nombre) {
     const cuerpo = html(`<form class="col" novalidate>
       <p class="suave" style="font-weight:650">Usa el código que te dio NOM-COLAB al crear la cuenta (o el último que generaste en Ajustes).</p>
+      <p class="suave chico" style="font-weight:650">${ico("hard-drive", "ico-s")} Lo que está en tus espacios no cambia. Lo que solo está guardado en un equipo (documentos de “${esc(NOM.etiquetaEquipo())}” y cambios sin enviar) va cifrado con tu contraseña de ahora: al entrar con la nueva te la pediremos una vez para recuperarlo, así que si la recuerdas, mejor cámbiala desde tu cuenta.</p>
       <div class="alerta" data-alerta hidden role="alert"></div>
       <div class="campo"><label for="rn">Usuario</label><div class="entrada">${ico("user")}<input id="rn" name="nombre" autocomplete="username" autocapitalize="none" value="${esc(nombre || "")}"></div></div>
       <div class="campo"><label for="rk">Código de recuperación</label><div class="entrada">${ico("key-round")}<input id="rk" name="codigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH-JKMN-PQRS"></div></div>
@@ -62,6 +63,171 @@
     cuerpo.onsubmit = enviar;
     $("[data-si]", pie).onclick = enviar;
     $("[data-no]", pie).onclick = () => h.cerrar();
+  }
+
+  /** Alerta dentro de una hoja (error del servidor o cuenta bloqueada). */
+  function alertaEn(al, x) {
+    al.className = "alerta " + (x.estado === 423 ? "aviso" : "error"); al.hidden = false;
+    al.innerHTML = `${ico(x.estado === 423 ? "lock" : "triangle-alert")}<span>${esc(x.red ? "Sin conexión: revisa el Wi-Fi o los datos e intenta de nuevo." : x.message)}</span>`;
+  }
+
+  /**
+   * Cambiar la contraseña sabiendo la actual. El servidor cierra las demás sesiones y da una nueva
+   * para este equipo; la llave de lo guardado aquí se envuelve con la contraseña nueva, así que
+   * los documentos de este equipo y los cambios sin enviar siguen abriendo.
+   */
+  function cambiarContrasena() {
+    const u = api.usuario() || {};
+    const cuerpo = html(`<form class="col" novalidate>
+      <p class="suave" style="font-weight:650">Tus otros equipos tendrán que volver a entrar con la contraseña nueva. Lo guardado en este no se pierde.</p>
+      <div class="alerta" data-alerta hidden role="alert"></div>
+      <input type="text" name="usuario" autocomplete="username" value="${esc(u.nombre || "")}" hidden>
+      <div class="campo"><label for="ca">Contraseña actual</label><div class="entrada">${ico("lock")}<input id="ca" name="actual" type="password" autocomplete="current-password" autofocus></div></div>
+      <div class="campo"><label for="cn">Contraseña nueva</label><div class="entrada">${ico("key-round")}<input id="cn" name="nueva" type="password" autocomplete="new-password" minlength="8"></div>
+        <div class="ayuda">Al menos 8 letras, números o signos.</div></div>
+      <div class="campo"><label for="cr">Repite la contraseña nueva</label><div class="entrada">${ico("key-round")}<input id="cr" name="repite" type="password" autocomplete="new-password" minlength="8"></div></div>
+    </form>`);
+    const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Cambiar contraseña</button></div>`);
+    const h = NOM.hoja({ titulo: "Cambiar contraseña", icono: "key-round", cuerpo, pie });
+    const al = $("[data-alerta]", cuerpo);
+    const enviar = async (e) => {
+      e && e.preventDefault();
+      const actual = cuerpo.actual.value, nueva = cuerpo.nueva.value;
+      if (!actual) return alertaEn(al, { message: "Escribe tu contraseña actual" });
+      if (nueva.length < 8) return alertaEn(al, { message: "La contraseña nueva necesita al menos 8 letras, números o signos" });
+      if (nueva !== cuerpo.repite.value) return alertaEn(al, { message: "Las dos contraseñas nuevas no son iguales" });
+      if (nueva === actual) return alertaEn(al, { message: "La contraseña nueva es igual a la actual" });
+      const b = $("[data-si]", pie);
+      b.disabled = true;
+      try {
+        const r = await api.put("/api/cuentas/contrasena", { actual, nueva }, { sin401: true, ms: ESPERA_BD });
+        api.fijarSesion(r.token, r.usuario);
+        try { await NOM.boveda.cambiarContrasena(nueva); }
+        catch (x) { console.error(x); NOM.aviso("La contraseña cambió, pero no se pudo actualizar lo guardado en este equipo: la próxima vez que entres te pediremos la anterior para abrirlo.", { tipo: "aviso", ms: 9000 }); }
+        h.cerrar(true);
+        NOM.aviso("Contraseña cambiada. En tus otros equipos vuelve a entrar con la nueva.", { tipo: "ok", ms: 6000 });
+      } catch (x) {
+        alertaEn(al, x);
+        b.disabled = false;
+      }
+    };
+    cuerpo.onsubmit = enviar;
+    $("[data-si]", pie).onclick = enviar;
+    $("[data-no]", pie).onclick = () => h.cerrar();
+  }
+
+  /**
+   * Borrar la cuenta: dice qué se borra, pide la contraseña y escribir el nombre de usuario. Al
+   * terminar se borra también lo suyo de este equipo y se vuelve a la pantalla de entrada.
+   */
+  async function borrarCuenta() {
+    const u = api.usuario() || {};
+    let alm = null;
+    try { alm = await api.get("/api/cuentas/almacenamiento"); } catch (e) { /* se explica sin las cifras */ }
+    const nEsp = alm ? alm.espacios.length : null, nDoc = alm ? alm.documentos : null;
+    const cuerpo = html(`<form class="col" novalidate>
+      <div class="alerta error">${ico("triangle-alert")}<span><b>No se puede deshacer.</b> Nadie, ni quien administra NOM-COLAB, puede recuperar la cuenta después.</span></div>
+      <div class="lista">
+        <div class="lista-item">${ico("trash-2")}<span class="crece"><b>Se borran ${nEsp === null ? "tus espacios" : nEsp === 1 ? "tu espacio" : "tus " + nEsp + " espacios"}${nDoc ? " y " + (nDoc === 1 ? "su documento" : "sus " + nDoc + " documentos") : ""}</b><small>Con todas sus versiones, también para las personas con quienes los compartes. Si quieres conservar algo, descárgalo antes.</small></span></div>
+        <div class="lista-item">${ico("log-out")}<span class="crece"><b>Sales de los espacios de otras personas</b><small>Lo que escribiste ahí se queda: es de ese espacio.</small></span></div>
+        <div class="lista-item">${ico(api.empaquetada ? "smartphone" : "hard-drive")}<span class="crece"><b>Se borra lo tuyo de este equipo</b><small>Los documentos de “${esc(NOM.etiquetaEquipo())}” y los cambios sin enviar de esta cuenta.</small></span></div>
+      </div>
+      <div class="alerta" data-alerta hidden role="alert"></div>
+      <input type="text" name="usuario" autocomplete="username" value="${esc(u.nombre || "")}" hidden>
+      <div class="campo"><label for="bc">Tu contraseña</label><div class="entrada">${ico("lock")}<input id="bc" name="contrasena" type="password" autocomplete="current-password"></div></div>
+      <div class="campo"><label for="bn">Para confirmar, escribe tu nombre de usuario: <b>${esc(u.nombre || "")}</b></label><div class="entrada">${ico("user")}<input id="bn" name="nombre" autocomplete="off" autocapitalize="none" spellcheck="false"></div></div>
+    </form>`);
+    const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn peligro lleno" data-si>Borrar mi cuenta para siempre</button></div>`);
+    const h = NOM.hoja({ titulo: "Borrar mi cuenta", icono: "trash-2", cuerpo, pie });
+    const al = $("[data-alerta]", cuerpo);
+    const enviar = async (e) => {
+      e && e.preventDefault();
+      if (!cuerpo.contrasena.value) return alertaEn(al, { message: "Escribe tu contraseña" });
+      if (cuerpo.nombre.value.trim().toLowerCase() !== String(u.nombre || "").toLowerCase()) return alertaEn(al, { message: "Escribe tu nombre de usuario tal cual para confirmar" });
+      const b = $("[data-si]", pie);
+      b.disabled = true;
+      try {
+        await api.post("/api/cuentas/eliminar", { contrasena: cuerpo.contrasena.value }, { sin401: true, ms: ESPERA_BD });
+        h.cerrar(true);
+        await NOM.app.cuentaBorrada(u.id);
+        NOM.aviso("Tu cuenta y todo lo que tenía se borraron.", { tipo: "ok", ms: 7000 });
+      } catch (x) {
+        alertaEn(al, x);
+        b.disabled = false;
+      }
+    };
+    cuerpo.onsubmit = enviar;
+    $("[data-si]", pie).onclick = enviar;
+    $("[data-no]", pie).onclick = () => h.cerrar();
+  }
+
+  /**
+   * Si la contraseña cambió sin este equipo (se restableció con el código, o se cambió en otro),
+   * lo que solo vivía aquí quedó apartado y cifrado con la anterior: se ofrece recuperarlo.
+   * `alEntrar`: recién se inició sesión (se ofrece siempre); si no, como mucho una vez al día.
+   * `pedido`: la persona lo abrió desde el menú. Cuando se ofrece solo, espera a que no haya otra
+   * ventana abierta (por ejemplo, la de unirse a un espacio con un código): abrir esta la cerraría.
+   */
+  async function ofrecerRecuperar(alEntrar, pedido, intento) {
+    if (!NOM.boveda || !NOM.boveda.activa()) return;
+    if (!pedido && document.querySelector(".velo")) {
+      if ((intento || 0) < 30) setTimeout(() => ofrecerRecuperar(alEntrar, false, (intento || 0) + 1).catch((e) => console.error(e)), 4000);
+      return;
+    }
+    const r = await NOM.boveda.porRecuperar();
+    NOM.app.viejaPendiente = r.hay;
+    if (!r.hay) return;
+    const uid = NOM.boveda.activa(), clave = "nom.viejaPospuesta." + uid;
+    if (alEntrar === false && Date.now() - NOM.leer(clave, 0) < 86400000) return;
+    const partes = [];
+    if (r.docs) partes.push(r.docs === 1 ? "1 documento" : r.docs + " documentos");
+    if (r.colas) partes.push("cambios sin enviar de " + (r.colas === 1 ? "1 documento" : r.colas + " documentos"));
+    const cuerpo = html(`<form class="col" novalidate>
+      <p style="font-weight:650">En este equipo hay <b>${esc(partes.join(" y "))}</b> que se guardaron con tu contraseña anterior. Siguen aquí, cifrados: escribe esa contraseña para recuperarlos.</p>
+      <div class="alerta" data-alerta hidden role="alert"></div>
+      <div class="campo"><label for="va">Tu contraseña anterior</label><div class="entrada">${ico("lock")}<input id="va" name="anterior" type="password" autocomplete="off" autofocus></div>
+        <div class="ayuda">No se envía a ningún lado: solo abre lo guardado en este equipo.</div></div>
+    </form>`);
+    const pie = html(`<div style="display:contents"><button class="btn plano peligro" data-borrar type="button">Borrarlos</button><span class="crece"></span><button class="btn" data-no type="button">Ahora no</button><button class="btn primario" data-si>Recuperar</button></div>`);
+    let hecho = false;
+    const h = NOM.hoja({ titulo: "Guardado con tu contraseña anterior", icono: "key-round", cuerpo, pie, alCerrar: () => { if (!hecho) NOM.guardar(clave, Date.now()); } });
+    const al = $("[data-alerta]", cuerpo);
+    const enviar = async (e) => {
+      e && e.preventDefault();
+      if (!cuerpo.anterior.value) return alertaEn(al, { message: "Escribe la contraseña que tenías antes" });
+      const b = $("[data-si]", pie);
+      b.disabled = true;
+      try {
+        const x = await NOM.boveda.recuperarCon(cuerpo.anterior.value);
+        hecho = true; NOM.quitar(clave);
+        h.cerrar(true);
+        const que = [];
+        if (x.docs) que.push(x.docs === 1 ? "1 documento" : x.docs + " documentos");
+        if (x.cambios) que.push(x.cambios === 1 ? "1 cambio sin enviar" : x.cambios + " cambios sin enviar");
+        NOM.aviso(que.length ? "Se recuperó: " + que.join(" y ") + "." : "No había nada nuevo que recuperar.", { tipo: "ok", ms: 7000 });
+        if (x.cambios && NOM.cola) NOM.cola.arrancar();
+        NOM.app.viejaPendiente = x.quedan > 0;
+        NOM.app.refrescar();
+        // Quedó algo guardado con otra contraseña todavía más vieja: se vuelve a ofrecer.
+        if (x.quedan) setTimeout(() => ofrecerRecuperar(true), 600);
+      } catch (x) {
+        alertaEn(al, x);
+        b.disabled = false; cuerpo.anterior.select();
+      }
+    };
+    cuerpo.onsubmit = enviar;
+    $("[data-si]", pie).onclick = enviar;
+    $("[data-no]", pie).onclick = () => h.cerrar();
+    $("[data-borrar]", pie).onclick = async () => {
+      // La confirmación abre otra hoja (cierra esta): si dice que no, se vuelve a ofrecer.
+      hecho = true;
+      const si = await NOM.confirmar("Borrar lo guardado con tu contraseña anterior", `Se borrarán de este equipo ${partes.join(" y ")}. Sin esa contraseña nadie puede abrirlos, y borrados no se pueden recuperar.`, { si: "Borrarlos", peligro: true });
+      if (!si) return ofrecerRecuperar(true, true);
+      await NOM.boveda.descartarVieja();
+      NOM.quitar(clave);
+      NOM.app.viejaPendiente = false;
+      NOM.aviso("Se borró lo guardado con tu contraseña anterior.", { tipo: "ok" });
+    };
   }
 
   /** "¿Tienes un código del salón?": QR con la cámara o código escrito. */
@@ -176,6 +342,12 @@
         const rev = (e) => { if (e.getModifierState) avisoMayus.hidden = !e.getModifierState("CapsLock"); };
         i.addEventListener("keyup", rev); i.addEventListener("keydown", rev);
       });
+      // En la red local se viaja por http:// (ahí no hay forma de dar un certificado de confianza):
+      // se avisa para que se use solo en un Wi-Fi conocido. En el propio equipo no hace falta.
+      const dir = api.empaquetada ? api.servidor() : location.origin;
+      const equipo = (dir.replace(/^https?:\/\//i, "").match(/^\[[^\]]*\]|^[^/:]+/) || [""])[0].toLowerCase();
+      if (/^http:/i.test(dir) && !/^(localhost|127(\.\d+){3}|\[::1\])$/.test(equipo))
+        f.append(html(`<p class="servidor-pie" data-sin-cifrar>${ico("triangle-alert", "ico-s")}<span><b>Conexión sin cifrar (red local).</b> Úsala solo en un Wi-Fi de confianza: quien esté en la misma red podría ver lo que se envía.</span></p>`));
       // En la app: a qué servidor se conecta, dicho en palabras, y cómo cambiarlo (para equipos que
       // usan NOM-COLAB en su propia red, sin Internet).
       if (NOM.anfitrion && NOM.anfitrion.esLocal()) {
@@ -240,6 +412,8 @@
       NOM.aplicarPreferencias(r.preferencias);
       if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
       NOM.app.alIniciarSesion(r);
+      // Tras la bienvenida: ¿quedó algo en este equipo guardado con la contraseña anterior?
+      setTimeout(() => ofrecerRecuperar(true).catch((e) => console.error(e)), nuevo ? 2600 : 1700);
     }
 
     async function enviando(f, fn) {
@@ -404,5 +578,5 @@
     if (b) b.click();
   }
 
-  NOM.vistaCuentas = { pintar, mostrarCodigo, recuperar };
+  NOM.vistaCuentas = { pintar, mostrarCodigo, recuperar, cambiarContrasena, borrarCuenta, ofrecerRecuperar };
 })();

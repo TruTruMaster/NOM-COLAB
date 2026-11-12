@@ -169,6 +169,43 @@ public class ServicioDocumentos {
         return total;
     }
 
+    /**
+     * Lo que la cuenta tiene guardado en este servidor: cuanto ocupan sus espacios (documentos y
+     * versiones, ya comprimidos), cuanto tiene permitido (0 = sin limite) y el detalle por espacio.
+     * Solo cuentan los espacios de los que es propietaria: lo que escribe en espacios ajenos ocupa
+     * el lugar del propietario de ese espacio.
+     */
+    public Map<String, Object> almacenamientoDe(Usuario u) {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        long total = 0;
+        int nDocs = 0;
+        for (Espacio e : espacios.todos()) {
+            if (!u.id.equals(e.propietarioId)) continue;
+            long b = 0;
+            int n = 0;
+            for (Documento d : repo.delEspacio(e.id)) {
+                b += repo.bytesEstado(d.id);
+                for (Version v : repo.historial(d.id)) b += v.bytes;
+                n++;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.id);
+            m.put("nombre", e.nombre);
+            m.put("bytes", b);
+            m.put("documentos", n);
+            lista.add(m);
+            total += b;
+            nDocs += n;
+        }
+        usoCache.put(u.id, new long[] { total, System.currentTimeMillis() });
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("uso", total);
+        r.put("cuota", cuotaBytes);
+        r.put("documentos", nDocs);
+        r.put("espacios", lista);
+        return r;
+    }
+
     private void revisarCuota(Espacio e) {
         if (cuotaBytes <= 0) return;
         if (usoDe(e.propietarioId) >= cuotaBytes)
@@ -347,7 +384,7 @@ public class ServicioDocumentos {
                 if (!mot.fusionar(est, op).isEmpty()) aplicadas.add(op);
             }
             if (!aplicadas.isEmpty()) {
-                if (repo.bytesEstado(docId) > MAX_BYTES_ESTADO)
+                if (repo.bytesEstadoReal(docId) > MAX_BYTES_ESTADO)
                     throw ErrorNom.invalido("El documento superó el tamaño máximo (25 MB)", null);
                 d.modificado = System.currentTimeMillis();
                 d.pendienteVersion = true;

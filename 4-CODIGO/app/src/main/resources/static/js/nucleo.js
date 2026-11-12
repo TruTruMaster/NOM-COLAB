@@ -6,8 +6,8 @@
   const NOM = (window.NOM = window.NOM || {});
   // Versión de esta interfaz. Tienen que ir a la par de nucleo/.../core/Version.java y del APK:
   // INTERFAZ sube cuando cambia el formato de los documentos o lo que la interfaz sabe leer.
-  NOM.VERSION = "0.12.0";
-  NOM.INTERFAZ = 12;
+  NOM.VERSION = "0.12.1";
+  NOM.INTERFAZ = 13;
 
   // ------------------------------------------------------------ utilidades
   const esc = (s) => String(s == null ? "" : s)

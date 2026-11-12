@@ -2,7 +2,7 @@
    Red primero (el servidor siempre tiene la versión más nueva) y, si no responde en 3 s o no hay
    red, la copia guardada. La API (/api/...) nunca se guarda: los documentos sin red viven en la
    bóveda cifrada de cada cuenta. Al cambiar VERSION se descarta la caché anterior. */
-const VERSION = "nom-colab-2026-11-11a";
+const VERSION = "nom-colab-2026-11-11b";
 const BASE = [
   "./", "index.html", "manifest.webmanifest",
   "css/nom.css", "css/editor.css", "css/fuentes.css",

@@ -25,9 +25,9 @@ import tools.jackson.core.type.TypeReference;
 /**
  * datos-nom/
  *   documentos.json                 metadatos de todos los documentos
- *   docs/{id}/estado.json           estado CRDT
+ *   docs/{id}/estado.json           estado CRDT (comprimido, ver AlmacenJson)
  *   docs/{id}/versiones.json        indice del historial
- *   docs/{id}/v/{n}.json            foto de cada version
+ *   docs/{id}/v/{n}.json            foto de cada version (comprimida)
  *   docs/{id}/actividad.jsonl       bitacora (una linea por racha de cambios)
  *   docs/{id}/visitas.json          ultima vez que cada persona lo abrio
  *   recibos/{huella}.json           recibos de proceso de escritura emitidos
@@ -78,6 +78,10 @@ public class RepositorioDocumentosJson implements RepositorioDocumentos {
 
     @Override public long bytesEstado(String docId) {
         return almacen.tamano("docs/" + docId + "/estado.json");
+    }
+
+    @Override public long bytesEstadoReal(String docId) {
+        return almacen.tamanoReal("docs/" + docId + "/estado.json");
     }
 
     @Override public synchronized List<Version> historial(String docId) {

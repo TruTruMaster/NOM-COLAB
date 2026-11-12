@@ -57,7 +57,8 @@ celular. La interfaz se adapta sola a la pantalla.
 
 ```bash
 cd android
-./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease        # app/build/outputs/apk/release/app-release.apk (el que se publica; firmado con ~/.android/debug.keystore)
+./gradlew assembleDebug          # solo para probar en un teléfono con las herramientas de depuración; no se publica
 ```
 
 Al abrirla pide el servidor: **Buscar en la red** lo encuentra por UDP, o se escribe
@@ -80,7 +81,8 @@ otra vez se enciende solo.
 
 ```bash
 cd app && mvn test               # convergencia del CRDT: 5 usuarios, 200 órdenes de llegada distintos
-python3 pruebas/seguridad.py     # 20 pruebas de seguridad (sesión, validación, bloqueo, roles por espacio)
+python3 pruebas/seguridad.py     # 226 pruebas de seguridad (sesión, bloqueo, roles, cuentas, boletos, cabeceras, almacenamiento)
+pruebas/interfaz/correr.sh       # la página en un navegador de verdad (ver pruebas/interfaz/LEEME.md)
 cd azure && ./desplegar.sh roles # roles de la base en Azure SQL: los aplica y prueba qué se permite y qué no
 ```
 

@@ -13,8 +13,8 @@ android {
         // Requerimientos de software: Android 7 (API 24) en adelante.
         minSdk = 24
         targetSdk = 37
-        versionCode = 16
-        versionName = "0.12.0"
+        versionCode = 17
+        versionName = "0.12.1"
     }
 
     buildTypes {
@@ -22,7 +22,19 @@ android {
             optimization {
                 enable = false
             }
+            // El APK que se publica es este (assembleRelease): no es de depuración, así que otra
+            // app o una computadora por USB no pueden leer sus datos. Va firmado con la MISMA llave
+            // con la que se han publicado todas las versiones (la de depuración de la computadora
+            // donde se compila, ~/.android/debug.keystore): así se instala encima de la anterior
+            // sin desinstalar. Sin ese archivo nadie puede publicar una actualización: hay que
+            // guardar una copia. assembleDebug queda solo para probar en un teléfono.
+            signingConfig = signingConfigs.getByName("debug")
         }
+    }
+    // La revisión "lint" de la versión publicable pide descargar otra herramienta; no se usa (así
+    // el APK se compila también sin Internet, igual que el de depuración).
+    lint {
+        checkReleaseBuilds = false
     }
     compileOptions {
         // El núcleo compartido con el servidor usa Java 17 (records, switch, instanceof con patrón);
