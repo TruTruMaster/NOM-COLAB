@@ -1,0 +1,3 @@
+#!/bin/sh
+# Respaldo diario de NOM-COLAB (lo corre cron a las 02:00): comprime datos y guarda los últimos 14.
+exec /usr/local/sbin/nomcolab-pi respaldo >/dev/null

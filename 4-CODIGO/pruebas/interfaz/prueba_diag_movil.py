@@ -1,0 +1,23 @@
+import os, sys, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys
+from nomprueba import *
+OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tempfile.gettempdir(), "nom-pruebas"); os.makedirs(OUT, exist_ok=True)
+esperar_servidor()
+c = cuenta(); e = espacio(c["token"]); d = documento(c["token"], e, "DIAGRAMA", "Movil")
+n = Navegador(movil=True); n.entrar(c); n.abrir(d); p = n.p; ev = p.evaluate
+ev("() => NOM.diagramas.elegir(NOM.modos.DIAGRAMA._lienzo)"); p.wait_for_timeout(600)
+print("ancho de página:", ev("() => [document.documentElement.scrollWidth, innerWidth]"))
+n.foto(OUT + "/m_galeria.png")
+p.tap('.dg-tarjeta[data-d="clases"]'); p.wait_for_timeout(600)
+ev("() => document.querySelectorAll('.bienvenida-momento, .pista').forEach(x => x.remove())")
+cid = ev("() => { const ed = NOM.editorActual; return ed.doc.deLaPagina(ed.pagina).find(b => b.tipo === 'conector').id; }")
+ev("() => NOM.modos.DIAGRAMA._lienzo.ajustar()"); p.wait_for_timeout(300)
+pt = ev("""(id) => { const pa = document.querySelector('[data-conector="' + id + '"] path.linea'); const q = pa.getPointAtLength(pa.getTotalLength() * 0.5); const m = pa.getScreenCTM(); return [q.x * m.a + q.y * m.c + m.e, q.x * m.b + q.y * m.d + m.f]; }""", cid)
+p.mouse.click(pt[0], pt[1]); p.wait_for_timeout(400)
+print("barra de flecha en el celular:", ev("() => { const b = document.querySelector('.lz-barra'); const r = b.getBoundingClientRect(); return [!b.hidden, Math.round(r.left), Math.round(r.right), b.querySelectorAll('button').length]; }"))
+n.foto(OUT + "/m_flecha.png")
+ev("() => NOM.diagramas.desdeTexto(NOM.modos.DIAGRAMA._lienzo, 'organigrama')"); p.wait_for_timeout(600)
+print("texto a diagrama, ancho:", ev("() => [document.documentElement.scrollWidth, document.querySelector('[data-previa] .dg-previa').offsetWidth]"))
+n.foto(OUT + "/m_texto.png")
+print("errores:", n.errores[:5])
+n.cerrar()

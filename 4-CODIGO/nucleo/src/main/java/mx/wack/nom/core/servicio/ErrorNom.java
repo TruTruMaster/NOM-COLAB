@@ -5,7 +5,7 @@ package mx.wack.nom.core.servicio;
  * que responde la API (el servidor de la computadora y el del teléfono responden igual).
  */
 public class ErrorNom extends RuntimeException {
-    public static final int INVALIDO = 400, SIN_SESION = 401, PROHIBIDO = 403, NO_EXISTE = 404, CONFLICTO = 409, LLENO = 413, BLOQUEADO = 423;
+    public static final int INVALIDO = 400, SIN_SESION = 401, PROHIBIDO = 403, NO_EXISTE = 404, CONFLICTO = 409, LLENO = 413, BLOQUEADO = 423, DEMASIADOS = 429;
 
     public final int estado;
     public final String campo;

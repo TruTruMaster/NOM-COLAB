@@ -138,6 +138,20 @@ public class ServicioEspacios {
 
     public void guardar(Espacio e) { repo.guardar(e); }
 
+    /** Borra un espacio (sus documentos ya los borro quien llama) y avisa a quienes lo tenian abierto. */
+    public synchronized void borrar(Espacio e) {
+        repo.borrar(e.id);
+        difusor.avisarTodoEspacio(e.id, "espacio", Map.of("borrado", true));
+    }
+
+    /** Quita a una cuenta de un espacio ajeno: su acceso, su solicitud y sus avisos. */
+    public synchronized void quitarCuenta(Espacio e, String usuarioId) {
+        boolean cambio = e.accesos.remove(usuarioId) != null;
+        cambio |= e.solicitudes.removeIf(s -> usuarioId.equals(s.usuarioId));
+        if (e.avisos != null) cambio |= e.avisos.remove(usuarioId) != null;
+        if (cambio) repo.guardar(e);
+    }
+
     /** CU-13 Crear espacio de trabajo. */
     public synchronized Espacio crear(Usuario u, String nombre) {
         if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no crean espacios. Crea una cuenta para tener los tuyos.");

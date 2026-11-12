@@ -1178,6 +1178,25 @@ public class ServicioDocumentos {
         borrarDeVerdad(d);
     }
 
+    /**
+     * Borrar la cuenta (la pide su dueno, con su contrasena ya comprobada). Sus espacios se borran
+     * con todos sus documentos y versiones; de los espacios de otros solo se le quita el acceso (lo
+     * que escribio ahi se queda: es del espacio). No se puede deshacer.
+     */
+    public Map<String, Object> eliminarCuenta(Usuario u) {
+        int nEsp = 0, nDoc = 0;
+        for (Espacio e : new java.util.ArrayList<>(espacios.todos())) {
+            if (u.id.equals(e.propietarioId)) {
+                for (Documento d : repo.delEspacio(e.id)) { borrarDeVerdad(d); nDoc++; }
+                espacios.borrar(e);
+                nEsp++;
+            } else espacios.quitarCuenta(e, u.id);
+        }
+        cuentas.borrar(u);
+        usoCache.clear();
+        return Map.of("espacios", nEsp, "documentos", nDoc);
+    }
+
     public Map<String, Object> vaciarPapelera(Usuario u, String espacioId) {
         espacios.exigir(espacios.requerir(espacioId), u, Permiso.PROPIETARIO);
         int n = 0;

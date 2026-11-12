@@ -26,9 +26,10 @@
   const G = () => NOM.graficas;
 
   /** Prefijos de las propiedades de cada celda. */
-  const PROPS = ["c", "n", "i", "u", "k", "f", "r", "al", "aj", "bd", "tl", "m"];
+  // tf: tipo de letra de la celda (viene de Excel; aquí se ve con esa fuente o su equivalente)
+  const PROPS = ["c", "n", "i", "u", "k", "f", "r", "al", "aj", "bd", "tl", "m", "tf"];
   /** Lo que copia "copiar formato" y el cuadrito de relleno además del contenido. */
-  const FORMATO = ["n", "i", "u", "k", "f", "r", "al", "aj", "bd", "tl"];
+  const FORMATO = ["n", "i", "u", "k", "f", "r", "al", "aj", "bd", "tl", "tf"];
   const ANCHO = 120, ALTO = 32;
   const COLORES_CELDA = ["#000000", "#C2372B", "#E8590C", "#2FA868", "#1D7A4C", "#3D72F2", "#8B5CF6"];
   const RELLENOS = ["#FFF2CC", "#FCE5CD", "#F4CCCC", "#D9EAD3", "#CFE2F3", "#D9D2E9", "#EFEFEF", "#FFFF00"];
@@ -316,6 +317,8 @@
         if (t["aj:" + ref]) st.push("white-space:normal;word-break:break-word;line-height:1.25;text-overflow:clip");
         const tl = +t["tl:" + ref];
         if (tl) st.push("font-size:" + tl + "pt");
+        const tf = t["tf:" + ref];
+        if (tf && NOM.textoRico) st.push("font-family:" + NOM.textoRico.cssFuente(tf));
         const bd = String(t["bd:" + ref] || "");
         if (bd) {
           const sh = [];

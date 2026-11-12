@@ -118,7 +118,15 @@
     const pct = (x, tot) => (tot ? Math.round((x * 100) / tot) : 0);
     a.cols.forEach((c) => {
       let t = null;
-      if (c.tipo === "opciones") { const [v, k] = c.frecuencias[0]; t = `${c.nombre}: lo más ${c.multiple ? "elegido" : "frecuente"} fue «${v}» (${k} de ${c.respuestas}, ${pct(k, c.respuestas)} %).`; }
+      if (c.tipo === "opciones") {
+        const [v, k] = c.frecuencias[0];
+        // Si varias respuestas empatan arriba, se nombran todas (no solo la primera de la lista).
+        const empate = c.frecuencias.filter((f) => f[1] === k).map((f) => `«${f[0]}»`);
+        const lista = empate.length > 1 ? empate.slice(0, -1).join(", ") + " y " + empate[empate.length - 1] : `«${v}»`;
+        t = empate.length > 1
+          ? `${c.nombre}: empataron ${lista} (${k} de ${c.respuestas} cada una, ${pct(k, c.respuestas)} %).`
+          : `${c.nombre}: lo más ${c.multiple ? "elegido" : "frecuente"} fue ${lista} (${k} de ${c.respuestas}, ${pct(k, c.respuestas)} %).`;
+      }
       else if (c.tipo === "numero") t = `${c.nombre}: promedio ${fmt(c.media)} (mínimo ${fmt(c.min)}, máximo ${fmt(c.max)}, mediana ${fmt(c.mediana)}).`;
       else if (c.tipo === "texto") t = `${c.nombre}: ${c.respuestas} respuestas distintas.`;
       if (t) par(t, { lista: "vinetas" });

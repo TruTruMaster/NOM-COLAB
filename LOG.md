@@ -599,3 +599,89 @@ Fuentes para regenerarlos: `5-PRESENTACION/fuentes-pdf/`.
 - **Documentación revisada contra el código:** `LEEME.md`, `README.md`, `DESPLIEGUE-AZURE.md`
   (sección de roles de la base), `DISENO-UI.md` (ya no habla del selector de modo ni de la
   minibarra; agrega miniaturas y solo lectura), diagrama de paquetes (Spring Boot 4.1, dónde corre).
+
+## 50. NOM-COLAB en https://nomcolab.dpdns.org, siempre prendido
+- **Dominio propio:** `nomcolab.dpdns.org` (gratis, DigitalPlat) con la zona en Cloudflare. Un
+  Cloudflare Tunnel (`nomcolab`) lo une con el servidor propio de esta computadora sin abrir
+  puertos; Cloudflare pone el HTTPS. También `www.nomcolab.dpdns.org`. Funnel sigue como segunda
+  dirección.
+- **Siempre prendido:** el servidor y el túnel arrancan solos con la computadora (sin iniciar
+  sesión) y se levantan si se caen; un vigía revisa cada 2 minutos y reinicia lo que no conteste;
+  la computadora ya no se duerme (tapa ignorada, suspensión deshabilitada). Probado: al matar el
+  servidor volvió a responder en el dominio en unos 8 s.
+- **App:** "Usar NOM-COLAB en Internet" ahora entra a `https://nomcolab.dpdns.org`; la app 0.11.2
+  y el jar se recompilaron (pruebas de seguridad: 171 de 171).
+- `nomcolab` (Local) maneja también el túnel; "Apagar" quita el arranque automático hasta el
+  siguiente "Prender". Archivos nuevos en `4-CODIGO/servidor-propio` (`tunel.sh`, `vigia.sh`,
+  `nomcolab-tunel.service`, `nomcolab-vigia.*`, `logind-siempre-prendido.conf`). Guía:
+  `docs/SERVIDOR-PROPIO.md`, con los pasos para pasarlo a la Raspberry Pi.
+
+## 51. Descargar la app desde la página, sin gastar la conexión del servidor
+- La pantalla de inicio (solo en el navegador, no dentro de la app) muestra "¿Usas Android?
+  Descarga la app". El enlace apunta a la **release más reciente de GitHub**
+  (`releases/latest/download/NOM-COLAB.apk`), así que el archivo lo entrega el CDN de GitHub
+  (Fastly) y no la conexión de casa donde corre `nomcolab.dpdns.org`.
+- Se eligió GitHub porque el token de Cloudflare (el del túnel) solo puede tocar el túnel y el
+  DNS, no las reglas de caché; y porque así la descarga nunca pesa sobre el ancho de banda del
+  servidor y siempre da la última versión publicada.
+- Release `v0.11.2` creada con el APK (2.7 MB). Para las próximas versiones:
+  `4-CODIGO/android/publicar-apk.sh` sube el APK actual y lo marca como el más reciente (lee la
+  versión de `build.gradle.kts` y el token de `~/NOM/tokensito`).
+- Desplegado y probado en `https://nomcolab.dpdns.org` (el botón aparece en un navegador real y
+  el enlace responde 200). En la página de Azure aparecerá cuando se haga push a `main`.
+
+## 52. Revisión de la conversión con Office y de la red: lo que se VE, no solo lo que se descarga
+Revisión del 11 de noviembre de 2026. Las pruebas de la fase 10 daban 100 %, pero ese número solo
+dice que un archivo sin tocar se descarga igual (sale del original guardado dentro del
+documento). No decía qué se veía en el editor. Se armó un Word con combinaciones raras
+(`pruebas/office/raros.py`) y se abrió en el editor de verdad.
+
+- **Lo que estaba mal en pantalla y ya quedó (Word):** la hoja se tomaba de la última sección (un
+  B5 vertical se veía carta horizontal) y ahora es la de la primera, con tamaños que no son de los
+  comunes; borde de página; borde y fondo de párrafo; fuente, tamaño, interlineado y espacios que
+  vienen del estilo y del tema (casi nada trae formato propio); interlineado exacto; encabezado y
+  pie con sus tres lugares y el número de página donde va (y sin número si el archivo no trae);
+  versalitas, mayúsculas y espacio entre letras; texto de derecha a izquierda; el texto de los
+  cuadros de texto, SmartArt y gráficos se lee en un recuadro; en las tablas, cursiva, color,
+  alineación y anchos de columna, y la tabla anidada renglón por renglón.
+- **Columnas:** se siguen viendo a una columna, con una marca donde empieza cada sección y un
+  aviso al importar (al descargar salen en columnas). La sección que empieza en hoja nueva, empieza
+  en hoja nueva.
+- **Error grave que no se había visto:** al TECLEAR en un párrafo importado, el cursor saltaba al
+  inicio del renglón y el párrafo perdía su liga con el original (al descargar salía sin su borde,
+  su fondo ni sus tabuladores). Las pruebas editaban con operaciones, no con el teclado. Causa: lo
+  que se pinta de un párrafo tiene que poder leerse de vuelta de la página, y esa liga no se
+  pintaba. Corregido; `pantalla.py` ahora teclea de verdad.
+- **Fuentes que el equipo no tiene:** van dentro de la aplicación las equivalentes de medidas
+  iguales (Carlito, Caladea, Liberation Sans, Serif y Mono, Comic Neue; 450 KB, licencia OFL),
+  recortadas al alfabeto latino. Un Android no trae ninguna y el texto medía otra cosa. Una fuente
+  desconocida cae en una de su tipo (con remates, palo seco, de máquina o manuscrita), ya no
+  siempre en palo seco.
+- **PowerPoint:** el SmartArt ya se ve (con el dibujo que el archivo guarda, o armado como
+  organigrama o lista si no lo trae) y las figuras toman los colores del tema.
+- **Red:** un documento con cambios sin enviar no se podía volver a abrir estando sin conexión
+  (se quedaba cargando): `editor.js` retomaba el envío antes de armar la pantalla. Corregido.
+- **Versiones:** el servidor informa su versión y su nivel de interfaz (`core/Version.java`,
+  `/api/red/info`) y la app avisa si no coinciden (antes siempre decía 0.1.0 y nadie comparaba).
+  App 0.12.0.
+- **En el celular:** sin páginas, las sangrías en centímetros se achican para no dejar el texto
+  en una tirita.
+- **Pruebas nuevas:** `pruebas/office/pantalla.py` (lo que se ve, tecleando de verdad; 32 de 32 en
+  computadora y 19 de 19 en ancho de celular), `fidelidad.py --modelo` (lo que NOM-COLAB entiende
+  sin apoyarse en el original: Word 91.8 %, antes 82.6 %; Excel 59.2 %; PowerPoint 78.5 %) y
+  `pruebas/interfaz/prueba_red.py` (página, celular y la interfaz del APK contra un servidor, con
+  y sin conexión: 24 de 24). Sin tocar: 100 % en 47 archivos; ediciones 144 de 144; seguridad 171
+  de 171.
+- **Excel:** las celdas se ven con su tipo de letra y con los colores del tema (antes un relleno
+  o una letra "de tema" salían sin color).
+- **Publicado el mismo día, servidor y app juntos:** jar nuevo en `2-PAGINA-Servidor/` y en la
+  Raspberry (`nomcolab-pi actualizar`: respaldó los datos y arrancó la versión nueva;
+  `https://nomcolab.dpdns.org/api/red/info` responde 0.12.0, interfaz 12) y APK 0.12.0 en
+  `3-APP-Android/` y como release más reciente en GitHub. Antes de publicar se probó el jar final
+  sirviendo su propia página y la interfaz sacada del APK final contra él. La página de Azure no
+  se tocó.
+- **Falta:** tabuladores con puntos, texto vertical y bordes por celda en tablas de Word; en
+  Excel, ver comentarios, formato condicional, gráficas e imágenes del archivo (se conservan al
+  descargar); columnas de verdad en pantalla; probar en el A55. Los respaldos de la Raspberry se
+  guardan en la misma Raspberry: falta sacar una copia a otro equipo.
+

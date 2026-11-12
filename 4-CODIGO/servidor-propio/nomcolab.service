@@ -1,13 +1,20 @@
-# NOM-COLAB en esta computadora. No arranca solo: se prende y se apaga con `nomcolab`
-# (Local -> Prender / Apagar). %h = la carpeta de inicio del usuario.
+# NOM-COLAB en esta computadora, siempre prendido (https://nomcolab.dpdns.org).
+# Arranca solo con la computadora aunque nadie inicie sesión (linger) y se levanta si se cae.
+# %h = la carpeta de inicio del usuario.
 [Unit]
-Description=NOM-COLAB (servidor propio, publicado por Tailscale Funnel)
+Description=NOM-COLAB (servidor propio: nomcolab.dpdns.org por Cloudflare Tunnel y Tailscale Funnel)
 After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 WorkingDirectory=%h/nomcolab-servidor
 Environment=NOM_PUERTO=8080
 Environment=NOM_DATOS=%h/nomcolab-servidor/datos
 ExecStart=%h/NOM/2-PAGINA-Servidor/java-linux/bin/java -Xmx512m -jar %h/nomcolab-servidor/nom-colab.jar
-Restart=on-failure
+Restart=always
 RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

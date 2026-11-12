@@ -56,7 +56,7 @@
     /** Bloques vivos del contenido (los comentarios van aparte: no se pintan ni se exportan). */
     vivos() {
       const r = [];
-      for (const id in this.estado.bloques) if (id !== "_doc" && this.vivo(id) && this.valor(id, "tipo") !== "comentario") r.push(this.bloque(id));
+      for (const id in this.estado.bloques) if (id !== "_doc" && id !== "_origen" && this.vivo(id) && this.valor(id, "tipo") !== "comentario") r.push(this.bloque(id));
       return r;
     }
     /** Comentarios y respuestas vivos (7). */

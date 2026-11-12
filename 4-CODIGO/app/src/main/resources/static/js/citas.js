@@ -351,7 +351,12 @@
       <div class="chips-donde">${DONDE.filter(([k]) => k !== "biblioteca" || !ed.local).map(([k, t]) => `<button type="button" class="chip-carpeta" data-donde="${k}" aria-pressed="${panel.donde === k}">${esc(t)}</button>`).join("")}</div></form>
       <div class="col" data-res style="gap:6px"></div>`;
     const f = $("[data-buscar]", c);
-    f.onsubmit = (e) => { e.preventDefault(); panel.q = f.q.value.trim(); buscar(); };
+    f.onsubmit = (e) => {
+      e.preventDefault(); panel.q = f.q.value.trim();
+      // En el celular se baja el teclado para que se vean los resultados.
+      if (!window.matchMedia("(hover: hover)").matches) f.q.blur();
+      buscar();
+    };
     $$("[data-donde]", c).forEach((b) => (b.onclick = () => { panel.donde = b.dataset.donde; $$("[data-donde]", c).forEach((x) => x.setAttribute("aria-pressed", x === b)); if (panel.q || panel.donde === "biblioteca") { panel.q = f.q.value.trim(); buscar(); } }));
     pintarResultados();
     if (!panel.q) setTimeout(() => f.q.focus(), 50);
@@ -419,7 +424,7 @@
       <div class="fila" style="flex-wrap:wrap;gap:6px"><button class="btn chico" data-agregar>${ico("book-marked", "ico-s")} A mis fuentes</button>${!L.deBiblioteca && !ed.local ? `<button class="btn chico" data-guardar>${ico("library", "ico-s")} Guardar con su texto</button>` : ""}</div>
       <p class="inv-pista">${ico("text-select", "ico-s")} Elige un pedazo del texto y toca <b>Hacer ficha</b>.</p>
       <div class="inv-texto" data-texto>${parrafos.map((p) => /^=+\s*.+\s*=+$/.test(p) ? `<h5>${esc(p.replace(/=/g, "").trim())}</h5>` : `<p>${esc(p)}</p>`).join("") || '<p class="suave">Sin texto.</p>'}</div>
-      <button class="btn primario inv-ficha" data-ficha hidden>${ico("notebook-pen", "ico-s")} Hacer ficha</button></div>`;
+      <button class="btn primario inv-hacer-ficha" data-ficha hidden>${ico("notebook-pen", "ico-s")} Hacer ficha</button></div>`;
     $("[data-volver]", c).onclick = () => { panel.lectura = null; pintar(); };
     $("[data-agregar]", c).onclick = () => { guardarFuente(ed, f); aviso("Agregada a tus fuentes", { tipo: "ok", ms: 1500 }); pintarPestanas(); };
     const g = $("[data-guardar]", c); if (g) g.onclick = () => guardarEnBiblioteca(ed, f, L.texto);

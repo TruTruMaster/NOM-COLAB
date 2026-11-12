@@ -191,6 +191,13 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         db.sql("DELETE FROM sesion WHERE token = ?").param(token).update();
     }
 
+    @Override public void borrar(String usuarioId) {
+        // (preferencias y sesiones se van solas: sus tablas borran en cascada)
+        db.sql("DELETE FROM sesion WHERE id_usuario = ?").param(usuarioId).update();
+        db.sql("DELETE FROM preferencias WHERE id_usuario = ?").param(usuarioId).update();
+        db.sql("DELETE FROM usuario WHERE id = ?").param(usuarioId).update();
+    }
+
     @Override public void borrarSesionesDe(String usuarioId) {
         db.sql("DELETE FROM sesion WHERE id_usuario = ?").param(usuarioId).update();
     }

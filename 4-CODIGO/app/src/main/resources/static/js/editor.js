@@ -61,7 +61,6 @@
     });
     ed.doc = doc;
     NOM.editorActual = ed;   // útil para depurar desde la consola
-    if (doc.pendientes.length) doc.reanudar();
 
     // ------------------------------------------------------------ estructura
     raiz.innerHTML = "";
@@ -208,6 +207,9 @@
         : "Guardado|Cada cambio se guarda solo y los demás lo ven en un momento.");
     }
     pintarEstado(sinRed ? "sin-red" : doc.estadoSync, doc.pendientes.length);
+    // Lo que quedó sin enviar se retoma hasta aquí, con la pantalla ya armada (pintarEstado usa "vista").
+    // Sin conexión no se intenta: el canal en tiempo real lo retoma solo al volver la red.
+    if (doc.pendientes.length && !sinRed) doc.reanudar();
     if (sinRed) aviso("Sin conexión: abriste la copia guardada en este equipo. Tus cambios se enviarán al volver la red.", { tipo: "aviso", ms: 6000 });
 
     // ------------------------------------------------------------ presencia (quién edita qué)

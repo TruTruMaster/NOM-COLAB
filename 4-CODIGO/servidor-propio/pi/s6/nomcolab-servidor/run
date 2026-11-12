@@ -1,0 +1,14 @@
+#!/bin/sh
+# NOM-COLAB: el jar, con el usuario sin privilegios "nomcolab". Ajustes en /etc/nomcolab.conf.
+exec 2>&1
+VAR=/var/lib/nomcolab
+JAR=/opt/nomcolab/nom-colab.jar
+if ! [ -s $JAR ]; then echo "nomcolab: falta $JAR, en espera"; exec sleep 2147483647; fi
+NOM_PUERTO=8080; NOM_DATOS=$VAR/datos; NOM_MEMORIA=512m
+[ -r /etc/nomcolab.conf ] && . /etc/nomcolab.conf
+export NOM_PUERTO NOM_DATOS NOM_DESCUBRIMIENTO NOM_CUOTA_MB
+export HOME=$VAR TMPDIR=$VAR/tmp LANG=C.UTF-8
+cd $VAR || exit 1
+rm -rf $VAR/tmp/* 2>/dev/null
+exec s6-setuidgid nomcolab java -Xmx"$NOM_MEMORIA" -XX:+ExitOnOutOfMemoryError \
+  -Djava.io.tmpdir=$VAR/tmp -Dfile.encoding=UTF-8 -jar $JAR

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Cloudflare Tunnel de NOM-COLAB (https://nomcolab.dpdns.org -> 127.0.0.1:8080).
+exec 2>&1
+C=/etc/cloudflared/nomcolab.yml
+if ! [ -x /usr/local/bin/cloudflared ] || ! [ -s $C ]; then
+  echo "nomcolab-tunel: sin configurar ($C), en espera"; exec sleep 2147483647
+fi
+exec s6-setuidgid cloudflared /usr/local/bin/cloudflared --no-autoupdate --config $C tunnel run

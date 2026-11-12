@@ -27,14 +27,36 @@
     { v: "h1", t: "Título 1" }, { v: "h2", t: "Título 2" }, { v: "h3", t: "Título 3" },
     { v: "cita", t: "Cita" }, { v: "codigo", t: "Código" },
   ];
+  // Cada fuente con sus equivalentes de medidas iguales. Carlito, Caladea, Liberation y Comic Neue
+  // van dentro de la aplicación (css/fuentes.css), así que el texto mide lo mismo en la computadora y
+  // en el teléfono aunque el equipo no tenga instalada la fuente de Office.
   const FUENTES = {
     Calibri: "'Calibri','Carlito',sans-serif", Arial: "'Arial','Liberation Sans','Arimo',sans-serif",
     "Times New Roman": "'Times New Roman','Liberation Serif','Tinos',serif", Cambria: "'Cambria','Caladea',serif",
-    Georgia: "'Georgia',serif", Garamond: "'Garamond','EB Garamond',serif", Verdana: "'Verdana','DejaVu Sans',sans-serif",
-    Tahoma: "'Tahoma','DejaVu Sans',sans-serif", "Trebuchet MS": "'Trebuchet MS',sans-serif",
+    Georgia: "'Georgia','Liberation Serif',serif", Garamond: "'Garamond','EB Garamond','Liberation Serif',serif", Verdana: "'Verdana','DejaVu Sans','Liberation Sans',sans-serif",
+    Tahoma: "'Tahoma','DejaVu Sans','Liberation Sans',sans-serif", "Trebuchet MS": "'Trebuchet MS','Liberation Sans',sans-serif",
     "Courier New": "'Courier New','Liberation Mono','Cousine',monospace", "Comic Sans MS": "'Comic Sans MS','Comic Neue',cursive",
     Nunito: "'Nunito',sans-serif",
   };
+  // Fuentes de Office que no están en la lista de arriba: con qué se ven cuando el equipo no las tiene.
+  const PARECIDAS = {
+    "calibri light": "'Carlito',sans-serif", aptos: "'Carlito',sans-serif", "aptos display": "'Carlito',sans-serif", "aptos narrow": "'Carlito',sans-serif", candara: "'Carlito',sans-serif", corbel: "'Carlito',sans-serif",
+    "segoe ui": "'Carlito',sans-serif", helvetica: "'Liberation Sans','Arimo',sans-serif", "helvetica neue": "'Liberation Sans','Arimo',sans-serif", "arial narrow": "'Liberation Sans Narrow','Liberation Sans',sans-serif",
+    "arial black": "'Liberation Sans',sans-serif", "century gothic": "'Liberation Sans',sans-serif", "franklin gothic medium": "'Liberation Sans',sans-serif", "gill sans mt": "'Liberation Sans',sans-serif", "lucida sans": "'Liberation Sans',sans-serif",
+    "cambria math": "'Caladea',serif", constantia: "'Caladea',serif", "times": "'Liberation Serif','Tinos',serif", "book antiqua": "'Liberation Serif',serif", "bookman old style": "'Caladea','Liberation Serif',serif",
+    "palatino linotype": "'Liberation Serif',serif", "century schoolbook": "'Caladea','Liberation Serif',serif", "century": "'Caladea','Liberation Serif',serif", perpetua: "'Liberation Serif',serif", rockwell: "'Caladea',serif",
+    consolas: "'Liberation Mono','Cousine',monospace", courier: "'Liberation Mono','Cousine',monospace", "lucida console": "'Liberation Mono',monospace",
+    "segoe script": "'Comic Neue',cursive", "segoe print": "'Comic Neue',cursive", "lucida handwriting": "'Comic Neue',cursive", "bradley hand itc": "'Comic Neue',cursive", "ink free": "'Comic Neue',cursive", "mv boli": "'Comic Neue',cursive", "kristen itc": "'Comic Neue',cursive",
+  };
+  /** Familia genérica de una fuente que no conocemos, por su nombre (una con remates no debe caer en una de palo seco). */
+  function generica(nombre) {
+    const n = nombre.toLowerCase();
+    if (/mono|courier|consol|code|typewriter|terminal/.test(n)) return "'Liberation Mono',monospace";
+    if (/script|hand|brush|comic|cursiv|callig|chancery|kristen|marker/.test(n)) return "'Comic Neue',cursive";
+    if (/sans|gothic|grotesk|arial|helvet|verdana|tahoma|segoe|calibri|roboto|lato|montserrat|open|noto sans|ubuntu|futura|avenir|univers|frutiger|din\b/.test(n)) return "'Liberation Sans',sans-serif";
+    if (/serif|roman|times|garamond|book|antiqua|bodoni|didot|caslon|baskerville|georgia|cambria|palatino|minion|century|goudy|elephant|playfair|merriweather|slab|rockwell|charter|sabon/.test(n)) return "'Liberation Serif',serif";
+    return "'Carlito',sans-serif";
+  }
   const TAMANOS = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
   const COLORES = [
     "#000000", "#434343", "#666666", "#999999", "#B7B7B7", "#D9D9D9", "#EFEFEF", "#FFFFFF",
@@ -43,12 +65,18 @@
   ];
   const RESALTES = ["#FFFF00", "#00FF00", "#00FFFF", "#FF00FF", "#FFC000", "#C9DAF8", "#F4CCCC", "#D9EAD3"];
   // sug / sugBorrar: modo sugerencia (7): texto propuesto o propuesto para borrar, con su autor.
-  const CAR = ["b", "i", "u", "s", "va", "color", "fondo", "fuente", "tam", "enlace", "sug", "sugBorrar"];
+  // vers / mayus / esp: versalitas, todo en mayúsculas y espacio entre letras (pt), como en Word.
+  const CAR = ["b", "i", "u", "s", "va", "color", "fondo", "fuente", "tam", "enlace", "sug", "sugBorrar", "vers", "mayus", "esp"];
   // dueno: el párrafo es de esa persona (3.5); solo ella y el propietario del espacio lo cambian.
   // 8.2: sangrías exactas (cm), primera línea o francesa, y opciones de lista (empezar en, continuar,
   // estilo de viñeta o de número).
   const PAR = ["estilo", "alin", "lista", "nivel", "hecho", "sangria", "interlineado", "antes", "despues", "dueno",
-    "sangiz", "sangder", "primera", "francesa", "inicio", "continuar", "vineta", "numfmt"];
+    "sangiz", "sangder", "primera", "francesa", "inicio", "continuar", "vineta", "numfmt",
+    // ox: de qué párrafo del archivo de Word importado viene (origen.js); al partir un párrafo los dos lo conservan
+    "ox",
+    // De Word: interlineado exacto (pt), borde y fondo del párrafo, sentido del texto y marca de
+    // inicio de sección ("p|2 columnas": hoja nueva; "c|…": en la misma hoja).
+    "lineaPt", "borde", "sombra", "dir", "sec"];
   const VINETAS = ["•", "◦", "▪", "–", "➢", "✓", "★", "♦"];
   const NUMFMTS = [["1.", "1. 2. 3."], ["1)", "1) 2) 3)"], ["a.", "a. b. c."], ["a)", "a) b) c)"], ["A.", "A. B. C."], ["I.", "I. II. III."], ["i.", "i. ii. iii."]];
   /** Quién mira el documento (para los párrafos con dueño): lo llena montar(). */
@@ -70,7 +98,19 @@
   };
   const claveA = (a) => { const l = limpio(a); return l ? Object.keys(l).sort().map((k) => k + "=" + l[k]).join(";") : ""; };
   const solo = (a, ks) => { const r = {}; ks.forEach((k) => { if (a && a[k] != null && a[k] !== false && a[k] !== "") r[k] = a[k]; }); return r; };
-  const cssFuente = (f) => FUENTES[f] || `'${String(f).replace(/['";{}<>]/g, "")}',sans-serif`;
+  const cssFuente = (f) => {
+    if (FUENTES[f]) return FUENTES[f];
+    const n = String(f).replace(/['";{}<>\\]/g, "").trim();
+    return `'${n}',` + (PARECIDAS[n.toLowerCase()] || generica(n));
+  };
+  // Borde de párrafo: "grosor estilo color lados" (puntos; lados: s superior, i inferior, z izquierda, d derecha).
+  const RE_BORDE = /^(\d+(?:\.\d+)?) (solid|double|dotted|dashed) (#[0-9A-Fa-f]{6}) ([sizd]{1,4})$/;
+  function cssBorde(b) {
+    const m = RE_BORDE.exec(b || "");
+    if (!m) return "";
+    const lado = { s: "top", i: "bottom", z: "left", d: "right" };
+    return [...new Set(m[4])].map((k) => `border-${lado[k]}:${+m[1]}pt ${m[2]} ${m[3]}`).join(";");
+  }
   const cps = (s) => Array.from(s || "");
 
   // ------------------------------------------------------------ colores (rgb() → #rrggbb)
@@ -137,6 +177,9 @@
         if (f && !/^(serif|sans-serif|monospace|cursive|system-ui|inherit|-apple-system)$/i.test(f)) pon("fuente", f);
       }
       if (st.fontSize) pon("tam", aPt(st.fontSize));
+      if (st.fontVariantCaps === "small-caps" || /small-caps/.test(st.fontVariant || "")) pon("vers", true);
+      if (st.textTransform === "uppercase") pon("mayus", true);
+      if (st.letterSpacing && st.letterSpacing !== "normal") { const e = /^(-?[\d.]+)(pt|px)$/.exec(st.letterSpacing); pon("esp", e ? Math.round((e[2] === "px" ? +e[1] * 0.75 : +e[1]) * 100) / 100 || null : null); }
     }
     return r || a;
   }
@@ -160,6 +203,12 @@
       if (d.continuar === "true") r.continuar = true;
       if (d.vineta) r.vineta = d.vineta;
       if (d.numfmt) r.numfmt = d.numfmt;
+      if (d.ox != null && d.ox !== "") r.ox = /^\d+$/.test(d.ox) ? +d.ox : d.ox;
+      if (+d.lipt) r.lineaPt = +d.lipt;
+      if (d.borde) r.borde = d.borde;
+      if (d.sombra) r.sombra = d.sombra;
+      if (d.dir === "rtl") r.dir = "rtl";
+      if (d.sec != null && d.sec !== "") r.sec = d.sec;
       return r;
     }
     // HTML ajeno (pegado de Word, Google Docs, la web…)
@@ -300,6 +349,9 @@
     if (a.fondo) st += `background-color:${a.fondo};`;
     if (a.fuente) st += `font-family:${cssFuente(a.fuente)};`;
     if (a.tam) st += `font-size:${+a.tam}pt;`;
+    if (a.vers) st += "font-variant-caps:small-caps;";
+    if (a.mayus) st += "text-transform:uppercase;";
+    if (+a.esp) st += `letter-spacing:${+a.esp}pt;`;
     if (st) h = `<span style="${esc(st)}">${h}</span>`;
     if (a.va === "sub") h = `<sub>${h}</sub>`; else if (a.va === "sup") h = `<sup>${h}</sup>`;
     if (a.s) h = `<s>${h}</s>`;
@@ -346,6 +398,13 @@
     if (pa.interlineado) { at += ` data-li="${+pa.interlineado}"`; st += `--li:${+pa.interlineado};`; }
     if (pa.antes != null) { at += ` data-antes="${+pa.antes}"`; st += `--antes:${+pa.antes}pt;`; }
     if (pa.despues != null) { at += ` data-desp="${+pa.despues}"`; st += `--desp:${+pa.despues}pt;`; }
+    if (pa.ox != null && pa.ox !== "") at += ` data-ox="${esc(pa.ox)}"`;
+    if (+pa.lineaPt) { at += ` data-lipt="${+pa.lineaPt}"`; st += `--li:${+pa.lineaPt}pt;`; }
+    const bm = RE_BORDE.exec(pa.borde || "");
+    if (bm) { at += ` data-borde="${esc(pa.borde)}"`; st += cssBorde(pa.borde) + (/[zd]/.test(bm[4]) ? `;--bext:${(+bm[1] + 4).toFixed(2)}pt;--bpad:4pt;` : ";"); }
+    if (/^#[0-9a-fA-F]{6}$/.test(pa.sombra || "")) { at += ` data-sombra="${pa.sombra}"`; st += `background-color:${pa.sombra};`; }
+    if (pa.dir === "rtl") at += ` dir="rtl" data-dir="rtl"`;
+    if (pa.sec != null && pa.sec !== "") { const t = String(pa.sec).slice(2); at += ` data-sec="${esc(pa.sec)}"${t ? ` data-sec-t="${esc("Sección: " + t)}"` : ""}`; }
     if (st) at += ` style="${st}"`;
     let h = "";
     let i = p.ini;
@@ -553,6 +612,12 @@
           } else if (e.tipo === "tabla") pintarTabla(o, bl, e.ref);
           else if (e.tipo === "nota") { o.innerHTML = `<sup>${numerosNotas().get(o.dataset.id) || "*"}</sup>`; o.title = bl && bl.texto ? "Nota: " + bl.texto : "Nota al pie (toca para escribirla)"; }
           else if (e.tipo === "ecuacion") { o.innerHTML = NOM.ecuaciones ? NOM.ecuaciones.html((bl && bl.tex) || "", !!(bl && bl.bloque)) : esc((bl && bl.tex) || ""); o.classList.toggle("en-bloque", !!(bl && bl.bloque)); o.title = ed.soloLectura ? "" : "Toca para editar la ecuación"; }
+          else if (e.tipo === "objeto") {
+            // Lo que aquí no se dibuja (cuadro de texto, SmartArt, gráfico): su texto sí se lee.
+            o.innerHTML = e.txt ? `<span class="wd-obj-caja"><b>${esc(e.que || "Objeto")}</b><span>${esc(e.txt)}</span></span>` : `<span>${esc(e.que || "Objeto")}</span>`;
+            o.classList.toggle("con-texto", !!e.txt);
+            o.title = "Objeto del archivo de Word (cuadro de texto, forma, gráfico…). Aquí no se puede editar, pero al descargar en Word sale completo.";
+          }
           else if (e.tipo === "salto") o.innerHTML = `<span>Salto de página</span>`;
           else if (e.tipo === "linea") o.innerHTML = `<hr>`;
           else if (e.tipo === "indice") pintarIndice(o);
@@ -1182,8 +1247,8 @@
           : { sangria: Math.max(0, Math.min(10, (pa.sangria || 0) + delta)) || null }));
       }
       function borrarFormato() {
-        formato({ b: null, i: null, u: null, s: null, va: null, color: null, fondo: null, fuente: null, tam: null });
-        formatoParrafo({ estilo: null, alin: null, interlineado: null, antes: null, despues: null, sangria: null });
+        formato({ b: null, i: null, u: null, s: null, va: null, color: null, fondo: null, fuente: null, tam: null, vers: null, mayus: null, esp: null });
+        formatoParrafo({ estilo: null, alin: null, interlineado: null, antes: null, despues: null, sangria: null, lineaPt: null, borde: null, sombra: null });
       }
       function cambiarTam(delta) {
         const t = attrsEnCursor().a.tam || baseTam();
@@ -1489,6 +1554,7 @@
           const ajuste = {};
           if (alFinal && ["titulo", "subtitulo", "h1", "h2", "h3"].includes(pa.estilo)) ajuste.estilo = null;
           if (pa.hecho) ajuste.hecho = null;
+          if (pa.sec != null) ajuste.sec = null;   // la sección empieza una sola vez: en la primera mitad
           if (Object.keys(ajuste).length) doc().seq(B, { k: "f", a: ajuste, r: S().rangos([p.mark]) }, { origen: "comando" });
           if (pendiente && pendiente.pos === s.ini) pendiente.pos = s.ini + 1;
           return { sel: [s.ini + 1, s.ini + 1] };
@@ -2206,11 +2272,12 @@
       // ------------------------------------------------------------ página: tamaño, márgenes, zoom y paginación
       function pagina() {
         const c = doc().valor("_doc", "pagina") || {};
-        const base = PAGINAS[c.tam] || PAGINAS.carta;
+        // "otro": tamaño que no es de los comunes (viene de un archivo de Word), con sus medidas
+        const base = c.tam === "otro" && +c.w > 100 && +c.h > 100 ? { w: +c.w, h: +c.h } : PAGINAS[c.tam] || PAGINAS.carta;
         const hor = c.orient === "h";
         const m = c.margen || {};
         const v = (x) => (typeof x === "number" ? x : 96);
-        return { tam: c.tam || "carta", orient: hor ? "h" : "v", w: hor ? base.h : base.w, h: hor ? base.w : base.h, m: { s: v(m.s), i: v(m.i), iz: v(m.iz), d: v(m.d) } };
+        return { tam: c.tam === "otro" && base !== PAGINAS.carta ? "otro" : PAGINAS[c.tam] ? c.tam : "carta", orient: hor ? "h" : "v", w: hor ? base.h : base.w, h: hor ? base.w : base.h, m: { s: v(m.s), i: v(m.i), iz: v(m.iz), d: v(m.d) }, borde: c.borde || null };
       }
       /** Formato con el que nació el documento (lo fija el propietario del espacio): fuente, tamaño e interlineado. */
       const formatoBase = () => doc().valor("_doc", "formato") || {};
@@ -2256,8 +2323,13 @@
         const fb = formatoBase();
         const lado = { izq: "left", centro: "center", der: "right" };
         const cajas = {};
-        if (e.enc) cajas["top-" + lado[e.encAl]] = q(e.enc);
-        if (e.pie) cajas["bottom-" + lado[e.pieAl]] = q(e.pie);
+        const pon = (zona, texto, al) => {
+          if (!texto) return;
+          if (texto.includes("\t")) texto.split("\t").slice(0, 3).forEach((t, k) => { if (t) cajas[zona + ["left", "center", "right"][k]] = q(t); });
+          else cajas[zona + lado[al]] = q(texto);
+        };
+        pon("top-", e.enc, e.encAl);
+        pon("bottom-", e.pie, e.pieAl);
         if (e.nums) {
           const [zona, al] = e.pos.split("-"), k = (zona === "enc" ? "top-" : "bottom-") + lado[al];
           const off = e.inicio - 1, n = off ? `counter(page, decimal)` : "counter(page)";
@@ -2304,7 +2376,7 @@
         const medidor = medirNotas(anchoTexto);
         const notasPag = {};   // página → [{ id, n, texto, alto }]
         const reservado = (p) => (notasPag[p] || []).reduce((s, x) => s + x.alto, 0) + ((notasPag[p] || []).length ? 14 : 0);
-        let corr = 0, forzar = null;
+        let corr = 0, forzar = null, pagEscrita = -1;   // pagEscrita: última hoja que ya tiene algo escrito
         for (let i = 0; i < kids.length; i++) {
           const el = kids[i], top = tops[i] + corr, h = altos[i];
           const pi = Math.floor(top / paso), arriba = pi * paso + pg.m.s;
@@ -2312,6 +2384,11 @@
           const altoNotasEl = notasEl.reduce((s, o) => s + medidor(o.dataset.id), 0);
           const abajo = pi * paso + H - pg.m.i - reservado(pi) - (altoNotasEl ? altoNotasEl + (reservado(pi) ? 0 : 14) : 0);
           let destino = null;
+          // Una sección de Word que empieza en hoja nueva: su primer párrafo baja a la hoja siguiente
+          // (si en esta hoja ya hay algo escrito; tras puros renglones vacíos no se deja una hoja en blanco).
+          if (forzar == null && i > 0 && (el.dataset.sec || "")[0] === "p" && top > arriba + 1) {
+            if (pagEscrita >= pi) forzar = (pi + 1) * paso + pg.m.s;
+          }
           if (forzar != null && top < forzar) destino = forzar;
           else if (top < arriba - 1) destino = arriba;
           else if (top + h > abajo + 1) {
@@ -2340,6 +2417,7 @@
             });
           }
           if (el.querySelector(".wd-salto")) { const t2 = topFinal; forzar = (Math.floor(t2 / paso) + 1) * paso + pg.m.s; }
+          if (el.firstElementChild && el.firstElementChild.tagName !== "BR" || el.textContent.trim()) pagEscrita = Math.floor((topFinal + Math.max(0, altos[i] - 1)) / paso);
         }
         tomarRegistros();
         const fin = cuerpo.offsetHeight;
@@ -2350,18 +2428,26 @@
         const [zonaNum, alNum] = e.pos.split("-");
         const fila = (zona, texto, al, n, extra) => {
           const slots = { izq: "", centro: "", der: "" };
-          if (texto) slots[al] += esc(texto);
+          // con tabuladores, el texto trae sus tres lugares: izquierda, centro y derecha (así viene de Word)
+          if (texto && texto.includes("\t")) texto.split("\t").slice(0, 3).forEach((t, k) => { slots[["izq", "centro", "der"][k]] += esc(t); });
+          else if (texto) slots[al] += esc(texto);
           if (e.nums && zonaNum === zona) slots[alNum] += (slots[alNum] ? "&emsp;" : "") + esc(textoNumero(n + e.inicio - 1, numPaginas + e.inicio - 1, e.fmt));
           return `<div class="wd-${zona === "enc" ? "enc" : "pie"}">${extra || ""}<span class="izq">${slots.izq}</span><span class="centro">${slots.centro}</span><span class="der">${slots.der}</span></div>`;
         };
         const logo = e.logo && e.logo.src ? `<img class="wd-logo" src="${esc(e.logo.src)}" alt="" style="height:${Math.min(80, +e.logo.alto || 36)}px">` : "";
         const estiloEP = `font-family:${esc(fb.fuente ? cssFuente(fb.fuente) : "Calibri, Carlito, sans-serif")};font-size:${Math.min(12, +fb.tam || 11)}pt`;
+        // Borde de página (de Word): a su distancia del canto de la hoja, o pegado al texto.
+        const bp = pg.borde && /^(solid|double|dotted|dashed)$/.test(pg.borde.e) && /^#[0-9a-fA-F]{6}$/.test(pg.borde.c) ? pg.borde : null;
+        const dBorde = bp ? Math.max(0, +bp.d || 0) : 0;
+        // el encabezado y el pie van por dentro del borde solo si caben entre el borde y el texto
+        const dentroBorde = bp ? Math.round(dBorde + (+bp.a || 1) * 1.34 + 3) : 0;
+        const cajaBorde = bp ? `<div class="wd-borde-pagina" style="border:${Math.max(0.5, +bp.a || 1)}pt ${bp.e} ${bp.c};${bp.hoja ? `inset:${dBorde}px` : `top:${Math.max(0, pg.m.s - dBorde)}px;bottom:${Math.max(0, pg.m.i - dBorde)}px;left:${Math.max(0, pg.m.iz - dBorde)}px;right:${Math.max(0, pg.m.d - dBorde)}px`}"></div>` : "";
         let h = "";
         for (let i = 0; i < numPaginas; i++) {
           const vacia = e.primera && i === 0;
           const notas = notasPag[i] || [];
           const bloqueNotas = notas.length ? `<div class="wd-notas" style="left:${pg.m.iz}px;right:${pg.m.d}px;bottom:${pg.m.i}px">${notas.map((x) => `<div class="wd-nota-pie"><sup>${x.n}</sup> ${esc(x.texto)}</div>`).join("")}</div>` : "";
-          h += `<div class="wd-pagina" style="top:${i * paso}px;${estiloEP}">${vacia ? "" : fila("enc", e.enc, e.encAl, i + 1, logo) + fila("pie", e.pie, e.pieAl, i + 1)}${bloqueNotas}${e.marca ? `<div class="wd-marca-agua">${esc(e.marca)}</div>` : ""}</div>`;
+          h += `<div class="wd-pagina${bp && bp.hoja ? " con-borde" : ""}" style="top:${i * paso}px;${estiloEP}${bp && bp.hoja ? `;--bpe:${pg.m.s - dentroBorde >= 20 ? dentroBorde : 0}px;--bpp:${pg.m.i - dentroBorde >= 20 ? dentroBorde : 0}px` : ""}">${cajaBorde}${vacia ? "" : fila("enc", e.enc, e.encAl, i + 1, logo) + fila("pie", e.pie, e.pieAl, i + 1)}${bloqueNotas}${e.marca ? `<div class="wd-marca-agua">${esc(e.marca)}</div>` : ""}</div>`;
         }
         pintarNotasFinales();
         if (capaPaginas.innerHTML !== h) capaPaginas.innerHTML = h;
@@ -2889,7 +2975,7 @@
         const mActual = Object.keys(MARGENES).find((k) => MARGENES[k].v === pg.m.s && pg.m.s === pg.m.i && pg.m.iz === pg.m.d && pg.m.s === pg.m.iz) || "personal";
         const cm = (k) => enCm(pg.m[k]);
         const cuerpoH = html(`<form class="col">
-          <div class="campo"><label>Tamaño del papel</label><div class="entrada"><select data-tam>${Object.entries(PAGINAS).map(([k, v]) => `<option value="${k}" ${k === pg.tam ? "selected" : ""}>${v.n}</option>`).join("")}</select></div></div>
+          <div class="campo"><label>Tamaño del papel</label><div class="entrada"><select data-tam>${Object.entries(PAGINAS).map(([k, v]) => `<option value="${k}" ${k === pg.tam ? "selected" : ""}>${v.n}</option>`).join("")}${pg.tam === "otro" ? `<option value="otro" selected>El del archivo (${enCm(Math.min(pg.w, pg.h))} × ${enCm(Math.max(pg.w, pg.h))} cm)</option>` : ""}</select></div></div>
           <div class="campo"><label>Orientación</label><div class="segmentado lleno" role="group"><button type="button" data-o="v" aria-pressed="${pg.orient === "v"}">Vertical</button><button type="button" data-o="h" aria-pressed="${pg.orient === "h"}">Horizontal</button></div></div>
           <div class="campo"><label>Márgenes</label><div class="entrada"><select data-m>${Object.entries(MARGENES).map(([k, v]) => `<option value="${k}" ${k === mActual ? "selected" : ""}>${v.n}</option>`).join("")}<option value="personal" ${mActual === "personal" ? "selected" : ""}>Personalizados…</option></select></div></div>
           <div class="fila" data-pers ${mActual === "personal" ? "" : "hidden"} style="flex-wrap:wrap">${[["s", "Arriba"], ["i", "Abajo"], ["iz", "Izquierda"], ["d", "Derecha"]].map(([k, t]) => `<div class="campo" style="flex:1;min-width:110px"><label>${t} (cm)</label><div class="entrada"><input data-mc="${k}" inputmode="decimal" value="${cm(k)}"></div></div>`).join("")}</div></form>`);
@@ -2943,7 +3029,9 @@
           const iz = Math.max(0, Math.min(15, num("[data-iz]", 0))), der = Math.max(0, Math.min(15, num("[data-der]", 0)));
           const antes = Math.max(0, Math.min(200, num("[data-antes]", 0))), desp = Math.max(0, Math.min(200, num("[data-desp]", 8)));
           formatoParrafo({ alin: $("[data-al]", cuerpoH).value || null, sangiz: iz || null, sangder: der || null, primera: esp === "primera" ? ecm : null, francesa: esp === "francesa" ? ecm : null,
-            antes: antes || null, despues: desp === 8 ? null : desp, interlineado: +$("[data-li]", cuerpoH).value || null }, ps);
+            antes: antes || null, despues: desp === 8 ? null : desp, interlineado: +$("[data-li]", cuerpoH).value || null,
+            // el interlineado exacto que venía de Word se quita solo si aquí se elige otro
+            lineaPt: +$("[data-li]", cuerpoH).value ? null : pa.lineaPt || null }, ps);
           h.cerrar();
         };
       }
@@ -3049,17 +3137,24 @@
         if (!f) return;
         try {
           const r = await NOM.ooxml.leerDocx(f);
-          const toks = [];
+          const toks = [], fbW = r.formato || {}, fbAqui = formatoBase();
           r.parrafos.forEach((p, i) => {
             p.tramos.forEach((t) => {
               if (t.e) {
                 if (t.e.tipo === "imagen") toks.push({ c: OBJ, img: t.e.src, w: t.e.w, h: t.e.h, a: t.a });
                 else if (t.e.tipo === "tabla") { const ref = NOM.DocCRDT.nuevoId(); doc().cambiar(ref, Object.assign({ tipo: "tabla", enTexto: true }, t.e.celdas, { filasTexto: t.e.filas, colsTexto: t.e.cols }), { origen: "comando" }); toks.push({ c: OBJ, obj: { tipo: "tabla", ref } }); }
                 else if (t.e.tipo === "nota" || t.e.tipo === "ecuacion") { const ref = NOM.DocCRDT.nuevoId(); doc().cambiar(ref, Object.assign({ enTexto: true }, t.e), { origen: "comando" }); toks.push({ c: OBJ, obj: { tipo: t.e.tipo, ref } }); }
-                else toks.push({ c: OBJ, obj: { tipo: t.e.tipo } });
-              } else cps(t.x).forEach((c) => toks.push({ c, a: t.a || {} }));
+                else toks.push({ c: OBJ, obj: limpio({ tipo: t.e.tipo, que: t.e.que, txt: t.e.txt }) });
+              } else {
+                // la letra que en su archivo venía del estilo Normal aquí se anota, si este documento usa otra
+                const a = Object.assign({}, t.a || {});
+                if (!a.fuente && fbW.fuente && fbW.fuente !== (fbAqui.fuente || "Calibri")) a.fuente = fbW.fuente;
+                if (!a.tam && fbW.tam && fbW.tam !== (+fbAqui.tam || 11)) a.tam = fbW.tam;
+                cps(t.x).forEach((c) => toks.push({ c, a }));
+              }
             });
-            if (i < r.parrafos.length - 1) toks.push({ c: "\n", pa: p.pa || {} });
+            // "ox" y "sec" hablan del archivo de origen de aquel documento, no de este
+            if (i < r.parrafos.length - 1) { const pa = Object.assign({}, p.pa || {}); delete pa.ox; delete pa.sec; toks.push({ c: "\n", pa }); }
           });
           const s = leerSel(), meta = metaPegado(toks);
           comando(() => { const fin = insertarEn(s.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
@@ -3293,5 +3388,5 @@
     },
   };
 
-  NOM.textoRico = { parrafosDe, asegurarSecuencia, tokens, envolver, BLOQUE: B, cssFuente, FUENTES };
+  NOM.textoRico = { parrafosDe, asegurarSecuencia, tokens, envolver, BLOQUE: B, cssFuente, cssBorde, FUENTES };
 })();

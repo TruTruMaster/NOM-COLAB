@@ -42,8 +42,86 @@ public class ServicioCuentas {
         this.horasSesion = horasSesion;
     }
 
+    // ------------------------------------------------------------ limites contra el abuso
+    /** Fallos de contrasena de una cuenta desde un mismo lugar (direccion de red), y su bloqueo. */
+    private static final class Fallos { int n; long desde; long bloqueadoHasta; }
+    private final Map<String, Fallos> fallos = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, java.util.ArrayDeque<Long>> registros = new java.util.HashMap<>();
+    private int registrosHoraLugar = 30, registrosHoraTotal = 300;
+    private static final long HORA = 3_600_000L;
+
+    /** Cuantas cuentas nuevas se aceptan por hora desde una misma red y en total (0 = sin limite). */
+    public void limitarRegistros(int porLugar, int total) { registrosHoraLugar = porLugar; registrosHoraTotal = total; }
+
+    private static String lugar(String origen) { return origen == null || origen.isBlank() ? "?" : origen; }
+
+    /**
+     * El bloqueo por intentos fallidos es de la cuenta DESDE un lugar: quien falla cinco veces queda
+     * fuera 15 minutos desde su red, pero no puede dejar fuera al dueno, que entra desde la suya.
+     * Si llueven fallos desde muchos lugares (mas de diez veces el limite en una hora) si se bloquea
+     * la cuenta entera. Sin lugar conocido (el telefono como servidor) cuenta todo junto, como antes.
+     */
+    private void exigirSinBloqueo(Usuario u, String origen, long ahora) {
+        long hasta = u.estaBloqueado(ahora) ? u.bloqueadoHasta : 0;
+        Fallos f = fallos.get(u.id + "|" + lugar(origen));
+        if (f != null && f.bloqueadoHasta > ahora) hasta = Math.max(hasta, f.bloqueadoHasta);
+        if (hasta > ahora) {
+            long min = Math.max(1, (hasta - ahora + 59_999) / 60_000);
+            throw new ErrorNom(ErrorNom.BLOQUEADO, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.", null, Map.of("bloqueadoHasta", hasta));
+        }
+    }
+
+    /** Anota un fallo. Devuelve cuantos intentos le quedan a ese lugar; si se acabaron, bloquea y lanza BLOQUEADO. */
+    private int fallo(Usuario u, String origen, long ahora) {
+        if (fallos.size() > 20_000) fallos.values().removeIf(x -> x.bloqueadoHasta < ahora && ahora - x.desde > HORA);
+        Fallos f = fallos.computeIfAbsent(u.id + "|" + lugar(origen), k -> new Fallos());
+        Fallos todos = fallos.computeIfAbsent(u.id, k -> new Fallos());
+        long ventana = minutosBloqueo * 60_000L;
+        if (ahora - f.desde > ventana) { f.n = 0; f.desde = ahora; }
+        if (ahora - todos.desde > HORA) { todos.n = 0; todos.desde = ahora; }
+        f.n++; todos.n++;
+        boolean cuentaEntera = todos.n > maxIntentos * 10;
+        if (f.n > maxIntentos || cuentaEntera) {
+            long hasta = ahora + ventana;
+            f.bloqueadoHasta = hasta; f.n = 0;
+            if (cuentaEntera) {
+                todos.n = 0;
+                u.bloqueadoHasta = hasta;
+                try { repo.guardar(u); } catch (RuntimeException e) { log.error("No se pudo persistir el bloqueo; se rechaza igual (falla cerrada)", e); }
+            }
+            log.aviso("Cuenta bloqueada por intentos fallidos: {}{}", u.nombre, cuentaEntera ? " (desde todos lados)" : "");
+            throw new ErrorNom(ErrorNom.BLOQUEADO, "Acceso bloqueado por " + minutosBloqueo + " minutos tras demasiados intentos.", null, Map.of("bloqueadoHasta", hasta));
+        }
+        return maxIntentos + 1 - f.n;
+    }
+
+    private void acierto(Usuario u, String origen) {
+        fallos.remove(u.id + "|" + lugar(origen));
+        fallos.remove(u.id);
+        u.intentosFallidos = 0;
+        u.bloqueadoHasta = 0;
+    }
+
+    /** Tope de cuentas nuevas por hora (un programa no debe poder llenar el disco registrando cuentas). */
+    private void anotarRegistro(String origen, long ahora) {
+        if (origen == null || origen.isBlank()) return;   // el propio equipo (pruebas, administracion)
+        for (String k : new String[] { origen, "*" }) {
+            int tope = "*".equals(k) ? registrosHoraTotal : registrosHoraLugar;
+            java.util.ArrayDeque<Long> l = registros.computeIfAbsent(k, x -> new java.util.ArrayDeque<>());
+            while (!l.isEmpty() && ahora - l.peekFirst() > HORA) l.pollFirst();
+            if (tope > 0 && l.size() >= tope)
+                throw new ErrorNom(ErrorNom.DEMASIADOS, "Se crearon demasiadas cuentas " + ("*".equals(k) ? "" : "desde esta red ") + "en la última hora. Intenta más tarde.");
+        }
+        registros.get(origen).addLast(ahora);
+        registros.get("*").addLast(ahora);
+        if (registros.size() > 5_000) registros.values().removeIf(java.util.ArrayDeque::isEmpty);
+    }
+
     /** CU-01 Crear usuario. */
-    public synchronized Usuario registrar(String nombre, String contrasena, String empresa) {
+    public Usuario registrar(String nombre, String contrasena, String empresa) { return registrar(nombre, contrasena, empresa, null); }
+
+    /** origen: la direccion de red de quien lo pide (null = este mismo equipo). */
+    public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen) {
         nombre = nombre == null ? "" : nombre.trim();
         if (nombre.isEmpty()) throw ErrorNom.invalido("Escribe un nombre de usuario", "nombre");
         if (contrasena == null || contrasena.isEmpty()) throw ErrorNom.invalido("Escribe una contraseña", "contrasena");
@@ -53,6 +131,7 @@ public class ServicioCuentas {
             throw ErrorNom.invalido("La contraseña necesita al menos 8 caracteres", "contrasena");
         if (repo.porNombre(nombre).isPresent())
             throw new ErrorNom(ErrorNom.CONFLICTO, "El nombre ya está en uso", "nombre");
+        anotarRegistro(origen, System.currentTimeMillis());
 
         Usuario u = new Usuario();
         u.id = cifrado.id();
@@ -129,32 +208,23 @@ public class ServicioCuentas {
      * Cambia la contrasena con el codigo de recuperacion. Los intentos fallidos cuentan igual que
      * al iniciar sesion (y bloquean igual). Cierra todas las sesiones y devuelve un codigo nuevo.
      */
-    public synchronized String recuperar(String nombre, String codigo, String nueva) {
+    public String recuperar(String nombre, String codigo, String nueva) { return recuperar(nombre, codigo, nueva, null); }
+
+    public synchronized String recuperar(String nombre, String codigo, String nueva, String origen) {
         if (nombre == null || nombre.isBlank()) throw ErrorNom.invalido("Escribe tu usuario", "nombre");
         if (normalizarCodigo(codigo).length() != 16) throw ErrorNom.invalido("El código tiene 16 letras y números (por ejemplo ABCD-EFGH-JKMN-PQRS)", "codigo");
         if (nueva == null || nueva.length() < 8) throw ErrorNom.invalido("La contraseña nueva necesita al menos 8 caracteres", "nueva");
         long ahora = System.currentTimeMillis();
         Usuario u = repo.porNombre(nombre).orElse(null);
         if (u == null || u.esInvitado() || u.hashRecuperacion == null) throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
-        if (u.estaBloqueado(ahora)) {
-            long min = Math.max(1, (u.bloqueadoHasta - ahora + 59_999) / 60_000);
-            throw new ErrorNom(ErrorNom.BLOQUEADO, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
-        }
+        exigirSinBloqueo(u, origen, ahora);
         if (!cifrado.coincide(normalizarCodigo(codigo).toCharArray(), u.salRecuperacion, u.hashRecuperacion)) {
-            u.intentosFallidos++;
-            if (u.intentosFallidos > maxIntentos) {
-                u.bloqueadoHasta = ahora + minutosBloqueo * 60_000L;
-                u.intentosFallidos = 0;
-                repo.guardar(u);
-                throw new ErrorNom(ErrorNom.BLOQUEADO, "Acceso bloqueado por " + minutosBloqueo + " minutos tras demasiados intentos.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
-            }
-            repo.guardar(u);
+            fallo(u, origen, ahora);
             throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
         }
         u.sal = cifrado.nuevaSal();
         u.hashContrasena = cifrado.hash(nueva.toCharArray(), u.sal);
-        u.intentosFallidos = 0;
-        u.bloqueadoHasta = 0;
+        acierto(u, origen);
         repo.borrarSesionesDe(u.id);
         log.info("Contraseña recuperada con código: {}", u.nombre);
         return nuevoCodigoRecuperacion(u);
@@ -171,7 +241,10 @@ public class ServicioCuentas {
     }
 
     /** CU-02 Iniciar sesion, con CU-04 (bloqueo) como extension. */
-    public synchronized Sesion iniciarSesion(String nombre, String contrasena) {
+    public Sesion iniciarSesion(String nombre, String contrasena) { return iniciarSesion(nombre, contrasena, null); }
+
+    /** origen: la direccion de red de quien entra (null = no se sabe: los fallos cuentan todos juntos). */
+    public synchronized Sesion iniciarSesion(String nombre, String contrasena, String origen) {
         if (nombre == null || nombre.isBlank() || contrasena == null || contrasena.isEmpty())
             throw ErrorNom.invalido("Escribe tu usuario y tu contraseña", nombre == null || nombre.isBlank() ? "nombre" : "contrasena");
         long ahora = System.currentTimeMillis();
@@ -181,35 +254,79 @@ public class ServicioCuentas {
             throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos");
         }
         Usuario u = encontrado.get();
-        if (u.estaBloqueado(ahora)) {
-            long min = Math.max(1, (u.bloqueadoHasta - ahora + 59_999) / 60_000);
-            throw new ErrorNom(ErrorNom.BLOQUEADO, "Cuenta bloqueada por seguridad. Intenta de nuevo en " + min + " min.",
-                    null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
-        }
+        exigirSinBloqueo(u, origen, ahora);
         if (!cifrado.coincide(contrasena.toCharArray(), u.sal, u.hashContrasena)) {
-            u.intentosFallidos++;
-            if (u.intentosFallidos > maxIntentos) {
-                u.bloqueadoHasta = ahora + minutosBloqueo * 60_000L;
-                u.intentosFallidos = 0;
-                log.aviso("Cuenta bloqueada por intentos fallidos: {}", u.nombre);
-                try {
-                    repo.guardar(u);
-                } catch (RuntimeException e) {
-                    log.error("No se pudo persistir el bloqueo; se rechaza igual (falla cerrada)", e);
-                }
-                throw new ErrorNom(ErrorNom.BLOQUEADO, "Acceso bloqueado por " + minutosBloqueo
-                        + " minutos tras demasiados intentos.", null, Map.of("bloqueadoHasta", u.bloqueadoHasta));
-            }
-            repo.guardar(u);
-            int quedan = maxIntentos + 1 - u.intentosFallidos;
+            int quedan = fallo(u, origen, ahora);
             throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos. "
                     + (quedan == 1 ? "Te queda 1 intento." : "Te quedan " + quedan + " intentos."),
                     null, Map.of("intentosRestantes", quedan));
         }
-        u.intentosFallidos = 0;
-        u.bloqueadoHasta = 0;
+        acierto(u, origen);
         repo.guardar(u);
         return nuevaSesion(u, ahora);
+    }
+
+    /** Comprueba la contrasena de la cuenta abierta (para lo delicado: cambiarla, borrar la cuenta). */
+    private void exigirContrasena(Usuario u, String contrasena, String origen, String campo) {
+        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no tienen contraseña");
+        if (contrasena == null || contrasena.isEmpty()) throw ErrorNom.invalido("Escribe tu contraseña actual", campo);
+        long ahora = System.currentTimeMillis();
+        exigirSinBloqueo(u, origen, ahora);
+        if (!cifrado.coincide(contrasena.toCharArray(), u.sal, u.hashContrasena)) {
+            fallo(u, origen, ahora);
+            throw new ErrorNom(ErrorNom.INVALIDO, "Esa no es tu contraseña actual", campo);
+        }
+        acierto(u, origen);
+    }
+
+    /**
+     * Cambiar la contrasena sabiendo la actual. Cierra las demas sesiones (otros equipos tienen que
+     * volver a entrar) y devuelve una sesion nueva para este.
+     */
+    public synchronized Sesion cambiarContrasena(Usuario u, String actual, String nueva, String origen) {
+        if (nueva == null || nueva.length() < 8) throw ErrorNom.invalido("La contraseña nueva necesita al menos 8 caracteres", "nueva");
+        exigirContrasena(u, actual, origen, "actual");
+        u.sal = cifrado.nuevaSal();
+        u.hashContrasena = cifrado.hash(nueva.toCharArray(), u.sal);
+        repo.guardar(u);
+        repo.borrarSesionesDe(u.id);
+        log.info("Contraseña cambiada: {}", u.nombre);
+        return nuevaSesion(u, System.currentTimeMillis());
+    }
+
+    /** Antes de borrar una cuenta: que quien lo pide sepa su contrasena. */
+    public synchronized void confirmarParaBorrar(Usuario u, String contrasena, String origen) {
+        exigirContrasena(u, contrasena, origen, "contrasena");
+    }
+
+    /** Borra la cuenta y sus sesiones. Lo que tenia en los espacios lo quita antes ServicioDocumentos. */
+    public synchronized void borrar(Usuario u) {
+        repo.borrarSesionesDe(u.id);
+        repo.borrar(u.id);
+        fallos.keySet().removeIf(k -> k.equals(u.id) || k.startsWith(u.id + "|"));
+        log.info("Cuenta borrada: {}", u.nombre);
+    }
+
+    // ------------------------------------------------------------ boletos para el canal en vivo
+    /**
+     * El canal en vivo (EventSource) no puede mandar cabeceras, asi que su identificacion va en la
+     * direccion. Para que ahi no viaje el token de la sesion (las direcciones acaban en bitacoras),
+     * se pide antes un boleto: sirve una sola vez y dura medio minuto.
+     */
+    private final Map<String, Object[]> boletos = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public String boleto(String token) {
+        long ahora = System.currentTimeMillis();
+        if (boletos.size() > 2_000) boletos.values().removeIf(b -> (long) b[1] < ahora);
+        String b = cifrado.token();
+        boletos.put(b, new Object[] { token, ahora + 30_000L });
+        return b;
+    }
+
+    /** El token de la sesion a la que pertenece el boleto, si sigue vigente (y el boleto se gasta). */
+    public Optional<String> canjearBoleto(String boleto) {
+        Object[] b = boleto == null ? null : boletos.remove(boleto);
+        return b == null || (long) b[1] < System.currentTimeMillis() ? Optional.empty() : Optional.of((String) b[0]);
     }
 
     /** CU-03 Cerrar sesion. Si ya habia expirado no es error. */

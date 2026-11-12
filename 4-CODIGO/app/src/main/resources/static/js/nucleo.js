@@ -4,6 +4,10 @@
 (function () {
   "use strict";
   const NOM = (window.NOM = window.NOM || {});
+  // Versión de esta interfaz. Tienen que ir a la par de nucleo/.../core/Version.java y del APK:
+  // INTERFAZ sube cuando cambia el formato de los documentos o lo que la interfaz sabe leer.
+  NOM.VERSION = "0.12.0";
+  NOM.INTERFAZ = 12;
 
   // ------------------------------------------------------------ utilidades
   const esc = (s) => String(s == null ? "" : s)
@@ -153,6 +157,11 @@
     requestAnimationFrame(() => {
       const f = $("[autofocus]", velo) || $("input, select, textarea", velo);
       if (f && window.matchMedia("(hover: hover)").matches) f.focus();
+      else if (!velo.contains(document.activeElement)) {
+        // En pantallas táctiles no se abre el teclado solo, pero el foco tampoco se queda en un campo
+        // de atrás (con un teclado físico, lo escrito iría a parar debajo de la ventana).
+        const d = $(".hoja", velo); d.tabIndex = -1; d.focus({ preventScroll: true });
+      }
     });
     return api;
   }

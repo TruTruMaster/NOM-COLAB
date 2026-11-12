@@ -208,8 +208,28 @@
   app.sinCuenta = () => { NOM.local.entrar(); if (location.hash === "#/" || !location.hash) ruta(); else location.hash = "#/"; };
 
 
+  /**
+   * La app trae su interfaz empaquetada; el servidor puede ser de otra versión (la página nunca se
+   * desfasa: siempre trae la de su servidor). Si no coinciden se avisa, una vez al día por servidor:
+   * lo que una versión importa de Office la otra puede verlo distinto.
+   */
+  NOM.revisarVersion = (info) => {
+    if (!api.empaquetada || !info || info.nom !== 1) return;
+    const suya = +info.interfaz || 0, mia = NOM.INTERFAZ;
+    if (suya === mia) return;
+    const clave = (info.servidor || api.servidor()) + "|" + suya + "|" + mia, hoy = new Date().toISOString().slice(0, 10);
+    const visto = NOM.leer("nom.versionAvisada", {});
+    if (visto.clave === clave && visto.dia === hoy) return;
+    NOM.guardar("nom.versionAvisada", { clave, dia: hoy });
+    if (suya < mia) {
+      NOM.aviso(`Este servidor tiene una versión anterior de NOM-COLAB${info.version && suya ? " (" + info.version + ")" : ""} que esta app (${NOM.VERSION}). Puedes trabajar, pero lo que importes de Word, Excel o PowerPoint puede verse distinto en la página hasta que actualicen el servidor.`, { tipo: "aviso", ms: 12000 });
+    } else {
+      NOM.aviso(`Hay una versión más nueva de la app (${info.version || "nueva"}; tienes la ${NOM.VERSION}). Actualízala para ver los documentos igual que en la página.`,
+        { tipo: "aviso", ms: 15000, accion: { texto: "Descargar", fn: () => { location.href = "https://github.com/TruTruMaster/NOM-COLAB/releases/latest/download/NOM-COLAB.apk"; } } });
+    }
+  };
   // ¿Servidor en la red local o en la nube? Cambia los textos de conexión y "Unirse".
-  api.get("/api/red/info", undefined, { ms: 90000 }).then((i) => { api.lan = i.lan !== false; NOM.guardar("nom.lan", api.lan); }).catch(() => {});
+  api.get("/api/red/info", undefined, { ms: 90000 }).then((i) => { api.lan = i.lan !== false; NOM.guardar("nom.lan", api.lan); NOM.revisarVersion(i); }).catch(() => {});
 
   // Los datos de la cuenta y sus preferencias se refrescan al abrir (pudieron cambiar en otro equipo).
   if (api.token()) api.get("/api/cuentas/yo").then((r) => {
@@ -226,7 +246,10 @@
     if (NOM.anfitrion) NOM.anfitrion.reanudar();
     if (api.token()) {
       const u = api.usuario() || {};
-      if (u.id && await NOM.boveda.reanudar(u.id)) {
+      // Un invitado no tiene contraseña: si el navegador borró la bóveda, se abre otra con el
+      // secreto de este dispositivo (cerrar su sesión sería perder la cuenta para siempre).
+      const secreto = u.id && NOM.leer("nom.inv." + u.id, null);
+      if (u.id && (await NOM.boveda.reanudar(u.id) || (secreto && await NOM.boveda.abrir(u.id, secreto).catch(() => false)))) {
         api.migrarClaves();
         app.espacios = NOM.leer(api.clave("cache.espacios"), []);
       } else {

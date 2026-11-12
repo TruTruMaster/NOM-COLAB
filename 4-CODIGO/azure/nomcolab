@@ -4,14 +4,20 @@
 #   nomcolab                       menú: 1) Azure o 2) Local, y luego qué hacer
 #   nomcolab azure up|down|estado|reiniciar
 #   nomcolab local up|down|estado|reiniciar
+#   nomcolab pi estado|up|down|reiniciar|actualizar|respaldo|bitacora|instalar
 #   nomcolab --up|--down|--state|--reset   (forma anterior, solo Azure)
 #
 # Azure: Web App nomcolab-wack (App Service F1 gratis, Linux, Java 21) y la base nomcolab en
 #        nomcolab-sql-6a073f.database.windows.net (Azure SQL serverless, oferta gratis), en
 #        rg-nomcolab / westus. "down" detiene la página y cierra la base a internet.
 # Local: el jar como servicio de usuario (systemd: nomcolab.service, puerto 8080, datos en
-#        ~/nomcolab-servidor) publicado por Tailscale Funnel. No arranca solo con la
-#        computadora: se prende y se apaga solo con este script.
+#        ~/nomcolab-servidor) publicado en https://nomcolab.dpdns.org (Cloudflare Tunnel,
+#        nomcolab-tunel.service) y en Tailscale Funnel. Siempre prendido: arranca solo con la
+#        computadora y un vigía lo reinicia si se cuelga. "down" lo apaga y le quita el
+#        arranque automático hasta el siguiente "up".
+# Pi:    la Raspberry Pi (pi5 en Tailscale) es la casa de https://nomcolab.dpdns.org: el jar y el
+#        túnel corren ahí como servicios supervisados (s6). "actualizar" le sube el jar nuevo (si
+#        no arranca, la Pi regresa sola al anterior); "respaldo" hace uno y trae una copia aquí.
 # Todo se queda en planes gratuitos. Más detalles: docs/SERVIDOR-PROPIO.md y docs/DESPLIEGUE-AZURE.md.
 URL="https://nomcolab-wack.azurewebsites.net"
 RG="rg-nomcolab"; APP="nomcolab-wack"; PLAN="plan-nomcolab"; SQL="nomcolab-sql-6a073f"; DB="nomcolab"
@@ -20,6 +26,8 @@ AQUI="$(dirname "$(readlink -f "$0")")"
 LOCAL_DIR="$HOME/nomcolab-servidor"
 LOCAL_PUERTO=8080
 SERVICIO="nomcolab.service"
+TUNEL="nomcolab-tunel.service"
+DOMINIO="https://nomcolab.dpdns.org"
 
 T0=$(date +%s.%N)
 ERR=0
@@ -179,10 +187,11 @@ local_actualizar_jar() {
 local_up() {
   if local_activo; then
     log "local: el servidor ya estaba prendido"
+    systemctl --user enable --quiet "$SERVICIO" 2>/dev/null
   else
     local_actualizar_jar
     log "local: prendiendo el servidor (puerto $LOCAL_PUERTO)"
-    systemctl --user start "$SERVICIO" || { err "local: no arrancó (journalctl --user -u $SERVICIO)"; return 1; }
+    systemctl --user enable --now "$SERVICIO" || { err "local: no arrancó (journalctl --user -u $SERVICIO)"; return 1; }
     local i r
     for i in $(seq 1 60); do
       r=$(local_http "http://127.0.0.1:$LOCAL_PUERTO/api/red/info" 2)
@@ -191,26 +200,38 @@ local_up() {
     done
     if [ "${r%% *}" = "200" ]; then log "local: responde en http://127.0.0.1:$LOCAL_PUERTO"; else err "local: no responde tras 60 s"; return 1; fi
   fi
+  if systemctl --user cat "$TUNEL" >/dev/null 2>&1; then
+    log "túnel: publicando en $DOMINIO"
+    if systemctl --user enable --now "$TUNEL"; then
+      for i in $(seq 1 30); do r=$(local_http "$DOMINIO/api/red/info" 10); [ "${r%% *}" = "200" ] && break; sleep 2; done
+      if [ "${r%% *}" = "200" ]; then log "túnel: HTTP 200 en ${r##* }s"; else err "túnel: $DOMINIO -> HTTP ${r%% *} (journalctl --user -u $TUNEL)"; fi
+    else
+      err "túnel: no arrancó (journalctl --user -u $TUNEL)"
+    fi
+  fi
   log "funnel: publicando en internet"
   if tailscale funnel --bg "$LOCAL_PUERTO" >"$TMP" 2>&1; then
     local pub; pub=$(local_dir_publica)
     log "funnel: encendido -> $pub"
     r=$(local_http "$pub/api/red/info" 20)
     if [ "${r%% *}" = "200" ]; then log "funnel: HTTP 200 en ${r##* }s"; else log "funnel: HTTP ${r%% *} (puede tardar unos segundos)"; fi
-    log "listo: $pub"
+    log "listo: $DOMINIO  (también $pub)"
   else
     err "funnel: falló: $(head -3 "$TMP" | tr '\n' ' ')"
   fi
 }
 
 local_down() {
+  if systemctl --user cat "$TUNEL" >/dev/null 2>&1; then
+    systemctl --user disable --now --quiet "$TUNEL" && log "túnel: apagado ($DOMINIO deja de responder)" || err "túnel: no se pudo apagar"
+  fi
   if tailscale funnel status 2>/dev/null | grep -q "Funnel on"; then
     tailscale funnel --https=443 off >/dev/null 2>&1 && log "funnel: apagado (la dirección pública deja de responder)" || err "funnel: no se pudo apagar"
   else
     log "funnel: ya estaba apagado"
   fi
   if local_activo; then
-    systemctl --user stop "$SERVICIO" && log "local: servidor apagado" || err "local: no se pudo apagar"
+    systemctl --user disable --now --quiet "$SERVICIO" && log "local: servidor apagado (no arranca solo hasta el siguiente up)" || err "local: no se pudo apagar"
   else
     log "local: el servidor ya estaba apagado"
   fi
@@ -228,6 +249,13 @@ local_estado() {
   else
     log "local: APAGADO"
   fi
+  if systemctl --user is-active --quiet "$TUNEL"; then
+    local r; r=$(local_http "$DOMINIO/api/red/info" 15)
+    log "túnel: ENCENDIDO $DOMINIO -> HTTP ${r%% *}"
+  else
+    log "túnel: APAGADO ($DOMINIO no responde)"
+  fi
+  log "arranque automático: servidor $(systemctl --user is-enabled "$SERVICIO" 2>/dev/null), túnel $(systemctl --user is-enabled "$TUNEL" 2>/dev/null), vigía $(systemctl --user is-active nomcolab-vigia.timer 2>/dev/null)"
   local pub; pub=$(local_dir_publica)
   if tailscale funnel status 2>/dev/null | grep -q "Funnel on"; then
     local r; r=$(local_http "$pub/api/red/info" 15)
@@ -237,11 +265,51 @@ local_estado() {
   fi
   log "datos: $LOCAL_DIR/datos ($(du -sh "$LOCAL_DIR/datos" 2>/dev/null | cut -f1))"
   local ult; ult=$(ls -1t "$LOCAL_DIR"/respaldos/datos-*.tar.gz 2>/dev/null | head -1)
-  log "respaldo: ${ult:+último $(basename "$ult")}${ult:-todavía no hay} (diario 03:30; también al apagar con este script)"
+  log "respaldo: $([ -n "$ult" ] && echo "último $(basename "$ult")" || echo "todavía no hay") (diario 03:30; también al apagar con este script)"
 }
 
 # Respaldo al apagar: lo que se escribió hoy queda guardado aunque la computadora no esté a las 03:30.
 local_respaldar() { [ -x "$LOCAL_DIR/respaldar.sh" ] && "$LOCAL_DIR/respaldar.sh" && log "respaldo: hecho"; }
+
+# ==================================================================== Pi
+PI_HOST="${NOMCOLAB_PI:-pi5}"
+PI_CMD="doas -n /usr/local/sbin/nomcolab-pi"
+pi_ssh() { ssh -o BatchMode=yes -o ConnectTimeout=10 "$PI_HOST" "$@"; }
+pi_lineas() { while IFS= read -r l; do log "pi: $l"; done; }
+need_pi() {
+  if ! pi_ssh true 2>/dev/null; then err "pi: no puedo entrar a $PI_HOST por SSH (¿está prendida y en Tailscale?)"; finish; fi
+}
+pi_publico() { local r; r=$(local_http "$DOMINIO/api/red/info" 20); if [ "${r%% *}" = "200" ]; then log "pi: $DOMINIO -> HTTP 200 en ${r##* }s"; else err "pi: $DOMINIO -> HTTP ${r%% *}"; fi; }
+pi_estado() { pi_ssh "$PI_CMD estado" 2>&1 | pi_lineas; pi_publico; }
+pi_orden() { pi_ssh "$PI_CMD $1" 2>&1 | pi_lineas; [ "${PIPESTATUS[0]}" -eq 0 ] || err "pi: '$1' terminó con error"; }
+pi_actualizar() {
+  local fuente; fuente=$(jar_fuente) || { err "pi: no encontré el jar (compila con mvn package)"; return 1; }
+  log "pi: subiendo $(basename "$fuente") ($(du -h "$fuente" | cut -f1))"
+  scp -q -o ConnectTimeout=10 "$fuente" "$PI_HOST:/home/user/nom-colab.jar.nuevo" || { err "pi: no se pudo copiar el jar"; return 1; }
+  pi_orden actualizar
+  pi_publico
+}
+# Hace un respaldo en la Pi y trae una copia a esta computadora (por si se daña la tarjeta de la Pi).
+pi_respaldo() {
+  pi_orden respaldo
+  local ult; ult=$(pi_ssh 'ls -1t /var/lib/nomcolab/respaldos/datos-2*.tar.gz 2>/dev/null | head -1')
+  [ -n "$ult" ] || { err "pi: no hay respaldos"; return 1; }
+  mkdir -p "$LOCAL_DIR/respaldos-pi"
+  if scp -q "$PI_HOST:$ult" "$LOCAL_DIR/respaldos-pi/"; then
+    ls -1t "$LOCAL_DIR"/respaldos-pi/datos-*.tar.gz | tail -n +15 | xargs -r rm -f
+    log "pi: copia en $LOCAL_DIR/respaldos-pi/$(basename "$ult")"
+  else err "pi: no se pudo traer la copia"; fi
+}
+# Manda los archivos de servidor-propio/pi (y el jar) y corre el instalador como root (pide la contraseña de la Pi).
+pi_instalar() {
+  local d="$AQUI/../servidor-propio/pi" fuente
+  [ -f "$d/instalar-pi.sh" ] || { err "pi: falta $d/instalar-pi.sh"; return 1; }
+  pi_ssh 'rm -rf /tmp/nomcolab-pi && mkdir -p /tmp/nomcolab-pi' || return 1
+  tar -C "$d" -cf - . | pi_ssh 'tar -xf - -C /tmp/nomcolab-pi' || { err "pi: no se pudieron copiar los archivos"; return 1; }
+  if fuente=$(jar_fuente); then scp -q "$fuente" "$PI_HOST:/tmp/nomcolab-pi/nom-colab.jar"; fi
+  log "pi: corriendo el instalador (escribe la contraseña de la Pi cuando la pida)"
+  ssh -t "$PI_HOST" 'doas sh /tmp/nomcolab-pi/instalar-pi.sh; rm -rf /tmp/nomcolab-pi' || err "pi: el instalador terminó con error"
+}
 
 # ==================================================================== menú
 elegir() {  # elegir "Pregunta" opción1 opción2 ...  -> deja el número en $ELEGIDO
@@ -261,17 +329,21 @@ case "$1" in
   --down) DESTINO=azure; ACCION=down ;;
   --state) DESTINO=azure; ACCION=estado ;;
   --reset) DESTINO=azure; ACCION=reiniciar ;;
-  azure|local) DESTINO=$1; ACCION=$2 ;;
+  azure|local|pi) DESTINO=$1; ACCION=$2; ARG=$3 ;;
   "") ;;
-  -h|--help|ayuda) sed -n 2,15p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  *) sed -n 2,15p "$0" | sed 's/^# \{0,1\}//'; echo; echo "nomcolab: opción desconocida '$1'"; exit 1 ;;
+  -h|--help|ayuda) sed -n 2,21p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) sed -n 2,21p "$0" | sed 's/^# \{0,1\}//'; echo; echo "nomcolab: opción desconocida '$1'"; exit 1 ;;
 esac
 
 if [ -z "$DESTINO" ]; then
   echo "NOM-COLAB"
   if systemctl --user is-active --quiet "$SERVICIO" 2>/dev/null; then est="prendido"; else est="apagado"; fi
-  elegir "¿Dónde?" "Azure  ($URL)" "Local  (esta computadora, por Tailscale Funnel; ahora: $est)"
-  [ "$ELEGIDO" = 1 ] && DESTINO=azure || DESTINO=local
+  elegir "¿Dónde?" "Azure  ($URL)" "Local  (esta computadora; ahora: $est)" "Pi     ($DOMINIO, la Raspberry Pi)"
+  DESTINO=$(echo "azure local pi" | cut -d' ' -f"$ELEGIDO")
+fi
+if [ -z "$ACCION" ] && [ "$DESTINO" = pi ]; then
+  elegir "¿Qué hago en la Pi?" "Estado" "Subir el jar nuevo (actualizar)" "Reiniciar" "Respaldo ahora (y traer copia)" "Ver la bitácora" "Apagar (down)" "Prender (up)"
+  ACCION=$(echo "estado actualizar reiniciar respaldo bitacora down up" | cut -d' ' -f"$ELEGIDO")
 fi
 if [ -z "$ACCION" ]; then
   elegir "¿Qué hago en $DESTINO?" "Prender (up)" "Apagar (down)" "Estado" "Reiniciar"
@@ -290,6 +362,14 @@ case "$DESTINO:$ACCION" in
   local:down) need_local; local_down; local_respaldar ;;
   local:estado) need_local; local_estado ;;
   local:reiniciar) need_local; log "nomcolab: fase 1/2 apagar"; local_down; log "nomcolab: fase 2/2 prender"; local_up ;;
+  pi:estado) need_pi; pi_estado ;;
+  pi:up) need_pi; pi_orden prender; pi_publico ;;
+  pi:down) need_pi; pi_orden apagar ;;
+  pi:reiniciar) need_pi; pi_orden reiniciar; pi_publico ;;
+  pi:actualizar) need_pi; pi_actualizar ;;
+  pi:respaldo) need_pi; pi_respaldo ;;
+  pi:bitacora) need_pi; pi_ssh "$PI_CMD bitacora ${ARG:-servidor} 40" ;;
+  pi:instalar) need_pi; pi_instalar ;;
   *) err "nomcolab: acción desconocida '$ACCION' (usa up, down, estado o reiniciar)" ;;
 esac
 finish

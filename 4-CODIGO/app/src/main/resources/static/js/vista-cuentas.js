@@ -162,7 +162,7 @@
 
     function enlazarComunes(f) {
       f.querySelectorAll("[data-sin-cuenta]").forEach((b) => (b.onclick = () => NOM.app.sinCuenta()));
-      f.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => { modo = b.dataset.ir; render(); }));
+      f.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => { if (modo === b.dataset.ir) return; modo = b.dataset.ir; render(); }));
       f.querySelectorAll("[data-ver]").forEach((b) => (b.onclick = () => {
         const i = b.parentElement.querySelector("input");
         const ver = i.type === "password";
@@ -183,11 +183,16 @@
         if (p) f.append(p);
       } else if (api.empaquetada) {
         const srv = api.servidor().replace(/^https?:\/\//, "");
-        const internet = /azurewebsites\.net/.test(srv);
+        const internet = /(^|\.)nomcolab\.dpdns\.org$|azurewebsites\.net|\.ts\.net$/.test(srv.replace(/\/.*$/, ""));
         const s = html(`<p class="servidor-pie">${ico(internet ? "globe" : "wifi", "ico-s")}<span>Trabajas en <b>${internet ? "NOM-COLAB en Internet" : "un equipo del Wi-Fi · " + esc(srv)}</b></span>
           <button type="button" data-micro="Cambiar dónde trabajas|Si tu equipo usa NOM-COLAB en otro lugar (en Internet, o en una computadora o teléfono del mismo Wi-Fi), elígelo aquí.">Cambiar</button></p>`);
-        $("button", s).onclick = () => pintarServidor(tarjeta, render);
+        $("button", s).onclick = () => pintarServidor(tarjeta, render, { cambiar: true });
         f.append(s);
+      } else {
+        // En un navegador normal (no la app): un enlace para descargar la app de Android. El
+        // archivo lo entrega la red de GitHub (Fastly), no la conexión del servidor, y
+        // ".../releases/latest/..." trae siempre la versión más reciente que se haya publicado.
+        f.append(html(`<p class="servidor-pie">${ico("smartphone", "ico-s")}<span>¿Usas Android? <a href="https://github.com/TruTruMaster/NOM-COLAB/releases/latest/download/NOM-COLAB.apk" rel="noopener" data-micro="Descargar la app para Android|Se descarga desde la red de GitHub, así que no gasta los datos del servidor. Ábrela en el teléfono para instalarla; trae siempre la versión más reciente."><b>Descarga la app</b></a> · siempre la más reciente</span></p>`));
       }
     }
 
@@ -328,7 +333,7 @@
   }
 
   /** Solo en la app Android: elegir el equipo de la red que comparte los espacios. */
-  function pintarServidor(tarjeta, listo) {
+  function pintarServidor(tarjeta, listo, opc) {
     tarjeta.innerHTML = "";
     const f = html(`<form class="col">
       <div><h2>¿Dónde trabaja tu equipo?</h2><p class="suave" style="font-weight:650;margin-top:4px">Si te dieron un código QR, escanéalo y listo. Si no, elige una opción.</p></div>
@@ -351,7 +356,7 @@
     f.querySelector("[data-sin-cuenta]").onclick = () => NOM.app.sinCuenta();
     // 2.1 En la app: el QR trae la dirección del servidor y el código; el espacio se abre aquí, en la app.
     f.querySelector("[data-escanear]").onclick = () => NOM.union && NOM.union.escanear();
-    f.querySelector("[data-internet]").onclick = () => probar("https://nomcolab-wack.azurewebsites.net");
+    f.querySelector("[data-internet]").onclick = () => probar("https://nomcolab.dpdns.org");
     // El teléfono también puede ser el servidor de la red (Android 8+).
     const propio = NOM.anfitrion && NOM.anfitrion.opcion(listo);
     if (propio) f.querySelector("[data-alerta]").before(propio);
@@ -364,6 +369,7 @@
         const info = await api.get("/api/red/info", undefined, { ms: 4000 });
         if (info.nom !== 1) throw new Error();
         NOM.aviso("Conectado con " + info.equipo, { tipo: "ok" });
+        if (NOM.revisarVersion) NOM.revisarVersion(info);
         listo();
       } catch (e) {
         api.fijarServidor(anterior);
@@ -391,8 +397,10 @@
       };
       window.NomAndroid.buscarServidores();
     };
-    // Al abrir la app se busca sin que haya que tocar nada.
-    let automatico = !!b;
+    // Al abrir la app se busca sin que haya que tocar nada. Solo la primera vez se conecta sola:
+    // si la persona tocó "Cambiar", o ya empezó a tocar algo de esta pantalla, decide ella.
+    let automatico = !!b && !(opc && opc.cambiar);
+    f.addEventListener("pointerdown", () => { automatico = false; }, { capture: true });
     if (b) b.click();
   }
 

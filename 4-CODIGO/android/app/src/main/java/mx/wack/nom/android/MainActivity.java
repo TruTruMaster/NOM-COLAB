@@ -136,6 +136,13 @@ public class MainActivity extends Activity {
         });
         web.addJavascriptInterface(new Puente(), "NomAndroid");
 
+        // Desde Android 16 (targetSdk 36+) el sistema ya no llama a onBackPressed(): sin esto, Atrás
+        // sacaba de la app aunque hubiera una ventana abierta.
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, () -> atras(true));
+        }
+
         if (guardado != null) web.restoreState(guardado);
         else web.loadUrl("file:///android_asset/index.html");
     }
@@ -167,10 +174,16 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // Primero se cierra la ventana o el menú que esté abierto; si no hay, se regresa de pantalla.
+        atras(false);
+    }
+
+    /** Botón o gesto Atrás: primero se cierra la ventana o el menú que esté abierto; si no hay, se
+     *  regresa de pantalla; y solo en la primera pantalla se sale (la app queda en segundo plano). */
+    private void atras(boolean nuevo) {
         web.evaluateJavascript("(window.NOM && NOM.hayHoja && NOM.hayHoja()) ? (NOM.cerrarHoja(), 'cerrada') : 'no'", r -> {
             if (r != null && r.contains("cerrada")) return;
             if (web.canGoBack()) web.goBack();
+            else if (nuevo) moveTaskToBack(true);
             else MainActivity.super.onBackPressed();
         });
     }

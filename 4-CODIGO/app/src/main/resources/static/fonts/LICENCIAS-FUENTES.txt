@@ -1,0 +1,20 @@
+Fuentes que van dentro de NOM-COLAB (carpeta fonts/)
+===================================================
+
+Todas se distribuyen bajo la SIL Open Font License, versión 1.1 (https://openfontlicense.org).
+El texto completo de la licencia es el mismo que acompaña a Nunito: ver OFL-Nunito.txt, a partir
+de "SIL OPEN FONT LICENSE Version 1.1".
+
+Los archivos .woff2 de Carlito, Caladea, Liberation y Comic Neue son recortes (solo alfabeto
+latino, griego básico y signos comunes) de las fuentes originales, sin cambios en el dibujo de las
+letras ni en sus medidas.
+
+  Nunito            Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+  Carlito 1.104     Copyright 2013 The Carlito Project Authors (https://github.com/googlefonts/carlito)
+  Caladea 1.001     Copyright 2012 The Caladea Project Authors (https://github.com/huertatipografica/Caladea)
+  Liberation 2.1.5  Digitized data copyright (c) 2010 Google Corporation.
+  (Sans, Serif,     Copyright (c) 2012 Red Hat, Inc.
+   Mono)            https://github.com/liberationfonts/liberation-fonts
+  Comic Neue 2.003  Copyright 2014 The Comic Neue Project Authors (https://github.com/crozynski/comicneue)
+
+Para qué sirve cada una: css/fuentes.css.

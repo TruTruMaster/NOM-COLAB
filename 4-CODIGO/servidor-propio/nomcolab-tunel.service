@@ -1,0 +1,16 @@
+# Publica NOM-COLAB en https://nomcolab.dpdns.org con Cloudflare Tunnel: la computadora se
+# conecta hacia afuera, no se abre ningún puerto del módem y Cloudflare pone el HTTPS.
+# Configuración en ~/.cloudflared/nomcolab.yml (la deja instalar.sh / tunel.sh).
+[Unit]
+Description=NOM-COLAB en internet (Cloudflare Tunnel -> nomcolab.dpdns.org)
+After=network-online.target nomcolab.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config %h/.cloudflared/nomcolab.yml tunnel run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

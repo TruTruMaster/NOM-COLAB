@@ -127,7 +127,8 @@ final class ApiTelefono {
         m.put("equipo", nodo.equipo());
         m.put("puerto", nodo.puerto());
         m.put("direcciones", nodo.direcciones());
-        m.put("version", "0.1.0");
+        m.put("version", mx.wack.nom.core.Version.APP);
+        m.put("interfaz", mx.wack.nom.core.Version.INTERFAZ);
         m.put("hora", System.currentTimeMillis());
         m.put("lan", descubrimiento.lanActiva());
         m.put("telefono", true);

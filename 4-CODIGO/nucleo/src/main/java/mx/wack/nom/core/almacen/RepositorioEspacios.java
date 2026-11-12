@@ -11,6 +11,8 @@ public interface RepositorioEspacios {
     Optional<Espacio> porId(String id);
     Collection<Espacio> todos();
     void guardar(Espacio e);
+    /** Borra el espacio y su biblioteca (sus documentos los borra antes quien llama). */
+    void borrar(String id);
 
     /** Fase 9: biblioteca del espacio (fuentes guardadas para investigar sin Internet), en un archivo aparte. */
     List<Map<String, Object>> biblioteca(String espacioId);

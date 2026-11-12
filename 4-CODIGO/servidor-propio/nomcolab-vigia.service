@@ -1,0 +1,6 @@
+[Unit]
+Description=Vigía de NOM-COLAB (reinicia el servidor o el túnel si dejan de responder)
+
+[Service]
+Type=oneshot
+ExecStart=%h/nomcolab-servidor/vigia.sh

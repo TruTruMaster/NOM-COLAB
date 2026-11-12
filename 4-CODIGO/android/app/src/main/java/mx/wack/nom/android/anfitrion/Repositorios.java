@@ -69,6 +69,11 @@ final class Repositorios {
             almacen.escribir("usuarios.json", usuarios);
         }
 
+        @Override public synchronized void borrar(String usuarioId) {
+            if (usuarios.remove(usuarioId) != null) almacen.escribir("usuarios.json", usuarios);
+            if (sesiones.values().removeIf(s -> usuarioId.equals(s.usuarioId))) almacen.escribir("sesiones.json", sesiones);
+        }
+
         @Override public synchronized Optional<Sesion> sesion(String token) { return Optional.ofNullable(token == null ? null : sesiones.get(token)); }
 
         @Override public synchronized void guardarSesion(Sesion s) {
@@ -102,6 +107,11 @@ final class Repositorios {
         @Override public synchronized void guardar(Espacio e) {
             espacios.put(e.id, e);
             almacen.escribir("espacios.json", espacios);
+        }
+
+        @Override public synchronized void borrar(String id) {
+            if (espacios.remove(id) != null) almacen.escribir("espacios.json", espacios);
+            almacen.escribir("biblioteca/" + id + ".json", new ArrayList<>());
         }
 
         @SuppressWarnings("unchecked")

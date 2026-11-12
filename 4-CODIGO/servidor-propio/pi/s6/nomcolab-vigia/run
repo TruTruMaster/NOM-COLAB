@@ -1,0 +1,22 @@
+#!/bin/sh
+# Vigía: s6 ya levanta lo que se muere; esto cubre lo que sigue vivo pero no contesta
+# (un Java colgado, un túnel sin conexiones). Tres fallas seguidas = reinicio.
+exec 2>&1
+[ -r /etc/nomcolab.conf ] && . /etc/nomcolab.conf
+P=${NOM_PUERTO:-8080}
+fs=0; ft=0
+sleep 120
+echo "vigia: empiezo a revisar cada minuto"
+while :; do
+  if wget -q -O /dev/null -T 10 "http://127.0.0.1:$P/api/red/info" 2>/dev/null; then fs=0
+  else fs=$((fs + 1)); echo "vigia: el servidor no contesta ($fs)"; fi
+  if [ $fs -ge 3 ]; then
+    echo "vigia: reinicio nomcolab-servidor"; s6-svc -r /run/service/nomcolab-servidor; fs=0; sleep 90
+  fi
+  if wget -q -O - -T 10 http://127.0.0.1:20242/ready 2>/dev/null | grep -q '"readyConnections":[1-9]'; then ft=0
+  else ft=$((ft + 1)); echo "vigia: el túnel no tiene conexiones ($ft)"; fi
+  if [ $ft -ge 3 ]; then
+    echo "vigia: reinicio nomcolab-tunel"; s6-svc -r /run/service/nomcolab-tunel; ft=0; sleep 30
+  fi
+  sleep 60
+done

@@ -108,7 +108,8 @@
       const cont = p.tramos.map((t) => (t.e ? objetoHtml(t.e, ps) : NOM.textoRico.envolver(t.x, t.a || {}))).join("") || "<br>";
       const st = [pa.alin ? `text-align:${{ centro: "center", der: "right", just: "justify" }[pa.alin]}` : "", pa.sangria && !pa.lista ? `margin-left:${pa.sangria * 36}pt` : "", pa.interlineado ? `line-height:${pa.interlineado}` : "",
         !pa.lista && (+pa.sangiz || +pa.francesa) ? `padding-left:${(+pa.sangiz || 0) + (+pa.francesa || 0)}cm` : "", !pa.lista && +pa.sangder ? `padding-right:${+pa.sangder}cm` : "",
-        !pa.lista && (pa.primera != null || +pa.francesa) ? `text-indent:${(+pa.primera || 0) - (+pa.francesa || 0)}cm` : ""].filter(Boolean).join(";");
+        !pa.lista && (pa.primera != null || +pa.francesa) ? `text-indent:${(+pa.primera || 0) - (+pa.francesa || 0)}cm` : "",
+        NOM.textoRico && NOM.textoRico.cssBorde ? NOM.textoRico.cssBorde(pa.borde) : "", /^#[0-9a-f]{6}$/i.test(pa.sombra || "") ? `background-color:${pa.sombra}` : "", +pa.lineaPt ? `line-height:${+pa.lineaPt}pt` : "", pa.dir === "rtl" ? "direction:rtl" : ""].filter(Boolean).join(";");
       const sa = st ? ` style="${st}"` : "";
       if (pa.lista) {
         const tag = pa.lista === "numeros" ? "ol" : "ul";
@@ -298,11 +299,164 @@ ${formas.join("\n")}
 </svg>`;
   }
 
+  // ------------------------------------------------------------ el formato propio (.nom)
+  /** Documento en memoria armado con operaciones (lo que devuelve importar). */
+  function docDeOps(nombre, modo, ops) {
+    const doc = new NOM.DocCRDT("mem-" + Math.random().toString(36).slice(2, 8), { bloques: {}, reloj: 0 }, { local: true, soloMemoria: true });
+    doc._fusionar({ id: "local:c1", bloque: "_doc", campos: { nombre, modo, paginas: ["p1"] }, t: 1, n: "local" });
+    (ops || []).forEach((op) => doc._fusionar(op));
+    return doc;
+  }
+  /** Texto letra por letra → párrafos compactos: [[formatoDePárrafo | 0, [texto, formato | 0, …]], …]. */
+  function parrafosDeFoto(f) {
+    const ps = [];
+    let tr = [], ult = null;
+    const cierra = (pa) => { ps.push([pa && Object.keys(pa).length ? pa : 0, tr]); tr = []; ult = null; };
+    for (const it of f.items) {
+      if (it.c === "\n" && !it.e) { cierra(it.a); continue; }
+      const a = it.a && Object.keys(it.a).length ? it.a : 0;
+      if (it.e) { tr.push({ e: it.e }, a); ult = null; continue; }
+      const k = a ? NOM.origen.estable(a) : "";
+      if (ult === k) tr[tr.length - 2] += it.c; else { tr.push(it.c, a); ult = k; }
+    }
+    cierra(f.fin);
+    return ps;
+  }
+  const igual = (a, b) => a === b || (a != null && b != null && typeof a === "object" && typeof b === "object" && NOM.origen.estable(a) === NOM.origen.estable(b));
+  /** Huella de un bloque tal como está ahora (se compara con la que se guardó al importar). */
+  function huellaBloque(doc, id) { const o = doc.bloque(id) || {}, r = {}; for (const k in o) if (k !== "id" && o[k] != null) r[k] = o[k]; return NOM.origen.huella(r); }
+  /** El documento como datos simples: { d: datos generales, b: bloques, t: textos }. Sin historia. */
+  function fotoModelo(doc) {
+    const sinNulos = (o) => { const r = {}; for (const k in o) if (k !== "id" && o[k] != null) r[k] = o[k]; return r; };
+    const d = sinNulos(doc.bloque("_doc") || {}), b = {}, t = {};
+    for (const id in doc.estado.bloques) {
+      if (id === "_doc" || id === NOM.origen.BLOQUE || !doc.vivo(id)) continue;
+      b[id] = sinNulos(doc.bloque(id));
+    }
+    for (const k in doc.estado.seq || {}) if (doc.tieneSecuencia(k)) t[k] = parrafosDeFoto(doc.secuencia(k).foto());
+    return { d, b, t };
+  }
+  const GRANDE = 256;   // un campo de texto más largo que esto (una imagen) lleva su propia huella
+  /** Huellas de un documento recién importado: con ellas se sabe después qué cambió, sin guardar otra copia. */
+  function huellasDe(foto) {
+    const H = NOM.origen.huella, h = { d: {}, b: {}, t: {} };
+    for (const k in foto.d) h.d[k] = H(foto.d[k]);
+    for (const id in foto.b) {
+      const x = foto.b[id];
+      let g = null;
+      for (const k in x) if (typeof x[k] === "string" && x[k].length > GRANDE) (g = g || {})[k] = H(x[k]);
+      h.b[id] = g ? [H(x), g] : H(x);
+    }
+    for (const k in foto.t) h.t[k] = H(foto.t[k]);
+    return h;
+  }
+  /**
+   * El documento como archivo .nom (versión 3): binario y comprimido. Si vino de un archivo de
+   * Office lleva ese archivo dentro (recomprimido todo junto, pesa menos que el original) y, del
+   * documento, solo lo que cambió desde que se importó.
+   */
+  function aNomBytes(doc) {
+    const O = NOM.origen, H = O.huella, foto = fotoModelo(doc), og = O.leer(doc);
+    const adj = [], json = { f: "nom-colab", v: 3 };
+    let cuerpo, enOrigen = null;
+    if (og && og.h && og.h.b) {
+      const h = og.h, d = {}, b = {}, bq = {}, t = {}, mezcla = [];
+      const nombres = og.zip.nombres();
+      enOrigen = new Map();
+      nombres.forEach((n) => { const u = og.zip.bytes(n), crudo = O.YA_COMPRIMIDO.test(n); adj.push({ datos: u, crudo }); if (crudo || /\.(emf|wmf|bmp|tiff?|svg)$/i.test(n)) enOrigen.set(O.huellaBytes(u), n); });
+      json.og = { fmt: og.fmt, nombres };
+      // De una hoja de cálculo importada se guardan solo las celdas que cambiaron.
+      const baseHojas = {};
+      if (og.fmt === "xlsx" && NOM.ooxml.modeloXlsx) { try { NOM.ooxml.modeloXlsx(og.zip).hojas.forEach((x, i) => { baseHojas["hoja-p" + (i + 1)] = x.campos; }); } catch (e) { /* sin base: se guarda la hoja completa */ } }
+      for (const k in foto.d) if (h.d[k] !== H(foto.d[k])) d[k] = foto.d[k];
+      for (const id in foto.b) {
+        const x = foto.b[id], hb = h.b[id];
+        if (!hb) { b[id] = x; continue; }
+        if ((Array.isArray(hb) ? hb[0] : hb) === H(x)) continue;
+        const y = baseHojas[id];
+        if (y && y.ox === x.ox) {
+          const c = {}, q = [];
+          for (const k in x) if (!(k in y) || !igual(x[k], y[k])) c[k] = x[k];
+          for (const k in y) if (!(k in x)) q.push(k);
+          b[id] = c; mezcla.push(id);
+          if (q.length) bq[id] = q;
+          continue;
+        }
+        const c = Object.assign({}, x), g = Array.isArray(hb) ? hb[1] : null;
+        if (g) for (const k in g) if (typeof c[k] === "string" && H(c[k]) === g[k]) c[k] = "\u0003";   // igual que en el original
+        b[id] = c;
+      }
+      for (const k in foto.t) if (h.t[k] !== H(foto.t[k])) t[k] = foto.t[k];
+      cuerpo = { d, dx: Object.keys(h.d).filter((k) => !(k in foto.d)), b, bq, bm: mezcla, bx: Object.keys(h.b).filter((id) => !foto.b[id]), t, tx: Object.keys(h.t).filter((k) => !(k in foto.t)) };
+      ["dx", "bx", "tx", "bm"].forEach((k) => { if (!cuerpo[k].length) delete cuerpo[k]; });
+      if (!Object.keys(bq).length) delete cuerpo.bq;
+    } else cuerpo = foto;
+    Object.assign(json, O.sacarDatos(cuerpo, adj, enOrigen, new Map()));
+    return NOM.paquete.empacar(json, adj);
+  }
+  /** Abre un .nom versión 3: { d, b, t } y, si vino de Office, las operaciones del archivo de origen. */
+  async function deNomBytes(u) {
+    const O = NOM.origen, { json, adjuntos } = NOM.paquete.desempacar(u);
+    if (json.f !== "nom-colab") throw new Error("Ese archivo no es un documento de NOM-COLAB");
+    if (!json.og) { const c = O.meterDatos({ d: json.d || {}, b: json.b || {}, t: json.t || {} }, adjuntos, null); return { d: c.d, b: c.b, t: c.t, opsOrigen: [] }; }
+    // Vino de Office: se vuelve a armar ese archivo, se importa igual que la primera vez y encima van los cambios.
+    const partes = new Map();
+    json.og.nombres.forEach((n, i) => partes.set(n, adjuntos[i]));
+    const archivo = NOM.ooxml.zip(json.og.nombres.map((n) => ({ nombre: n, datos: partes.get(n) })), { nivel: 4 });
+    const imp = await importar(new File([archivo], "origen." + json.og.fmt));
+    const B = fotoModelo(docDeOps(imp.nombre, imp.modo, imp.ops));
+    const c = O.meterDatos({ d: json.d || {}, b: json.b || {}, t: json.t || {} }, adjuntos, partes);
+    const d = Object.assign({}, B.d, c.d), b = {}, t = Object.assign({}, B.t, c.t);
+    (json.dx || []).forEach((k) => delete d[k]);
+    (json.tx || []).forEach((k) => delete t[k]);
+    const fuera = new Set(json.bx || []), mezcla = new Set(json.bm || []);
+    for (const id in B.b) if (!fuera.has(id)) b[id] = B.b[id];
+    for (const id in c.b) {
+      const x = c.b[id], y = B.b[id] || {};
+      if (mezcla.has(id)) b[id] = Object.assign({}, y, x);
+      else { b[id] = x; for (const k in x) if (x[k] === "\u0003") { if (y[k] != null) x[k] = y[k]; else delete x[k]; } }
+    }
+    for (const id in json.bq || {}) if (b[id]) { b[id] = Object.assign({}, b[id]); json.bq[id].forEach((k) => delete b[id][k]); }
+    return { d, b, t, opsOrigen: imp.ops.filter((op) => op.bloque === O.BLOQUE) };
+  }
+  /** .nom versión 3 → operaciones para crear el documento. */
+  function opsDeNom(r) {
+    const ops = [];
+    let i = 0;
+    const { nombre: _n, modo: _m, ...resto } = r.d;
+    if (Object.keys(resto).length) ops.push({ id: "imp:d", bloque: "_doc", campos: resto, t: 2, n: "importar" });
+    for (const id in r.b) ops.push({ id: "imp:" + i++, bloque: id, campos: r.b[id], t: 2, n: "importar" });
+    const partidas = NOM.DocCRDT.partir(ops);
+    let k = 0;
+    for (const bl in r.t) {
+      const ps = r.t[bl].map(([pa, tr]) => {
+        const tramos = [];
+        for (let j = 0; j < tr.length; j += 2) { const a = tr[j + 1] || undefined; tramos.push(typeof tr[j] === "string" ? { x: tr[j], a } : { e: tr[j].e, a }); }
+        return { a: pa || undefined, tramos };
+      });
+      partidas.push(...NOM.Secuencia.crearOps(bl, ps, "importar", 2, "imp" + (k++ ? k : "")));
+    }
+    return partidas.concat(r.opsOrigen || []);
+  }
+  /** El formato de antes (versión 2, JSON): se sigue pudiendo abrir. */
   function aNom(doc) {
     const bloques = {};
-    for (const id in doc.estado.bloques) if (id === "_doc" || doc.vivo(id)) bloques[id] = doc.bloque(id);
-    // El texto letra por letra va completo (con su historia de formato), así se reimporta igual.
+    for (const id in doc.estado.bloques) if (id === "_doc" || (doc.vivo(id) && id !== "_origen")) bloques[id] = doc.bloque(id);
     return JSON.stringify({ formato: "nom-colab", version: 2, exportado: new Date().toISOString(), bloques, seq: doc.estado.seq || {} });
+  }
+  /** Guarda dentro del documento recién importado el archivo de Office del que vino (y sus huellas). */
+  function conOrigen(fmt, nombre, modo, ops, archivo) {
+    if (!archivo || !NOM.origen) return ops;
+    try {
+      const tmp = docDeOps(nombre, modo, ops), h = huellasDe(fotoModelo(tmp));
+      if (fmt === "docx" && NOM.ooxml.huellasDocx && NOM.textoRico) h.u = NOM.ooxml.huellasDocx(tmp);
+      if (fmt === "pptx" && NOM.ooxml.huellasPptx) {
+        h.pp = NOM.ooxml.huellasPptx(tmp); h.q = {};
+        tmp.vivos().forEach((b) => { if (b.ox != null) h.q[b.id] = NOM.ooxml.parcialesPptx(b); });
+      }
+      const og = NOM.origen.crearOps(fmt, archivo, h);
+      return og.length ? ops.concat(og) : ops;
+    } catch (e) { if (typeof console !== "undefined") console.warn("No se pudo guardar el archivo de origen", e); return ops; }
   }
 
   const EXPORTABLES = [
@@ -345,7 +499,7 @@ ${formas.join("\n")}
   function exportar(doc, formato, nombre, pagina, opcTipo) {
     const base = limpioNombre(nombre);
     switch (formato) {
-      case "nom": descargar(base + ".nom", "application/json", aNom(doc)); return null;
+      case "nom": descargarBytes(base + ".nom", "application/octet-stream", aNomBytes(doc)); return null;
       case "docx": descargarBytes(base + ".docx", MIME.docx, NOM.ooxml.docx(doc)); return hayLibres(doc, ["conector"]) ? "Las flechas no se incluyen en Word" : null;
       case "xlsx": descargarBytes(base + ".xlsx", MIME.xlsx, NOM.ooxml.xlsx(doc)); return null;
       case "pptx": descargarBytes(base + ".pptx", MIME.pptx, NOM.ooxml.pptx(doc, (doc.valor("_doc", "modo") || "") === "DIAGRAMA" || opcTipo === "DIAGRAMA")); return null;
@@ -431,6 +585,15 @@ ${formas.join("\n")}
     if (ext === ".docx") return importarDocx(archivo, nombre);
     if (ext === ".xlsx") return importarXlsx(archivo, nombre);
     if (ext === ".pptx") return importarPptx(archivo, nombre);
+    if (ext === ".nom") {
+      // Versión 3: binario comprimido. (La 2 era JSON y se lee más abajo.)
+      if (archivo.size > 60 * 1024 * 1024) throw new Error("El archivo pesa más de 60 MB");
+      const u = new Uint8Array(await archivo.arrayBuffer());
+      if (NOM.paquete.esPaquete(u)) {
+        const r = await deNomBytes(u);
+        return { nombre: r.d.nombre || nombre, modo: r.d.modo || "TEXTO", ops: opsDeNom(r), aviso: null };
+      }
+    }
     if (archivo.size > MAX_BYTES) throw new Error("El archivo pesa más de 10 MB");
     const texto = await archivo.text();
     if (/�/.test(texto.slice(0, 2000)) && ext !== ".txt") throw new Error("El archivo parece dañado o no es texto");
@@ -446,7 +609,8 @@ ${formas.join("\n")}
         return { id: "imp:" + i, bloque: k, campos: c, t: 2, n: "importar" };
       });
       if (d.paginas) ops.unshift({ id: "imp:p", bloque: "_doc", campos: { paginas: d.paginas }, t: 2, n: "importar" });
-      ["pagina", "encabezado", "pie", "numeros"].forEach((k) => { if (d[k] != null) ops.push({ id: "imp:d" + k, bloque: "_doc", campos: { [k]: d[k] }, t: 2, n: "importar" }); });
+      // Todos los datos generales (antes solo cuatro: se perdían fondos, notas del orador, tema…).
+      Object.keys(d).forEach((k) => { if (!["id", "nombre", "modo", "paginas"].includes(k) && d[k] != null) ops.push({ id: "imp:d" + k, bloque: "_doc", campos: { [k]: d[k] }, t: 2, n: "importar" }); });
       // Texto letra por letra: se recrean sus operaciones con los mismos ids.
       let i = 0;
       for (const b in datos.seq || {}) {
@@ -494,17 +658,21 @@ ${formas.join("\n")}
     r.parrafos.forEach((p) => {
       const tramos = p.tramos.map((t) => {
         if (!t.e) return { x: t.x, a: limpio(t.a) };
-        const ref = "imp" + (i++).toString(36) + Math.random().toString(36).slice(2, 7);
-        if (t.e.tipo === "imagen") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: { tipo: "imagen", enTexto: true, src: t.e.src, w: Math.min(t.e.w || 320, 624), h: t.e.h || 0 }, t: 1, n: "importar" }); return { e: { tipo: "imagen", ref } }; }
+        // ids fijos (no al azar): al abrir un .nom se vuelve a importar el original y tienen que salir los mismos
+        const ref = "impw" + (i++).toString(36);
+        if (t.e.tipo === "imagen") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: { tipo: "imagen", enTexto: true, src: t.e.src, w: Math.min(t.e.w || 320, 624), h: t.e.h || 0, oe: t.e.oe || undefined }, t: 1, n: "importar" }); return { e: { tipo: "imagen", ref } }; }
         if (t.e.tipo === "tabla") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: Object.assign({ tipo: "tabla", enTexto: true, filasTexto: t.e.filas, colsTexto: t.e.cols }, t.e.celdas), t: 1, n: "importar" }); return { e: { tipo: "tabla", ref } }; }
         if (t.e.tipo === "nota" || t.e.tipo === "ecuacion") { ops.push({ id: "imp:b" + ref, bloque: ref, campos: Object.assign({ enTexto: true }, t.e), t: 1, n: "importar" }); return { e: { tipo: t.e.tipo, ref } }; }
-        return { e: { tipo: t.e.tipo } };
+        return { e: limpio({ tipo: t.e.tipo, oe: t.e.oe, que: t.e.que, txt: t.e.txt }) };
       });
       ps.push({ tramos, a: limpio(p.pa) });
     });
     ops.push(...NOM.Secuencia.crearOps("cuerpo", ps, "importar", 2, "imp"));
     if (r.pagina) ops.push({ id: "imp:pag", bloque: "_doc", campos: { pagina: r.pagina }, t: 1, n: "importar" });
-    return { nombre, modo: "TEXTO", ops, aviso: r.aviso };
+    // Formato base (el estilo Normal del archivo), encabezado, pie y número de página. Con reloj 2: va
+    // después del formato que el servidor le pone a los documentos nuevos del espacio.
+    if (r.doc && Object.keys(r.doc).length) ops.push({ id: "imp:doc", bloque: "_doc", campos: r.doc, t: 2, n: "importar" });
+    return { nombre, modo: "TEXTO", ops: conOrigen("docx", nombre, "TEXTO", ops, r.archivo), aviso: r.aviso };
   }
 
   /** Excel (.xlsx) → hoja de cálculo: una hoja por pestaña, con fórmulas, formato, combinadas y anchos. */
@@ -512,7 +680,7 @@ ${formas.join("\n")}
     const r = await NOM.ooxml.leerXlsx(archivo);
     const paginas = r.hojas.map((_, i) => "p" + (i + 1));
     const bloques = r.hojas.map((h, i) => Object.assign({ id: "hoja-" + paginas[i], tipo: "tabla", pagina: paginas[i], orden: 0, x: 40, y: 40, w: 880, h: 300 }, h.campos));
-    return { nombre, modo: "HOJA", ops: comoOps(bloques, paginas), aviso: r.aviso };
+    return { nombre, modo: "HOJA", ops: conOrigen("xlsx", nombre, "HOJA", comoOps(bloques, paginas), r.archivo), aviso: r.aviso };
   }
   /** PowerPoint (.pptx) → presentación (lo arma ooxml.leerPptx). */
   async function importarPptx(archivo, nombre) {
@@ -521,7 +689,7 @@ ${formas.join("\n")}
     const ops = comoOps(r.bloques, r.paginas);
     // Tamaño, fondos, transiciones y notas del orador van en los datos del documento.
     if (r.doc && Object.keys(r.doc).length) ops.push(...NOM.DocCRDT.partir([{ id: "imp:d", bloque: "_doc", campos: r.doc, t: 2, n: "importar" }]));
-    return { nombre, modo: "PRESENTACION", ops, aviso: r.aviso };
+    return { nombre, modo: "PRESENTACION", ops: conOrigen("pptx", nombre, "PRESENTACION", ops, r.archivo), aviso: r.aviso };
   }
 
   /** Imagen local -> data URL comprimida (máx. 1600 px, JPEG 0.85) para no inflar el documento. */
@@ -558,5 +726,5 @@ ${formas.join("\n")}
     });
   }
 
-  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, aSvg, textoPlano, descargar, descargarBytes, MIME, limpioNombre };
+  NOM.formatos = { IMPORTABLES, EXPORTABLES, paraTipo, exportar, importar, aNom, aNomBytes, deNomBytes, fotoModelo, docDeOps, huellaBloque, imagenADataUrl, elegirArchivo, aHtml, aMarkdown, aSvg, textoPlano, descargar, descargarBytes, MIME, limpioNombre };
 })();

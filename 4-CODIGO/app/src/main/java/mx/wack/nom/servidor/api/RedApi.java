@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import mx.wack.nom.core.Version;
 import mx.wack.nom.core.red.EspacioRemoto;
 import mx.wack.nom.core.red.Descubrimiento;
 import mx.wack.nom.red.nodo.NodoLocal;
@@ -27,8 +28,8 @@ public class RedApi {
     @GetMapping("/info")
     public Map<String, Object> info() {
         return Map.of("nom", 1, "servidor", nodo.id(), "equipo", nodo.equipo(), "puerto", nodo.puerto(),
-                "direcciones", nodo.direcciones(), "version", "0.1.0", "hora", System.currentTimeMillis(),
-                "lan", descubrimiento.lanActiva());
+                "direcciones", nodo.direcciones(), "version", Version.APP, "interfaz", Version.INTERFAZ,
+                "hora", System.currentTimeMillis(), "lan", descubrimiento.lanActiva());
     }
 
     /** CU-15 Descubrir espacios en la LAN. */

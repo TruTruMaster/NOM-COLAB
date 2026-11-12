@@ -137,6 +137,11 @@ public class ServicioFuentes {
         if (h.startsWith("[") && h.endsWith("]")) h = h.substring(1, h.length() - 1);
         if (h.equals("localhost") || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".lan") || h.endsWith(".home.arpa"))
             throw interna();
+        // IPv4 escrita de formas raras (2130706433, 0x7f000001, 127.1, 0177.0.0.1): cada sistema la
+        // entiende distinto (Java la convierte, Android la busca como nombre), así que no se lee.
+        if (h.matches("(0x[0-9a-f]*|[0-9]+)(\\.(0x[0-9a-f]*|[0-9]+))*\\.?")
+                && !h.matches("(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}"))
+            throw interna();
         InetAddress[] ips;
         try { ips = InetAddress.getAllByName(IDN.toASCII(h)); }
         catch (UnknownHostException | IllegalArgumentException e) { throw new ErrorNom(ErrorNom.NO_EXISTE, "No se encontró ese sitio: revisa la dirección (o la conexión del servidor)"); }

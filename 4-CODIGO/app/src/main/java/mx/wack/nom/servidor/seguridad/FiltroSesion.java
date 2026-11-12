@@ -30,6 +30,9 @@ public class FiltroSesion implements HandlerInterceptor {
         String token = null;
         String cab = req.getHeader("Authorization");
         if (cab != null && cab.startsWith("Bearer ")) token = cab.substring(7).trim();
+        // El canal en vivo no puede mandar cabeceras: trae un boleto de un solo uso (o, las versiones
+        // anteriores de la app, el token en la direccion).
+        if (token == null && req.getParameter("boleto") != null) token = cuentas.canjearBoleto(req.getParameter("boleto")).orElse(null);
         if (token == null) token = req.getParameter("token");
         if (token == null || token.isBlank())
             throw new ErrorNom(ErrorNom.SIN_SESION, "Inicia sesion para continuar");

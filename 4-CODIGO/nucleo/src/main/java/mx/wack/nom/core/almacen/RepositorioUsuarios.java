@@ -9,6 +9,8 @@ public interface RepositorioUsuarios {
     Optional<Usuario> porId(String id);
     Optional<Usuario> porNombre(String nombre);
     void guardar(Usuario u);
+    /** Borra la cuenta y sus sesiones (lo que tenia en los espacios lo quita antes quien llama). */
+    void borrar(String usuarioId);
 
     Optional<Sesion> sesion(String token);
     void guardarSesion(Sesion s);

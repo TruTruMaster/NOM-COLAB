@@ -1,0 +1,76 @@
+#!/bin/sh
+# nomcolab-pi: NOM-COLAB en la Raspberry Pi.
+#
+#   nomcolab-pi estado        servicios, si contesta, túnel, datos y último respaldo
+#   nomcolab-pi reiniciar     reinicia el servidor y el túnel
+#   nomcolab-pi apagar        apaga todo (vuelve con: nomcolab-pi prender, o al reiniciar la Pi)
+#   nomcolab-pi prender
+#   nomcolab-pi respaldo      hace un respaldo ahora (se guardan 14)
+#   nomcolab-pi actualizar    instala el jar que esté en /home/user/nom-colab.jar.nuevo;
+#                             si el nuevo no arranca, regresa al anterior
+#   nomcolab-pi bitacora [servidor|tunel|vigia] [líneas]
+set -u
+VAR=/var/lib/nomcolab
+OPT=/opt/nomcolab
+JAR=$OPT/nom-colab.jar
+NUEVO=/home/user/nom-colab.jar.nuevo
+RUN=/run/service
+[ "$(id -u)" = 0 ] || exec doas "$0" "$@"
+[ -r /etc/nomcolab.conf ] && . /etc/nomcolab.conf
+P=${NOM_PUERTO:-8080}
+contesta() { wget -q -O /dev/null -T "${1:-5}" "http://127.0.0.1:$P/api/red/info" 2>/dev/null; }
+esperar() { i=0; until contesta 3; do i=$((i + 1)); [ $i -ge "${1:-90}" ] && return 1; sleep 1; done; return 0; }
+respaldo() {
+  f=$VAR/respaldos/datos-$(date +%Y-%m-%d_%H%M%S).tar.gz
+  tar -czf "$f.n" -C $VAR datos && mv "$f.n" "$f" || { rm -f "$f.n"; echo "respaldo: falló"; return 1; }
+  chown root:adm "$f"; chmod 640 "$f"
+  ls -1t $VAR/respaldos/datos-2*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+  echo "respaldo: $f ($(du -h "$f" | cut -f1))"
+}
+estado() {
+  for s in nomcolab-servidor nomcolab-tunel nomcolab-vigia; do
+    printf '%-18s %s\n' "$s" "$(s6-svstat $RUN/$s 2>/dev/null || echo 'no existe')"
+  done
+  if contesta 5; then echo "servidor:  contesta en http://127.0.0.1:$P"; else echo "servidor:  NO contesta en el puerto $P"; fi
+  t=$(wget -q -O - -T 5 http://127.0.0.1:20242/ready 2>/dev/null | sed -n 's/.*"readyConnections":\([0-9]*\).*/\1/p')
+  echo "túnel:     ${t:-0} conexiones con Cloudflare (nomcolab.dpdns.org)"
+  echo "jar:       $(ls -l $JAR 2>/dev/null | awk '{print $5" bytes, "$6" "$7" "$8}')"
+  echo "datos:     $(du -sh $VAR/datos 2>/dev/null | cut -f1) en $VAR/datos"
+  u=$(ls -1t $VAR/respaldos/datos-*.tar.gz 2>/dev/null | head -1)
+  echo "respaldo:  $([ -n "$u" ] && basename "$u" || echo 'todavía no hay') ($(ls $VAR/respaldos | wc -l) guardados; diario a las 02:00)"
+  echo "equipo:    $(( $(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo 0) / 1000 )) °C, disco $(df -h / | awk 'NR==2{print $5" usado, "$4" libres"}'), RAM libre $(free -m | awk 'NR==2{print $7}') MB"
+}
+case "${1:-estado}" in
+  estado) estado ;;
+  reiniciar)
+    s6-svc -r $RUN/nomcolab-servidor; s6-svc -r $RUN/nomcolab-tunel
+    sleep 2
+    if esperar 90; then echo "reiniciado: contesta"; else echo "reiniciado, pero no contesta tras 90 s (nomcolab-pi bitacora)"; exit 1; fi ;;
+  apagar) s6-rc -d change nomcolab && echo "apagado" ;;
+  prender) s6-rc -u change nomcolab && { esperar 90 && echo "prendido: contesta" || { echo "no contesta tras 90 s"; exit 1; }; } ;;
+  respaldo) respaldo ;;
+  actualizar)
+    [ -f $NUEVO ] && ! [ -L $NUEVO ] || { echo "actualizar: no hay $NUEVO"; exit 1; }
+    [ "$(wc -c < $NUEVO)" -gt 1000000 ] && unzip -tq $NUEVO >/dev/null 2>&1 \
+      || { echo "actualizar: $NUEVO no es un jar completo"; exit 1; }
+    if [ -f $JAR ] && cmp -s $NUEVO $JAR; then rm -f $NUEVO; echo "actualizar: ya estaba esa versión"; exit 0; fi
+    respaldo || exit 1
+    s6-svc -wD -T 40000 -d $RUN/nomcolab-servidor
+    [ -f $JAR ] && cp -p $JAR $JAR.anterior
+    cp $NUEVO $JAR.n && chown root:root $JAR.n && chmod 644 $JAR.n && mv $JAR.n $JAR
+    s6-svc -u $RUN/nomcolab-servidor
+    if esperar 120; then rm -f $NUEVO; echo "actualizar: versión nueva funcionando"; estado
+    else
+      echo "actualizar: la versión nueva no contestó; regreso a la anterior"
+      s6-svc -wD -T 40000 -d $RUN/nomcolab-servidor
+      [ -f $JAR.anterior ] && cp -p $JAR.anterior $JAR
+      s6-svc -u $RUN/nomcolab-servidor
+      esperar 120 && echo "actualizar: la anterior contesta" || echo "actualizar: tampoco contesta la anterior (nomcolab-pi bitacora)"
+      exit 1
+    fi ;;
+  bitacora)
+    s=${2:-servidor}; case "$s" in servidor|tunel|vigia) ;; *) echo "bitacora: servidor, tunel o vigia"; exit 1 ;; esac
+    n=${3:-60}; case "$n" in *[!0-9]*|'') n=60 ;; esac
+    tail -n "$n" /var/log/nomcolab-$s/current ;;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

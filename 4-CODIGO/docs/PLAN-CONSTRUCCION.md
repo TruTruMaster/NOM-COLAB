@@ -301,6 +301,35 @@ Sale de comparar los cuatro editores con los programas reales. Primero lo que m�
 
 ---
 
+## Fase 10. Conversión confiable con Office, formato propio comprimido y la Pi (10 de noviembre de 2026)
+
+Idea: al importar un .docx, .xlsx o .pptx se guarda **el archivo original dentro del documento**
+(bloque `_origen`, `js/origen.js`). Al exportar al mismo formato se parte de ese original y solo se
+cambia lo que la persona editó; lo que NOM-COLAB no modela sale idéntico. Se mide con archivos
+reales de Microsoft (`pruebas/office/corpus.sh`, `fidelidad.py`, `ediciones.py`).
+
+- [x] Compresor propio sin librerías (`js/compresion.js`, DEFLATE; variante de ventana grande).
+- [x] Los .docx, .xlsx y .pptx exportados van comprimidos (antes iban sin comprimir).
+- [x] Formato `.nom` versión 3: binario, comprimido, con suma de comprobación; lleva el original
+  recomprimido y solo los cambios. La versión 2 (JSON) se sigue abriendo.
+- [x] Excel a partir del original: se parchan solo las celdas, anchos, combinadas, filas fijas,
+  validaciones y hojas que cambiaron; estilos nuevos al final de los del original.
+- [x] Word a partir del original (párrafos y tablas sin tocar salen idénticos).
+- [x] PowerPoint a partir del original (diapositivas y figuras sin tocar salen idénticas).
+- [x] Mejorar lo que se VE al importar (colores de tema, estilos heredados, fuentes). Hecho el 11
+  de noviembre: hoja de la primera sección y tamaños poco comunes, bordes de página y de párrafo,
+  fondo, estilos y tema heredados, interlineado exacto, encabezado y pie, versalitas, cuadros de
+  texto y SmartArt legibles, tablas con formato, fuentes equivalentes dentro de la app, SmartArt y
+  colores de tema en PowerPoint. Se revisa con `pruebas/office/pantalla.py`.
+- [x] Teclear en un párrafo importado ya no mueve el cursor ni le quita su formato original.
+- [x] Reabrir sin conexión un documento con cambios sin enviar; aviso de versión entre app y servidor.
+- [ ] Lo que falta de ver: columnas de verdad, tabuladores con puntos, texto vertical y bordes por
+  celda (Word); comentarios, gráficas e imágenes del archivo (Excel).
+- [ ] Probar en el A55 (app y navegador) importar, editar, exportar y `.nom`.
+- [x] Raspberry Pi: servicios s6 supervisados (`servidor-propio/pi/`), respaldo diario, `nomcolab-pi`.
+- [x] Subir el jar nuevo a la Pi (11 de noviembre: 0.12.0, con `nomcolab-pi actualizar`) y LOG.
+- [ ] `nomcolab pi …` desde la laptop y una copia de los respaldos de la Pi en otro equipo.
+
 ## Cómo quedó (8 de noviembre de 2026)
 
 Las fases 8 y 9 están construidas en Spring, en el servidor del teléfono (`ApiTelefono`) y en la

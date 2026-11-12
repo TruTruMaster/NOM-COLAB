@@ -3,6 +3,12 @@
     python3 pruebas/seguridad.py                 # usa app/target/nom-colab.jar
     python3 pruebas/seguridad.py ruta/al.jar
     NOM_PRUEBA_RAPIDA=1 python3 pruebas/seguridad.py   # sin la prueba de la fecha de entrega (1 min)
+    NOM_BASE=http://192.168.0.77:8080 python3 pruebas/seguridad.py   # contra un servidor ya encendido
+
+Con NOM_BASE no arranca nada: prueba ese servidor (por ejemplo, el teléfono como servidor, para
+revisar que ApiTelefono tenga las mismas rutas y permisos que Spring). Ese servidor debe estar
+recién instalado o con sus datos borrados: las cuentas de prueba (maestra, alumno1…) no deben
+existir antes. Ojo: también prueba el bloqueo de cuenta tras 6 intentos fallidos.
 
 Arranca el jar en el puerto 8092 con una carpeta de datos temporal, crea cuentas y espacios, y
 prueba sesión, validación, bloqueo y los roles de cada espacio (Propietario, Puede editar, Solo
@@ -19,8 +25,9 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, "..", "app", "target", "nom-colab.jar")
 D = tempfile.mkdtemp(prefix="nomcolab-pruebas-")
 JAVA = shutil.which("java") or "java"
-P = 8092; B = f"http://localhost:{P}"
-srv = subprocess.Popen([JAVA, "-jar", JAR],
+EXTERNO = os.environ.get("NOM_BASE", "").rstrip("/")
+P = 8092; B = EXTERNO or f"http://localhost:{P}"
+srv = None if EXTERNO else subprocess.Popen([JAVA, "-jar", JAR],
     env=dict(os.environ, NOM_PUERTO=str(P), NOM_DATOS=D, NOM_DESCUBRIMIENTO="false"), stdout=open(os.path.join(D, "servidor.log"), "w"), stderr=subprocess.STDOUT)
 def r(m, u, b=None, t=None):
     h = {"Content-Type": "application/json"}
@@ -265,6 +272,9 @@ try:
     prueba("9 No lee el propio servidor (localhost)", 403, web("http://localhost/"))
     prueba("9 No lee 127.0.0.1", 403, web("http://127.0.0.1/"))
     prueba("9 No lee 127.0.0.1 escrito como número (2130706433)", 403, web("http://2130706433/"))
+    prueba("9 No lee 127.0.0.1 en hexadecimal (0x7f000001)", 403, web("http://0x7f000001/"))
+    prueba("9 No lee 127.0.0.1 abreviado (127.1): inválida o interna", True, web("http://127.1/") in (400, 403))
+    prueba("9 No lee 127.0.0.1 con ceros a la izquierda (0177.0.0.1)", 403, web("http://0177.0.0.1/"))
     prueba("9 No lee 0.0.0.0", 403, web("http://0.0.0.0/"))
     prueba("9 No lee la red del salón (192.168.x)", 403, web("http://192.168.1.10/"))
     prueba("9 No lee redes privadas (10.x)", 403, web("http://10.0.0.1/"))
@@ -310,7 +320,7 @@ try:
         prueba("3.6 …y lo abre en solo lectura", "LECTURA", (r("GET", f"/api/documentos/{edoc}", t=tk["alumno1"])[1] or {}).get("permiso"))
         prueba("3.6 El propietario sí puede", 200, r("POST", f"/api/documentos/{edoc}/ops", lote("m1", {"bloque": "_doc", "campos": {"nota": "revisado"}}), tk["maestra"])[0])
 finally:
-    srv.kill(); srv.wait(30)
+    if srv: srv.kill(); srv.wait(30)
     shutil.rmtree(D, ignore_errors=True)
 for n, e, o, ok in res: print(("OK " if ok else "MAL"), f"{n:<66} esperado {e} obtenido {o}")
 print(sum(ok for *_, ok in res), "de", len(res))

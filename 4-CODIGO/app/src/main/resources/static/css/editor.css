@@ -842,14 +842,17 @@
 .muestra-cf { display: inline-grid; place-items: center; min-width: 64px; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--borde); font-weight: 750; }
 
 /* ---------------------------------------------------------------- 8.2 texto: sangrías en cm, primera línea y francesa */
-.wd-cuerpo > * { padding-left: calc(var(--sang, 0) * 36pt + var(--sangiz, 0cm) + var(--francesa, 0cm)); padding-right: var(--sangder, 0cm); text-indent: calc(var(--primera, var(--wd-primera, 0cm)) - var(--francesa, 0cm)); }
-.wd-cuerpo > :is(h1, h2, h3, [data-estilo], [data-obj-bloque]) { text-indent: calc(var(--primera, 0cm) - var(--francesa, 0cm)); }
-.wd-cuerpo > [data-lista] { text-indent: 0; padding-left: calc(18pt + var(--n) * 18pt + var(--sang, 0) * 36pt + var(--sangiz, 0cm)); }
+/* --ks: cuánto se achican las sangrías en centímetros (1 = tal cual; en un celular sin páginas, menos) */
+.wd-cuerpo > * { padding-left: calc(var(--sang, 0) * 36pt + (var(--sangiz, 0cm) + var(--francesa, 0cm)) * var(--ks, 1)); padding-right: calc(var(--sangder, 0cm) * var(--ks, 1)); text-indent: calc((var(--primera, var(--wd-primera, 0cm)) - var(--francesa, 0cm)) * var(--ks, 1)); }
+.wd-cuerpo > :is(h1, h2, h3, [data-estilo], [data-obj-bloque]) { text-indent: calc((var(--primera, 0cm) - var(--francesa, 0cm)) * var(--ks, 1)); }
+.wd-cuerpo > [data-lista] { text-indent: 0; padding-left: calc(18pt + var(--n) * 18pt + var(--sang, 0) * 36pt + var(--sangiz, 0cm) * var(--ks, 1)); }
 .wd-cuerpo > [data-lista="vinetas"][data-vineta]::before { content: attr(data-vineta); }
 .wd-cuerpo > :has(> .wd-obj.bloque:only-child) { text-indent: 0; }
 /* 8.2 encabezado y pie: tres lugares (izquierda, centro, derecha), logo y marca de agua */
 .wd-enc, .wd-pie { display: flex; align-items: center; gap: 10px; font: inherit; color: #333; }
 .wd-enc > span, .wd-pie > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* un lugar vacío no le quita espacio a los otros (un encabezado largo a la izquierda cabe entero) */
+.wd-enc > span:empty, .wd-pie > span:empty { flex: 0 1 0px; }
 .wd-enc > .izq, .wd-pie > .izq { text-align: left; }
 .wd-enc > .centro, .wd-pie > .centro { text-align: center; }
 .wd-enc > .der, .wd-pie > .der { text-align: right; }
@@ -893,6 +896,9 @@
 .wd-notas { position: absolute; font-size: 9pt; line-height: 1.25; color: #222; border-top: 1px solid #999; padding-top: 4px; }
 .wd-notas .wd-nota-pie { margin: 0 0 2px; text-align: left; white-space: normal; }
 .wd-nota[data-obj] { cursor: pointer; color: #1F4E9E; }
+/* Objeto de Word que se conserva sin poder editarse aquí (cuadro de texto, forma, gráfico) */
+.wd-objeto[data-obj] > span { display: inline-block; padding: 0 6px; margin: 0 2px; border: 1px dashed #b9b9c6; border-radius: 6px; color: #77758a; background: #f6f5fa; font: 600 .78em/1.5 Nunito, sans-serif; white-space: nowrap; text-indent: 0; }
+@media print { .wd-objeto[data-obj] { display: none; } }
 .wd-nota[data-obj] sup { font-size: .7em; line-height: 0; padding: 0 1px; }
 .wd-ecuacion[data-obj] { cursor: pointer; display: inline-block; padding: 0 2px; border-radius: 4px; }
 .wd-ecuacion[data-obj]:hover { background: rgba(68, 114, 196, .10); }
@@ -1112,10 +1118,34 @@
 .inv-texto { font-size: 14px; line-height: 1.6; color: var(--tinta); user-select: text; -webkit-user-select: text; }
 .inv-texto p { margin: 0 0 10px; }
 .inv-texto h5 { margin: 14px 0 6px; font-size: 14.5px; }
-.inv-ficha.inv-lectura-fija { position: sticky; }
-.inv-lectura .inv-ficha, .inv-lectura [data-ficha] { position: sticky; bottom: 8px; align-self: center; box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .4); }
+.inv-lectura [data-ficha] { position: sticky; bottom: 8px; align-self: center; box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .4); }
 .ficha-original blockquote { margin: 4px 0 0; padding: 8px 12px; border-left: 4px solid var(--borde-fuerte); background: var(--sup-hundida); border-radius: 0 10px 10px 0; font-size: 13.5px; max-height: 160px; overflow: auto; }
 .fuente-previa { background: var(--sup-hundida); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .fuente-previa p { margin: 0; padding-left: 1.6em; text-indent: -1.6em; font-size: 14px; }
 .autor-fila .entrada { min-width: 0; }
 @media (max-width: 760px) { .autor-fila { flex-wrap: wrap; } .autor-fila .entrada { flex: 1 1 40%; } }
+
+/* ---------------------------------------------------------------- lo que viene de Word
+   Borde y fondo de párrafo: el recuadro va en las sangrías (como en Word), no de lado a lado, y el
+   texto se queda donde estaba (--bext: lo que el recuadro sale hacia afuera; --bpad: su relleno). */
+.wd-cuerpo > :is([data-borde], [data-sombra]):not([data-lista]) { margin-left: calc(var(--sang, 0) * 36pt + (var(--sangiz, 0cm) + var(--francesa, 0cm)) * var(--ks, 1) - var(--bext, 0pt)); margin-right: calc(var(--sangder, 0cm) * var(--ks, 1) - var(--bext, 0pt)); padding-left: var(--bpad, 0pt); padding-right: var(--bpad, 0pt); }
+.wd-cuerpo > [data-borde] { padding-top: 1pt; padding-bottom: 1pt; }
+/* Texto de derecha a izquierda */
+.wd-cuerpo > [dir="rtl"] { text-align: right; }
+.wd-cuerpo > [dir="rtl"][data-alin="centro"] { text-align: center; }
+/* Inicio de una sección de Word (columnas u otra hoja): una marca que no es parte del texto */
+.wd-cuerpo > [data-sec-t]::before { content: attr(data-sec-t); display: block; margin: 0 0 6px; padding: 1px 8px; border-top: 1px dashed #b9b9c6; color: #77758a; font: 600 9px/1.6 Nunito, sans-serif; letter-spacing: .02em; text-indent: 0; text-align: left; text-transform: none; font-variant: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; pointer-events: none; }
+@media print { .wd-cuerpo > [data-sec-t]::before { display: none; } }
+/* Borde de página */
+.wd-borde-pagina { position: absolute; pointer-events: none; box-sizing: border-box; }
+/* con borde de página medido desde el canto de la hoja, el encabezado y el pie van por dentro de él */
+.wd-pagina.con-borde .wd-enc { top: max(calc(var(--ms) / 2 - 12px), var(--bpe, 0px)); }
+.wd-pagina.con-borde .wd-pie { bottom: max(calc(var(--mi) / 2 - 12px), var(--bpp, 0px)); }
+/* Cuadro de texto, SmartArt o gráfico de Word: se lee su texto dentro de un recuadro */
+.wd-objeto.con-texto[data-obj] { display: inline-block; max-width: 100%; vertical-align: top; text-indent: 0; }
+.wd-objeto.con-texto[data-obj] > .wd-obj-caja { display: block; max-width: 100%; padding: 4px 8px 6px; margin: 2px 0; border: 1px solid #b9b9c6; border-radius: 4px; background: #fbfbfd; color: inherit; font: inherit; white-space: normal; text-align: left; }
+.wd-objeto.con-texto[data-obj] > .wd-obj-caja > b { display: block; margin-bottom: 2px; color: #77758a; font: 700 9px/1.4 Nunito, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.wd-objeto.con-texto[data-obj] > .wd-obj-caja > span { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92em; line-height: 1.25; }
+@media print { .wd-objeto.con-texto[data-obj] { display: inline-block; } .wd-objeto.con-texto[data-obj] > .wd-obj-caja > b { display: none; } }
+/* En un celular, sin páginas, las sangrías en centímetros no deben dejar el texto en una tirita */
+@media (max-width: 640px) { .wd[data-vista="continua"] .wd-cuerpo { --ks: .35; } }

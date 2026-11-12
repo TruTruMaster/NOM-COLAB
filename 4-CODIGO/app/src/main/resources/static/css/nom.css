@@ -552,6 +552,7 @@ kbd {
   display: grid; place-items: center; padding: var(--e4);
   animation: aparecer var(--t-corto) var(--suave);
 }
+.hoja:focus { outline: none; }
 .hoja {
   width: min(560px, 100%); max-height: min(86vh, 900px);
   display: flex; flex-direction: column;

@@ -1,0 +1,11 @@
+# Cloudflare Tunnel de NOM-COLAB en la Raspberry Pi (servicio nomcolab-tunel).
+# Es un segundo cloudflared: el de vefose.pp.ua (servicio cloudflared) no se toca.
+tunnel: 869abbea-c306-4ef3-b6ff-2dc21263328a
+credentials-file: /etc/cloudflared/869abbea-c306-4ef3-b6ff-2dc21263328a.json
+metrics: 127.0.0.1:20242
+ingress:
+  - hostname: nomcolab.dpdns.org
+    service: http://127.0.0.1:8080
+  - hostname: www.nomcolab.dpdns.org
+    service: http://127.0.0.1:8080
+  - service: http_status:404
