@@ -753,3 +753,14 @@ HTML metido a la fuerza no se ejecuta y las contraseñas van con sal y PBKDF2.
   que la política ya no deja, y ahora las escribe en el propio programa de la prueba.
   La política de contenido de la app se probó en el WebView del emulador (sin una sola
   violación); en el A55 todavía no.
+- **Publicado el mismo día, servidor y app juntos**, después de pasar todas las pruebas contra el
+  jar final sirviendo su propia página y con la interfaz sacada del APK final (fidelidad 100 % en
+  47 archivos, ediciones 144 de 144, interfaz 9 y 9, en pantalla 32 y 19, red 24 de 24, cuentas
+  57 de 57 y las demás de la página): jar en `2-PAGINA-Servidor/` y en la Raspberry
+  (`nomcolab-pi actualizar`; `https://nomcolab.dpdns.org/api/red/info` responde 0.12.1, interfaz
+  13, y se probó por el túnel con una cuenta de prueba que luego se borró) y APK 0.12.1 en
+  `3-APP-Android/` y como release más reciente en GitHub. Esta vez también va a git y a Azure
+  (el push a `main` lo despliega).
+- **Falta:** probar en el A55 (la app publicable y su política de contenido solo se vieron en el
+  emulador); guardar una copia de `~/.android/debug.keystore` fuera de la laptop; y lo de Word y
+  Excel que ya estaba pendiente (entrada 52).
