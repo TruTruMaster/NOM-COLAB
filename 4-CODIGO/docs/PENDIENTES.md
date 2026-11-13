@@ -158,3 +158,30 @@ Todo esto sale de los hilos de r/canva
 - [ ] **Línea de tiempo de animaciones** en presentaciones, no solo entrada y salida.
 - [ ] **Sin IA metida a fuerza**: "I wish all the AI fluff had an off button, like a Canva Lite
       that's also cheaper" (r/canva 1syka6w). Nosotros no la tenemos: hay que decirlo como ventaja.
+
+## 6. Idea: qué puede hacer cada equipo según la conexión (13 de noviembre de 2026)
+
+Pregunta de origen: si una computadora **nunca** entró a la página y no hay Internet, ¿el teléfono
+le puede pasar la página para trabajar en grupo? **Sí, ya lo hace:** el servidor del teléfono
+(`ServidorHttp`) sirve la página completa que trae el APK a cualquier navegador que entre a
+`http://IP-del-teléfono:8080`, por el mismo Wi-Fi o por el **punto de acceso del teléfono** (sin
+router ni Internet). Lo que no se puede: entrar con la cuenta de la nube a ese espacio (las cuentas
+del teléfono son aparte; se entra con QR o código y un apodo, o creando una cuenta en el teléfono).
+Las combinaciones completas, para no perderlas:
+
+| Situación | Qué se puede |
+|---|---|
+| Hay Internet (cualquier equipo) | Nube (Raspberry o Azure) con la cuenta de siempre, en la app y en cualquier navegador |
+| Sin Internet, la persona ya abrió antes la página por https (o tiene la app) | Sus documentos ya abiertos, sola; se envían al volver la red. No puede entrar por primera vez, ni iniciar sesión, ni abrir documentos nuevos |
+| Sin Internet, un teléfono con la app comparte (Wi-Fi o su punto de acceso) | Todos trabajan juntos: la app por «Buscar en la red» y los navegadores (aunque nunca hayan entrado) por la dirección o el QR. En http no hay service worker: si el teléfono se va, la página no se puede recargar (lo escrito se queda en el equipo) |
+| Lo mismo, pero el teléfono tiene datos móviles | Además, el teléfono copia el espacio a la nube cada rato (`ServicioSincronia`); los equipos en su punto de acceso también salen a Internet a través de él |
+| Sin Internet y sin teléfono, pero una computadora tiene Java y el jar | Esa computadora es el servidor (`nomcolab` → 2 Local, o `java -jar nom-colab.jar`) y las demás entran por navegador, igual que con el teléfono |
+| Sin Internet, sin la app y sin el jar, navegadores que nunca entraron | Nada: no hay de dónde sacar la página ni las cuentas |
+
+- [ ] **Entrar con la cuenta de la nube al espacio del teléfono**: si el teléfono tiene (o tuvo)
+      Internet, comprobar la cuenta con la nube y dejar una copia de esa cuenta en el teléfono, para
+      que no haga falta apodo ni cuenta aparte.
+- [ ] **Servidor de computadora "de doble clic"**: el jar con su propio Java, para que una laptop
+      sin nada instalado comparta como el teléfono (hoy hace falta Java).
+- [ ] **Explicarlo en la página**: una pantalla corta «¿Sin Internet?» con estos casos (qué hacer
+      con teléfono, con laptop o sin nada), enlazada desde la entrada y desde «Unirse».
