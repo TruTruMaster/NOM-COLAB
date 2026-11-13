@@ -178,10 +178,10 @@ Las combinaciones completas, para no perderlas:
 | Sin Internet y sin teléfono, pero una computadora tiene Java y el jar | Esa computadora es el servidor (`nomcolab` → 2 Local, o `java -jar nom-colab.jar`) y las demás entran por navegador, igual que con el teléfono |
 | Sin Internet, sin la app y sin el jar, navegadores que nunca entraron | Nada: no hay de dónde sacar la página ni las cuentas |
 
-- [ ] **Entrar con la cuenta de la nube al espacio del teléfono**: si el teléfono tiene (o tuvo)
+- [ ] **Entrar con la cuenta de la nube al espacio del teléfono** (plan: fase 13, `PLAN-CUENTAS-PC-Y-AYUDA.md` parte A): si el teléfono tiene (o tuvo)
       Internet, comprobar la cuenta con la nube y dejar una copia de esa cuenta en el teléfono, para
       que no haga falta apodo ni cuenta aparte.
-- [ ] **Servidor de computadora "de doble clic"**: el jar con su propio Java, para que una laptop
+- [ ] **Servidor de computadora "de doble clic"** (opcional, no prioritario: ruta B.4 del plan): el jar con su propio Java, para que una laptop
       sin nada instalado comparta como el teléfono (hoy hace falta Java).
-- [ ] **Explicarlo en la página**: una pantalla corta «¿Sin Internet?» con estos casos (qué hacer
+- [ ] **Explicarlo en la página** (fase 14, sitio de ayuda aparte de la app): una pantalla corta «¿Sin Internet?» con estos casos (qué hacer
       con teléfono, con laptop o sin nada), enlazada desde la entrada y desde «Unirse».
