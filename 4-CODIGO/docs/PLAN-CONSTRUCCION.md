@@ -399,35 +399,47 @@ reales de Microsoft bajados de las pruebas de LibreOffice. Lo que se encontró y
   (cómo se ve junto a LibreOffice) y un segundo corpus con 43 archivos reales de Microsoft.
 - [ ] Lo que sigue pendiente se anota en `docs/RELEVO-PRUEBAS-0.12.2.md`.
 
-## Fase 13. Una sola cuenta en todos lados y rutas para la computadora (plan del 13 de noviembre de 2026)
+## Fase 13. Sin Internet: alias al azar, ramas y crear documentos (plan del 13 de noviembre de 2026)
 
-Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes A y B. Con Internet ya es una sola cuenta (app
-y página van a la Raspberry); falta el teléfono que comparte sin Internet, y Azure es otra nube.
+Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes A, B y C. Decidido: con Internet hay cuenta (la
+de la Raspberry, la misma en la app y en la página); **sin Internet no se entra a ninguna cuenta**,
+solo alias generados al azar; lo editado sin Internet se sube tal cual si nadie más cambió el
+documento, y si alguien lo cambió se abre una **rama** y el original no se toca.
 
-- [ ] A.1 manera 1: con Internet en el teléfono, entrar con la cuenta de la nube (copia con el mismo `id`).
-- [ ] A.1 manera 2: sin Internet, verificador propio del teléfono para quien ya entró ahí.
-- [ ] A.1 manera 3: pase sin conexión firmado por la nube (ECDSA P-256, llave pública dentro del APK y del jar), solo para la app.
-- [ ] A.2: registro en el teléfono pasado a la nube; sin Internet, apodo y «Guardar lo mío en una cuenta».
-- [ ] A.3: accesos de la nube mandan; autoría correcta al sincronizar (revisar `ServicioSincronia`).
-- [ ] A.4: pruebas de seguridad de pases y copias de cuenta.
-- [ ] A.5: Azure dicha como «cuentas aparte» en la interfaz (o unificar, según la decisión D.4).
-- [ ] B.1: botón «Instalar en esta computadora».
-- [ ] B.2: un día para investigar «Acceso a la red local» de Chrome (la página instalada hablando con el teléfono).
+- [ ] A: en el teléfono que comparte, alias al azar (sin escribir apodo); quitar registro e inicio de
+      sesión de cuentas en `ApiTelefono`; lo de alias queda a su nombre al subir a la nube.
+- [ ] C: crear documentos dentro de un espacio sin Internet (se suben solos al volver); botón
+      «Instalar en esta computadora».
+- [ ] B.3: base al quedarse sin conexión y `GET /api/documentos/{id}/cambios-desde`.
+- [ ] B.4: crear la rama (`ramaDe`, `base`, cambios propios) en lugar de enviar la cola; «Ramas (n)» en el original.
+- [ ] B.5: comparar con el original, fusionar (con versión para regresar), dejar aparte, descartar.
+- [ ] B.6: casos especiales (borrado, renombrado, protegido o con fecha vencida, el teléfono al subir).
+- [ ] B.2 / G.3: confirmar con pruebas cuánto tiempo sin conexión abre una rama (propuesta: 2 minutos).
+- [ ] Pruebas de la parte H y ciclo real en `flast-desktop` con la Raspberry.
 
-## Fase 14. Sitio de ayuda y legal, aparte de la app (plan del 13 de noviembre de 2026)
+## Fase 14. Sitio de ayuda y legal, y cifrado en reposo (plan del 13 de noviembre de 2026)
 
-Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, parte C; antes, las decisiones de la parte D.
+Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.1 y F.
 
-- [ ] Decisiones D.1 a D.8 con el equipo y el profesor.
+- [ ] Archivo `LICENSE` con la GPL-3.0 (decidida) y sección en el README; correo del proyecto (G.5).
+- [ ] D.1: cifrado en reposo en el servidor (documentos, versiones, comentarios y respaldos).
 - [ ] Generador `4-CODIGO/ayuda/generar.py`, plantilla, buscador, rutas en Spring y en el teléfono, service worker.
 - [ ] `/legal/`: aviso integral y simplificado (LFPDPPP de 2025), términos, uso aceptable,
       almacenamiento, permisos de Android, licencias, seguridad (y `security.txt`), accesibilidad, denuncias.
-- [ ] Cambios de la app: aceptar en el registro (y versión aceptada), pie «Ayuda · Privacidad ·
-      Términos», quitar el script de Cloudflare, «Descargar los datos de mi cuenta», rotación de la bitácora.
-- [ ] `/ayuda/`: Sin Internet, Empezar, Cuentas, preguntas frecuentes (30), Problemas; luego
-      editores, Office, novedades, referencia de fórmulas, Acerca de.
-- [ ] Botones «?» de la app hacia su artículo.
+- [ ] Cambios de la app (F.5): aceptar en el registro, pie «Ayuda · Privacidad · Términos», quitar
+      el script de Cloudflare, «Descargar los datos de mi cuenta», rotación de la bitácora.
+- [ ] `/ayuda/`: Sin Internet, Empezar, Cuentas, preguntas frecuentes (32), Problemas; luego
+      editores, Office, novedades, referencia de fórmulas, Acerca de; botones «?» de la app.
 - [ ] `prueba_ayuda.py`, mapa de navegación, casos de uso, plan de pruebas, LOG.
+
+## Fase 15. Cifrado de extremo a extremo y chat (plan del 13 de noviembre de 2026)
+
+Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.2 y E. Antes, decidir la edad para grupos con chat (G.2).
+
+- [ ] Llave por espacio, par de llaves por cuenta (envuelto con la contraseña y con el código de recuperación).
+- [ ] Contenido cifrado, estructura en claro; proyección pública y recibos ajustados.
+- [ ] Chat por espacio con imágenes y documentos, cifrado; reportar compartiendo lo descifrado.
+- [ ] Azure unida a la misma cuenta cuando sea requisito (G.4).
 
 ## Cómo quedó (8 de noviembre de 2026)
 
@@ -475,8 +487,8 @@ sesión anterior: `./desplegar.sh roles` para las columnas nuevas de usuarios.
 
 ## Orden recomendado para la siguiente sesión
 
-**Desde el 13 de noviembre de 2026:** fase 14 primero (lo legal no existe y la entrega se acerca),
-luego fase 13, en el orden de la parte E de `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`. Antes, regresar el
+**Desde el 13 de noviembre de 2026:** el orden de la parte H de `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`
+(licencia y correo; fase 13; fase 14; fase 15 cuando se decida la edad para el chat). Antes, regresar el
 A55 (ver `docs/RELEVO-PRUEBAS-0.12.2.md`, sección 4). La lista de abajo es la de antes.
 
 1. Probar en el A55: la app 0.11.0, el teléfono como servidor con otra persona, el QR con la cámara

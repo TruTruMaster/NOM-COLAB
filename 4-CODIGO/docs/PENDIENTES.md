@@ -163,25 +163,22 @@ Todo esto sale de los hilos de r/canva
 
 Pregunta de origen: si una computadora **nunca** entró a la página y no hay Internet, ¿el teléfono
 le puede pasar la página para trabajar en grupo? **Sí, ya lo hace:** el servidor del teléfono
-(`ServidorHttp`) sirve la página completa que trae el APK a cualquier navegador que entre a
-`http://IP-del-teléfono:8080`, por el mismo Wi-Fi o por el **punto de acceso del teléfono** (sin
-router ni Internet). Lo que no se puede: entrar con la cuenta de la nube a ese espacio (las cuentas
-del teléfono son aparte; se entra con QR o código y un apodo, o creando una cuenta en el teléfono).
-Las combinaciones completas, para no perderlas:
+(`ServidorHttp`) sirve la página completa del APK a cualquier navegador que entre a
+`http://IP-del-teléfono:8080`, por el mismo Wi-Fi o por el punto de acceso del teléfono.
+
+Decisión del equipo (el plan está en `PLAN-CUENTAS-PC-Y-AYUDA.md`): **con Internet hay cuenta, sin
+Internet no hay cuentas** (alias al azar), y lo editado sin Internet abre una **rama** si alguien
+más cambió el documento mientras tanto.
 
 | Situación | Qué se puede |
 |---|---|
-| Hay Internet (cualquier equipo) | Nube (Raspberry o Azure) con la cuenta de siempre, en la app y en cualquier navegador |
-| Sin Internet, la persona ya abrió antes la página por https (o tiene la app) | Sus documentos ya abiertos, sola; se envían al volver la red. No puede entrar por primera vez, ni iniciar sesión, ni abrir documentos nuevos |
-| Sin Internet, un teléfono con la app comparte (Wi-Fi o su punto de acceso) | Todos trabajan juntos: la app por «Buscar en la red» y los navegadores (aunque nunca hayan entrado) por la dirección o el QR. En http no hay service worker: si el teléfono se va, la página no se puede recargar (lo escrito se queda en el equipo) |
-| Lo mismo, pero el teléfono tiene datos móviles | Además, el teléfono copia el espacio a la nube cada rato (`ServicioSincronia`); los equipos en su punto de acceso también salen a Internet a través de él |
-| Sin Internet y sin teléfono, pero una computadora tiene Java y el jar | Esa computadora es el servidor (`nomcolab` → 2 Local, o `java -jar nom-colab.jar`) y las demás entran por navegador, igual que con el teléfono |
-| Sin Internet, sin la app y sin el jar, navegadores que nunca entraron | Nada: no hay de dónde sacar la página ni las cuentas |
+| Hay Internet | La nube (la Raspberry) con la cuenta de siempre, en la app y en cualquier navegador |
+| Sin Internet, con la página ya descargada o la app, y la sesión abierta en ese equipo | Editar la última versión de sus documentos y crear nuevos (fase 13); nada se actualiza hasta que vuelva Internet. No se puede iniciar sesión |
+| Sin Internet, un teléfono con la app comparte (Wi-Fi o punto de acceso) | Todos juntos con alias al azar: la app por «Buscar en la red» y los navegadores (aunque nunca hayan entrado) por la dirección o el QR |
+| Lo mismo, y el teléfono tiene datos móviles | El teléfono sube el espacio a la nube (tal cual o en rama); los equipos en su punto de acceso también tienen Internet |
+| Sin Internet, sin la app y navegadores que nunca entraron | Nada: no hay de dónde sacar la página |
 
-- [ ] **Entrar con la cuenta de la nube al espacio del teléfono** (plan: fase 13, `PLAN-CUENTAS-PC-Y-AYUDA.md` parte A): si el teléfono tiene (o tuvo)
-      Internet, comprobar la cuenta con la nube y dejar una copia de esa cuenta en el teléfono, para
-      que no haga falta apodo ni cuenta aparte.
-- [ ] **Servidor de computadora "de doble clic"** (opcional, no prioritario: ruta B.4 del plan): el jar con su propio Java, para que una laptop
-      sin nada instalado comparta como el teléfono (hoy hace falta Java).
-- [ ] **Explicarlo en la página** (fase 14, sitio de ayuda aparte de la app): una pantalla corta «¿Sin Internet?» con estos casos (qué hacer
-      con teléfono, con laptop o sin nada), enlazada desde la entrada y desde «Unirse».
+- [ ] Alias, ramas y crear sin Internet: fase 13 de `PLAN-CONSTRUCCION.md`.
+- [ ] Explicarlo en la página: fase 14 (sitio de ayuda aparte de la app).
+- Descartado: entrar al teléfono con la cuenta de la nube y un servidor de computadora «de doble
+  clic» (con la decisión de arriba ya no hacen falta).
