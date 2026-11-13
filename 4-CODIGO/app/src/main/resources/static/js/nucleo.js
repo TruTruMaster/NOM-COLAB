@@ -6,7 +6,7 @@
   const NOM = (window.NOM = window.NOM || {});
   // Versión de esta interfaz. Tienen que ir a la par de nucleo/.../core/Version.java y del APK:
   // INTERFAZ sube cuando cambia el formato de los documentos o lo que la interfaz sabe leer.
-  NOM.VERSION = "0.12.1";
+  NOM.VERSION = "0.12.2";
   NOM.INTERFAZ = 13;
 
   // ------------------------------------------------------------ utilidades
@@ -400,8 +400,31 @@
     return { cerrar };
   }
 
+  /** Copia texto al portapapeles y dice si de verdad se copió. En la red del salón (http, sin
+      navigator.clipboard) o sin permiso, prueba con la copia clásica; si tampoco se puede, false:
+      quien llama muestra el texto para copiarlo a mano (nunca un "copiado" falso). */
+  async function copiarTexto(texto) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(texto); return true; }
+    } catch (e) { /* sin permiso: se intenta lo clásico */ }
+    const antes = document.activeElement;
+    try {
+      const a = document.createElement("textarea");
+      a.value = texto; a.setAttribute("readonly", ""); a.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+      document.body.append(a); a.select();
+      const ok = document.execCommand("copy");
+      a.remove();
+      return !!ok;
+    } catch (e) { return false; }
+    finally { if (antes && antes.focus && antes !== document.body) antes.focus({ preventScroll: true }); }
+  }
+  /** Copia y avisa: "copiado", o el texto mismo para copiarlo a mano. */
+  function copiarConAviso(texto, listo) {
+    return copiarTexto(texto).then((ok) => { aviso(ok ? listo : texto, { tipo: ok ? "ok" : "info", ms: ok ? undefined : 9000 }); return ok; });
+  }
+
   try { aplicarLetra(leer("nom.letra", "normal")); } catch (e) { /* sin almacenamiento */ }
-  Object.assign(NOM, { aplicarLetra, etiquetaEquipo, paleta, COLORES,
+  Object.assign(NOM, { aplicarLetra, copiarTexto, copiarConAviso, etiquetaEquipo, paleta, COLORES,
     enApp, aqui,
     esc, $, $$, ico, html, debounce, throttle, haceCuanto, bytes, iniciales, avatar, idCorto,
     avisoNuevo, leer, guardar, quitar, MODOS, miniatura, aviso, hoja, confirmar, cerrarHoja: () => hojaActual && hojaActual.cerrar(true), hayHoja: () => !!hojaActual, pedirTexto, menu, cerrarMenu, ocultarMicro, aplicarPreferencias,

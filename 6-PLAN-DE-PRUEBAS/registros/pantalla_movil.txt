@@ -1,0 +1,23 @@
+== Word con combinaciones raras (celular)
+  ok   avisa lo que no se dibuja igual (columnas, cambio de hoja)
+  ok   fuente del estilo Normal (Garamond 13, con sustituta de remates)
+  ok   interlineado 1.5 del estilo Normal
+  ok   título con la letra de su estilo (Calibri 14)
+  ok   sangrías: izquierda 2.5, derecha 1.5 y primera línea 1.25 cm
+  ok   justificado e interlineado exacto de 18 pt
+  ok   en el celular las sangrías no dejan el texto en una tirita (ocupa más de 70 % del ancho)
+  ok   sangría francesa de 1.5 cm sobre 3 cm
+  ok   párrafo con recuadro azul y fondo amarillo
+  ok   versalitas, y fuentes que nadie tiene con sustituta de su tipo
+  ok   las fuentes equivalentes van con la aplicación (se cargan sin tenerlas instaladas)
+  ok      …las seis familias
+  ok   el texto del cuadro de texto se lee
+  ok   tabla: celda roja en cursiva
+  ok   tabla: celda centrada y columnas de ancho distinto (2, 7 y 3.5 cm)
+  ok   tabla dentro de una celda: se lee renglón por renglón
+  ok   marca donde empieza la sección a 2 columnas
+  ok   marca de la sección a 3 columnas en hoja horizontal
+  ok   párrafo de derecha a izquierda
+
+En pantalla (celular): 19 bien, 0 mal. Errores de JavaScript: []
+FIN 0

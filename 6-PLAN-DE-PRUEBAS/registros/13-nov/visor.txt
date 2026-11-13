@@ -1,0 +1,46 @@
+MAL lo-fdo74605.docx                               TEXTO         texto del original en el documento:   0.0%  aviso: Las formas, los gráficos y los cuadros de texto de Word no se editan aquí: se ve 
+ok  lo-fdo76316.docx                               TEXTO         texto del original en el documento:  92.2%  aviso: Las formas, los gráficos y los cuadros de texto de Word no se editan aquí: se ve 
+ok  lo-fdo77476.docx                               TEXTO         texto del original en el documento: 100.0%  aviso: Las formas, los gráficos y los cuadros de texto de Word no se editan aquí: se ve 
+ok  lo-fdo77718.docx                               TEXTO         texto del original en el documento: 100.0%  aviso: Las formas, los gráficos y los cuadros de texto de Word no se editan aquí: se ve 
+MAL lo-FDO78292.docx                               TEXTO         texto del original en el documento:  21.5%   
+MAL lo-FigureAsLabelPicture.docx                   TEXTO         texto del original en el documento:   0.0%   
+MAL lo-groupshape-fontname.docx                    TEXTO         texto del original en el documento:   0.0%  aviso: Las formas, los gráficos y los cuadros de texto de Word no se editan aquí: se ve 
+ok  lo-pictureWatermark.docx                       TEXTO         texto del original en el documento: 100.0%   
+ok  lo-tdf104061_tableSectionColumns.docx          TEXTO         texto del original en el documento:  98.2%  aviso: Las partes en columnas se ven aquí a una sola columna, con una marca donde empie 
+MAL lo-tdf104420_lostParagraph.docx                TEXTO         texto del original en el documento:   0.0%  aviso: Este documento cambia de tamaño u orientación de hoja a media obra: aquí se ve t 
+MAL lo-tdf107111.docx                              TEXTO         texto del original en el documento:   0.0%   
+MAL lo-tdf130804.docx                              TEXTO         texto del original en el documento:   0.0%   
+ok  lo-tdf143476_lockedCanvas_position.docx        TEXTO         texto del original en el documento: 100.0%   
+MAL lo-tdf75573_page1frame.docx                    TEXTO         texto del original en el documento:   0.0%   
+MAL officer-table-complex.docx                     TEXTO         texto del original en el documento:  47.1%   
+ok  lo-accent-color.pptx                           PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-crop-to-shape.pptx                          PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-cshapes.pptx                                PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-multiplelayoutfooter.pptx                   PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-n821567.pptx                                PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-slide-sections.pptx                         PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-smartart-linear-rule-vert.pptx              PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-tdf106638.pptx                              PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-tdf120573.pptx                              PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-tdf134174.pptx                              PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-tdf149206.pptx                              PRESENTACION  texto del original en el documento: 100.0%  aviso: Algunos objetos de PowerPoint (videos o imágenes de otro formato) no se ven aquí 
+ok  lo-tdf169781.pptx                              PRESENTACION  texto del original en el documento: 100.0%  aviso: Algunos objetos de PowerPoint (videos o imágenes de otro formato) no se ven aquí 
+ok  lo-tdf89927.pptx                               PRESENTACION  texto del original en el documento: 100.0%   
+ok  officer-table-complex.pptx                     PRESENTACION  texto del original en el documento: 100.0%   
+ok  lo-cell-anchored-hidden-shapes.xlsx            HOJA          texto del original en el documento:  92.3%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-cell-borders.xlsx                           HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-chart_hyperlink.xlsx                        HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-column-style-autofilter.xlsx                HOJA          texto del original en el documento: 100.0%  aviso: Solo se importaron las primeras 5000 filas y 60 columnas 
+MAL lo-forcepoint107.xlsx: BadZipFile: Bad CRC-32 for file 'xl/worksheets/sheet2.xml'
+ok  lo-forum-mso-de-104083.xlsx                    HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-forum-mso-en4-134670.xlsx                   HOJA          texto del original en el documento:  98.0%   
+ok  lo-functions-excel-2010.xlsx                   HOJA          texto del original en el documento: 100.0%   
+ok  lo-pivottable_invalid_formats.xlsx             HOJA          texto del original en el documento: 100.0%   
+ok  lo-TableEmptyHeaders.xlsx                      HOJA          texto del original en el documento: 100.0%   
+ok  lo-tdf122471.xlsx                              HOJA          texto del original en el documento: 100.0%   
+ok  lo-tdf130959.xlsx                              HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-tdf83671_SmartArt_import.xlsx               HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+ok  lo-totalsRowFunction.xlsx                      HOJA          texto del original en el documento: 100.0%  aviso: Las gráficas e imágenes del archivo no se ven aquí, pero se conservan: al descar 
+
+Visor: 33 bien, 10 con algo que revisar. Capturas lado a lado en ~/.cache/nom-pruebas/salida-final/visor
+FIN 1

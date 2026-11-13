@@ -1466,6 +1466,8 @@
             if (!s.col) borrarRango(s.ini, s.fin, grupoEscritura());
             const toks = [];
             (tramos || []).forEach((tr) => cps(tr.x || "").forEach((c) => toks.push(c === "\n" ? { c: "\n", pa: Object.assign({}, cur.pa, { hecho: null }) } : { c, a: Object.assign({}, cur.a, tr.a || {}) })));
+            // Una cita llega con un espacio delante: si ya hay uno (o es el inicio del párrafo), sobra.
+            if (toks.length && toks[0].c === " ") { const ant = visPintado[s.ini - 1]; if (!ant || ant.e || /\s/.test(ant.c || "")) toks.shift(); }
             const fin = insertarEn(s.ini, toks, grupoEscritura(), meta);
             finEdicion = fin;
             return { sel: [fin, fin] };
@@ -2198,6 +2200,17 @@
 
       // ------------------------------------------------------------ pegar y soltar
       let pegadoManejado = false;
+      // Lo último que se copió o cortó aquí. "Pegar" de la ruedita lo usa cuando el navegador no deja
+      // leer el portapapeles (en http de la red del salón no existe navigator.clipboard).
+      const guardarCopia = () => {
+        const sl = getSelection();
+        if (!sl.rangeCount || sl.isCollapsed) return;
+        const d = document.createElement("div");
+        d.append(sl.getRangeAt(0).cloneContents());
+        NOM._portaTexto = { html: d.innerHTML, texto: sl.toString() };
+      };
+      cuerpo.addEventListener("copy", guardarCopia);
+      cuerpo.addEventListener("cut", guardarCopia);
       cuerpo.addEventListener("paste", async (e) => {
         if (ed.soloLectura || (e.target.closest && e.target.closest("[data-celda]"))) return;
         e.preventDefault();
@@ -2884,7 +2897,8 @@
         document.body.append(p);
         const r = ancla.getBoundingClientRect();
         p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left)) + "px";
-        p.style.top = r.bottom + 6 + "px";
+        // En el celular la barra está abajo: si no cabe debajo del botón, sale arriba (antes quedaba fuera de la pantalla).
+        p.style.top = (r.bottom + 6 + p.offsetHeight > innerHeight - 8 ? Math.max(8, r.top - p.offsetHeight - 6) : r.bottom + 6) + "px";
         const cerrar = () => { p.remove(); document.removeEventListener("pointerdown", fuera, true); };
         const fuera = (e) => { if (!p.contains(e.target)) cerrar(); };
         setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
@@ -3209,7 +3223,7 @@
       // Sale al mantener presionado (dedo o clic, también en una pausa al seleccionar) o con clic
       // derecho, centrada en el dedo o el cursor. Mismo orden que en los demás editores: negrita,
       // cursiva, subrayado, color, cortar, copiar, estilo, más.
-      let selRueda = null;
+      let selRueda = null, selOculta = null;
       function accionesTexto(s) {
         const restaurar = () => { if (document.activeElement !== cuerpo) cuerpo.focus({ preventScroll: true }); ponerSel(s.a, s.f); };
         const con = (fn) => () => { restaurar(); fn(); };
@@ -3293,6 +3307,20 @@
           return "sistema";
         },
         alPreparar: () => { selRueda = leerSel(); setTimeout(() => (selRueda = null), 0); },
+        // Con el dedo, las manijas de selección de Android se dibujan ENCIMA de la rueda (tapaban
+        // "Estilo" y el centro): mientras está abierta se quita la selección y al cerrar vuelve.
+        // Las acciones igual la restauran antes de aplicarse (accionesTexto → restaurar).
+        alAbrir: (e, tactil) => {
+          if (!tactil) return;
+          const s = getSelection();
+          if (!s.rangeCount || s.isCollapsed || !cuerpo.contains(s.anchorNode)) return;
+          selOculta = leerSel();
+          s.removeAllRanges();
+        },
+        alCerrar: () => {
+          const s = selOculta; selOculta = null;
+          if (s) { if (document.activeElement !== cuerpo) cuerpo.focus({ preventScroll: true }); ponerSel(s.a, s.f); }
+        },
         ignorar: (e) => !!(e.target.closest && (e.target.closest("[data-celda]") || e.target.closest("[data-tirador]"))),
         puntoTeclado: () => { const s = getSelection(); return s.rangeCount ? s.getRangeAt(0).getBoundingClientRect() : cuerpo.getBoundingClientRect(); },
       });
@@ -3312,7 +3340,26 @@
         dedos.add(e.pointerId);
       }, true);
       ["pointerup", "pointercancel"].forEach((t) => cuerpo.addEventListener(t, (e) => dedos.delete(e.pointerId), true));
+      /** Pega lo copiado dentro de la app (sin el portapapeles del sistema). */
+      function pegarCopiaInterna() {
+        const c = NOM._portaTexto;
+        if (!c) return false;
+        const s0 = leerSel();
+        if (enlazarSeleccion(s0, c.texto)) return true;
+        const d = new DOMParser().parseFromString(c.html, "text/html");
+        const toks = tokens(d.body, {});
+        if (toks.length && toks[toks.length - 1].c === "\n") toks.pop();
+        if (!toks.length) return false;
+        const meta = metaPegado(toks);
+        comando(() => { if (!s0.col) borrarRango(s0.ini, s0.fin, "pegar"); const fin = insertarEn(s0.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
+        seguirAlCursor();
+        return true;
+      }
+      const sinPortapapeles = () => aviso(matchMedia("(hover: hover)").matches ? "El navegador no dejó leer el portapapeles. Usa Ctrl+V."
+        : "El navegador no dejó leer el portapapeles: mantén presionado el texto y elige «Pegar».", { tipo: "info", ms: 5000 });
       async function pegarPortapapeles() {
+        // Sin portapapeles del sistema (http en la red del salón): lo copiado dentro de la app.
+        if (!(navigator.clipboard && window.isSecureContext && navigator.clipboard.readText)) { if (!pegarCopiaInterna()) sinPortapapeles(); return; }
         try {
           const s0 = leerSel();
           // 1.1 También con "Pegar" de la ruedita (celular y app): un enlace sobre texto elegido es vínculo.
@@ -3339,7 +3386,7 @@
             comando(() => { if (!s.col) borrarRango(s.ini, s.fin, "pegar"); const fin = insertarEn(s.ini, toks, "pegar", meta); return { sel: [fin, fin] }; });
             seguirAlCursor();
           }
-        } catch (e) { aviso("El navegador no dejó leer el portapapeles. Usa Ctrl+V.", { tipo: "info" }); }
+        } catch (e) { if (!pegarCopiaInterna()) sinPortapapeles(); }
       }
 
       // ------------------------------------------------------------ arranque

@@ -363,8 +363,14 @@ ${formas.join("\n")}
       const h = og.h, d = {}, b = {}, bq = {}, t = {}, mezcla = [];
       const nombres = og.zip.nombres();
       enOrigen = new Map();
-      nombres.forEach((n) => { const u = og.zip.bytes(n), crudo = O.YA_COMPRIMIDO.test(n); adj.push({ datos: u, crudo }); if (crudo || /\.(emf|wmf|bmp|tiff?|svg)$/i.test(n)) enOrigen.set(O.huellaBytes(u), n); });
+      const danadas = {};
+      nombres.forEach((n) => {
+        const u = og.zip.bytes(n), cr = u == null && og.zip.crudo ? og.zip.crudo(n) : null;
+        if (cr) { danadas[n] = { crc: cr.crc, tam: cr.tam }; adj.push({ datos: cr.datos, crudo: true }); return; }
+        const crudo = O.YA_COMPRIMIDO.test(n); adj.push({ datos: u, crudo }); if (crudo || /\.(emf|wmf|bmp|tiff?|svg)$/i.test(n)) enOrigen.set(O.huellaBytes(u), n);
+      });
       json.og = { fmt: og.fmt, nombres };
+      if (Object.keys(danadas).length) json.og.danadas = danadas;
       // De una hoja de cálculo importada se guardan solo las celdas que cambiaron.
       const baseHojas = {};
       if (og.fmt === "xlsx" && NOM.ooxml.modeloXlsx) { try { NOM.ooxml.modeloXlsx(og.zip).hojas.forEach((x, i) => { baseHojas["hoja-p" + (i + 1)] = x.campos; }); } catch (e) { /* sin base: se guarda la hoja completa */ } }
@@ -402,7 +408,8 @@ ${formas.join("\n")}
     // Vino de Office: se vuelve a armar ese archivo, se importa igual que la primera vez y encima van los cambios.
     const partes = new Map();
     json.og.nombres.forEach((n, i) => partes.set(n, adjuntos[i]));
-    const archivo = NOM.ooxml.zip(json.og.nombres.map((n) => ({ nombre: n, datos: partes.get(n) })), { nivel: 4 });
+    const dan = json.og.danadas || {};
+    const archivo = NOM.ooxml.zip(json.og.nombres.map((n) => (dan[n] ? { nombre: n, crudo: { datos: partes.get(n), crc: dan[n].crc, tam: dan[n].tam } } : { nombre: n, datos: partes.get(n) })), { nivel: 4 });
     const imp = await importar(new File([archivo], "origen." + json.og.fmt));
     const B = fotoModelo(docDeOps(imp.nombre, imp.modo, imp.ops));
     const c = O.meterDatos({ d: json.d || {}, b: json.b || {}, t: json.t || {} }, adjuntos, partes);

@@ -47,6 +47,9 @@ tr, pre, .flujo, .caja { break-inside: avoid; }
 .marcas { display: flex; align-items: center; gap: 14pt; }
 .res-ok { color: #1D7A4C; font-weight: 800; }
 .res-no { color: #B42318; font-weight: 800; }
+/* Un título nunca queda solo al pie de la hoja: se va con lo que sigue. */
+h3, h4, .subtit { break-after: avoid; page-break-after: avoid; }
+table { break-before: auto; }
 </style></head><body>
 
 <!-- ============================== PORTADA ============================== -->
@@ -86,7 +89,7 @@ tr, pre, .flujo, .caja { break-inside: avoid; }
   <h2>2. El módulo: Gestión de cuentas</h2>
   <p>NOM-COLAB es una suite colaborativa (texto, hojas de cálculo, presentaciones y diagramas) para docentes del CECyT 11. El módulo de cuentas es la puerta de entrada: sin una sesión válida no se puede ver ningún espacio ni documento.</p>
   <div class="dos">
-    <div class="fig"><img src="../imagenes/lf-cuentas-2-crear-cuenta.png" alt="Crear cuenta"><p>Crear cuenta: nombre, contraseña (con medidor de fuerza) y empresa opcional.</p></div>
+    <div class="fig"><img src="../imagenes/lf-cuentas-2-crear-cuenta.png" alt="Crear cuenta"><p>Crear cuenta: nombre, contraseña (con medidor de fuerza) y empresa opcional. Al terminar se muestra un código de recuperación para restablecer la contraseña si se olvida.</p></div>
     <div class="fig"><img src="../imagenes/lf-cuentas-1-iniciar-sesion.png" alt="Iniciar sesión"><p>Iniciar sesión. El mensaje de error es genérico para no revelar qué usuarios existen.</p></div>
   </div>
   <h3>Casos de uso del módulo</h3>
@@ -95,7 +98,7 @@ tr, pre, .flujo, .caja { break-inside: avoid; }
     <tr><td>CU-01</td><td>Crear usuario</td><td>Valida nombre (3–24 caracteres) y contraseña (mín. 8), revisa que el nombre esté libre y guarda solo el hash con su sal.</td></tr>
     <tr><td>CU-02</td><td>Iniciar sesión</td><td>Busca la cuenta, compara el hash y crea una sesión con token y fecha de expiración.</td></tr>
     <tr><td>CU-03</td><td>Cerrar sesión</td><td>Borra la sesión de la base de datos; el token deja de servir.</td></tr>
-    <tr><td>CU-04</td><td>Bloquear acceso</td><td>Al 6.º intento fallido bloquea la cuenta 15 minutos; después se desbloquea sola.</td></tr>
+    <tr><td>CU-04</td><td>Bloquear acceso</td><td>Al 6.º intento fallido desde una misma red, esa red queda fuera 15 minutos y después se desbloquea sola; el dueño sigue entrando desde la suya. Si llegan más de 50 fallos en una hora desde muchos lugares, se bloquea la cuenta entera.</td></tr>
     <tr><td>CU-05</td><td>Cifrar credenciales</td><td>PBKDF2-HMAC-SHA256, 120 000 iteraciones, sal aleatoria de 16 bytes por cuenta.</td></tr>
     <tr><td>CU-27</td><td>Configurar preferencias</td><td>Tema, autoguardado, versiones a conservar, calidad visual y movimiento, guardados en la base.</td></tr>
   </table>

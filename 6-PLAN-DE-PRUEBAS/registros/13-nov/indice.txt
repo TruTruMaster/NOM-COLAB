@@ -1,0 +1,61 @@
+### unitarias_js 00:53:44
+    fin unitarias_js 00:53:44
+### seguridad 00:53:44
+    fin seguridad 00:55:17
+### limites 00:55:17
+    fin limites 00:55:38
+### prueba_pres1 00:55:38
+    fin prueba_pres1 00:55:53
+### prueba_pptx 00:55:53
+    fin prueba_pptx 00:56:02
+### prueba_pptx2 00:56:02
+    fin prueba_pptx2 00:56:09
+### prueba_diag1 00:56:09
+    fin prueba_diag1 00:56:31
+### prueba_diag_movil 00:56:31
+    fin prueba_diag_movil 00:56:38
+### prueba_85 00:56:38
+    fin prueba_85 00:57:15
+### prueba_citas 00:57:15
+    fin prueba_citas 00:57:58
+### prueba_datos 00:57:58
+    fin prueba_datos 00:58:27
+### prueba_biblioteca 00:58:27
+    fin prueba_biblioteca 00:58:48
+### prueba_fuentes_api 00:58:48
+    fin prueba_fuentes_api 00:58:58
+### prueba_red 00:58:58
+    fin prueba_red 00:59:36
+### prueba_cuentas_equipo 00:59:36
+    fin prueba_cuentas_equipo 01:01:31
+### funciones_escritorio 01:01:31
+    fin funciones_escritorio 01:04:31
+### funciones_movil 01:04:31
+    fin funciones_movil 01:07:35
+### funciones_firefox 01:07:35
+    fin funciones_firefox 01:10:41
+### rastreo_escritorio 01:10:41
+    fin rastreo_escritorio 01:26:55
+### rastreo_movil 01:26:55
+    fin rastreo_movil 01:41:14
+### rastreo_firefox 01:41:14
+    fin rastreo_firefox 01:57:43
+### fidelidad 01:57:43
+    fin fidelidad 01:59:27
+### fidelidad_modelo 01:59:27
+    fin fidelidad_modelo 02:00:57
+### ui_escritorio 02:00:57
+    fin ui_escritorio 02:06:38
+### ui_movil 02:06:38
+    fin ui_movil 02:12:09
+### pantalla 02:12:09
+    fin pantalla 02:12:22
+### pantalla_movil 02:12:22
+    fin pantalla_movil 02:12:28
+### raros 02:12:28
+    fin raros 02:12:28
+### visor 02:12:28
+    fin visor 02:21:00
+### ediciones 02:21:00
+    fin ediciones 03:00:17
+TANDA_TERMINADA

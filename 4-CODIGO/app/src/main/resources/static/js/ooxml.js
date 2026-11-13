@@ -21,9 +21,12 @@
     const partes = [], centrales = [];
     let off = 0;
     for (const a of archivos) {
-      const nombre = enc.encode(a.nombre), datos = typeof a.datos === "string" ? enc.encode(a.datos) : a.datos, crc = crc32(datos);
-      let cuerpo = datos, metodo = 0;
-      if (datos.length > 40 && !a.sinComprimir) {
+      const nombre = enc.encode(a.nombre);
+      // Parte que llegó dañada del archivo original: va tal cual venía (comprimida, con su CRC y su tamaño).
+      const cr = a.crudo;
+      const datos = cr ? { length: cr.tam } : typeof a.datos === "string" ? enc.encode(a.datos) : a.datos, crc = cr ? cr.crc : crc32(datos);
+      let cuerpo = cr ? cr.datos : datos, metodo = cr ? 8 : 0;
+      if (!cr && datos.length > 40 && !a.sinComprimir) {
         // Lo que ya viene comprimido (fotos) se prueba rápido: algunos PNG mal comprimidos todavía bajan bastante.
         const ya = YA_COMPRIMIDO.test(a.nombre);
         const c = NOM.compresion.comprimir(datos, { nivel: ya ? 2 : (opc && opc.nivel) || (datos.length > 3000000 ? 6 : 9) });
@@ -385,7 +388,10 @@
       Object.keys(hu).forEach((c) => { modeladas.add(topDe(c)); if (c.includes(".")) (hojas[topDe(c)] = hojas[topDe(c)] || []).push(c); });
       const porRuta = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); for (let d = 0; d < Math.max(x.length, y.length); d++) { if ((x[d] || 0) !== (y[d] || 0)) return (x[d] || 0) - (y[d] || 0); } return 0; };
       Object.values(hojas).forEach((l) => l.sort(porRuta));
-      const sueltas = (hasta) => { for (; suelta < hasta; suelta++) { const u = us[suelta]; if (!modeladas.has(suelta) && O.local(u.n) !== "sectPr") piezas.push(xd.slice(u.i, u.f)); } };
+      // El espacio en blanco que el original tenía antes de una unidad que sale tal cual (sangría del XML):
+      // así un documento que no cambió sale idéntico byte por byte aunque se arme pieza por pieza.
+      const antesDe = (el) => { const idx = us.indexOf(el); if (idx < 0) return ""; const g = xd.slice(idx === 0 ? body.ci : us[idx - 1].f, el.i); return /^\s*$/.test(g) ? g : ""; };
+      const sueltas = (hasta) => { for (; suelta < hasta; suelta++) { const u = us[suelta]; if (!modeladas.has(suelta) && O.local(u.n) !== "sectPr") piezas.push(antesDe(u) + xd.slice(u.i, u.f)); } };
       for (let i = 0; i < ps.length;) {
         const k = ps[i].pa.ox, u = k != null && hu[k] != null && !usados.has(String(k)) ? elDe(k) : null;
         if (!u) { piezas.push(gen(i, null, false, true)); regeneradas++; i++; continue; }
@@ -401,13 +407,13 @@
             if (huellaGrupo(ps.slice(q, j2 + 1)) !== hu[hk][0]) { entero = false; break; }
             q = j2 + 1;
           }
-          if (entero) { piezas.push(xd.slice(us[top].i, us[top].f)); hojas[top].forEach((hk) => usados.add(hk)); textuales++; i = q; continue; }
+          if (entero) { piezas.push(antesDe(us[top]) + xd.slice(us[top].i, us[top].f)); hojas[top].forEach((hk) => usados.add(hk)); textuales++; i = q; continue; }
         }
         let j = i;
         while (j + 1 < ps.length && ps[j + 1].pa.ox === k) j++;
         usados.add(String(k));
         const grupo = ps.slice(i, j + 1);
-        if (huellaGrupo(grupo) === hu[k][0]) { piezas.push(xd.slice(u.i, u.f)); textuales++; }
+        if (huellaGrupo(grupo) === hu[k][0]) { piezas.push(antesDe(u) + xd.slice(u.i, u.f)); textuales++; }
         else {
           // La unidad cambió (se editó, o se partió con Enter). Párrafo por párrafo: el que sigue igual
           // que el original sale textual; los demás se escriben de nuevo con el formato de párrafo original.
@@ -456,7 +462,9 @@
         let extra = "";
         Object.keys(NS).forEach((p) => { if (!new RegExp("\\sxmlns:" + p + "\\s*=").test(etiqueta)) extra += ` xmlns:${p}="${NS[p]}"`; });
         if (extra) abre = xd.slice(0, raiz.ci - 1) + extra + ">" + xd.slice(raiz.ci, body.ci);
-        pq.pon(DOC, abre + cuerpo + sect + xd.slice(body.cf));
+        // Lo de alrededor de la sección final (saltos de línea del original) también se conserva.
+        const antesSect = su ? antesDe(su) : "", trasSect = su && /^\s*$/.test(xd.slice(su.f, body.cf)) ? xd.slice(su.f, body.cf) : "";
+        pq.pon(DOC, abre + cuerpo + antesSect + sect + trasSect + xd.slice(body.cf));
         // ---- relaciones e imágenes nuevas
         const usadosEnCuerpo = (id) => cuerpo.includes('"' + id + '"');
         rels.filter((r) => (r.tipo === T.img || r.tipo === T.enlace) && usadosEnCuerpo(r.id)).forEach((r) => pq.agregaRel(DOC, r.id, r.tipo, r.destino, r.externo));
@@ -1653,7 +1661,17 @@ ${graficasArch.map((_, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" 
         if (t) P.pon(CTN, t.replace(new RegExp('<Override\\b[^>]*PartName\\s*=\\s*["\']/' + parte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '["\'][^>]*?/>'), ""));
       },
       zip() {
-        const lista = orden.filter((n) => P.tiene(n)).map((n) => ({ nombre: n, datos: nuevos.has(n) ? nuevos.get(n) : Z.bytes(n) }));
+        const lista = orden.filter((n) => P.tiene(n)).map((n) => {
+          if (nuevos.has(n)) {
+            // Si la parte original empezaba con la marca UTF-8 (BOM), se conserva: al leerla como texto se
+            // pierde, y la parte reescrita salía 3 bytes distinta aunque su contenido fuera el mismo.
+            let v = nuevos.get(n);
+            if (typeof v === "string" && v.charCodeAt(0) !== 0xFEFF && Z.tiene(n)) { const o = Z.bytes(n); if (o && o[0] === 0xEF && o[1] === 0xBB && o[2] === 0xBF) v = "\uFEFF" + v; }
+            return { nombre: n, datos: v };
+          }
+          const d = Z.bytes(n), cr = d == null && Z.crudo ? Z.crudo(n) : null;
+          return cr ? { nombre: n, crudo: cr } : { nombre: n, datos: d };
+        }).filter((x) => x.crudo || x.datos != null);
         // [Content_Types].xml primero, como lo escribe Office
         lista.sort((a, b) => (a.nombre === CTN ? -1 : 0) - (b.nombre === CTN ? -1 : 0));
         return zip(lista);

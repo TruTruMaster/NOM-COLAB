@@ -1,0 +1,100 @@
+ 100.0%  ms-comentarios.docx                    211 KB ->   191 KB  .nom   186 KB  imp    28 ms  exp    33 ms  nom=igual 
+ 100.0%  ms-complex01.docx                      827 KB ->   809 KB  .nom   790 KB  imp    61 ms  exp    87 ms  nom=igual 
+ 100.0%  ms-complex0.docx                       214 KB ->   194 KB  .nom   160 KB  imp   137 ms  exp   219 ms  nom=igual 
+ 100.0%  ms-complex2005.docx                    617 KB ->   546 KB  .nom   515 KB  imp   296 ms  exp   323 ms  nom=igual 
+ 100.0%  ms-complex2010.docx                    230 KB ->   207 KB  .nom   175 KB  imp    95 ms  exp   184 ms  nom=igual 
+ 100.0%  ms-document.docx                       798 KB ->   793 KB  .nom   781 KB  imp    59 ms  exp    82 ms  nom=igual 
+ 100.0%  ms-ecuaciones.docx                     191 KB ->   155 KB  .nom    44 KB  imp    37 ms  exp   126 ms  nom=igual 
+ 100.0%  ms-hoja-informativa.docx               140 KB ->   111 KB  .nom   105 KB  imp    17 ms  exp    17 ms  nom=igual 
+ 100.0%  ms-imagenes.docx                       202 KB ->   172 KB  .nom   168 KB  imp    14 ms  exp    19 ms  nom=igual 
+ 100.0%  ms-informe-gobernanza.docx             199 KB ->   145 KB  .nom   107 KB  imp   743 ms  exp   266 ms  nom=igual 
+ 100.0%  ms-marcadores.docx                     126 KB ->    98 KB  .nom    88 KB  imp   177 ms  exp    89 ms  nom=igual 
+ 100.0%  ms-notes.docx                          158 KB ->   141 KB  .nom   137 KB  imp     9 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-smartart.docx                       161 KB ->   152 KB  .nom   138 KB  imp    14 ms  exp    30 ms  nom=igual 
+ 100.0%  ms-tabla.docx                          116 KB ->   107 KB  .nom   104 KB  imp    13 ms  exp    13 ms  nom=igual 
+ 100.0%  poi-campos.docx                         12 KB ->     9 KB  .nom     5 KB  imp     4 ms  exp     4 ms  nom=igual 
+ 100.0%  poi-encabezados.docx                    12 KB ->     9 KB  .nom     5 KB  imp     5 ms  exp     4 ms  nom=igual 
+ 100.0%  poi-listas.docx                         13 KB ->    11 KB  .nom     7 KB  imp     8 ms  exp     6 ms  nom=igual 
+ 100.0%  poi-notas-al-pie.docx                   12 KB ->     9 KB  .nom     5 KB  imp     3 ms  exp     3 ms  nom=igual 
+ 100.0%  raro-combinaciones.docx                 38 KB ->    36 KB  .nom    27 KB  imp    44 ms  exp    37 ms  nom=igual 
+ 100.0%  ms-album.pptx                          140 KB ->   124 KB  .nom   106 KB  imp    21 ms  exp    22 ms  nom=igual 
+ 100.0%  ms-animacion.pptx                       97 KB ->    91 KB  .nom    72 KB  imp    10 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-brownbag.pptx                       670 KB ->   621 KB  .nom   554 KB  imp   130 ms  exp    82 ms  nom=igual 
+ 100.0%  ms-grafica-area.pptx                    79 KB ->    60 KB  .nom    28 KB  imp    11 ms  exp    16 ms  nom=igual 
+ 100.0%  ms-o12-tipico.pptx                     922 KB ->   907 KB  .nom   869 KB  imp    91 ms  exp    95 ms  nom=igual 
+ 100.0%  ms-of16.pptx                           114 KB ->   109 KB  .nom    90 KB  imp     7 ms  exp    17 ms  nom=igual 
+ 100.0%  ms-organigrama.pptx                     79 KB ->    61 KB  .nom    39 KB  imp     9 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-presentation.pptx                  1001 KB ->  1001 KB  .nom   968 KB  imp    19 ms  exp    97 ms  nom=igual 
+ 100.0%  ms-rendimiento-tipico.pptx            1481 KB ->  1458 KB  .nom  1407 KB  imp   187 ms  exp   132 ms  nom=igual 
+ 100.0%  ms-tabla-grande.pptx                    74 KB ->    64 KB  .nom    43 KB  imp     7 ms  exp    13 ms  nom=igual 
+ 100.0%  ms-tipico.pptx                         637 KB ->   618 KB  .nom   570 KB  imp   124 ms  exp    96 ms  nom=igual 
+ 100.0%  poi-formas.pptx                         67 KB ->    59 KB  .nom    36 KB  imp    23 ms  exp    17 ms  nom=igual 
+ 100.0%  poi-tablas.pptx                        145 KB ->   137 KB  .nom   118 KB  imp     9 ms  exp    16 ms  nom=igual 
+ 100.0%  poi-temas.pptx                         314 KB ->   284 KB  .nom   138 KB  imp    90 ms  exp    99 ms  nom=igual 
+ 100.0%  ms-complex01.xlsx                      113 KB ->   102 KB  .nom    94 KB  imp     6 ms  exp    30 ms  nom=igual 
+ 100.0%  ms-datos-a1.xlsx                       223 KB ->   164 KB  .nom   169 KB  imp   535 ms  exp   800 ms  nom=igual 
+ 100.0%  ms-dinamica-b1.xlsx                    318 KB ->   217 KB  .nom   181 KB  imp   438 ms  exp  1073 ms  nom=igual 
+ 100.0%  ms-excel14.xlsx                         86 KB ->    84 KB  .nom    80 KB  imp     3 ms  exp    14 ms  nom=igual 
+ 100.0%  ms-filtros.xlsx                         68 KB ->    55 KB  .nom    18 KB  imp     7 ms  exp    36 ms  nom=igual 
+ 100.0%  ms-financial-sample.xlsx                81 KB ->    64 KB  .nom    59 KB  imp   171 ms  exp   250 ms  nom=igual 
+ 100.0%  ms-galeria.xlsx                         93 KB ->    75 KB  .nom    15 KB  imp     7 ms  exp    36 ms  nom=igual 
+ 100.0%  ms-hojas.xlsx                          122 KB ->    95 KB  .nom    95 KB  imp   279 ms  exp   436 ms  nom=igual 
+ 100.0%  ms-rendimiento.xlsx                    303 KB ->   223 KB  .nom   223 KB  imp   756 ms  exp  1021 ms  nom=igual 
+ 100.0%  poi-estilos.xlsx                         9 KB ->     6 KB  .nom     3 KB  imp     4 ms  exp     5 ms  nom=igual 
+ 100.0%  poi-formato-condicional.xlsx             9 KB ->     7 KB  .nom     3 KB  imp     3 ms  exp     5 ms  nom=igual 
+ 100.0%  poi-formulas.xlsx                       63 KB ->    52 KB  .nom    47 KB  imp    95 ms  exp   130 ms  nom=igual 
+ 100.0%  poi-graficas.xlsx                       11 KB ->     8 KB  .nom     5 KB  imp     3 ms  exp     5 ms  nom=igual 
+ 100.0%  poi-validacion.xlsx                     10 KB ->     7 KB  .nom     5 KB  imp     5 ms  exp     6 ms  nom=igual 
+ 100.0%  lo-fdo74605.docx                       176 KB ->   142 KB  .nom   118 KB  imp    95 ms  exp    58 ms  nom=igual 
+ 100.0%  lo-fdo76316.docx                       637 KB ->   610 KB  .nom    43 KB  imp    36 ms  exp   310 ms  nom=igual 
+ 100.0%  lo-fdo77476.docx                       913 KB ->   854 KB  .nom   851 KB  imp    10 ms  exp    71 ms  nom=igual 
+ 100.0%  lo-fdo77718.docx                       541 KB ->   531 KB  .nom   518 KB  imp    12 ms  exp    49 ms  nom=igual 
+ 100.0%  lo-FDO78292.docx                       572 KB ->   565 KB  .nom   551 KB  imp    20 ms  exp    58 ms  nom=igual 
+ 100.0%  lo-FigureAsLabelPicture.docx           106 KB ->   103 KB  .nom    98 KB  imp     7 ms  exp    10 ms  nom=igual 
+ 100.0%  lo-groupshape-fontname.docx             59 KB ->    47 KB  .nom    40 KB  imp    32 ms  exp    25 ms  nom=igual 
+ 100.0%  lo-pictureWatermark.docx               779 KB ->   775 KB  .nom   765 KB  imp     9 ms  exp    60 ms  nom=igual 
+ 100.0%  lo-tdf104061_tableSectionColumns.docx   101 KB ->    89 KB  .nom    81 KB  imp    56 ms  exp    31 ms  nom=igual 
+ 100.0%  lo-tdf104420_lostParagraph.docx        101 KB ->    88 KB  .nom    80 KB  imp    13 ms  exp    14 ms  nom=igual 
+ 100.0%  lo-tdf107111.docx                      440 KB ->   400 KB  .nom   389 KB  imp    21 ms  exp    40 ms  nom=igual 
+ 100.0%  lo-tdf130804.docx                      178 KB ->   175 KB  .nom   170 KB  imp    14 ms  exp    17 ms  nom=igual 
+ 100.0%  lo-tdf143476_lockedCanvas_position.docx   271 KB ->   264 KB  .nom   205 KB  imp    21 ms  exp   215 ms  nom=igual 
+ 100.0%  lo-tdf75573_page1frame.docx             28 KB ->    21 KB  .nom    15 KB  imp    30 ms  exp    16 ms  nom=igual 
+ 100.0%  officer-table-complex.docx              59 KB ->    40 KB  .nom    28 KB  imp    97 ms  exp    46 ms  nom=igual 
+ 100.0%  lo-accent-color.pptx                  1054 KB ->   999 KB  .nom   947 KB  imp    16 ms  exp    88 ms  nom=igual 
+ 100.0%  lo-crop-to-shape.pptx                   81 KB ->    78 KB  .nom    60 KB  imp     8 ms  exp    15 ms  nom=igual 
+ 100.0%  lo-cshapes.pptx                        169 KB ->   131 KB  .nom   105 KB  imp    76 ms  exp    66 ms  nom=igual 
+ 100.0%  lo-multiplelayoutfooter.pptx            87 KB ->    83 KB  .nom    70 KB  imp     5 ms  exp    11 ms  nom=igual 
+ 100.0%  lo-n821567.pptx                        175 KB ->   169 KB  .nom   151 KB  imp     8 ms  exp    20 ms  nom=igual 
+ 100.0%  lo-slide-sections.pptx                 134 KB ->   127 KB  .nom    56 KB  imp   135 ms  exp    79 ms  nom=igual 
+ 100.0%  lo-smartart-linear-rule-vert.pptx       71 KB ->    65 KB  .nom    43 KB  imp     6 ms  exp    13 ms  nom=igual 
+ 100.0%  lo-tdf106638.pptx                      436 KB ->   449 KB  .nom   427 KB  imp     9 ms  exp    57 ms  nom=igual 
+ 100.0%  lo-tdf120573.pptx                      238 KB ->   237 KB  .nom   221 KB  imp     8 ms  exp    37 ms  nom=igual 
+ 100.0%  lo-tdf134174.pptx                      181 KB ->   179 KB  .nom   174 KB  imp    12 ms  exp    17 ms  nom=igual 
+ 100.0%  lo-tdf149206.pptx                       87 KB ->    84 KB  .nom    44 KB  imp    19 ms  exp   230 ms  nom=igual 
+ 100.0%  lo-tdf169781.pptx                      335 KB ->   325 KB  .nom   262 KB  imp    11 ms  exp    68 ms  nom=igual 
+ 100.0%  lo-tdf89927.pptx                       407 KB ->   380 KB  .nom   331 KB  imp     8 ms  exp    47 ms  nom=igual 
+ 100.0%  officer-table-complex.pptx              50 KB ->    42 KB  .nom    22 KB  imp     9 ms  exp    10 ms  nom=igual 
+ 100.0%  lo-cell-anchored-hidden-shapes.xlsx    118 KB ->   107 KB  .nom   104 KB  imp    13 ms  exp    16 ms  nom=igual 
+ 100.0%  lo-cell-borders.xlsx                    20 KB ->    16 KB  .nom    11 KB  imp     4 ms  exp     6 ms  nom=igual 
+ 100.0%  lo-chart_hyperlink.xlsx                 21 KB ->    17 KB  .nom     7 KB  imp     2 ms  exp     7 ms  nom=igual 
+ 100.0%  lo-column-style-autofilter.xlsx        387 KB ->   429 KB  .nom   371 KB  imp  1145 ms  exp  3266 ms  nom=igual 
+ 100.0%  lo-forcepoint107.xlsx                  389 KB ->   323 KB  .nom   296 KB  imp   377 ms  exp   987 ms  nom=igual 
+ 100.0%  lo-forum-mso-de-104083.xlsx            182 KB ->   151 KB  .nom   151 KB  imp   357 ms  exp   775 ms  nom=igual 
+ 100.0%  lo-forum-mso-en4-134670.xlsx           105 KB ->    80 KB  .nom    80 KB  imp   196 ms  exp   345 ms  nom=igual 
+ 100.0%  lo-functions-excel-2010.xlsx            20 KB ->    16 KB  .nom    14 KB  imp    25 ms  exp    30 ms  nom=igual 
+ 100.0%  lo-pivottable_invalid_formats.xlsx      53 KB ->    42 KB  .nom    37 KB  imp    47 ms  exp    66 ms  nom=igual 
+ 100.0%  lo-TableEmptyHeaders.xlsx               21 KB ->    16 KB  .nom    12 KB  imp     3 ms  exp    12 ms  nom=igual 
+ 100.0%  lo-tdf122471.xlsx                      149 KB ->   104 KB  .nom    99 KB  imp     9 ms  exp   245 ms  nom=igual 
+ 100.0%  lo-tdf130959.xlsx                       37 KB ->    30 KB  .nom    27 KB  imp    66 ms  exp    64 ms  nom=igual 
+ 100.0%  lo-tdf83671_SmartArt_import.xlsx        25 KB ->    20 KB  .nom    16 KB  imp     3 ms  exp    19 ms  nom=igual 
+ 100.0%  lo-totalsRowFunction.xlsx               18 KB ->    14 KB  .nom    11 KB  imp     5 ms  exp    11 ms  nom=igual 
+
+docx: 100.0% de fidelidad en 34 archivos (0 con error); original 9257 KB, exportado 8616 KB, .nom 7516 KB
+   lo más flojo: 
+xlsx: 100.0% de fidelidad en 28 archivos (0 con error); original 3068 KB, exportado 2543 KB, .nom 2244 KB
+   lo más flojo: 
+pptx: 100.0% de fidelidad en 28 archivos (0 con error); original 9339 KB, exportado 8955 KB, .nom 7965 KB
+   lo más flojo: 
+
+TOTAL: 100.0% en 90 archivos. Errores de JavaScript en la página: []
+FIN 0

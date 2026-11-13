@@ -1,0 +1,15 @@
+tema: ['oceano', 'linear-gradient(135deg, rgb(15, 76, 129)']
+bloques del diseño: ['texto:Título', 'texto:• Escribe los puntos principales']
+barra de texto visible: True
+html del título: Hola <span style="font-weight:normal;">mundo</span> cruel
+tabla: [True, 'Mango', 18]
+gráfica: [True, 6]
+ícono: True
+imagen: ['path("M 0 70', 'grayscale(100%)', '111.111%']
+pasos: 2
+presentar: 5 ['a-e-deslizar-izq', 'a-n-pulso'] ['a-x-desvanecer']
+láser: 2
+tamaño: ['4:3', '720px']
+png bytes (base64): 802414
+errores: []
+FIN 0

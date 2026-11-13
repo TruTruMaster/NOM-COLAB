@@ -325,7 +325,7 @@ reales de Microsoft (`pruebas/office/corpus.sh`, `fidelidad.py`, `ediciones.py`)
 - [x] Reabrir sin conexión un documento con cambios sin enviar; aviso de versión entre app y servidor.
 - [ ] Lo que falta de ver: columnas de verdad, tabuladores con puntos, texto vertical y bordes por
   celda (Word); comentarios, gráficas e imágenes del archivo (Excel).
-- [ ] Probar en el A55 (app y navegador) importar, editar, exportar y `.nom`.
+- [x] Probar en el A55 (app y navegador) importar, editar, exportar y `.nom` (13 de noviembre, fase 12).
 - [x] Raspberry Pi: servicios s6 supervisados (`servidor-propio/pi/`), respaldo diario, `nomcolab-pi`.
 - [x] Subir el jar nuevo a la Pi (11 de noviembre: 0.12.0, con `nomcolab-pi actualizar`) y LOG.
 - [ ] `nomcolab pi …` desde la laptop.
@@ -361,6 +361,38 @@ puntos, texto vertical y bordes por celda en Word; comentarios, formato condicio
 imágenes de Excel en pantalla; probar en el A55 (también la política de contenido de la app y el
 APK publicable). `~/NOM-COLAB` (la "copia de trabajo") lleva sin sincronizarse desde el 22 de
 octubre: se trabaja directo en `~/NOM`.
+
+## Fase 12. Revisión completa de pruebas en equipos reales (13 de noviembre de 2026, versión 0.12.2)
+
+Todas las funciones probadas en la laptop, en el escritorio (Chromium real en su pantalla), en el
+A55 (Chrome y la app, con toques de verdad) y contra la nube propia (la Raspberry), con archivos
+reales de Microsoft bajados de las pruebas de LibreOffice. Lo que se encontró y se corrigió:
+
+- [x] DEF-18: el tope de 25 MB se revisa antes de aplicar (lo guardado + lo que creció sin guardar +
+  lo que llega) y también al crear un documento; responde 413 y lo escrito se queda en el equipo.
+- [x] DEF-19: deshacer la creación de una figura dejaba un bloque vacío escondido en el documento.
+- [x] DEF-20: un documento con cambios sin enviar de una hoja o una presentación no se abría sin red.
+- [x] DEF-21: la API no decía `Cache-Control: no-store`; el navegador guardaba documentos en claro y,
+  sin red, Firefox daba una copia vieja (vacía) como si fuera la del servidor.
+- [x] DEF-22: la ruedita cerca de la orilla (número de fila) elegía una acción sola al soltar.
+- [x] DEF-23: en el celular, tocar el número de una fila no la elegía (el toque se iba a la manija de tamaño).
+- [x] DEF-24: Insertar tabla en el celular: el selector de tamaño salía fuera de la pantalla.
+- [x] DEF-25: las notas al pie no se veían sin páginas (la vista normal del celular).
+- [x] DEF-26: con un grupo elegido, la ruedita ofrecía "Agrupar" y no "Desagrupar".
+- [x] DEF-27: una parte dañada dentro de un archivo de Office tumbaba la exportación fiel y el `.nom`.
+- [x] DEF-28: al reescribir una parte de Word o Excel se perdía la marca UTF-8 o la sangría del XML
+  (el archivo sin cambios salía distinto por unos bytes).
+- [x] DEF-29: "Copiado" falso y error sin atrapar cuando el navegador no deja escribir en el
+  portapapeles (http en la red del salón); el código de recuperación decía "copiado" sin copiarse.
+- [x] DEF-30: "Pegar" de la ruedita no funcionaba en http (red del salón): ahora pega lo copiado en la app.
+- [x] DEF-31: el orden "solo para mí" movía el encabezado si la fila 1 tenía una fórmula.
+- [x] DEF-32: elegir una fila, una columna o todo corría la hoja hasta la última celda.
+- [x] DEF-33: las manijas de selección de Android tapaban la ruedita del texto.
+- [x] DEF-34: la bienvenida, al desvanecerse, se tragaba el primer clic.
+- [x] Pruebas nuevas: `pruebas/interfaz/rastreo.py` (toca cada botón, menú y acción de la ruedita),
+  `pruebas/interfaz/prueba_funciones.py` (que cada función haga lo correcto), `pruebas/office/visor.py`
+  (cómo se ve junto a LibreOffice) y un segundo corpus con 43 archivos reales de Microsoft.
+- [ ] Lo que sigue pendiente se anota en `docs/RELEVO-PRUEBAS-0.12.2.md`.
 
 ## Cómo quedó (8 de noviembre de 2026)
 

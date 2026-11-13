@@ -106,11 +106,16 @@
         NOM.guardar(claveVista(), vistas);
         render();
       }
-      /** La primera fila parece encabezado si tiene texto y la segunda no está vacía. */
+      /** La primera fila parece encabezado si lo que tiene escrito es texto (no números). Una fórmula en
+          la fila 1 (un total junto a los títulos) no decide nada: ni lo hace encabezado ni lo quita. */
       function pareceEncabezado() {
         if (!t) return false;
         let texto = 0, n = 0;
-        for (let c = 0; c < (t.cols || 10); c++) { const v = crudo(c, 0); if (v !== "") { n++; if (isNaN(parseFloat(v)) && !String(v).startsWith("=")) texto++; } }
+        for (let c = 0; c < (t.cols || 10); c++) {
+          const v = crudo(c, 0);
+          if (v === "" || String(v).startsWith("=")) continue;
+          n++; if (isNaN(parseFloat(v))) texto++;
+        }
         return n > 0 && texto === n;
       }
       const conDatos = (f) => { for (let c = 0; c < (t.cols || 10); c++) if (crudo(c, f) !== "") return true; return false; };
@@ -784,7 +789,7 @@
         if (mod && k === "d") { e.preventDefault(); rellenarCopia("abajo"); return; }
         if (mod && k === "r") { e.preventDefault(); rellenarCopia("derecha"); return; }
         if (mod && k === "1") { e.preventDefault(); dialogoFormato(); return; }
-        if (mod && k === "a") { e.preventDefault(); ancla = { c: 0, f: 0 }; sel = { c: (t.cols || 10) - 1, f: (t.filas || 30) - 1 }; pintarSeleccion(); return; }
+        if (mod && k === "a") { e.preventDefault(); ancla = { c: (t.cols || 10) - 1, f: (t.filas || 30) - 1 }; sel = { c: 0, f: 0 }; pintarSeleccion(); return; }
         if (mod && e.shiftKey && (e.key === "+" || e.key === "=")) { e.preventDefault(); menuInsertar(celda(sel.c, sel.f) || rej); return; }
         if (mod && e.key === "-") { e.preventDefault(); menuInsertar(celda(sel.c, sel.f) || rej, true); return; }
         if (!mod && !e.altKey && e.key.length === 1) { e.preventDefault(); abrirEditor(e.key); }
@@ -1166,10 +1171,12 @@
         if ((!rc && !rf) || ed.soloLectura) return;
         e.preventDefault(); e.stopPropagation();
         const c = rc ? +rc.dataset.redimC : null, f = rf ? +rf.dataset.redimF : null;
+        rej._redimMovio = false;
         redim = { c, f, x0: e.clientX, y0: e.clientY, w0: c != null ? ancho(c) : 0, h0: f != null ? (alto(f) || (rf.closest("tr").offsetHeight)) : 0, el: rc || rf };
         redim.el.setPointerCapture(e.pointerId);
         redim.el.onpointermove = (ev) => {
           if (!redim) return;
+          if (Math.hypot(ev.clientX - redim.x0, ev.clientY - redim.y0) > 4) rej._redimMovio = true;
           if (redim.c != null) { const w = Math.max(24, Math.min(800, Math.round(redim.w0 + ev.clientX - redim.x0))); const col = rej.querySelectorAll("colgroup col")[redim.c + 1]; if (col) col.style.width = w + "px"; redim.w = w; }
           else { const hh = Math.max(18, Math.min(400, Math.round(redim.h0 + ev.clientY - redim.y0))); const tr = rej.querySelector(`tr[data-fila="${redim.f}"]`); if (tr) tr.style.height = hh + "px"; redim.h = hh; }
         };
@@ -1217,12 +1224,14 @@
       });
       // Clic (o toque sin mantener) en la letra de una columna: su menú; en el número de fila: elige la fila.
       rej.addEventListener("click", (e) => {
-        if (e.target.closest("[data-redim-c],[data-redim-f]")) return;
+        // Con el dedo, el navegador lleva el toque a la manija de tamaño más cercana (aunque se toque el
+        // centro del número de fila): si no se arrastró, cuenta como tocar el encabezado.
+        if (e.target.closest("[data-redim-c],[data-redim-f]") && rej._redimMovio) return;
         const th = e.target.closest && e.target.closest("thead th[data-col]");
         if (th && !rej._toqueLargo) { menuColumna(th, +th.dataset.col); return; }
         const thf = e.target.closest && e.target.closest("tbody th[data-filah]");
-        if (thf && !rej._toqueLargo && t) { const f = +thf.dataset.filah; if (e.shiftKey && ancla) sel = { c: (t.cols || 10) - 1, f }; else { ancla = { c: 0, f }; sel = { c: (t.cols || 10) - 1, f }; } pintarSeleccion(); return; }
-        if (e.target.closest("thead th[data-todo]") && t) { ancla = { c: 0, f: 0 }; sel = { c: (t.cols || 10) - 1, f: (t.filas || 30) - 1 }; pintarSeleccion(); }
+        if (thf && !rej._toqueLargo && t) { const f = +thf.dataset.filah; /* la fila entera, con la celda activa en A: la hoja no se corre hasta la última columna */ if (e.shiftKey && ancla) { ancla = { c: (t.cols || 10) - 1, f: ancla.f }; sel = { c: 0, f }; } else { ancla = { c: (t.cols || 10) - 1, f }; sel = { c: 0, f }; } pintarSeleccion(); return; }
+        if (e.target.closest("thead th[data-todo]") && t) { ancla = { c: (t.cols || 10) - 1, f: (t.filas || 30) - 1 }; sel = { c: 0, f: 0 }; pintarSeleccion(); }
       });
       rej.addEventListener("pointermove", (e) => {
         if (!arrastrando) return;
@@ -1654,7 +1663,7 @@
       function elegirColumna(c) {
         const r = rango();
         const completa = r.f1 === 0 && r.f2 >= (t.filas || 30) - 1;
-        if (!(completa && c >= r.c1 && c <= r.c2)) { ancla = { c, f: visibles[0] || 0 }; sel = { c, f: visibles[visibles.length - 1] || 0 }; }
+        if (!(completa && c >= r.c1 && c <= r.c2)) { ancla = { c, f: visibles[visibles.length - 1] || 0 }; sel = { c, f: visibles[0] || 0 }; }   // activa arriba: la hoja no baja hasta la última fila
         pintarSeleccion();
       }
       function menuColumna(anc, c) {
@@ -1682,7 +1691,7 @@
         if (thf) {
           rej._toqueLargo = true; setTimeout(() => (rej._toqueLargo = false), 600);
           const f = +thf.dataset.filah, r = rango();
-          if (!(f >= r.f1 && f <= r.f2 && r.c1 === 0)) { ancla = { c: 0, f }; sel = { c: (t.cols || 10) - 1, f }; pintarSeleccion(); }
+          if (!(f >= r.f1 && f <= r.f2 && r.c1 === 0)) { ancla = { c: (t.cols || 10) - 1, f }; sel = { c: 0, f }; pintarSeleccion(); }
           const l = accionesFila(f);
           l.titulo = "Fila " + (f + 1);
           return l;

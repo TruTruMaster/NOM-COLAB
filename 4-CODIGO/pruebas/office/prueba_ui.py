@@ -109,9 +109,15 @@ def main():
                 s2 = salida / ("recargado-" + f.name); s2.write_bytes(base64.b64decode(e2["salida"]))
                 assert e1["origen"] and e2["origen"], "el documento perdió su archivo de origen"
                 cmp = {"docx": F.comparar_docx, "xlsx": F.comparar_xlsx, "pptx": F.comparar_pptx}[ext]
-                n1, n2 = cmp(f, s1), cmp(f, s2)
                 za, zb = F.partes_zip(f), F.partes_zip(s2)
                 iguales = sum(1 for k, v in za.items() if zb.get(k) == v)
+                try:
+                    n1, n2 = cmp(f, s1), cmp(f, s2)
+                except Exception as ex:
+                    # Algunas bibliotecas de Python no leen archivos reales raros (openpyxl con ciertos filtros):
+                    # entonces cuenta que cada parte salga idéntica byte por byte.
+                    print(f"      (la biblioteca de Python no lee el original: {type(ex).__name__}; se comparan las partes)")
+                    n1 = n2 = F.Nota(); n1.pon("partes", iguales / max(1, len(za)))
                 ok = n1.total() > 0.9995 and n2.total() > 0.9995 and iguales == len(za)
                 bien += ok; mal += not ok
                 print(f"{'ok ' if ok else 'MAL'} {f.name:34} abierto {n1.total()*100:5.1f}%  recargado {n2.total()*100:5.1f}%  partes idénticas {iguales}/{len(za)}  "

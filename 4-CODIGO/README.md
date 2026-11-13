@@ -2,8 +2,9 @@
 
 Suite colaborativa: **texto, hojas de cálculo, presentaciones y diagramas en una sola app**,
 con edición simultánea. Funciona en la red local sin depender de Internet (un equipo o un
-teléfono hace de servidor), en Azure (https://nomcolab-wack.azurewebsites.net) o en una
-computadora propia publicada con Tailscale Funnel (`docs/SERVIDOR-PROPIO.md`).
+teléfono hace de servidor), en Azure (https://nomcolab-wack.azurewebsites.net) o en el servidor
+propio: una Raspberry Pi publicada con Cloudflare Tunnel en https://nomcolab.dpdns.org
+(`docs/SERVIDOR-PROPIO.md`).
 
 Equipo 6 "WACK" · CECyT 9 "Juan de Dios Bátiz" · 5IM7
 
@@ -14,13 +15,13 @@ NOM-COLAB/
 ├── app/            Servidor (Java 17 + Spring Boot 4.1) e interfaz web
 │   └── src/main/resources/static/   la interfaz (la misma para navegador y Android)
 ├── android/        App Android 7+ que empaqueta esa interfaz (y en Android 8+ puede ser el servidor)
-├── diagramas/      UML en PlantUML + diagramas de actividades (A1-A7)
+├── diagramas/      UML en PlantUML, mapa de navegación (navegacion/generar.py) y actividades (A1-A8)
 ├── azure/          desplegar.sh (crea Azure, roles de la base, sube el jar) · roles-bd.sql · AplicarSql.java ·
 │                   nomcolab (prende y apaga Azure o el servidor propio)
-├── servidor-propio/ servicio, respaldo diario e instalar.sh para publicar NOM-COLAB desde una computadora
-├── pruebas/        seguridad.py: sesión, validación, bloqueo y roles de cada espacio contra un servidor nuevo
-├── docs/           DISENO-UI.md (interfaz) · DESPLIEGUE-AZURE.md (nube, BD y roles) · SERVIDOR-PROPIO.md · MARCA.md
-└── entregables/    Documentos para entregar (PDF / DOCX)
+├── servidor-propio/ publicar NOM-COLAB desde una computadora o la Raspberry Pi (pi/: servicios s6, respaldo, nomcolab-pi)
+├── pruebas/        seguridad.py (API) · interfaz/ (la página en navegadores reales) · office/ (Word, Excel y PowerPoint)
+└── docs/           PLAN-CONSTRUCCION.md · DISENO-UI.md · DESPLIEGUE-AZURE.md · SERVIDOR-PROPIO.md · GUIA-FACIL-DE-USAR.md · MARCA.md
+(Los PDF para entregar están fuera del código, en ../ENTREGA/.)
 ```
 
 ## Arrancar el servidor (equipo que comparte los espacios)
@@ -80,21 +81,31 @@ otra vez se enciende solo.
 ## Pruebas
 
 ```bash
-cd app && mvn test               # convergencia del CRDT: 5 usuarios, 200 órdenes de llegada distintos
-python3 pruebas/seguridad.py     # 226 pruebas de seguridad (sesión, bloqueo, roles, cuentas, boletos, cabeceras, almacenamiento)
-pruebas/interfaz/correr.sh       # la página en un navegador de verdad (ver pruebas/interfaz/LEEME.md)
-cd azure && ./desplegar.sh roles # roles de la base en Azure SQL: los aplica y prueba qué se permite y qué no
+cd app && mvn test                       # CRDT: convergencia con 5 usuarios y 200 órdenes de llegada distintos
+python3 pruebas/seguridad.py             # 226 casos de la API (sesión, bloqueo, permisos, cuentas, tope de tamaño…)
+pruebas/interfaz/correr.sh               # la página en un navegador de verdad (ver pruebas/interfaz/LEEME.md)
+python pruebas/interfaz/rastreo.py SALIDA        # toca CADA botón, menú y acción de la ruedita de los 4 editores
+python pruebas/interfaz/prueba_funciones.py SALIDA   # que cada función haga lo correcto (≈180 casos)
+python pruebas/office/fidelidad.py       # Word, Excel y PowerPoint reales de Microsoft: abrir y volver a guardar
+python pruebas/office/visor.py SALIDA archivos…   # cómo se ve en NOM-COLAB junto a LibreOffice
+cd azure && ./desplegar.sh roles         # roles de la base en Azure SQL: los aplica y prueba qué se permite y qué no
 ```
+
+Las mismas pruebas de la interfaz corren con `--movil` (ancho de celular), con `NOM_NAVEGADOR=firefox`,
+contra un navegador ya abierto (`--cdp`: el Chrome del teléfono o el de otra computadora) y dentro de
+la app Android (`NOM_APP=1 --cdp` con el WebView de un APK de depuración). Los resultados de cada
+tanda quedan en `../6-PLAN-DE-PRUEBAS/registros/`.
 
 ## Lo que ya funciona
 
 | Módulo (mapa de navegación) | Funcionalidad |
 |---|---|
-| **Gestión de cuentas** | Base de datos (H2 / Azure SQL) · **seguridad con roles en la base**: en Azure la página entra como `nomcolab_app` (rol `rol_nomcolab_app`, solo datos) y `nomcolab_lector` (rol `rol_nomcolab_consulta`) lee sin ver contraseñas · sin administrador general: cada cuenta controla sus espacios, y el propietario cambia permisos (Puede editar / Solo lectura) o quita el acceso; el servidor responde 403 a lo demás · Crear usuario (nombre, contraseña, empresa opcional) · iniciar y cerrar sesión · contraseñas con PBKDF2 + sal · bloqueo al 6.º intento fallido (15 min) · preferencias (tema, autoguardado, versiones, calidad, movimiento) |
-| **Espacios de trabajo** | Crear espacio · conexión del proyecto (anuncio UDP en la LAN) · descubrir y unirse · solicitudes de acceso · máximo 5 personas simultáneas |
-| **Gestión de accesos** | Invitar, cambiar Lectura/Edición, quitar acceso (desconecta al usuario), aprobar o rechazar solicitudes · con Solo lectura el editor solo deja buscar, enfocar y descargar |
-| **Editor** | 4 tipos de documento (fijo al crear) · **texto tipo Word sincronizado letra por letra** (~20 ms en LAN) con páginas, estilos, fuentes, colores, listas, tablas, imágenes, encabezado/pie, índice, buscar y reemplazar, copiar formato · cursores de los demás con su nombre · **ruedita de acciones** (clic derecho o mantener) · **figuras tipo Canva** (20+ figuras, girar, borde, transparencia, agrupar, alinear, guías) · descarga en .docx/.xlsx/.pptx · importar Word (.docx) · bitácora de actividad · deshacer/rehacer · sin conexión con cola persistente · micro-textos · plantillas · importar (.docx .nom .md .txt .csv .html) · exportar (.nom .html .md .csv .svg PDF) · modo enfoque |
-| **Almacenamiento** | Consumo por documento · historial de versiones · vista previa y restauración como versión nueva · depurar versiones (pospone los abiertos por otros) · autoguardado |
+| **Gestión de cuentas** | Base de datos (H2 / Azure SQL) con **seguridad con roles en la base** · sin administrador general: cada cuenta controla sus espacios · crear cuenta con **código de recuperación** · iniciar y cerrar sesión · recuperar la contraseña con el código · cambiar la contraseña y **borrar la cuenta** · contraseñas con PBKDF2 + sal · bloqueo por intentos (por cuenta y por red) y tope de cuentas nuevas por hora · preferencias (tema, letra, movimiento) · lo guardado en el equipo va **cifrado** (bóveda por cuenta) |
+| **Espacios de trabajo** | Crear espacio · **invitar con código de 8 letras o QR** (con fecha de vencimiento, anulable, y entrada **con apodo sin cuenta**) · agregar por nombre de usuario · visible en el mismo Wi-Fi (UDP) · Puede editar / Solo lectura / quitar · máximo 5 personas a la vez · carpetas, destacados, ordenar y buscar dentro del contenido · **papelera de 30 días** · @menciones · plantillas del espacio · letra de los textos nuevos · descargar todo · cuánto ocupa y depurar versiones · copia en otro NOM-COLAB |
+| **Editores** | 4 tipos (fijo al crear) · **texto tipo Word letra por letra** (estilos, listas, tablas, imágenes, notas al pie, ecuaciones, índice, encabezado y pie, columnas, marca de agua, configurar página) · **hoja de cálculo** (fórmulas en español e inglés, referencias $ y entre hojas, relleno, filtro y orden personales, fijar filas, formato condicional, listas desplegables, gráficas) · **presentación** (temas, diseños, animaciones, transiciones, notas, modo presentador, proyector, láser) · **diagrama** (UML, entidad-relación, diagramas listos, texto a diagrama, conectores) · **ruedita de acciones** en los cuatro · comentarios y **modo sugerencia** · partes asignadas a una persona · entrega con fecha límite · **recibo del proceso de escritura** verificable · investigar y citar en APA · deshacer/rehacer · sin conexión con cola persistente |
+| **Importar y exportar** | .docx, .xlsx y .pptx de Office (un archivo sin cambios sale idéntico; lo editado se reescribe), .nom (formato propio comprimido), PDF, HTML, Markdown, CSV, SVG y PNG |
+| **Almacenamiento** | Límite por cuenta a la vista · 25 MB por documento · historial de versiones con vista previa y restauración · respaldos rotativos |
+| **Android** | La misma interfaz en una app · el **teléfono como servidor** (sin computadora ni Internet) · escanear el QR para unirse · guardar y compartir archivos |
 
 ## Cómo se sincroniza
 

@@ -1,0 +1,30 @@
+OK    SHA-256 de 'abc' (FIPS 180-2)
+OK    SHA-256 de 56 bytes (dos bloques)
+OK    SHA-256 aleatorio de 0 bytes = Node
+OK    SHA-256 aleatorio de 1 bytes = Node
+OK    SHA-256 aleatorio de 55 bytes = Node
+OK    SHA-256 aleatorio de 56 bytes = Node
+OK    SHA-256 aleatorio de 63 bytes = Node
+OK    SHA-256 aleatorio de 64 bytes = Node
+OK    SHA-256 aleatorio de 65 bytes = Node
+OK    SHA-256 aleatorio de 1000 bytes = Node
+OK    SHA-256 aleatorio de 70000 bytes = Node
+OK    HMAC-SHA256 RFC 4231 caso 2
+OK    HMAC con llave de 131 bytes = Node
+OK    PBKDF2-SHA256 RFC 7914 (1 iteración, 64 bytes)
+OK    PBKDF2-SHA256 4096 iteraciones = Node
+OK    AES-256 FIPS-197 apéndice C.3
+OK    AES-256-CTR de 1 bytes = Node
+OK    AES-256-CTR de 16 bytes = Node
+OK    AES-256-CTR de 17 bytes = Node
+OK    AES-256-CTR de 1000 bytes = Node
+OK    AES-256-CTR de 65537 bytes = Node
+OK    gcm: cifrar y descifrar devuelve el original
+OK    gcm: otra llave no puede descifrar
+OK    gcm: un byte alterado se detecta
+OK    ctr: cifrar y descifrar devuelve el original
+OK    ctr: otra llave no puede descifrar
+OK    ctr: un byte alterado se detecta
+PBKDF2 en JS puro con 60 000 iteraciones: 144 ms
+Todas las pruebas pasaron
+FIN 0

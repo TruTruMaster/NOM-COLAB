@@ -1,0 +1,226 @@
+pptx bytes: 24736
+partes: 23 xml malos: []
+python-pptx diapositivas: 2 tamaño: 9144000 5143500
+ diapo 1 ['LINE', 'TEXT_BOX', 'TEXT_BOX', 'TEXT_BOX', 'AUTO_SHAPE', 'AUTO_SHAPE', 'PICTURE', 'TABLE', 'TEXT_BOX', 'PICTURE'] nota: Saludar y presentar el tema
+   texto: 'luego'
+   texto: 'Hola mundo cruel'
+   texto: 'Primero\nSegundo punto'
+   texto: 'Idea'
+   texto: '¿Sí?'
+   tabla: [['Fruta', 'Precio'], ['Mango', '25'], ['Piña', '30']]
+   texto: 'x=(−b±√(b^2−4ac))/(2a)'
+ diapo 2 ['CHART', 'TEXT_BOX'] nota: Mostrar la gráfica
+   gráfica: COLUMN_CLUSTERED (51) [[10.0, 14.0, 8.0], [7.0, 9.0, 12.0]]
+   texto: 'Resultados'
+libreoffice: 0 True
+importado: {
+"paginas": [
+"p1",
+"p2"
+],
+"doc": [
+"tamDiapo",
+"os:p1",
+"fondo:p1",
+"trans:p1",
+"nota:p1",
+"os:p2",
+"fondo:p2",
+"nota:p2"
+],
+"tamDiapo": "16:9",
+"notas": [
+"Saludar y presentar el tema",
+"Mostrar la gráfica"
+],
+"fondos": [
+{
+"tipo": "degradado",
+"c1": "#FFFFFF",
+"c2": "#3D72F2",
+"angulo": 135
+},
+{
+"tipo": "color",
+"color": "#FFF1B8"
+}
+],
+"trans": "desvanecer",
+"aviso": null,
+"bloques": [
+[
+"p1",
+"forma",
+"linea-flecha",
+"",
+702,
+205,
+33,
+16,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"texto",
+"p",
+"<div style=\"text-align:center\"><b><span style=\"fon",
+687,
+191,
+64,
+28,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"texto",
+"h1",
+"<div><b><span style=\"font-size:53px;color:#FFFFFF\"",
+60,
+40,
+840,
+90,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"texto",
+"p",
+"<ul><li><span style=\"font-size:27px;color:#E6F0FF\"",
+60,
+150,
+400,
+140,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"forma",
+"elipse",
+"<div style=\"text-align:center\"><b><span style=\"fon",
+520,
+150,
+180,
+110,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"forma",
+"rombo",
+"<div style=\"text-align:center\"><b><span style=\"fon",
+740,
+150,
+160,
+110,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"imagen",
+"",
+"",
+60,
+320,
+220,
+150,
+"recorte",
+"elipse",
+"",
+""
+],
+[
+"p1",
+"tabla",
+"",
+"",
+320,
+320,
+280,
+150,
+"",
+"",
+"Mango",
+"25"
+],
+[
+"p1",
+"ecuacion",
+"",
+"",
+620,
+320,
+300,
+90,
+"",
+"",
+"",
+""
+],
+[
+"p1",
+"imagen",
+"",
+"",
+420,
+210,
+120,
+120,
+"",
+"",
+"",
+""
+],
+[
+"p2",
+"grafica",
+"barras",
+"Ventas",
+80,
+60,
+520,
+320,
+"",
+"",
+"Ene",
+"10"
+],
+[
+"p2",
+"texto",
+"h2",
+"<div style=\"text-align:center\"><b><span style=\"fon",
+620,
+60,
+300,
+80,
+"",
+"",
+"",
+""
+]
+],
+"ops": 16,
+"modo": "PRESENTACION"
+}
+crear importada: 201
+diapos importadas: [2, '16:9', 10]
+errores: []
+FIN 0

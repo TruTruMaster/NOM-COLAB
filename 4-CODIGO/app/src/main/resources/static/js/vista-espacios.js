@@ -261,7 +261,7 @@
              <div class="lista">${c.direcciones.map((ip) => `<div class="lista-item">${ico("link")}<span class="crece"><b style="font-family:var(--mono)">http://${esc(ip)}:${c.puerto}</b><small>Equipo ${esc(c.equipo)}</small></span><button class="icono-btn" data-qrdir="http://${esc(ip)}:${c.puerto}" aria-label="Código QR" data-micro="Código QR|Quien lo escanea abre NOM-COLAB de este equipo.">${ico("qr-code")}</button><button class="icono-btn" data-copiar="http://${esc(ip)}:${c.puerto}" aria-label="Copiar" data-micro="Copiar dirección|Pégala en el navegador o en la app de tu compañero.">${ico("copy")}</button></div>`).join("")}</div>
              <p class="suave chico">Lo más fácil para que entren directo, sin pedir permiso: <b>Compartir → Crear código de invitación</b>.</p>`
           : `<div class="alerta info">${ico("lock")}<span>No aparece al buscar. Quienes ya son miembros, o tienen un código de invitación, sí pueden entrar.</span></div>`;
-      $$("[data-copiar]", det).forEach((b) => (b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copiar); aviso("Dirección copiada", { tipo: "ok" }); }));
+      $$("[data-copiar]", det).forEach((b) => (b.onclick = () => NOM.copiarConAviso(b.dataset.copiar, "Dirección copiada")));
       $$("[data-qrdir]", det).forEach((b) => (b.onclick = () => NOM.anfitrion.qrDireccion(b.dataset.qrdir)));
     };
     pintar(c);
@@ -1067,7 +1067,8 @@
     const pie = html(`<div style="display:contents"><button class="btn peligro" type="button" data-quitar>${ico("link-2-off")} Quitar el enlace</button><span class="crece"></span><button class="btn primario" type="button" data-copiar>${ico("copy")} Copiar enlace</button></div>`);
     const h = hoja({ titulo: "Enlace para ver", icono: "link-2", cuerpo, pie });
     $("[data-copiar]", pie).onclick = async () => {
-      try { await navigator.clipboard.writeText(url); aviso("Enlace copiado", { tipo: "ok" }); } catch (e) { $("[data-url]", cuerpo).select(); document.execCommand("copy"); aviso("Enlace copiado", { tipo: "ok" }); }
+      if (await NOM.copiarTexto(url)) aviso("Enlace copiado", { tipo: "ok" });
+      else { $("[data-url]", cuerpo).select(); aviso("No se pudo copiar solo: el enlace quedó seleccionado para copiarlo a mano.", { tipo: "info", ms: 6000 }); }
     };
     $("[data-quitar]", pie).onclick = async () => {
       try { await api.delete(`/api/documentos/${doc.id}/enlace-ver`); h.cerrar(); aviso("Enlace quitado: ya no sirve", { tipo: "ok" }); if (alCambiar) alCambiar(); } catch (e) { aviso(e.message, { tipo: "error" }); }

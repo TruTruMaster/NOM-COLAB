@@ -943,7 +943,8 @@
       const bs = seleccionados();
       if (!bs.length) return;
       NOM._portaFiguras = copiarBloques(bs);
-      try { navigator.clipboard && navigator.clipboard.writeText("nom-figuras:" + JSON.stringify(NOM._portaFiguras)); } catch (e) { /* sin permiso */ }
+      // También al portapapeles del sistema (para pegar en otra pestaña); si no hay permiso, basta el de la app.
+      try { if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText("nom-figuras:" + JSON.stringify(NOM._portaFiguras)).catch(() => {}); } catch (e) { /* sin permiso */ }
       if (cortar) eliminar();
     }
     async function pegar() {
@@ -974,6 +975,11 @@
       const r = [];
       for (let i = 0; rutas.length && i < rutas[0].length; i++) { const g = rutas[0][i]; if (rutas.every((x) => x[i] === g)) r.push(g); else break; }
       return r;
+    }
+    /** ¿La selección es justo un grupo completo (y nada más)? */
+    function grupoEntero(bs) {
+      const pre = prefijoComun(bs);
+      return bs.length > 1 && pre.length > 0 && miembrosHasta(bs[0], pre.length - 1).length === bs.length;
     }
     function agrupar() {
       const bs = editables();
@@ -1656,7 +1662,8 @@
           (varios || acotado) ? { texto: "Alinear", icono: "al-centro-h", sub: alinearSub } : { texto: "Alinear", icono: "al-centro-h", off: true }] },
         { texto: "Más", icono: "more-horizontal", sub: [
           { texto: multiple ? "Terminar de elegir" : "Elegir varias", corto: multiple ? "Listo" : "Varias", icono: "group", fn: () => { multiple = !multiple; pintarMultiple(); } },
-          varios ? { texto: "Agrupar", icono: "group", fn: agrupar }
+          // Un grupo entero elegido (lo normal al tocarlo) ofrece desagrupar; varias cosas sueltas, agrupar.
+          (varios && !grupoEntero(bs)) ? { texto: "Agrupar", icono: "group", fn: agrupar }
             : { texto: "Desagrupar", icono: "ungroup", off: !bs.some((b) => gruposDe(b).length), fn: desagrupar },
           { texto: bloq ? "Desbloquear" : "Bloquear", icono: bloq ? "lock-open" : "lock", fn: bloquear },
           { texto: "Copiar", icono: "clipboard-copy", fn: () => copiar(false) },

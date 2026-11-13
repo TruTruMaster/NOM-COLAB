@@ -764,3 +764,58 @@ HTML metido a la fuerza no se ejecuta y las contraseñas van con sal y PBKDF2.
 - **Falta:** probar en el A55 (la app publicable y su política de contenido solo se vieron en el
   emulador); guardar una copia de `~/.android/debug.keystore` fuera de la laptop; y lo de Word y
   Excel que ya estaba pendiente (entrada 52).
+
+## 54. Revisión completa en equipos reales y 0.12.2 (13 de noviembre de 2026)
+
+Se probó **cada función** de la app en todos los lugares donde se usa, a mano y con pruebas
+automáticas nuevas, y se corrigió todo lo que salió mal. El detalle para retomar está en
+`4-CODIGO/docs/RELEVO-PRUEBAS-0.12.2.md`; la lista de defectos, en `PLAN-CONSTRUCCION.md`, fase 12.
+
+- **Dónde:** la laptop (Chromium y Firefox), el escritorio `flast-desktop` (Chromium real en su
+  pantalla), el **Samsung A55** (Chrome y la app, con toques de verdad por `adb`, el teclado del
+  teléfono y la ruedita con el dedo) y la **nube propia** (la Raspberry, `nomcolab.dpdns.org`) con
+  tres equipos a la vez. El A55 también como **servidor**: 212 de 212 de `seguridad.py` y la app,
+  la laptop y el escritorio escribiendo a la vez en el mismo párrafo sin perder una letra.
+- **Pruebas nuevas:** `pruebas/interfaz/rastreo.py` toca cada botón, cada opción de cada menú y cada
+  acción de la ruedita (y sus submenús) de los cuatro editores y anota errores;
+  `pruebas/interfaz/prueba_funciones.py` revisa que cada función haga lo correcto (fórmulas,
+  formato, listas, enlaces, tablas, notas, índice, comentarios, sugerencias, partes con dueño, QR
+  leído de la pantalla, entrar con apodo, recibo verificable, grupos dentro de grupos, capas, mesa
+  de trabajo, notas del orador, modo presentador, conectores, registro, sin cuenta, letra del
+  espacio, protección, entrega, descargar todo, Ctrl+K y sin red); `pruebas/office/visor.py` pone
+  lado a lado cómo se ve un archivo en NOM-COLAB y en LibreOffice. Todas corren también con
+  `--movil`, con Firefox, contra un navegador ya abierto (`--cdp`) y dentro de la app (`NOM_APP=1`).
+- **Archivos reales de Microsoft nuevos:** 43 .docx, .xlsx y .pptx hechos con Word, Excel y
+  PowerPoint (de las pruebas de regresión de LibreOffice y del paquete officer), además de los 47
+  de antes.
+- **Corregido (DEF-18 a DEF-34):** el tope de 25 MB se revisa antes de aplicar y responde 413 (lo
+  escrito se queda en el equipo); la API manda `Cache-Control: no-store` (los documentos ya no se
+  quedan en claro en la caché del navegador, y Firefox sin red ya no da una copia vieja); un
+  documento con cambios sin enviar de una hoja o presentación ya se abre sin red; deshacer la
+  creación de una figura ya no deja un bloque vacío; la ruedita cerca de la orilla ya no elige sola
+  al soltar (podía tocar "Eliminar fila"); en el celular, tocar el número de una fila ya la elige,
+  la tabla se inserta (el selector salía fuera de la pantalla) y las notas al pie se ven; con un
+  grupo elegido la ruedita ofrece "Desagrupar"; una parte dañada de un archivo de Office ya no
+  tumba la exportación ni el .nom (se copia tal cual); un archivo de Office sin cambios sale
+  idéntico aunque se haya abierto en el editor (marca UTF-8 y sangría del XML); copiar y pegar
+  funcionan en http (red del salón) sin decir "copiado" en falso; el orden personal ya no mueve el
+  encabezado; elegir una fila o columna ya no corre la hoja; las manijas de Android ya no tapan la
+  ruedita; la bienvenida ya no se traga el primer clic; la cita ya no deja doble espacio.
+- **Documentos al día:** mapa de navegación, diagramas de actividades A1 y A2, especificación de
+  casos de uso, README, LEEME, SERVIDOR-PROPIO (la Raspberry), documento del módulo y plan de
+  pruebas (con los resultados y los defectos de esta revisión).
+- **Resultados con la versión final 0.12.2** (registros en `6-PLAN-DE-PRUEBAS/registros/13-nov/`):
+  unitarias 35 de 35 · seguridad 226 de 226 (y 212 de 212 con el A55 como servidor) · valores
+  límite 18 de 18 (DEF-18 cerrado) · Office sin cambios 100 % en 90 archivos reales de Microsoft ·
+  ediciones de Office 144 de 144 · Office por la interfaz 90 y 90 (computadora y celular) · en
+  pantalla 32 y 19 · red 24 de 24 · cuentas y equipo 57 de 57 · funciones de la interfaz 167 de 167
+  en computadora, celular y Firefox, 159 de 160 en el Chromium real del escritorio (la descarga se
+  revisó aparte: en http Chrome pide "Conservar") · rastreo: más de 500 acciones por equipo sin un
+  solo error de JavaScript (computadora, celular, Firefox, escritorio y la app del A55). Lo que el
+  rastreo no alcanzó a reabrir de la ruedita se revisó a mano.
+- **Publicado:** jar en `2-PAGINA-Servidor/` y en la Raspberry, APK 0.12.2 en `3-APP-Android/` y
+  como release de GitHub; `main` empujado (despliega a Azure).
+- **Falta:** confirmar en la app del A55 dos casos (una celda tecleada muy rápido y la fecha de
+  entrega) que no se pudieron repetir porque el teléfono apagó la depuración inalámbrica; cinco
+  equipos a la vez en la red de la escuela; la prueba con usuarios (SUS); ver los dibujos de Word y
+  los encabezados con tablas o logotipos igual que Word. Detalle en `docs/RELEVO-PRUEBAS-0.12.2.md`.

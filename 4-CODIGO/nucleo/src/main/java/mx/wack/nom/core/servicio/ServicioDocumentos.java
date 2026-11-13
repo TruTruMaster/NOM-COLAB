@@ -42,6 +42,8 @@ public class ServicioDocumentos {
     private final Map<String, Object> candados = new ConcurrentHashMap<>();
     /** Documentos con cambios aun no escritos a disco (se escriben cada ~0.8 s, no en cada tecla). */
     private final java.util.Set<String> sucios = ConcurrentHashMap.newKeySet();
+    /** Lo que cada documento crecio desde la ultima vez que se escribio a disco (para el tope de 25 MB). */
+    private final Map<String, Long> crecidoSinGuardar = new ConcurrentHashMap<>();
     /** Bitacora: los cambios seguidos de una misma persona se juntan en una sola linea. */
     private final Map<String, Map<String, Object>> rachas = new ConcurrentHashMap<>();
     private static final long RACHA_MS = 60_000;
@@ -251,10 +253,15 @@ public class ServicioDocumentos {
         if (m == ModoEditor.TEXTO && e.formatoBase != null && !e.formatoBase.isEmpty()) inicial.put("formato", new LinkedHashMap<>(e.formatoBase));
         mot.fusionar(est, new Operacion(n + ":c1", Operacion.DOC, inicial, 1, n));
         if (iniciales != null) {
+            long peso = 0;
+            for (Operacion op : iniciales) peso += pesoAprox(op.campos()) + pesoAprox(op.s()) + 64;
+            if (peso > MAX_BYTES_ESTADO)
+                throw new ErrorNom(ErrorNom.LLENO, "El documento superaría el tamaño máximo (25 MB). Lo último se queda en este equipo: divide el contenido en varios documentos.", null, Map.of("tope", MAX_BYTES_ESTADO));
             for (Operacion op : iniciales) if (op.valida()) mot.fusionar(est, op);
         }
         sincronizarMeta(d, est);
         repo.guardarEstado(d.id, est);
+        crecidoSinGuardar.remove(d.id);
         repo.guardar(d);
         nuevaVersion(d, est, u, "Creación");
         difusor.avisarEspacio(espacioId, "documentos", Map.of("accion", "creado", "id", d.id));
@@ -368,6 +375,13 @@ public class ServicioDocumentos {
         synchronized (candado(docId)) {
             est = repo.estado(docId);
             if (repo.bytesEstado(docId) > 64 * 1024) revisarCuota(e);
+            // Tope por documento ANTES de aplicar nada: lo guardado + lo que crecio sin guardar + lo que llega.
+            // (Antes se media solo lo ya escrito a disco, despues de aplicar: un envio grande de una vez pasaba.)
+            long entrante = 0;
+            for (Operacion op : ops) entrante += pesoAprox(op.campos()) + pesoAprox(op.s()) + 64;
+            long previsto = repo.bytesEstadoReal(docId) + crecidoSinGuardar.getOrDefault(docId, 0L) + entrante;
+            if (previsto > MAX_BYTES_ESTADO)
+                throw new ErrorNom(ErrorNom.LLENO, "El documento superaría el tamaño máximo (25 MB). Lo último se queda en este equipo: divide el contenido en varios documentos.", null, Map.of("tope", MAX_BYTES_ESTADO));
             MotorCRDT mot = motor(docId);
             Set<String> descartados = new HashSet<>();
             for (Operacion op : ops) {
@@ -384,8 +398,7 @@ public class ServicioDocumentos {
                 if (!mot.fusionar(est, op).isEmpty()) aplicadas.add(op);
             }
             if (!aplicadas.isEmpty()) {
-                if (repo.bytesEstadoReal(docId) > MAX_BYTES_ESTADO)
-                    throw ErrorNom.invalido("El documento superó el tamaño máximo (25 MB)", null);
+                crecidoSinGuardar.merge(docId, entrante, Long::sum);
                 d.modificado = System.currentTimeMillis();
                 d.pendienteVersion = true;
                 d.ultimoEditorId = u.id;
@@ -586,9 +599,20 @@ public class ServicioDocumentos {
             if (repo.porId(id).isEmpty()) continue;
             synchronized (candado(id)) {
                 repo.guardarEstado(id, repo.estado(id));
+                crecidoSinGuardar.remove(id);
                 repo.porId(id).ifPresent(repo::guardar);
             }
         }
+    }
+
+    /** Cuanto ocupa, mas o menos, un valor al guardarse en JSON (sin armar el texto). */
+    static long pesoAprox(Object v) {
+        if (v == null) return 4;
+        if (v instanceof CharSequence cs) return cs.length() + 2L;
+        if (v instanceof Map<?, ?> m) { long n = 2; for (Map.Entry<?, ?> x : m.entrySet()) n += String.valueOf(x.getKey()).length() + 4L + pesoAprox(x.getValue()); return n; }
+        if (v instanceof Iterable<?> it) { long n = 2; for (Object x : it) n += pesoAprox(x) + 1; return n; }
+        if (v instanceof Object[] a) { long n = 2; for (Object x : a) n += pesoAprox(x) + 1; return n; }
+        return 8;
     }
 
     /** Cada 10 s. */
@@ -785,6 +809,7 @@ public class ServicioDocumentos {
             d.ultimoEditorId = u.id;
             sincronizarMeta(d, est);
             repo.guardarEstado(docId, est);
+            crecidoSinGuardar.remove(docId);
             repo.guardar(d);
             v = nuevaVersion(d, est, u, "Restaurada desde la versión " + numero);
         }
@@ -1329,6 +1354,7 @@ public class ServicioDocumentos {
         motor(d.id).fusionar(est, new Operacion(n + ":copia" + t, Operacion.DOC, Map.of("nombre", nuevo), t, n));
         sincronizarMeta(d, est);
         repo.guardarEstado(d.id, est);
+        crecidoSinGuardar.remove(d.id);
         repo.guardar(d);
         nuevaVersion(d, est, u, comoPlantilla ? "Plantilla hecha de «" + origen.nombre + "»"
                 : origen.plantilla ? "Desde la plantilla «" + origen.nombre + "»" : "Copia de «" + origen.nombre + "»");

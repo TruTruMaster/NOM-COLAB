@@ -1,0 +1,5 @@
+ancho de página: [390, 390]
+barra de flecha en el celular: [True, 12, 378, 8]
+texto a diagrama, ancho: [390, 356]
+errores: []
+FIN 0

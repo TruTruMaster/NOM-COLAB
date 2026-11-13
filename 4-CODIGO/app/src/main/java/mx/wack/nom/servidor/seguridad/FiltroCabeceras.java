@@ -38,6 +38,10 @@ public class FiltroCabeceras extends OncePerRequestFilter {
         res.setHeader("Referrer-Policy", "no-referrer");
         res.setHeader("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()");
         if (!req.getRequestURI().startsWith("/api/")) res.setHeader("Content-Security-Policy", CSP);
+        // Los datos de la API nunca se guardan en la caché del navegador: ahí quedarían en claro (lo del
+        // equipo vive cifrado en la bóveda) y, sin red, el navegador podría dar una copia vieja como si
+        // fuera la del servidor (Firefox lo hacía al recargar sin conexión).
+        else res.setHeader("Cache-Control", "no-store");
         if ("https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto")) || req.isSecure())
             res.setHeader("Strict-Transport-Security", "max-age=15552000");
         cadena.doFilter(req, res);

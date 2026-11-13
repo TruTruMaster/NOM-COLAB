@@ -304,8 +304,16 @@ def abre_office(ruta):
     ext = Path(ruta).suffix[1:]
     destino = carpeta / (Path(ruta).stem + ".pdf")
     if destino.exists(): destino.unlink()
-    subprocess.run(["soffice", f"-env:UserInstallation=file://{F.CACHE / 'lo-perfil'}", "--headless", "--convert-to", "pdf", "--outdir", str(carpeta), str(ruta)],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=240)
+    # LibreOffice se queda esperando con algunos archivos (también con el original de Microsoft, p. ej.
+    # ms-brownbag.pptx): se corre en su propio grupo y, si no termina, se mata todo el grupo; si no,
+    # soffice.bin seguía vivo con el perfil bloqueado y todas las conversiones siguientes se trababan.
+    import os, signal
+    pr = subprocess.Popen(["soffice", f"-env:UserInstallation=file://{F.CACHE / 'lo-perfil'}", "--headless", "--convert-to", "pdf", "--outdir", str(carpeta), str(ruta)],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    try: pr.wait(timeout=180)
+    except subprocess.TimeoutExpired:
+        os.killpg(pr.pid, signal.SIGKILL); pr.wait()
+        return None
     return destino.exists() and destino.stat().st_size > 800
 
 
@@ -337,7 +345,11 @@ def main():
                         try:
                             assert zipfile.ZipFile(sale).testzip() is None, "zip dañado"
                             det = revisar(r, orig, sale)
-                            if a.office and not sufijo: assert abre_office(sale), "LibreOffice no pudo abrirlo"
+                            if a.office and not sufijo:
+                                r_lo = abre_office(sale)
+                                # Si LibreOffice se traba, se prueba con el original de Microsoft: si con ese también, no es culpa de la exportación.
+                                if r_lo is None: assert abre_office(orig) is None, "LibreOffice se trabó con lo exportado y no con el original"
+                                else: assert r_lo, "LibreOffice no pudo abrirlo"
                             bien += 1
                             print(f"   ok   {nombre}{' (vía .nom)' if sufijo else ''}: {det}; {orig.stat().st_size//1024} KB -> {sale.stat().st_size//1024} KB{'' if sufijo else f', .nom {r['nom']//1024} KB'}")
                         except AssertionError as e:

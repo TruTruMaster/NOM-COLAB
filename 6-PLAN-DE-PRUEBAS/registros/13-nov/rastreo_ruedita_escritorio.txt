@@ -1,0 +1,120 @@
+
+== TEXTO: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Cortar', 'Copiar', 'Estilo', 'Más']
+  ok  TEXTO        ruedita > Negrita                                                                          
+  ok  TEXTO        ruedita > Cursiva                                                                          
+  ok  TEXTO        ruedita > Subrayado                                                                        
+  ok  TEXTO        ruedita > Color > Automático                                                               
+  ok  TEXTO        ruedita > Color > #666666                                                                  
+  ok  TEXTO        ruedita > Color > #FF0000                                                                  
+  ok  TEXTO        ruedita > Color > #FFC000                                                                  
+  ok  TEXTO        ruedita > Color > #00B050                                                                  
+  ok  TEXTO        ruedita > Color > #0070C0                                                                  
+  ok  TEXTO        ruedita > Color > #7030A0                                                                  
+  ok  TEXTO        ruedita > Color > Resaltar > #FFFF00                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #00FF00                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #00FFFF                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #FF00FF                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #FFC000                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #C9DAF8                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #F4CCCC                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > Sin resaltado                                                 
+  ok  TEXTO        ruedita > Cortar                                                                           
+  ok  TEXTO        ruedita > Copiar                                                                           
+  ok  TEXTO        ruedita > Estilo > Normal                                                                  
+  ok  TEXTO        ruedita > Estilo > Título 1                                                                
+  ok  TEXTO        ruedita > Estilo > Título 2                                                                
+  ok  TEXTO        ruedita > Estilo > Título 3                                                                
+  ok  TEXTO        ruedita > Estilo > Viñetas                                                                 
+  ok  TEXTO        ruedita > Estilo > Numeración                                                              
+  ok  TEXTO        ruedita > Estilo > Tareas                                                                  
+  ok  TEXTO        ruedita > Estilo > Cita                                                                    
+  ok  TEXTO        ruedita > Más > Enlace                                                                     ventana «Insertar enlace»
+  ok  TEXTO        ruedita > Más > Elegir todo                                                                
+  ok  TEXTO        ruedita > Más > Pegar                                                                      
+  ok  TEXTO        ruedita > Más > Copiar formato                                                             
+  ok  TEXTO        ruedita > Más > Borrar formato                                                             
+  ok  TEXTO        ruedita > Más > Tachado                                                                    
+  ok  TEXTO        ruedita > Más > Comentar                                                                   ventana «Nuevo comentario»
+  ok  TEXTO        ruedita > Más > Asignar párrafo a…                                                         ventana «Asignar el párrafo a…»
+
+== HOJA: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Borrar', 'Copiar', 'Formato', 'Más']
+  ok  HOJA         ruedita > Negrita                                                                          
+  ok  HOJA         ruedita > Cursiva                                                                          
+  ok  HOJA         ruedita > Subrayado                                                                        
+  ok  HOJA         ruedita > Color > Automático                                                               
+  ok  HOJA         ruedita > Color > #C2372B                                                                  
+  ok  HOJA         ruedita > Color > #E8590C                                                                  
+  ok  HOJA         ruedita > Color > #2FA868                                                                  
+  ok  HOJA         ruedita > Color > #1D7A4C                                                                  
+  ok  HOJA         ruedita > Color > #3D72F2                                                                  
+  ok  HOJA         ruedita > Color > #8B5CF6                                                                  
+  ok  HOJA         ruedita > Color > Relleno > #FFF2CC                                                        
+  ok  HOJA         ruedita > Color > Relleno > #FCE5CD                                                        
+  ok  HOJA         ruedita > Color > Relleno > #F4CCCC                                                        
+  ok  HOJA         ruedita > Color > Relleno > #D9EAD3                                                        
+  ok  HOJA         ruedita > Color > Relleno > #CFE2F3                                                        
+  ok  HOJA         ruedita > Color > Relleno > #D9D2E9                                                        
+  ok  HOJA         ruedita > Color > Relleno > #EFEFEF                                                        
+  ok  HOJA         ruedita > Color > Relleno > Sin relleno                                                    
+  ok  HOJA         ruedita > Borrar                                                                           
+  ok  HOJA         ruedita > Copiar                                                                           
+  ok  HOJA         ruedita > Formato > Autosuma                                                               
+  ok  HOJA         ruedita > Formato > Funciones > SUMA                                                       
+  MAL HOJA         ruedita > Formato > Número: la ruedita no abrió
+  MAL HOJA         ruedita > Formato > Alinear: la ruedita no abrió
+  MAL HOJA         ruedita > Formato > Bordes: la ruedita no abrió
+  MAL HOJA         ruedita > Más: la ruedita no abrió
+
+== PRESENTACION: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Eliminar', 'Duplicar', 'Orden', 'Más']
+  ok  PRESENTACION ruedita > Negrita                                                                          
+  ok  PRESENTACION ruedita > Cursiva                                                                          
+  ok  PRESENTACION ruedita > Subrayado                                                                        
+  ok  PRESENTACION ruedita > Color > #FFFFFF                                                                  
+  ok  PRESENTACION ruedita > Color > #F2385A                                                                  
+  ok  PRESENTACION ruedita > Color > #F08C2A                                                                  
+  ok  PRESENTACION ruedita > Color > #2FA868                                                                  
+  ok  PRESENTACION ruedita > Color > #3D72F2                                                                  
+  ok  PRESENTACION ruedita > Color > #8B5CF6                                                                  
+  ok  PRESENTACION ruedita > Color > Copiar color de otra figura                                              
+  ok  PRESENTACION ruedita > Eliminar                                                                         
+  ok  PRESENTACION ruedita > Duplicar                                                                         
+  ok  PRESENTACION ruedita > Orden > Traer al frente                                                          
+  ok  PRESENTACION ruedita > Orden > Traer adelante                                                           
+  ok  PRESENTACION ruedita > Orden > Enviar atrás                                                             
+  ok  PRESENTACION ruedita > Orden > Enviar al fondo                                                          
+  ok  PRESENTACION ruedita > Orden > Girar 90°                                                                
+  ok  PRESENTACION ruedita > Orden > Voltear horizontal                                                       
+  ok  PRESENTACION ruedita > Orden > Voltear vertical                                                         
+  ok  PRESENTACION ruedita > Orden > Alinear > Izquierda                                                      
+  ok  PRESENTACION ruedita > Orden > Alinear > Centro horizontal                                              
+  ok  PRESENTACION ruedita > Orden > Alinear > Derecha                                                        
+  ok  PRESENTACION ruedita > Orden > Alinear > Arriba                                                         
+  MAL PRESENTACION ruedita > Más: la ruedita no abrió
+
+== DIAGRAMA: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Eliminar', 'Duplicar', 'Orden', 'Más']
+  ok  DIAGRAMA     ruedita > Eliminar                                                                         
+  MAL DIAGRAMA     ruedita > Orden: la ruedita no abrió
+  MAL DIAGRAMA     ruedita > Más: la ruedita no abrió
+
+Rastreo (ruedita): 82 acciones bien, 20 mal, 0 sin volver a aparecer, 4 apagadas por la selección
+Descargas: []
+  MAL ('HOJA', 'ruedita > Formato > Funciones > PROMEDIO', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > BUSCARV', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > CONTAR.SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > SUMAR.SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > HOY', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > MAX', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Número', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Alinear', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Bordes', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Combinar', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Ajustar texto', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Formato de celdas…', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Más', 'MAL', 'la ruedita no abrió')
+  MAL ('PRESENTACION', 'ruedita > Orden > Alinear > Centro vertical', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('PRESENTACION', 'ruedita > Orden > Alinear > Abajo', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('PRESENTACION', 'ruedita > Más', 'MAL', 'la ruedita no abrió')
+  MAL ('DIAGRAMA', 'ruedita > Duplicar', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('DIAGRAMA', 'ruedita > Orden', 'MAL', 'la ruedita no abrió')
+  MAL ('DIAGRAMA', 'ruedita > Más', 'MAL', 'la ruedita no abrió')

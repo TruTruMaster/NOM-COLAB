@@ -319,7 +319,8 @@ final class ServidorHttp {
         StringBuilder h = new StringBuilder("HTTP/1.1 ").append(codigo).append(' ').append(razon(codigo)).append("\r\n");
         if (tipo != null) h.append("Content-Type: ").append(tipo).append("\r\n");
         h.append("Content-Length: ").append(cuerpo == null ? 0 : cuerpo.length).append("\r\n");
-        h.append("Cache-Control: no-cache\r\n");
+        // La API nunca va a la caché del navegador (igual que FiltroCabeceras); la página sí puede, revalidando.
+        h.append(cors ? "Cache-Control: no-store\r\n" : "Cache-Control: no-cache\r\n");
         h.append(SEGURAS);
         // "cors" marca las respuestas de la API; lo demás es la página y lleva la política de contenido.
         if (cors) h.append(CORS); else h.append(CSP);

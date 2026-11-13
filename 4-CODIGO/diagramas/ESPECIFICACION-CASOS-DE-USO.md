@@ -59,7 +59,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 | **Actores secundarios** | Módulo de seguridad |
 | **Descripción** | Registra una cuenta nueva con nombre y contraseña, y opcionalmente el nombre de la empresa. |
 | **Precondiciones** | Ninguna. |
-| **Postcondiciones** | Existe un `Usuario` persistido con su contraseña cifrada. |
+| **Postcondiciones** | Existe un `Usuario` persistido con su contraseña cifrada, con sesión abierta, y la persona recibió su código de recuperación. |
 | **Incluye** | CU-05 Cifrar credenciales |
 
 **Flujo principal**
@@ -69,7 +69,8 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 4. El sistema valida que el nombre no esté ocupado.
 5. El sistema cifra la contraseña (CU-05).
 6. El sistema guarda el `Usuario` y confirma el registro.
-7. El sistema redirige a la pantalla de inicio de sesión.
+7. El sistema muestra el **código de recuperación** (4 bloques de letras) para restablecer la contraseña si se olvida; se puede copiar o descargar.
+8. El sistema abre la sesión y lleva al inicio (con los "Primeros pasos").
 
 **Flujos alternativos**
 - *3a.* El Visitante deja la empresa vacía → el registro continúa sin ella.
@@ -146,18 +147,19 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 | | |
 |---|---|
 | **Actor principal** | Módulo de seguridad |
-| **Descripción** | Bloquea el acceso a una cuenta tras más de 5 intentos de contraseña incorrecta. |
+| **Descripción** | Bloquea el acceso a una cuenta desde una red tras más de 5 intentos de contraseña incorrecta desde esa red. |
 | **Tipo** | «extend» sobre CU-02 |
-| **Precondiciones** | `intentosFallidos` del usuario es mayor que 5. |
-| **Postcondiciones** | La cuenta queda bloqueada y se rechazan nuevos intentos. |
+| **Precondiciones** | Hubo más de 5 intentos fallidos para la cuenta desde la misma red en 15 minutos. |
+| **Postcondiciones** | Esa red no puede entrar a la cuenta durante 15 minutos; el dueño sigue entrando desde la suya. |
 
 **Flujo principal**
-1. El módulo detecta el sexto intento fallido consecutivo.
-2. El módulo marca la cuenta como bloqueada.
+1. El módulo detecta el sexto intento fallido desde la misma red.
+2. El módulo bloquea la cuenta **para esa red** durante 15 minutos.
 3. El módulo registra el evento (fecha y origen).
-4. El sistema informa al Visitante que el acceso fue bloqueado.
+4. El sistema informa al Visitante que el acceso fue bloqueado y cuánto falta.
 
 **Flujos alternativos**
+- *2a.* Llegan más de 50 fallos en una hora desde muchas redes → se bloquea la cuenta entera 15 minutos.
 - *4a.* El bloqueo es temporal → se indica el tiempo restante para reintentar.
 
 **Excepciones**
@@ -260,7 +262,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 | **Postcondiciones** | `NodoLocal` escucha en un puerto y el espacio se anuncia en la LAN. |
 
 **Flujo principal**
-1. El Propietario activa "Conexión del proyecto".
+1. El Propietario activa "Que lo encuentren en el mismo Wi-Fi" (en **Invitar**, o en **Más opciones del espacio → Visible en el mismo Wi-Fi**).
 2. El sistema selecciona un puerto disponible.
 3. `NodoLocal.iniciar()` abre el puerto.
 4. `ServicioDescubrimiento.anunciar()` publica el espacio en la red local.
@@ -324,6 +326,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 5. El sistema abre el editor con el permiso correspondiente.
 
 **Flujos alternativos**
+- *1a.* Con un **código de invitación o su QR** (lo crea el Propietario en Invitar → Crear código: permiso, vigencia de 1 hora a 30 días, y si se deja entrar sin cuenta): el Usuario escribe el código en "Tengo un código de invitación" o abre el enlace del QR → entra directo con su cuenta, o **con un apodo sin registrarse** si el código lo permite (queda como invitado solo de ese espacio y de ese equipo). Un código vencido o anulado se rechaza.
 - *2a.* Sin acceso → el Usuario solicita invitación al Propietario (CU-17) y el caso de uso termina.
 - *5a.* Permiso `LECTURA` → el editor abre en modo solo lectura.
 
@@ -670,3 +673,24 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 - *3c.* En la app Android el archivo se guarda en Descargas.
 
 **Requerimientos** Objetivo general "compatibilidad con formatos de uso libre"
+
+---
+
+## Anexo · Funciones agregadas en las fases 1 a 11 (noviembre de 2026)
+
+Las fases del plan de construcción (`../docs/PLAN-CONSTRUCCION.md`) agregaron funciones que no
+cambian la lista de casos de uso: cada una amplía uno de los casos de arriba.
+
+| Función | Amplía | Dónde se ve |
+|---|---|---|
+| Código de recuperación, recuperar y cambiar la contraseña, borrar la cuenta | CU-01, CU-02, CU-27 | Pantalla de entrada · Cuenta y ajustes |
+| Lo guardado en el equipo, cifrado por cuenta (bóveda) | CU-05, CU-26 | Este dispositivo |
+| Invitar con código o QR, entrar con apodo, códigos que vencen y se anulan | CU-16, CU-17 | Invitar → Crear código · Tengo un código |
+| Carpetas, destacados, ordenar, buscar dentro del contenido, papelera de 30 días, proteger contra el borrado, plantillas del espacio, letra de los textos nuevos | CU-18, CU-24 | Pantalla del espacio |
+| Comentarios, @menciones, modo sugerencia, partes asignadas a una persona, plantilla del maestro | CU-19, CU-21 | Editor |
+| Recibo del proceso de escritura (con huella SHA-256 verificable) y mapa de aportes | CU-23 | Más opciones → Recibo de mi trabajo |
+| Entrega con fecha límite | CU-17, CU-19 | Más opciones → Entrega con fecha límite |
+| Investigar, fichas, citas y referencias APA, reporte de datos, combinar correspondencia | CU-19 | Editor de texto |
+| Límite de almacenamiento por cuenta a la vista y 25 MB por documento | CU-24 | Cuenta y ajustes · Cuánto ocupa |
+| El teléfono como servidor, respaldo diario en el teléfono | CU-14, CU-25 | Este teléfono |
+| Formato `.nom` comprimido y el archivo de Office original dentro del documento | CU-28, CU-29 | Importar · Exportar |

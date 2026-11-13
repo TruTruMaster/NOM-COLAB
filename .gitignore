@@ -17,3 +17,7 @@ CREDENCIALES-*.txt
 
 # Token personal de GitHub (nunca subir)
 tokensito
+
+# Python compilado (lo crea cada corrida de las pruebas)
+__pycache__/
+*.pyc

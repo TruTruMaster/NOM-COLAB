@@ -26,7 +26,7 @@
         <div class="fila"><button class="btn chico" data-copiar>${ico("copy", "ico-s")} Copiar</button><button class="btn chico" data-bajar>${ico("download", "ico-s")} Guardar archivo</button></div></div>`);
       const pie = html(`<div style="display:contents"><span class="crece"></span><button class="btn primario" data-ok>Ya lo guardé</button></div>`);
       const h = NOM.hoja({ titulo: "Tu código de recuperación", icono: "key-round", cuerpo, pie, alCerrar: () => listo() });
-      $("[data-copiar]", cuerpo).onclick = () => { try { navigator.clipboard.writeText(codigo); NOM.aviso("Código copiado", { tipo: "ok" }); } catch (e) { /* sin portapapeles */ } };
+      $("[data-copiar]", cuerpo).onclick = () => NOM.copiarTexto(codigo).then((ok) => NOM.aviso(ok ? "Código copiado" : "No se pudo copiar: anótalo o usa «Descargar».", { tipo: ok ? "ok" : "aviso", ms: ok ? undefined : 6000 }));
       $("[data-bajar]", cuerpo).onclick = () => NOM.formatos.descargar(`Codigo de recuperacion NOM-COLAB - ${nombre || "cuenta"}.txt`, "text/plain", `Cuenta: ${nombre || ""}\r\nCódigo para recuperar la contraseña de NOM-COLAB: ${codigo}\r\nGuárdalo en un lugar seguro.\r\n`);
       $("[data-ok]", pie).onclick = () => h.cerrar();
     });

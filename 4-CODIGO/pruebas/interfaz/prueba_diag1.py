@@ -109,7 +109,7 @@ print("libreoffice:", r.returncode)
 subprocess.run(["pdftoppm", "-png", "-r", "70", os.path.join(OUT, "diagrama.pdf"), os.path.join(OUT, "diagrama")], timeout=60)
 # 7. Presentación con un diagrama listo: las flechas se ven al presentar
 d3 = documento(c["token"], e, "PRESENTACION", "Con diagrama"); n.abrir(d3); p.wait_for_timeout(1200)
-ev("() => { const c = NOM.diagramas.CATALOGO.find(x => x.id === 'flujo'); const g = c.hacer(); NOM.modos.PRESENTACION._lienzo.insertarBloques(g.bloques, g.uniones); }"); p.wait_for_timeout(500)
+ev("() => { const c = NOM.diagramas.CATALOGO.find(x => x.id === 'flujo'); const g = NOM.diagramas.generar(c); NOM.modos.PRESENTACION._lienzo.insertarBloques(g.bloques, g.uniones); }"); p.wait_for_timeout(500)
 print("en la diapositiva:", ev("() => { const ed = NOM.editorActual, bs = ed.doc.deLaPagina(ed.pagina); return [bs.filter(b => b.tipo === 'forma').length, bs.filter(b => b.tipo === 'conector').length, Math.max(...bs.filter(b => b.x != null).map(b => b.y + b.h))]; }"))
 p.keyboard.press("Escape"); p.mouse.click(5, 500); p.keyboard.press("F5"); p.wait_for_timeout(800)
 print("al presentar, flechas:", ev("() => document.querySelectorAll('.reproductor .capa-conectores path.linea').length"))

@@ -74,11 +74,29 @@ async ([b64, nombre]) => {
 
 # ------------------------------------------------------------------ utilidades
 def partes_zip(ruta):
+    """Cada parte del zip descomprimida. Una parte que Python no puede leer (CRC malo o datos dañados,
+    como en los archivos de pruebas de fallas) se representa con sus bytes comprimidos tal cual."""
     try:
-        with zipfile.ZipFile(ruta) as z:
-            return {i.filename: z.read(i.filename) for i in z.infolist() if not i.is_dir()}
+        z = zipfile.ZipFile(ruta)
     except Exception:
         return None
+    out = {}
+    with z:
+        for i in z.infolist():
+            if i.is_dir(): continue
+            try: out[i.filename] = z.read(i.filename)
+            except Exception:
+                with open(ruta, "rb") as f:
+                    f.seek(i.header_offset); cab = f.read(30)
+                    n, e = int.from_bytes(cab[26:28], "little"), int.from_bytes(cab[28:30], "little")
+                    f.seek(i.header_offset + 30 + n + e); crudo = f.read(i.compress_size)
+                # CRC malo pero datos legibles: se descomprime sin revisar el CRC; si ni así, los bytes comprimidos.
+                try:
+                    import zlib
+                    out[i.filename] = zlib.decompressobj(-15).decompress(crudo) if i.compress_type == 8 else crudo
+                except Exception:
+                    out[i.filename] = ("crudo", crudo)
+    return out
 
 
 def cuenta(xml, *etiquetas):
@@ -247,7 +265,8 @@ def comparar_docx(orig, nuevo):
     ka = [p["texto"].strip() for p in a["parrafos"]]; kb = [p["texto"].strip() for p in b["parrafos"]]
     sm = difflib.SequenceMatcher(None, ka, kb, autojunk=False)
     pares = [(a["parrafos"][i + k], b["parrafos"][j + k]) for i, j, l in sm.get_matching_blocks() for k in range(l) if ka[i + k]]
-    n.pon("parrafos", len(pares) / max(1, sum(1 for k in ka if k)), f"{len(pares)} de {sum(1 for k in ka if k)} con el mismo texto")
+    # Un documento sin párrafos de texto (solo formas o cuadros de texto) no se mide en esto: 0 de 0 no es 0 %.
+    if sum(1 for k in ka if k): n.pon("parrafos", len(pares) / sum(1 for k in ka if k), f"{len(pares)} de {sum(1 for k in ka if k)} con el mismo texto")
     PR = ("alin", "titulo", "lista", "ind_left", "ind_firstLine", "ind_hanging", "esp_before", "esp_after", "esp_line")
     LR = ("b", "i", "u", "tachado", "tam", "color", "fuente", "resalte", "vert")
     okp = {k: [0, 0] for k in PR}; okl = {k: [0, 0] for k in LR}

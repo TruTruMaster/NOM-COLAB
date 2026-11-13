@@ -1,0 +1,173 @@
+
+== Hoja: fórmulas, referencias, filas y columnas, formato
+  ok   fórmula =SUMA(B2:B5) = 32.5
+  ok   fórmula =SUM(B2:B5) = 32.5
+  ok   fórmula =PROMEDIO(B2:B5) = 8.125
+  ok   fórmula =MIN(B2:B5) = 6
+  ok   fórmula =MAX(B2:B5) = 10
+  ok   fórmula =CONTAR(B2:B5) = 4
+  ok   fórmula =SI(B2>=8;"Aprobado";"Repite") = Aprobado
+  ok   fórmula =REDONDEAR(B3/3;2) = 2.5
+  ok   fórmula =BUSCARV("Eva";A2:C5;2;FALSO) = 10
+  ok   fórmula =VLOOKUP("Luis",A2:C5,3,FALSE) = 3
+  ok   fórmula =CONTAR.SI(D2:D5;"A") = 2
+  MAL  fórmula =SUMAR.SI(D2:D5;"B";B2:B5) = 13.5   [7.5]
+  ok   fórmula =PROMEDIO.SI(D2:D5;"A";B2:B5) = 9.5
+  ok   fórmula =CONTAR.SI.CONJUNTO(D2:D5;"B";B2:B5;">6") = 1
+  ok   fórmula =SUMAR.SI.CONJUNTO(C2:C5;D2:D5;"A";B2:B5;">9") = 0
+  ok   fórmula =SI.CONJUNTO(B5>=9;"A";B5>=7;"B";VERDADERO;"C") = C
+  ok   fórmula =SIERROR(1/0;"nada") = nada
+  ok   fórmula =MEDIANA(B2:B5) = 8.25
+  ok   fórmula =MODA(1;2;2;3) = 2
+  ok   fórmula =JERARQUIA(B3;B2:B5) = 3
+  ok   fórmula =K.ESIMO.MAYOR(B2:B5;2) = 9
+  ok   fórmula =CONCATENAR(A2;" ";D2) = Ana A
+  ok   fórmula =IZQUIERDA(A3;2) = Lu
+  ok   fórmula =DERECHA(A3;2) = is
+  ok   fórmula =EXTRAE(A4;2;2) = va
+  ok   fórmula =MAYUSC(A5) = JUAN
+  ok   fórmula =ESPACIOS("  hola   mundo ") = hola mundo
+  ok   fórmula =SUSTITUIR("a-b-c";"-";"+") = a+b+c
+  ok   fórmula =TEXTO(0.5;"0.00") = 0.50
+  ok   fórmula =AÑO(FECHA(2026;11;12)) = 2026
+  ok   fórmula =MES(FECHA(2026;11;12)) = 11
+  ok   fórmula =DIA(FECHA(2026;11;12)) = 12
+  ok   fórmula =DIAS(FECHA(2026;12;25);FECHA(2026;11;12)) = 43
+  ok   fórmula =SIFECHA(FECHA(2000;1;1);FECHA(2026;11;12);"Y") = 26
+  ok   fórmula =BUSCARX("Juan";A2:A5;C2:C5) = 5
+  ok   fórmula =INDICE(A2:C5;2;1) = Luis
+  ok   fórmula =COINCIDIR("Eva";A2:A5;0) = 3
+  ok   fórmula =BUSCARH("Cal";A1:D5;3;FALSO) = 7.5
+  ok   fórmula =$B$2+B$3+$B4 = 26.5
+  ok   fórmula =SUMA(B:B) = 32.5
+  ok   fórmula =REDONDEAR(DESVEST(2;4;4;4;5;5;7;9);4) = 2.1381
+  ok   fórmula =1/0 = #DIV/0!
+  ok   HOY() da el año actual
+  ok   pegar fórmula ajusta la referencia (=B3*2 → 15)
+  ok   Ctrl+D rellena hacia abajo con referencias relativas
+  ok   cuadrito de relleno: Tema 1, Tema 2 → Tema 3, Tema 4, Tema 5
+  ok   insertar fila arriba ajusta =SUMA(B2:B5) → =SUMA(B3:B6)
+  ok   …y el resultado no cambia
+  ok   deshacer quita la fila insertada
+  ok   formato moneda: 9 → $9.00
+  ok   botón porcentaje: 1 → 100%
+  ok   más decimales: 100% → 100.0%
+  ok   negrita en la celda
+  ok   combinar celdas A7:C7
+  ok   ordenar A→Z solo para mí: la vista cambia
+  ok   …y las celdas reales no (es personal)
+  ok   fijar la fila 1
+  ok   gráfica de barras creada y dibujada
+  ok   buscar y reemplazar todo en la hoja (Luis → Luisa)
+  ok   xlsx: la fórmula SUMA sale como fórmula
+  ok   xlsx: BUSCARV sale en inglés (VLOOKUP)
+  ok   xlsx: celdas combinadas A7:C7
+  ok   xlsx: negrita en A1
+  ok   xlsx: formato de moneda en B2
+
+== Texto: escribir, formato, listas, enlaces, insertar, buscar, deshacer, exportar
+  ok   escribir 6 párrafos con el teclado
+  ok   estilo Título 1 en el primer párrafo
+  ok   Negrita sobre «fotosíntesis»
+  ok   Cursiva sobre «fotosíntesis»
+  ok   Subrayado sobre «fotosíntesis»
+  ok   Tachado sobre «fotosíntesis»
+  ok   Ctrl+B alterna la negrita
+  ok   color del texto rojo oscuro
+  ok   resaltado amarillo
+  ok   aumentar tamaño de letra
+  ok   centrar el párrafo
+  ok   viñetas en «Primer punto»
+  ok   numeración en «Segundo punto»
+  ok   …y se ve el número (1.)
+  ok   pegar un enlace sobre «oxígeno» lo convierte en vínculo (el texto se queda)
+  ok   …y deshacer lo quita en un paso
+  ok   superíndice desde «Más»
+  ok   buscar y reemplazar en el texto (palabras → términos)
+  ok   escribir al final
+  ok   deshacer (botón) quita lo último escrito
+  ok   rehacer lo vuelve a poner
+  ok   insertar tabla
+  ok   nota al pie aparece al pie de la página
+  ok   ecuación insertada (se dibuja)
+  ok   índice (tabla de contenido) con el título
+  ok   comentario guardado en el documento
+  ok   .docx: el título sale con estilo de título
+  ok   .docx: la tabla sale como tabla
+  ok   .docx: el color del texto se conserva
+  ok   .nom: se exporta y se vuelve a importar como texto
+  ok   al recargar la página el texto sigue igual (guardado en el servidor)
+  ok   …y el formato también (rojo en «energía»)
+
+== Colaboración: invitar con código y QR, apodo, en vivo, permisos, partes con dueño, comentarios, sugerencias, recibo
+  ok   Invitar abre la ventana del espacio con miembros
+  ok   Invitar abre «Código de invitación»
+  ok   se crea un código de 8 letras
+  MAL  colaboracion: la sección terminó sin trabarse   [TimeoutError: Page.screenshot: Timeout 30000ms exceeded.
+Call log:
+  - taking page screenshot
+  - waiting for fonts to load...
+  - fonts loaded
+]
+
+== Presentación y diagrama: figuras, girar, grupos dentro de grupos, capas, mesa de trabajo, notas, presentar, transición, .pptx
+  ok   girar 90° desde la ruedita
+  ok   Mayús+clic elige dos figuras
+  ok   agrupar dos figuras
+  ok   agrupar el grupo con otra figura: grupo dentro de grupo (2 niveles)
+  ok   desagrupar quita solo el nivel de arriba
+  ok   el panel de capas lista las figuras
+  ok   ocultar una figura desde Capas
+  ok   bloquear una figura desde Capas
+  ok   las notas del orador se guardan en la diapositiva
+  ok   transición «Desvanecer»
+  ok   modo presentador: se ven las notas del orador
+  ok   …la figura de la mesa de trabajo (fuera de la hoja) no se presenta
+  ok   …ni la que se ocultó en Capas
+  ok   salir de presentar regresa al editor
+  ok   .pptx: la figura de la mesa de trabajo no se exporta
+  ok   .pptx: las notas del orador van en la diapositiva
+  ok   .pptx: la figura girada sale girada 90°
+  ok   «Cuadro de texto» lo pone al centro listo para escribir
+  ok   deshacer quita el cuadro nuevo (en 2 paso(s): el texto y luego el cuadro)
+  ok   …y no deja un bloque vacío escondido en el documento
+  ok   rehacer lo trae de vuelta con su texto
+  ok   conector de A a B (herramienta Conector: clic en A, clic en B)
+  ok   mover B con el ratón cambia su posición
+  ok   …y el conector la sigue (se vuelve a dibujar hasta B)
+  ok   con la cuadrícula prendida la figura cae en la cuadrícula
+  ok   exportar el diagrama a SVG
+
+== Cuentas, espacios, sin cuenta, sin red
+  ok   contraseña equivocada: no entra y lo dice
+  ok   crear cuenta por la pantalla muestra «Tu código de recuperación»
+  ok   …con un código de 4 bloques
+  ok   …y entra a su inicio con sesión
+  ok   cerrar sesión regresa a la pantalla de entrada
+  ok   «Usar sin cuenta» entra sin registrarse
+  ok   documento sin cuenta: lo escrito sigue después de recargar
+  ok   sin errores de JavaScript en la entrada, el registro y sin cuenta
+  ok   letra del espacio: un texto nuevo nace en Times New Roman
+  ok   un documento protegido no se puede borrar (ni por la API)
+  MAL  entrega con fecha límite guardada en el documento   [{"documento": {"autorId": "QLklR2S02Pdk", "carpeta": null, "creado": 1794553126057, "destacadoPor": null, "eliminado": 0, "eliminadoPor": null, "enlaceVer": null, "entregaCerrada": false, "entregaLimi]
+  ok   «Cuánto espacio ocupa» muestra lo usado
+  MAL  cuentas: la sección terminó sin trabarse   [TimeoutError: Timeout 30000ms exceeded while waiting for event "download"
+=========================== logs ===========================
+waiting for event "download"
+====================================]
+  ok   sin errores de JavaScript en la página
+
+Funciones: 136 bien, 4 mal
+  MAL fórmula =SUMAR.SI(D2:D5;"B";B2:B5) = 13.5: 7.5
+  MAL colaboracion: la sección terminó sin trabarse: TimeoutError: Page.screenshot: Timeout 30000ms exceeded.
+Call log:
+  - taking page screenshot
+  - waiting for fonts to load...
+  - fonts loaded
+
+  MAL entrega con fecha límite guardada en el documento: {"documento": {"autorId": "QLklR2S02Pdk", "carpeta": null, "creado": 1794553126057, "destacadoPor": null, "eliminado": 0, "eliminadoPor": null, "enlaceVer": null, "entregaCerrada": false, "entregaLimite": 0, "entregaRecibos": null, "espacioId": "hZ9M5btCB8DD", "id": "fVIDO16DO4hr", "modificado": 179
+  MAL cuentas: la sección terminó sin trabarse: TimeoutError: Timeout 30000ms exceeded while waiting for event "download"
+=========================== logs ===========================
+waiting for event "download"
+============================================================
+FIN 1

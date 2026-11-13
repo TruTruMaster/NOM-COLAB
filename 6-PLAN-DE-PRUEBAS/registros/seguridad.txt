@@ -1,0 +1,229 @@
+(esperando 64 s a que pase la fecha límite de entrega…)
+OK  Pedir datos sin token                                              esperado 401 obtenido 401
+OK  Token inventado                                                    esperado 401 obtenido 401
+OK  La ruta de administración ya no existe                             esperado 404 obtenido 404
+OK  Inyección SQL en el inicio de sesión (' OR 1=1 --)                 esperado 401 obtenido 401
+OK  Registro con HTML en el nombre                                     esperado 400 obtenido 400
+OK  Contraseña de menos de 8 caracteres                                esperado 400 obtenido 400
+OK  Cuenta ajena abre un espacio que no es suyo                        esperado 403 obtenido 403
+OK  Cuenta ajena abre un documento de ese espacio                      esperado 403 obtenido 403
+OK  Solo lectura abre el documento                                     esperado 200 obtenido 200
+OK  Solo lectura intenta editar                                        esperado 403 obtenido 403
+OK  Puede editar escribe en el documento                               esperado 200 obtenido 200
+OK  Puede editar intenta dar acceso a otra cuenta                      esperado 403 obtenido 403
+OK  El propietario cambia a solo lectura a la editora                  esperado 200 obtenido 200
+OK  …y en su siguiente cambio ya no puede escribir                     esperado 403 obtenido 403
+OK  El propietario le quita el acceso a la lectora                     esperado 200 obtenido 200
+OK  …y ya no puede abrir el espacio                                    esperado 403 obtenido 403
+OK  Nadie puede quitarle el espacio a su propietario                   esperado 400 obtenido 400
+OK  6 intentos fallidos bloquean la cuenta                             esperado 423 obtenido 423
+OK  …y ni con la contraseña correcta entra (15 min)                    esperado 423 obtenido 423
+OK  Cerrar sesión invalida el token                                    esperado 401 obtenido 401
+OK  1.2 El propietario protege un documento                            esperado 200 obtenido 200
+OK  1.2 Un editor no puede borrarlo                                    esperado 409 obtenido 409
+OK  1.2 Un editor no puede quitarle la protección                      esperado 403 obtenido 403
+OK  1.2 Quitarla sin escribir BORRAR                                   esperado 400 obtenido 400
+OK  1.2 El propietario la quita escribiendo BORRAR                     esperado 200 obtenido 200
+OK  1.2 …y ya se puede borrar                                          esperado 200 obtenido 200
+OK  3.5 Un editor no puede asignarse un párrafo                        esperado 1 obtenido 1
+OK  3.5 El propietario asigna el párrafo 1 a alumno1                   esperado 0 obtenido 0
+OK  3.5 Otro editor no puede borrar en ese párrafo                     esperado 1 obtenido 1
+OK  3.5 …ni escribir en él                                             esperado 1 obtenido 1
+OK  3.5 …pero sí en el párrafo de nadie                                esperado 0 obtenido 0
+OK  3.5 Su dueño sí escribe en su párrafo                              esperado 0 obtenido 0
+OK  3.5 El servidor guardó lo del dueño y no lo rechazado              esperado sí obtenido sí
+OK  3.5 Con partes asignadas, un editor no restaura versiones          esperado 403 obtenido 403
+OK  3.5 Otro editor no mueve la figura de alumno1                      esperado 1 obtenido 1
+OK  3.5 alumno1 sí mueve su figura                                     esperado 0 obtenido 0
+OK  3.5 Otro editor no agrega figuras en la diapositiva de alumno1     esperado 1 obtenido 1
+OK  3.5 …ni quita esa diapositiva                                      esperado 1 obtenido 1
+OK  5.4 Nadie más que el propietario mueve la plantilla del maestro    esperado 1 obtenido 1
+OK  5.4 …ni le quita el candado                                        esperado 1 obtenido 1
+OK  5.4 El propietario sí la cambia                                    esperado 0 obtenido 0
+OK  3.5 El servidor conserva la posición que puso el dueño             esperado 300 obtenido 300
+OK  2.3 Un editor no crea enlaces para unirse                          esperado 403 obtenido 403
+OK  2.1 El propietario crea un enlace (QR)                             esperado 201 obtenido 201
+OK  2.1 Lo que dice el enlace se ve sin sesión                         esperado 200 obtenido 200
+OK  2.1 Una cuenta entra con el enlace                                 esperado 200 obtenido 200
+OK  2.1 …y ya abre el espacio                                          esperado 200 obtenido 200
+OK  2.1 Entrar con el enlace pide sesión                               esperado 401 obtenido 401
+OK  2.2 Alguien entra con apodo, sin registrarse                       esperado 200 obtenido 200
+OK  2.2 El invitado ve el espacio del enlace                           esperado 200 obtenido 200
+OK  2.2 El invitado no puede crear espacios                            esperado 403 obtenido 403
+OK  2.2 Un apodo con HTML no se acepta                                 esperado 400 obtenido 400
+OK  2.3 El propietario revoca el enlace                                esperado 200 obtenido 200
+OK  2.3 …y ya no sirve                                                 esperado 403 obtenido 403
+OK  2.3 …ni para entrar con apodo                                      esperado 403 obtenido 403
+OK  2.3 Un código inventado                                            esperado 404 obtenido 404
+OK  3.2 alumno1 pide su recibo                                         esperado 200 obtenido 200
+OK  3.2 alumno2 no puede ver el recibo de alumno1                      esperado 403 obtenido 403
+OK  3.2 El propietario ve el recibo de alumno1                         esperado 200 obtenido 200
+OK  3.2 Un recibo auténtico se verifica (sin sesión)                   esperado True obtenido True
+OK  3.2 Un recibo modificado no pasa                                   esperado False obtenido False
+OK  5.5 Quien presenta obtiene un código                               esperado 200 obtenido 200
+OK  5.5 El proyector abre la presentación con el código (sin sesión)   esperado 200 obtenido 200
+OK  5.5 Un código de proyección inventado                              esperado 404 obtenido 404
+OK  8.3 Quien presenta marca con láser y pluma                         esperado 200 obtenido 200
+OK  8.3 …el proyector recibe el puntero                                esperado 0.5 obtenido 0.5
+OK  8.3 …los trazos se recortan (máx. 60 de 800 números)               esperado [60, 800] obtenido [60, 800]
+OK  8.3 …un color inválido se cambia por el de la pluma                esperado #F2385A obtenido #F2385A
+OK  8.3 Quien no está presentando no puede marcar                      esperado 404 obtenido 404
+OK  8.3 Sin sesión no se marca                                         esperado 401 obtenido 401
+OK  Recuperar con un código equivocado                                 esperado 401 obtenido 401
+OK  Recuperar con el código correcto                                   esperado 200 obtenido 200
+OK  …la contraseña vieja ya no entra                                   esperado 401 obtenido 401
+OK  …la nueva sí                                                       esperado 200 obtenido 200
+OK  …y las sesiones de antes se cerraron                               esperado 401 obtenido 401
+OK  …y el código usado ya no sirve                                     esperado 401 obtenido 401
+OK  8.5 Un lector no manda documentos a la papelera                    esperado 403 obtenido 403
+OK  8.5 Un editor manda el documento a la papelera                     esperado 200 obtenido 200
+OK  8.5 …ya no sale en la lista                                        esperado False obtenido False
+OK  8.5 …ni se puede abrir                                             esperado 404 obtenido 404
+OK  8.5 …ni editar                                                     esperado 404 obtenido 404
+OK  8.5 Un lector no ve la papelera                                    esperado 403 obtenido 403
+OK  8.5 Un editor ve el documento en la papelera                       esperado True obtenido True
+OK  8.5 Un lector no lo restaura                                       esperado 403 obtenido 403
+OK  8.5 Un editor lo restaura                                          esperado 200 obtenido 200
+OK  8.5 …y vuelve a la lista                                           esperado True obtenido True
+OK  8.5 Un editor no lo borra para siempre                             esperado 403 obtenido 403
+OK  8.5 Un lector no hace copias en el espacio                         esperado 403 obtenido 403
+OK  8.5 Un editor hace una copia                                       esperado 200 obtenido 200
+OK  8.5 …con el mismo contenido                                        esperado La clorofila absorbe la luz obtenido La clorofila absorbe la luz
+OK  8.5 …y su propio nombre                                            esperado Fotosíntesis (mi versión) obtenido Fotosíntesis (mi versión)
+OK  8.5 Lo que no está en la papelera no se borra para siempre         esperado 409 obtenido 409
+OK  8.5 No se copia a un espacio donde no puedes editar                esperado 403 obtenido 403
+OK  8.5 No se mueve a un espacio ajeno                                 esperado 403 obtenido 403
+OK  8.5 Quien edita en los dos espacios lo mueve                       esperado 200 obtenido 200
+OK  8.5 …ya no está en el salón                                        esperado False obtenido False
+OK  8.5 …y la maestra ya no lo abre (es de otro espacio)               esperado 403 obtenido 403
+OK  8.5 Un lector no cambia el nombre                                  esperado 403 obtenido 403
+OK  8.5 Un editor cambia el nombre desde la lista                      esperado Fotosíntesis y respiración obtenido Fotosíntesis y respiración
+OK  8.5 …y el nombre nuevo llega al contenido                          esperado Fotosíntesis y respiración obtenido Fotosíntesis y respiración
+OK  8.5 Un nombre vacío no se acepta                                   esperado 400 obtenido 400
+OK  8.5 Un lector no cambia la carpeta                                 esperado 403 obtenido 403
+OK  8.5 Un editor lo pone en una carpeta                               esperado Ciencias obtenido Ciencias
+OK  8.5 …la carpeta sale en el espacio                                 esperado ['Ciencias'] obtenido ['Ciencias']
+OK  8.5 Renombrar la carpeta cambia sus documentos                     esperado 1 obtenido 1
+OK  8.5 Un lector no renombra carpetas                                 esperado 403 obtenido 403
+OK  8.5 Un lector sí puede destacar (es su propia marca)               esperado 200 obtenido 200
+OK  8.5 …y lo ve destacado en su lista                                 esperado ['FppTsaFcgs77'] obtenido ['FppTsaFcgs77']
+OK  8.5 …pero los demás no ven de quién es la marca                    esperado None obtenido None
+OK  8.5 Buscar encuentra el texto de adentro                           esperado True obtenido True
+OK  8.5 …también sin acentos                                           esperado True obtenido True
+OK  8.5 Quien no es del espacio no busca en él                         esperado 403 obtenido 403
+OK  8.5 Un editor guarda el documento como plantilla del espacio       esperado True obtenido True
+OK  8.5 Un documento nuevo desde la plantilla ya no es plantilla       esperado [False, 'Desde plantilla'] obtenido [False, 'Desde plantilla']
+OK  8.5 La persona mencionada en un comentario tiene un aviso          esperado 1 obtenido 1
+OK  8.5 …dice quién la mencionó y dónde                                esperado ['alumno1', 'a9q0qc8tfNig'] obtenido ['alumno1', 'a9q0qc8tfNig']
+OK  8.5 …y al verlo queda leído                                        esperado 0 obtenido 0
+OK  8.5 A quien no mencionan no le llega nada                          esperado 0 obtenido 0
+OK  8.5 Un editor no crea el enlace para ver                           esperado 403 obtenido 403
+OK  8.5 El propietario crea el enlace para ver                         esperado True obtenido True
+OK  8.5 Con el enlace se ve el documento sin cuenta                    esperado 200 obtenido 200
+OK  8.5 …sin los comentarios                                           esperado False obtenido False
+OK  8.5 Los miembros no ven el enlace en la lista                      esperado None obtenido None
+OK  8.5 Un enlace inventado no sirve                                   esperado 404 obtenido 404
+OK  8.5 Al quitar el enlace deja de servir                             esperado 404 obtenido 404
+OK  8.5 Un documento en la papelera no se ve con su enlace             esperado 404 obtenido 404
+OK  8.5 Un editor no vacía la papelera                                 esperado 403 obtenido 403
+OK  8.5 El propietario vacía la papelera                               esperado 200 obtenido 200
+OK  8.5 …y ya no se puede restaurar                                    esperado 404 obtenido 404
+OK  9 Sin sesión no se leen direcciones                                esperado 401 obtenido 401
+OK  9 No lee el propio servidor (localhost)                            esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1                                                 esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 escrito como número (2130706433)                esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 en hexadecimal (0x7f000001)                     esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 abreviado (127.1): inválida o interna           esperado True obtenido True
+OK  9 No lee 127.0.0.1 con ceros a la izquierda (0177.0.0.1)           esperado 403 obtenido 403
+OK  9 No lee 0.0.0.0                                                   esperado 403 obtenido 403
+OK  9 No lee la red del salón (192.168.x)                              esperado 403 obtenido 403
+OK  9 No lee redes privadas (10.x)                                     esperado 403 obtenido 403
+OK  9 No lee 172.16.x                                                  esperado 403 obtenido 403
+OK  9 No lee los datos internos de la nube (169.254.169.254)           esperado 403 obtenido 403
+OK  9 No lee la red compartida del proveedor (100.64.x)                esperado 403 obtenido 403
+OK  9 No lee ::1 (IPv6 del propio equipo)                              esperado 403 obtenido 403
+OK  9 No lee ::ffff:127.0.0.1                                          esperado 403 obtenido 403
+OK  9 No lee fd00:: (IPv6 privada)                                     esperado 403 obtenido 403
+OK  9 No lee nombres .local                                            esperado 403 obtenido 403
+OK  9 Solo los puertos 80 y 443                                        esperado 400 obtenido 400
+OK  9 Ni con un puerto raro en un sitio público                        esperado 400 obtenido 400
+OK  9 Solo http y https (file:)                                        esperado 400 obtenido 400
+OK  9 Solo http y https (ftp:)                                         esperado 400 obtenido 400
+OK  9 Sin usuario ni contraseña en la dirección                        esperado 400 obtenido 400
+OK  9 Un DOI inválido                                                  esperado 400 obtenido 400
+OK  9 Un ISBN inválido                                                 esperado 400 obtenido 400
+OK  9 Un conjunto de datos que no existe                               esperado 400 obtenido 400
+OK  9 Quien no es del espacio no ve su biblioteca                      esperado 403 obtenido 403
+OK  9 Un lector no agrega a la biblioteca                              esperado 403 obtenido 403
+OK  9 Una fuente sin título ni dirección no se guarda                  esperado 400 obtenido 400
+OK  9 Un editor guarda una fuente con su texto                         esperado 200 obtenido 200
+OK  9 …los campos desconocidos no se guardan                           esperado None obtenido None
+OK  9 Un lector ve la biblioteca                                       esperado 1 obtenido 1
+OK  9 …y busca en sus textos (sin Internet)                            esperado 1 obtenido 1
+OK  9 …y lee el texto guardado                                         esperado True obtenido True
+OK  9 Guardar la misma fuente no la repite                             esperado 1 obtenido 1
+OK  9 Un lector no la quita                                            esperado 403 obtenido 403
+OK  9 Un editor la quita                                               esperado 200 obtenido 200
+OK  12.1 La página dice que no se adivinen tipos de archivo            esperado nosniff obtenido nosniff
+OK  12.1 …que no se meta dentro de otra página                         esperado SAMEORIGIN obtenido SAMEORIGIN
+OK  12.1 …y que no se diga de dónde viene                              esperado no-referrer obtenido no-referrer
+OK  12.1 …y solo corre programas de este servidor                      esperado True obtenido True
+OK  12.1 La API también lleva las cabeceras                            esperado ['nosniff', 'no-referrer'] obtenido ['nosniff', 'no-referrer']
+OK  12.1 Cambiar la contraseña pide sesión                             esperado 401 obtenido 401
+OK  12.1 …y la contraseña actual correcta                              esperado 400 obtenido 400
+OK  12.1 …y una nueva de 8 o más                                       esperado 400 obtenido 400
+OK  12.1 Un invitado no tiene contraseña que cambiar                   esperado 403 obtenido 403
+OK  12.1 Con la actual correcta, cambia                                esperado 200 obtenido 200
+OK  12.1 …y da una sesión nueva para ese equipo                        esperado 200 obtenido 200
+OK  12.1 …las demás sesiones se cierran                                esperado [401, 401] obtenido [401, 401]
+OK  12.1 …la contraseña vieja ya no entra                              esperado 401 obtenido 401
+OK  12.1 …la nueva sí                                                  esperado 200 obtenido 200
+OK  12.1 Pedir un boleto pide sesión                                   esperado 401 obtenido 401
+OK  12.1 Con sesión se obtiene un boleto                               esperado True obtenido True
+OK  12.1 El canal en vivo abre con el boleto                           esperado [200, 'text/event-stream'] obtenido [200, 'text/event-stream']
+OK  12.1 …y el mismo boleto no sirve dos veces                         esperado 401 obtenido 401
+OK  12.1 Un boleto inventado no abre nada                              esperado 401 obtenido 401
+OK  12.1 El boleto de otra persona no da su permiso (espacio ajeno)    esperado 403 obtenido 403
+OK  12.1 Sin boleto ni token el canal no abre                          esperado 401 obtenido 401
+OK  12.1 Ver el almacenamiento pide sesión                             esperado 401 obtenido 401
+OK  12.1 La cuenta ve cuánto ocupa y su límite                         esperado True obtenido True
+OK  12.1 …solo de los espacios que son suyos                           esperado ['ofAQMAHi0aqG'] obtenido ['ofAQMAHi0aqG']
+OK  12.1 …lo que escribe en espacios ajenos no le cuenta               esperado [0, []] obtenido [0, []]
+OK  12.1 El estado de los documentos se guarda comprimido              esperado True obtenido True
+OK  12.1 …y las fotos de sus versiones también                         esperado True obtenido True
+OK  12.1 6 intentos fallidos desde una red la bloquean ahí             esperado 423 obtenido 423
+OK  12.1 …ni con la contraseña correcta entra desde esa red            esperado 423 obtenido 423
+OK  12.1 …pero su dueño entra desde otra red                           esperado 200 obtenido 200
+OK  12.1 …y desde el propio equipo                                     esperado 200 obtenido 200
+OK  12.1 Una red crea hasta 30 cuentas por hora                        esperado [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201] obtenido [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201]
+OK  12.1 …la 31 se rechaza                                             esperado 429 obtenido 429
+OK  12.1 …otra red sí puede crear la suya                              esperado 201 obtenido 201
+OK  12.1 …y el propio equipo no tiene tope                             esperado 201 obtenido 201
+OK  12.1 (antes) está en el salón de la maestra                        esperado True obtenido True
+OK  12.1 Borrar la cuenta pide sesión                                  esperado 401 obtenido 401
+OK  12.1 …y la contraseña                                              esperado 400 obtenido 400
+OK  12.1 …la correcta                                                  esperado 400 obtenido 400
+OK  12.1 Un invitado no borra cuentas                                  esperado 403 obtenido 403
+OK  12.1 (tras los intentos) la cuenta sigue ahí                       esperado 200 obtenido 200
+OK  12.1 Con su contraseña, la cuenta se borra                         esperado [200, 1, 1] obtenido [200, 1, 1]
+OK  12.1 …su sesión deja de servir                                     esperado 401 obtenido 401
+OK  12.1 …ya no puede entrar                                           esperado 401 obtenido 401
+OK  12.1 …su espacio ya no existe para quien estaba invitado           esperado 404 obtenido 404
+OK  12.1 …ni sus documentos                                            esperado 404 obtenido 404
+OK  12.1 …sale de los espacios de otros                                esperado [False, 5] obtenido [False, 5]
+OK  12.1 …pero lo que escribió ahí se queda                            esperado 200 obtenido 200
+OK  12.1 …y su nombre queda libre                                      esperado 201 obtenido 201
+OK  12.1 …la cuenta nueva no hereda nada                               esperado [] obtenido []
+OK  12.1 Tras reiniciar, un estado sin comprimir (versión anterior) abre esperado 300 obtenido 300
+OK  12.1 …y uno comprimido también                                     esperado True obtenido True
+OK  12.1 …con sus versiones                                            esperado True obtenido True
+OK  12.1 …y al volver a guardarse queda comprimido                     esperado b'\x1f\x8b' obtenido b'\x1f\x8b'
+OK  3.6 Un editor no fija la fecha de entrega                          esperado 403 obtenido 403
+OK  3.6 El propietario fija la fecha límite                            esperado 200 obtenido 200
+OK  3.6 Antes de la fecha, el alumno escribe                           esperado 0 obtenido 0
+OK  3.6 Al pasar la fecha, el alumno ya no puede escribir              esperado 403 obtenido 403
+OK  3.6 …y lo abre en solo lectura                                     esperado LECTURA obtenido LECTURA
+OK  3.6 El propietario sí puede                                        esperado 200 obtenido 200
+OK  12.1 Un boleto sin usar vence a los 30 segundos                    esperado 401 obtenido 401
+226 de 226
+FIN 0

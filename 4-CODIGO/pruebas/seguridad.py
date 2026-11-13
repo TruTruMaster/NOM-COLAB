@@ -59,6 +59,9 @@ def canal(u):
         try: return x.status, (x.headers.get("Content-Type") or "").split(";")[0]
         finally: x.close()
     except urllib.error.HTTPError as e: return e.code, ""
+import random as _r
+# Nombres de espacio únicos: así se puede correr dos veces contra el mismo servidor (la Pi, el teléfono).
+SUFIJO = " " + "".join(_r.choice("abcdefghijkmnpqrstuvwxyz") for _ in range(5))
 res = []
 def prueba(nombre, esperado, obtenido): res.append((nombre, esperado, obtenido, str(esperado) == str(obtenido)))
 try:
@@ -66,7 +69,7 @@ try:
     CL = "Clave-Segura-123"
     for n in ("duena", "lectora", "editora", "ajena"): r("POST", "/api/cuentas/registro", {"nombre": n, "contrasena": CL})
     tok = {n: r("POST", "/api/cuentas/sesion", {"nombre": n, "contrasena": CL})[1]["token"] for n in ("duena", "lectora", "editora", "ajena")}
-    esp = r("POST", "/api/espacios", {"nombre": "Prueba"}, tok["duena"])[1]["id"]
+    esp = r("POST", "/api/espacios", {"nombre": "Prueba" + SUFIJO}, tok["duena"])[1]["id"]
     r("PUT", f"/api/espacios/{esp}/accesos", {"usuario": "lectora", "permiso": "LECTURA"}, tok["duena"])
     r("PUT", f"/api/espacios/{esp}/accesos", {"usuario": "editora", "permiso": "EDICION"}, tok["duena"])
     doc = r("POST", f"/api/espacios/{esp}/documentos", {"nombre": "Doc", "modo": "TEXTO", "ops": []}, tok["duena"])[1]["id"]
@@ -98,7 +101,7 @@ try:
     ses = {n: r("POST", "/api/cuentas/sesion", {"nombre": n, "contrasena": CL})[1] for n in ("maestra", "alumno1", "alumno2", "visitante")}
     tk = {n: ses[n]["token"] for n in ses}
     uid = {n: ses[n]["usuario"]["id"] for n in ses}
-    salon = r("POST", "/api/espacios", {"nombre": "Salón 3B"}, tk["maestra"])[1]["id"]
+    salon = r("POST", "/api/espacios", {"nombre": "Salón 3B" + SUFIJO}, tk["maestra"])[1]["id"]
     for n in ("alumno1", "alumno2"): r("PUT", f"/api/espacios/{salon}/accesos", {"usuario": n, "permiso": "EDICION"}, tk["maestra"])
     T = [1000]
     def lote(cliente, *ops):
@@ -236,7 +239,7 @@ try:
     prueba("8.5 …con el mismo contenido", "La clorofila absorbe la luz", reg(abierto, "f1", "texto"))
     prueba("8.5 …y su propio nombre", "Fotosíntesis (mi versión)", (abierto[1] or {}).get("documento", {}).get("nombre"))
     prueba("8.5 Lo que no está en la papelera no se borra para siempre", 409, r("DELETE", f"/api/documentos/{cid}/definitivo", t=tk["maestra"])[0])
-    otro = r("POST", "/api/espacios", {"nombre": "Ajeno"}, tk["alumno2"])[1]["id"]
+    otro = r("POST", "/api/espacios", {"nombre": "Ajeno" + SUFIJO}, tk["alumno2"])[1]["id"]
     prueba("8.5 No se copia a un espacio donde no puedes editar", 403, r("POST", f"/api/documentos/{bdoc}/copia", {"espacioId": otro}, tk["alumno1"])[0])
     prueba("8.5 No se mueve a un espacio ajeno", 403, r("PUT", f"/api/documentos/{cid}/espacio", {"espacioId": otro}, tk["alumno1"])[0])
     prueba("8.5 Quien edita en los dos espacios lo mueve", 200, r("PUT", f"/api/documentos/{cid}/espacio", {"espacioId": otro}, tk["alumno2"])[0])
@@ -405,7 +408,7 @@ try:
     r("POST", "/api/cuentas/registro", {"nombre": "borrable", "contrasena": CL})
     sb = r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[1]
     tb, ub = sb["token"], sb["usuario"]["id"]
-    eb = r("POST", "/api/espacios", {"nombre": "Se va conmigo"}, tb)[1]["id"]
+    eb = r("POST", "/api/espacios", {"nombre": "Se va conmigo" + SUFIJO}, tb)[1]["id"]
     r("PUT", f"/api/espacios/{eb}/accesos", {"usuario": "alumno1", "permiso": "EDICION"}, tb)
     db = r("POST", f"/api/espacios/{eb}/documentos", {"nombre": "Mío", "modo": "TEXTO", "ops": []}, tb)[1]["id"]
     r("PUT", f"/api/espacios/{salon}/accesos", {"usuario": "borrable", "permiso": "EDICION"}, tk["maestra"])

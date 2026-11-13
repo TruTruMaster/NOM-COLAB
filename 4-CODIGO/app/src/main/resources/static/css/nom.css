@@ -982,7 +982,8 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 /* ---------------------------------------------------------------- bienvenida al entrar */
 .bienvenida-momento { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; padding: 24px;
   background: color-mix(in srgb, var(--fondo) 84%, transparent); backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5); animation: aparecer 240ms var(--salida); }
-.bienvenida-momento.saliendo { animation: desaparecer 520ms var(--salida) forwards; }
+/* Mientras se desvanece ya no detiene los clics: el primer toque después de entrar sí cuenta. */
+.bienvenida-momento.saliendo { animation: desaparecer 520ms var(--salida) forwards; pointer-events: none; }
 .bm-tarjeta { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; animation: bm-in 760ms var(--resorte) 60ms backwards; transition: transform 520ms var(--salida); }
 .bienvenida-momento.saliendo .bm-tarjeta { transform: translateY(-16px) scale(.98); }
 @keyframes bm-in { from { opacity: 0; transform: translateY(18px) scale(.95); } }

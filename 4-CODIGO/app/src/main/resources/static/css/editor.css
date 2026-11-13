@@ -905,6 +905,10 @@
 .wd-ecuacion.en-bloque { display: block; text-align: center; margin: 6px 0; }
 .wd-ecuacion math { font-size: 1.1em; }
 .wd-notas-finales { display: none; }
+/* Sin páginas (lo normal en el celular) las notas al pie no tienen pie de página: van al final del texto. */
+[data-vista="continua"] .wd-notas-finales { display: block; margin-top: 22px; border-top: 1px solid var(--borde-fuerte, #999); padding-top: 8px; font-size: .82em; color: var(--tinta-suave, inherit); }
+[data-vista="continua"] .wd-notas-finales .wd-notas-titulo { font-weight: 700; margin-bottom: 4px; }
+[data-vista="continua"] .wd-notas-finales p { margin: 0 0 3px; }
 .ecu-vista { min-height: 70px; display: grid; place-items: center; padding: 12px; border-radius: 12px; background: var(--sup-hundida); font-size: 22px; overflow-x: auto; }
 .ecu-ayudas { display: flex; flex-wrap: wrap; gap: 4px; }
 .ecu-ayudas button { min-width: 40px; height: 34px; border-radius: 8px; border: 1px solid var(--borde); background: var(--sup-2); font: 650 15px var(--fuente); color: var(--tinta); cursor: pointer; }

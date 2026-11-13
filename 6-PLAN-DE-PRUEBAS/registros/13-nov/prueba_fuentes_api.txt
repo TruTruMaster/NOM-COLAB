@@ -1,0 +1,13 @@
+wikipedia buscar: 200 ['Fotosíntesis', 'Fotosíntesis oxigénica', 'Fotosíntesis anoxigénica', 'Fotosíntesis artificial']
+wikipedia artículo: 200 {'tipo': 'enciclopedia', 'titulo': 'Fotosíntesis', 'sitio': 'Wikipedia, la enciclopedia libre', 'fecha': '2026-11-03', 'anio': '2026', 'url': 'https://es.wikipedia.org/wiki/Fotos%C3%ADntesis', 'consultado': '2026-11-13'} 25001
+libros: 200 [('Cien años de soledad', '1967', [{'familia': 'García Márquez', 'nombres': 'Gabriel'}]), ('Cien años de soledad', '1985', [{'familia': 'Ludmer', 'nombres': 'Josefina'}]), ('Cien años de Soledad', '2015', [{'familia': 'Marquez', 'nombres': 'Gabriel'}])]
+artículos: 200 [('Confronting Climate Change in New Mexico', 'Climate Change and Law Collection', None), ('Mexico - Climate Change', 'Foreign Law Guide', None), ('New Mexico Environmental Improvement Board Conside', 'Climate Change and Law Collection', None)]
+doi: 200 {'tipo': 'articulo', 'titulo': 'Nanometre-scale thermometry in a living cell', 'autores': [{'familia': 'Kucsko', 'nombres': 'G.'}, {'familia': 'Maurer', 'nombres': 'P. C.'}, {'familia': 'Yao', 'nombres': 'N. Y.'}, {'familia': 'Kubo', 'nombres': 'M.'}, {'familia': 'Noh', 'nombres': 'H. J.'}, {'familia': 'Lo', 'nombres': 'P. K.'}, {'familia': 'Park', 'nombres': 'H.'}, {'familia': 'Lukin', 'nombres': 'M. D.'}], 'anio': '2013', 'fecha': '2013-07-31', 'revista': 'Nature', 'volumen': '500', 'numero': '7460', 'paginas': '54–58', 'editorial': 'Springer Science and Business Media LLC', 'doi': '10.1038/nature12373', 'url': 'https://doi.org/10.1038/nature12373', 'consultado': '2026-11-13'}
+isbn: 200 {'tipo': 'libro', 'titulo': 'Cien años de soledad', 'autores': [{'familia': 'García Márquez', 'nombres': 'Gabriel'}], 'anio': '2009', 'editorial': 'Vintage Español', 'isbn': '9780307474728', 'url': 'http://openlibrary.org/books/OL23961914M/Cien_años_de_soledad', 'consultado': '2026-11-13'}
+web bbc: 200 {'titulo': 'Noticias - BBC News Mundo', 'sitio': 'BBC News Mundo', 'tipo': 'web'}
+web wiki: 200 {'titulo': 'Revolución mexicana - Wikipedia, la enciclopedia libre', 'sitio': 'Wikipedia, la enciclopedia libre', 'tipo': 'enciclopedia'}
+conjuntos: 200 ['estados-mexico', 'paises-america', 'elementos', 'planetas', 'paises-poblacion']
+wikidata estados: 200 ['Estado', 'Capital', 'Población'] 31 [['Aguascalientes', 'Aguascalientes', '1312544'], ['Baja California', 'Mexicali', '3315766']]
+wikidata elementos: 200 118 [['1', 'H', 'hidrógeno', '1.008'], ['2', 'He', 'helio', '4.003']]
+wikidata planetas: 200 [['Mercurio', '2440', '0.33', '88'], ['Venus', '6052', '4.868', '225'], ['Tierra', '6378', '5.972', '365']]
+FIN 0

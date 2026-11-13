@@ -33,7 +33,7 @@
   function compartir(dir) {
     const t = `Entra a NOM-COLAB en mi teléfono: ${dir}\n(Con la app: "¿Dónde trabaja tu equipo?" → "Buscar en este Wi-Fi". En la computadora: abre la dirección en el navegador; hay que estar en el mismo Wi-Fi.)`;
     if (window.NomAndroid && window.NomAndroid.compartirTexto) window.NomAndroid.compartirTexto(t);
-    else if (navigator.clipboard) navigator.clipboard.writeText(dir).then(() => aviso("Dirección copiada", { tipo: "ok" }));
+    else NOM.copiarConAviso(dir, "Dirección copiada");
   }
 
   /** Al abrir la app: si el teléfono era el servidor y Android lo cerró (o se reinició), se enciende. */
@@ -114,7 +114,7 @@
         exp.disabled = true; exp.innerHTML = `<span class="cargando"></span> Preparando…`;
         setTimeout(() => { const n = window.NomAndroid.exportarRespaldo(); exp.disabled = false; exp.innerHTML = `${ico("archive")} Descargar todo`; if (n) pintar(); }, 30);
       };
-      $$("[data-copiar]", sec).forEach((b) => (b.onclick = () => { try { navigator.clipboard.writeText(b.dataset.copiar); aviso("Dirección copiada", { tipo: "ok" }); } catch (x) { compartir(b.dataset.copiar); } }));
+      $$("[data-copiar]", sec).forEach((b) => (b.onclick = () => NOM.copiarConAviso(b.dataset.copiar, "Dirección copiada")));
       $$("[data-compartir]", sec).forEach((b) => (b.onclick = () => compartir(b.dataset.compartir)));
       const enc = $("[data-encender]", sec);
       if (enc) enc.onclick = () => { try { encender(false); aviso("Listo: este teléfono ya comparte", { tipo: "ok" }); } catch (err) { aviso(err.message, { tipo: "error" }); } pintar(); };

@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Plan de pruebas · NOM-COLAB</title>
+<style>
+@font-face { font-family: 'Nunito'; src: url(../../4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-wght-normal.woff2) format('woff2'); font-weight: 200 1000; }
+@font-face { font-family: 'Nunito'; src: url(../../4-CODIGO/app/src/main/resources/static/fonts/nunito-latin-ext-wght-normal.woff2) format('woff2'); font-weight: 200 1000; unicode-range: U+0100-024F, U+1E00-1EFF, U+2020, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+:root { --guinda: #6E1F3A; --azul: #1F5FA8; --azulc: #E6EEF8; --coral: #D9573A; --coralc: #FBE7E1; --amar: #F2B705; --verde: #1D7A4C; --verdec: #E3F2EA; --tinta: #1F1B24; --gris: #5E5A66; --linea: #CFC8BE; --crema: #FAF6EF; --marino: #1E2A44; }
+@page { size: letter; margin: 2.2cm 2.3cm 2.4cm 2.3cm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: var(--tinta); font-family: 'Carlito', 'Calibri', Arial, sans-serif; font-size: 11.5pt; line-height: 1.45; }
+p { margin: 0 0 7pt; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
+li { text-align: justify; hyphens: auto; margin-bottom: 3pt; }
+ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+h2, h3, h4 { font-family: 'Nunito', Arial, sans-serif; color: var(--guinda); break-after: avoid; page-break-after: avoid; }
+h2 { font-size: 17pt; font-weight: 900; margin: 0 0 9pt; padding-bottom: 4pt; border-bottom: 2.5px solid var(--guinda); }
+h3 { font-size: 13pt; font-weight: 800; margin: 15pt 0 6pt; color: var(--azul); }
+h4 { font-size: 11.2pt; font-weight: 800; margin: 12pt 0 5pt; color: var(--tinta); }
+.capitulo { break-before: page; page-break-before: always; }
+.sigue { margin-top: 20pt; }
+h3:first-child { margin-top: 0; }
+table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 9.8pt; line-height: 1.3; }
+th, td { text-align: left; vertical-align: top; padding: 4pt 5pt; border: 1px solid var(--linea); }
+th { background: var(--guinda); color: #fff; font-family: 'Nunito', Arial, sans-serif; font-weight: 800; font-size: 9pt; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+thead { display: table-header-group; }
+td.c, th.c { text-align: center; }
+td.x { text-align: center; font-weight: 900; font-size: 11pt; vertical-align: middle; }
+code { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.3pt; background: #F1EDF3; padding: 0 2.5pt; border-radius: 2pt; }
+.fig { margin: 8pt 0 12pt; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.fig img, .fig svg { max-width: 100%; }
+.fig img.borde { border: 1px solid var(--linea); border-radius: 5pt; }
+.pie-fig { font-size: 9pt; color: var(--gris); margin-top: 4pt; text-align: center; }
+.pie-fig b { color: var(--guinda); }
+.caja { background: var(--crema); border-left: 4px solid var(--amar); padding: 7pt 10pt; margin: 6pt 0 11pt; break-inside: avoid; }
+.caja p:last-child { margin-bottom: 0; }
+.caja.coral { background: var(--coralc); border-color: var(--coral); }
+.caja.azul { background: var(--azulc); border-color: var(--azul); }
+.ok { color: var(--verde); font-weight: 700; }
+.no { color: #B42318; font-weight: 700; }
+.prog { color: var(--azul); font-weight: 700; }
+.pill { display: inline-block; font-family: 'Nunito', Arial, sans-serif; font-weight: 800; font-size: 8pt; padding: 0.5pt 5pt; border-radius: 8pt; white-space: nowrap; }
+.p-crit { background: #F8D7DA; color: #8A1C27; } .p-alta { background: #FDE2CF; color: #8E3B12; } .p-media { background: #FFF1C2; color: #6B5300; } .p-baja { background: #E3F2EA; color: #1D5E3B; }
+.dos { display: flex; gap: 12pt; align-items: flex-start; } .dos > * { flex: 1; min-width: 0; }
+/* ficha de prueba (formato de la unidad 3_2, con el encabezado de la empresa) */
+.ficha-cab { display: grid; grid-template-columns: 2.3cm 1fr 3.6cm; border: 1.5px solid var(--marino); margin-top: 6pt; break-inside: avoid; break-after: avoid; }
+.ficha-cab .logo { grid-row: span 3; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--marino); padding: 4pt; }
+.ficha-cab .logo img { width: 100%; }
+.ficha-cab .emp { background: var(--marino); color: #fff; font-family: 'Nunito', Arial, sans-serif; font-weight: 900; font-size: 12pt; padding: 3pt 7pt; line-height: 1.15; }
+.ficha-cab .emp span { display: block; font-weight: 600; font-size: 8pt; opacity: .85; }
+.ficha-cab .d { font-size: 9pt; padding: 2.5pt 6pt; border-top: 1px solid var(--marino); }
+.ficha-cab .r { border-left: 1px solid var(--marino); font-size: 9pt; padding: 2.5pt 6pt; }
+.ficha-cab .r:first-of-type { border-top: none; }
+.ficha { margin: 0 0 12pt; font-size: 9.8pt; }
+.ficha td:first-child { width: 27%; font-weight: 700; background: #F3F1EE; }
+.ficha td.sec { background: var(--marino) !important; color: #fff; font-family: 'Nunito', Arial, sans-serif; font-weight: 800; font-size: 9pt; }
+.ficha + table { margin-top: -12pt; }
+.tabla-req th { background: #4A4A52; }
+.tabla-req td:first-child { width: 36%; }
+.tabla-req td.x { width: 7.5%; }
+.tabla-req th { font-size: 8.6pt; }
+td.id { white-space: nowrap; }
+.capturas { display: flex; gap: 10pt; align-items: flex-start; break-inside: avoid; margin: 4pt 0 10pt; }
+.capturas .fig { flex: 1; margin: 0; }
+.capturas img { max-height: 5.6cm; width: auto; max-width: 100%; }
+.dos { break-inside: avoid; }
+.escala th { background: #4A4A52; }
+.escala td.x { width: 7.5%; }
+/* índice */
+.indice { list-style: none; padding: 0; margin: 6pt 0 0; }
+.indice li { display: flex; align-items: baseline; margin: 0 0 4.5pt; text-align: left; }
+.indice li.sub { padding-left: 16pt; font-size: 10.5pt; color: #3a3640; margin-bottom: 2.5pt; }
+.indice li.sub2 { padding-left: 32pt; font-size: 10pt; color: #55515c; margin-bottom: 2pt; }
+.indice li.n1 { font-weight: 700; margin-top: 5pt; }
+.indice .t { white-space: nowrap; }
+.indice .puntos { flex: 1; border-bottom: 1.5px dotted #B9B2A8; margin: 0 5pt 3pt; }
+.indice .pg { min-width: 16pt; text-align: right; font-weight: 700; color: var(--guinda); }
+/* calendario */
+.gantt td { padding: 3pt 4pt; font-size: 9pt; }
+.gantt td.b { background: var(--azul); } .gantt td.h { background: var(--verde); } .gantt td.e { background: var(--coral); }
+.leyenda { font-size: 8.8pt; color: var(--gris); text-align: left; }
+.leyenda i { display: inline-block; width: 10pt; height: 8pt; margin: 0 3pt 0 8pt; vertical-align: middle; }
+.barra { height: 9pt; background: #EEE9E2; border-radius: 5pt; overflow: hidden; }
+.barra span { display: block; height: 100%; background: var(--verde); border-radius: 5pt; }
+.firma { margin-top: 30pt; display: grid; grid-template-columns: 1fr 1fr; gap: 34pt 30pt; break-inside: avoid; }
+.firma div { border-top: 1.2px solid var(--tinta); padding-top: 4pt; text-align: center; font-size: 10pt; }
+.firma div span { display: block; color: var(--gris); font-size: 9pt; }
+.ref { padding-left: 24pt; text-indent: -24pt; text-align: left; }
+/* portada empresarial */
+.portada { height: 23.2cm; position: relative; display: flex; flex-direction: column; color: #fff; background: var(--marino); margin: -0.2cm; padding: 1.4cm 1.3cm 1.2cm; border-radius: 6pt; overflow: hidden; font-family: 'Nunito', Arial, sans-serif; }
+.portada .onda1 { position: absolute; right: -4cm; top: -4cm; width: 13cm; height: 13cm; border-radius: 50%; background: #6E1F3A; opacity: .9; }
+.portada .onda2 { position: absolute; left: -3cm; bottom: -5cm; width: 12cm; height: 12cm; border-radius: 50%; border: 3px solid var(--amar); opacity: .7; }
+.portada .onda3 { position: absolute; right: 2.2cm; bottom: 3.5cm; width: 4cm; height: 4cm; border-radius: 50%; background: var(--amar); opacity: .18; }
+.portada > * { position: relative; }
+.portada .marca { display: flex; align-items: center; gap: 12pt; }
+.portada .marca img { height: 2.6cm; background: #fff; border-radius: 10pt; padding: 4pt; }
+.portada .marca b { font-size: 26pt; font-weight: 900; letter-spacing: 2px; display: block; line-height: 1; }
+.portada .marca span { font-size: 10.5pt; opacity: .85; }
+.portada .doc { margin-top: 4.2cm; }
+.portada .doc .tipo { font-size: 11pt; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--amar); }
+.portada .doc h1 { font-size: 40pt; font-weight: 900; line-height: 1.02; margin: 6pt 0 10pt; color: #fff; }
+.portada .doc .proy { font-size: 15pt; font-weight: 700; }
+.portada .doc .proy small { display: block; font-size: 11pt; font-weight: 600; opacity: .8; margin-top: 3pt; }
+.portada .cliente { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 10pt; }
+.portada .cliente .dato { font-size: 10pt; line-height: 1.55; }
+.portada .cliente .dato b { color: var(--amar); }
+.portada .cliente img { height: 2.2cm; background: #fff; border-radius: 10pt; padding: 5pt; }
+.portada .lema { font-style: italic; font-size: 11pt; color: var(--amar); margin-top: 8pt; }
+/* subportada empresarial */
+.subportada { height: 23.2cm; display: flex; flex-direction: column; align-items: center; text-align: center; font-family: 'Nunito', Arial, sans-serif; }
+.subportada .logos { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.subportada .logos img { height: 2.8cm; }
+.subportada .inst { font-size: 13.5pt; font-weight: 800; line-height: 1.3; margin-top: 4pt; text-transform: uppercase; color: var(--tinta); }
+.subportada .franja { width: 100%; margin-top: 0.9cm; background: var(--marino); color: #fff; border-radius: 6pt; padding: 12pt 14pt; }
+.subportada .franja .m { font-size: 11pt; font-weight: 700; letter-spacing: 2px; color: var(--amar); text-transform: uppercase; }
+.subportada .franja .t { font-size: 22pt; font-weight: 900; line-height: 1.15; margin-top: 4pt; }
+.subportada .franja .s { font-size: 11pt; opacity: .85; margin-top: 3pt; }
+.subportada .empresa { margin-top: 0.8cm; display: flex; align-items: center; gap: 14pt; text-align: left; }
+.subportada .empresa img { height: 2.4cm; }
+.subportada .empresa div { font-size: 11pt; line-height: 1.45; }
+.subportada table { margin-top: 0.7cm; font-size: 10.5pt; }
+.subportada table td { text-align: left; }
+.subportada .fecha { margin-top: auto; font-size: 11pt; color: var(--gris); }
+</style></head><body>
+
+<!-- ============================== 1. PORTADA (empresarial) ============================== -->
+<section class="portada">
+  <div class="onda1"></div><div class="onda2"></div><div class="onda3"></div>
+  <div class="marca"><img src="../imagenes/logo-wack.png" alt="WACK"><div><b>WACK</b><span>Pruebas y aseguramiento de la calidad de software</span></div></div>
+  <div class="doc">
+    <div class="tipo">Documento PP-NOMCOLAB-01 · Revisión 1</div>
+    <h1>Plan de<br>pruebas</h1>
+    <div class="proy">Sistema evaluado: NOM-COLAB 0.12.1<small>Suite colaborativa de documentos para trabajar donde no hay internet</small></div>
+  </div>
+  <div class="cliente">
+    <div class="dato"><b>Elaboró:</b> WACK, área de Aseguramiento de la calidad<br><b>Proyecto:</b> NOM-COLAB (servidor, página web y app Android)<br><b>Fecha:</b> noviembre de 2026
+      <div class="lema">“We carry the flame”</div></div>
+    <img src="../imagenes/logo-nom.png" alt="NOM-COLAB">
+  </div>
+</section>
+
+<!-- ============================== 1. SUBPORTADA (empresarial) ============================== -->
+<section class="capitulo subportada">
+  <div class="logos"><img src="../imagenes/logo-ipn.jpg" alt="IPN"><div class="inst">Instituto Politécnico Nacional<br>Centro de Estudios Científicos<br>y Tecnológicos 9 “Juan de Dios Bátiz”</div><img src="../imagenes/logo-cecyt9.png" alt="CECyT 9"></div>
+  <div class="franja">
+    <div class="m">Pruebas de software · Unidad 3</div>
+    <div class="t">Plan de pruebas (aseguramiento de la calidad)</div>
+    <div class="s">Proyecto aula: NOM-COLAB, versión 0.12.1</div>
+  </div>
+  <div class="empresa"><img src="../imagenes/logo-wack.png" alt="WACK"><div><b>WACK</b> · Equipo 6<br>Grupo 5IM7<br><i>“We carry the flame”</i></div></div>
+  <table>
+    <thead><tr><th>Integrante</th><th>Puesto en WACK</th></tr></thead>
+    <tbody>
+    <tr><td>Martínez Ortega Uriel Alejandro</td><td>Director general</td></tr>
+    <tr><td>Soria Flores Josep Aarón</td><td>Project manager</td></tr>
+    <tr><td>González Azuara Arturo Leonardo</td><td>Subdirector de operaciones</td></tr>
+    <tr><td>Rodríguez Esparza Diego Alejandro</td><td>Desarrollador y QA</td></tr>
+    </tbody>
+  </table>
+  <div class="fecha">Ciudad de México, 27 de noviembre de 2026</div>
+</section>
+
+<!-- ============================== ÍNDICE ============================== -->
+<section class="capitulo" id="pag-indice">
+  <h2>Índice</h2>
+  <ul class="indice" id="indice"><li class="n1"><span class="t">1. Portada y subportada</span><span class="puntos"></span><span class="pg">1</span></li></ul>
+</section>
+
+<!-- ============================== 2. INTRODUCCIÓN ============================== -->
+<section class="capitulo">
+  <h2 id="s2">2. Introducción</h2>
+  <p>Las pruebas son un elemento crítico del software. Un error que llega al usuario cuesta mucho más que uno encontrado durante el desarrollo: se pierde trabajo, se pierde confianza y corregirlo obliga a rehacer partes que ya estaban terminadas. Por eso las pruebas no se dejan al azar, sino que se definen y se aplican mediante un proceso minucioso y bien planificado, que permite <b>verificar</b> que el software se construyó conforme a lo especificado y <b>validar</b> que de verdad resuelve la necesidad de quien lo usa.</p>
+  <p>Un <b>plan de pruebas</b> es el documento que señala el enfoque de las actividades de prueba: qué elementos se van a probar, qué características, con qué técnicas, quién es responsable de cada actividad, en qué fechas y cuáles son los riesgos asociados. Se elabora a partir de los documentos de especificación del sistema (casos de uso, reglas de negocio, diseño de la interfaz y modelo de la base de datos) y sirve de guía tanto para las pruebas manuales como para las automatizadas.</p>
+  <p>Las pruebas se clasifican, según lo definido por Pressman, en dos enfoques. Las pruebas de <b>caja negra</b> se llevan a cabo sobre la interfaz del software: demuestran que las funciones son operativas, que las entradas se manejan de forma adecuada y que se produce el resultado esperado, sin mirar el código. Las pruebas de <b>caja blanca</b> se centran en la estructura lógica interna y examinan en detalle los procedimientos y caminos lógicos del programa.</p>
+  <h3>Objetivos de las pruebas en el software</h3>
+  <ul>
+    <li>Demostrar al desarrollador y al cliente que el software satisface sus requerimientos, con al menos una prueba para cada requerimiento documentado.</li>
+    <li>Descubrir defectos antes de que lleguen al usuario, en el punto donde corregirlos es más barato.</li>
+    <li>Dar evidencia objetiva (resultado esperado contra resultado obtenido) para decidir si una versión se puede liberar.</li>
+    <li>Comprobar atributos de calidad que no son funciones visibles, como la seguridad, la facilidad de uso y la portabilidad.</li>
+  </ul>
+  <p>En este documento, WACK presenta el plan de pruebas que aplicó al sistema NOM-COLAB: un plan para cada tipo de prueba (unitarias, de integración, de requerimientos y de sistema: usabilidad, seguridad y portabilidad), con los resultados de su ejecución sobre la versión 0.12.1.</p>
+</section>
+
+<!-- ============================== 3. DESCRIPCIÓN ============================== -->
+<section class="capitulo">
+  <h2 id="s3">3. Breve descripción del proyecto</h2>
+  <p><b>NOM-COLAB</b> es una suite de documentos colaborativos con cuatro tipos de documento: texto, hoja de cálculo, presentación y diagrama. Hasta cinco personas pueden editar el mismo espacio de trabajo al mismo tiempo y los cambios se ven en tiempo real en la computadora, en el navegador del celular y en la app Android. Su rasgo principal es que <b>funciona donde no hay internet</b>: una computadora del salón, o incluso un teléfono, puede ser el servidor de la red local, y si la conexión se pierde, los cambios se guardan en el dispositivo y se envían solos al volver la red.</p>
+  <p>Cada espacio de trabajo tiene tres roles: <b>Propietario</b>, <b>Puede editar</b> y <b>Solo lectura</b>. El sistema guarda versiones, lleva una bitácora de cambios, importa y exporta archivos de Word, Excel y PowerPoint, y protege las cuentas con contraseñas cifradas y bloqueo por intentos fallidos. Está publicado en la nube (Azure App Service con Azure SQL), en un servidor propio (Raspberry Pi) y como aplicación instalable para Android.</p>
+  <div class="fig">
+    <svg viewBox="0 0 640 200" width="100%" font-family="Carlito, Arial" font-size="12">
+      <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6E1F3A"/></marker></defs>
+      <rect x="4" y="15" width="170" height="170" rx="10" fill="#E6EEF8" stroke="#1F5FA8" stroke-width="1.5"/>
+      <text x="89" y="38" text-anchor="middle" font-weight="700" fill="#1F5FA8" font-size="13">Clientes</text>
+      <text x="89" y="62" text-anchor="middle">Navegador de computadora</text><text x="89" y="82" text-anchor="middle">Navegador del celular</text><text x="89" y="102" text-anchor="middle">App Android (WebView)</text>
+      <text x="89" y="130" text-anchor="middle" fill="#5E5A66" font-size="11">HTML, CSS y JavaScript</text><text x="89" y="146" text-anchor="middle" fill="#5E5A66" font-size="11">sin bibliotecas externas;</text><text x="89" y="162" text-anchor="middle" fill="#5E5A66" font-size="11">copia cifrada sin conexión</text>
+      <line x1="176" y1="100" x2="232" y2="100" stroke="#6E1F3A" stroke-width="2" marker-end="url(#fl)"/>
+      <text x="204" y="91" text-anchor="middle" font-size="10" fill="#6E1F3A">REST</text><text x="204" y="117" text-anchor="middle" font-size="10" fill="#6E1F3A">en vivo</text>
+      <rect x="234" y="15" width="190" height="170" rx="10" fill="#FBE7E1" stroke="#D9573A" stroke-width="1.5"/>
+      <text x="329" y="38" text-anchor="middle" font-weight="700" fill="#D9573A" font-size="13">Servidor</text>
+      <text x="329" y="62" text-anchor="middle">Java 17 + Spring Boot 4.1</text><text x="329" y="82" text-anchor="middle">Cuentas · Espacios · Documentos</text><text x="329" y="102" text-anchor="middle">Motor de sincronización (CRDT)</text>
+      <text x="329" y="130" text-anchor="middle" fill="#5E5A66" font-size="11">El mismo núcleo corre en la</text><text x="329" y="146" text-anchor="middle" fill="#5E5A66" font-size="11">laptop, la Raspberry Pi, Azure</text><text x="329" y="162" text-anchor="middle" fill="#5E5A66" font-size="11">y el teléfono como servidor</text>
+      <line x1="426" y1="100" x2="482" y2="100" stroke="#6E1F3A" stroke-width="2" marker-end="url(#fl)"/>
+      <text x="454" y="91" text-anchor="middle" font-size="10" fill="#6E1F3A">JDBC</text>
+      <rect x="484" y="15" width="152" height="170" rx="10" fill="#E3F2EA" stroke="#1D7A4C" stroke-width="1.5"/>
+      <text x="560" y="38" text-anchor="middle" font-weight="700" fill="#1D7A4C" font-size="13">Datos</text>
+      <text x="560" y="62" text-anchor="middle">H2 en la red local</text><text x="560" y="82" text-anchor="middle">Azure SQL en la nube</text><text x="560" y="102" text-anchor="middle">Documentos en JSON</text><text x="560" y="118" text-anchor="middle">comprimido (gzip)</text>
+      <text x="560" y="146" text-anchor="middle" fill="#5E5A66" font-size="11">Roles de base de datos</text><text x="560" y="162" text-anchor="middle" fill="#5E5A66" font-size="11">(rol_nomcolab_app)</text>
+    </svg>
+    <div class="pie-fig"><b>Figura 1.</b> Arquitectura cliente-servidor de NOM-COLAB.</div>
+  </div>
+  <p>El sistema se organiza en los módulos que aparecen en el diagrama de casos de uso (figura 2), y son los que se eligieron para aplicar las pruebas de este plan.</p>
+  <div class="dos">
+    <div class="fig" style="flex:0 0 42%"><img src="../imagenes/11-cu-general.png" alt="Casos de uso" class="borde" style="height:7.4cm"><div class="pie-fig"><b>Figura 2.</b> Casos de uso de NOM-COLAB.</div></div>
+    <div>
+      <table>
+        <thead><tr><th style="width:14%">Mód.</th><th>Nombre</th><th style="width:30%">Casos de uso</th></tr></thead>
+        <tbody>
+        <tr><td class="c">M1</td><td>Gestión de cuentas</td><td>CU-01 a CU-05, CU-27</td></tr>
+        <tr><td class="c">M2</td><td>Espacios de trabajo y permisos</td><td>CU-13 a CU-17</td></tr>
+        <tr><td class="c">M3</td><td>Documentos, edición y colaboración</td><td>CU-18 a CU-23</td></tr>
+        <tr><td class="c">M4</td><td>Almacenamiento, Android y sin conexión</td><td>CU-24 a CU-26</td></tr>
+        <tr><td class="c">M5</td><td>Importar y exportar</td><td>CU-28, CU-29</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:10.5pt">Los casos de uso CU-06 a CU-12 pertenecían al módulo “Conoce NOM”, que se retiró del proyecto en octubre de 2026; por eso no aparecen en el plan.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 4. PROPÓSITO ============================== -->
+<section class="capitulo">
+  <h2 id="s4">4. Propósito</h2>
+  <p><b>WACK</b> es una empresa dedicada al desarrollo y a las pruebas de software colaborativo. Su área de Aseguramiento de la calidad diseña, aplica y valida pruebas para comprobar que un sistema cumple lo que promete antes de que llegue a sus usuarios, con una filosofía enfocada en el usuario: cada prueba busca proteger su trabajo, su información y su tiempo.</p>
+  <p>Como empresa de pruebas, con las pruebas diseñadas, aplicadas y validadas sobre NOM-COLAB, WACK pretende obtener:</p>
+  <ol>
+    <li><b>Evidencia de que cada requerimiento se cumple.</b> Cada caso de uso tiene al menos una prueba con resultado esperado y obtenido, y queda registrado si cumplió o no.</li>
+    <li><b>La certeza de que la información está protegida.</b> Que ninguna cuenta pueda ver o cambiar lo que no le corresponde, que las contraseñas no puedan leerse y que el sistema resista los ataques más comunes de la web.</li>
+    <li><b>La garantía de que no se pierde trabajo.</b> Que varias personas puedan escribir a la vez sin pisarse, que lo escrito sin conexión llegue al volver la red y que los archivos de Office salgan como entraron.</li>
+    <li><b>Una medida de la facilidad de uso y de la portabilidad</b>, con criterios e indicadores evaluados en una escala, para saber qué tan listo está el producto para personas que nunca lo han usado y para las distintas plataformas donde corre.</li>
+    <li><b>Una lista de defectos con su severidad</b>, para que el equipo de desarrollo los corrija en orden de importancia, y una decisión fundamentada sobre si la versión se puede liberar.</li>
+  </ol>
+  <div class="caja azul"><p><b>Política de calidad de WACK.</b> Una prueba solo se da por aprobada cuando el resultado obtenido coincide exactamente con el esperado; cualquier diferencia, por pequeña que parezca, se registra como defecto. Las pruebas automatizadas se repiten completas antes de cada publicación y siempre con datos ficticios, nunca con información de usuarios reales.</p></div>
+</section>
+
+<!-- ============================== 5. ALCANCE ============================== -->
+<section class="capitulo">
+  <h2 id="s5">5. Alcance</h2>
+  <p>WACK, como empresa consolidada en las pruebas de software, estableció qué pruebas se aplican a cada módulo de NOM-COLAB, cómo se aplican, qué se pretende comprobar con ellas y qué se espera alcanzar. El enfoque principal es de <b>caja negra</b>, por tratarse de una arquitectura cliente-servidor en la que lo importante es que cada función responda correctamente desde fuera; se complementa con pruebas de <b>caja blanca</b> solo en el motor de sincronización, donde un error interno haría perder texto sin que se note en la pantalla.</p>
+  <h3 id="s5-1">5.1 Pruebas por módulo</h3>
+  <table>
+    <thead><tr><th style="width:17%">Módulo</th><th style="width:22%">Pruebas que se aplican y cómo</th><th>Qué se pretende comprobar</th><th style="width:25%">Qué se espera alcanzar</th></tr></thead>
+    <tbody>
+    <tr><td><b>M1</b> Gestión de cuentas</td><td>Requerimientos y seguridad (caja negra contra la API y la página); valores límite; unitarias del cifrado.</td><td>Que el registro valide los datos, que solo entre quien sabe la contraseña, que las contraseñas se guarden cifradas, que el sexto intento fallido bloquee y que borrar o cambiar la cuenta no deje restos.</td><td>Cero accesos indebidos y todas las entradas inválidas rechazadas con un mensaje claro.</td></tr>
+    <tr><td><b>M2</b> Espacios y permisos</td><td>Requerimientos, integración y seguridad (tabla de decisión de roles); valores límite.</td><td>Que cada rol haga exactamente lo que le corresponde, que el servidor lo haga cumplir aunque alguien salte la interfaz, y que el espacio no admita más de cinco personas.</td><td>El 100 % de las combinaciones de rol y acción con el resultado esperado.</td></tr>
+    <tr><td><b>M3</b> Documentos y colaboración</td><td>Unitarias de caja blanca del CRDT; requerimientos y sistema en el navegador real.</td><td>Que varias personas editando a la vez terminen con el mismo documento, sin perder letras, y que las versiones se puedan restaurar.</td><td>Copias idénticas en cualquier orden de llegada y latencia menor a 100 ms en la red local.</td></tr>
+    <tr><td><b>M4</b> Almacenamiento, Android y sin conexión</td><td>Requerimientos, sistema (página, celular y app) y portabilidad; valores límite.</td><td>Que lo escrito sin red llegue al volver, que la app funcione igual que la página, que se respeten los límites de espacio y que el sistema corra en distintas plataformas.</td><td>Ningún cambio perdido al cortar y devolver la red; la misma funcionalidad en todas las plataformas.</td></tr>
+    <tr><td><b>M5</b> Importar y exportar</td><td>Requerimientos y sistema con un corpus de 47 archivos reales de Office.</td><td>Que un archivo de Word, Excel o PowerPoint se abra, se vea y se descargue igual, también después de editarlo.</td><td>Fidelidad del 100 % al volver a guardar sin cambios.</td></tr>
+    <tr><td>Todos</td><td>Usabilidad (criterios e indicadores) y aceptación con usuarios.</td><td>Que la aplicación sea fácil de entender, de aprender y de operar, en computadora y celular.</td><td>Calificación de “Bueno” o mejor en todos los criterios.</td></tr>
+    </tbody>
+  </table>
+  <h3 id="s5-2">5.2 Tipos de prueba y nivel</h3>
+  <p>Siguiendo el proceso de la unidad 3, cada fase del desarrollo tiene su nivel de prueba: los requerimientos se validan al final y lo más cercano al código se prueba primero.</p>
+  <table>
+    <thead><tr><th style="width:24%">Tipo de prueba</th><th style="width:14%">Enfoque</th><th>Qué se hace</th><th style="width:13%">Sección</th></tr></thead>
+    <tbody>
+    <tr><td>Pruebas unitarias</td><td>Caja blanca</td><td>Se prueba cada pieza por separado: motor de sincronización y cifrado.</td><td>6.2</td></tr>
+    <tr><td>Pruebas de integración</td><td>Caja gris</td><td>Se prueba el servidor real con sus partes trabajando juntas: API, permisos, almacenamiento y canal en vivo.</td><td>6.3</td></tr>
+    <tr><td>Pruebas de requerimientos (validación)</td><td>Caja negra</td><td>Se comprueba, con la tabla de requerimientos de cada módulo, que cada uno se cumpla en el sistema terminado.</td><td>6.4</td></tr>
+    <tr><td>Pruebas de sistema: usabilidad, seguridad y portabilidad</td><td>Caja negra</td><td>Se ejercita el sistema completo y se califican criterios e indicadores en la escala Excelente, Bueno, Elemental o Insuficiente.</td><td>6.5</td></tr>
+    </tbody>
+  </table>
+  <h3 id="s5-3">5.3 Lo que queda fuera del alcance</h3>
+  <table>
+    <thead><tr><th style="width:36%">Característica</th><th>Motivo</th></tr></thead>
+    <tbody>
+    <tr><td>Carga con más de 5 personas por espacio</td><td>El límite de 5 es una regla de diseño; solo se prueba que la sexta persona sea rechazada.</td></tr>
+    <tr><td>Pruebas de estrés en Azure</td><td>El plan gratuito y el crédito de estudiante son limitados; las pruebas pesadas se hacen en el servidor local, que tiene el mismo código.</td></tr>
+    <tr><td>iPhone y navegadores antiguos</td><td>No hay app para iOS; Internet Explorer ya no tiene soporte.</td></tr>
+    <tr><td>Columnas de Word vistas en pantalla</td><td>La función no está construida (se avisa al importar y se conservan al descargar).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================== 6. DESARROLLO ============================== -->
+<section class="capitulo">
+  <h2 id="s6">6. Desarrollo</h2>
+  <p>En este apartado se exponen las pruebas ejecutadas a los módulos elegidos. Primero se describe cómo se organizaron (responsables, entorno, calendario y criterios) y después se presenta un plan para cada tipo de prueba, con su ficha y sus resultados. Todas las pruebas se ejecutaron el <b>12 de noviembre de 2026</b> sobre la versión 0.12.1, salvo donde se indica otra fecha.</p>
+  <h3 id="s6-1">6.1 Organización de las pruebas</h3>
+  <h4>Responsables</h4>
+  <table>
+    <thead><tr><th style="width:31%">Integrante</th><th style="width:21%">Puesto</th><th>Responsabilidad en las pruebas</th></tr></thead>
+    <tbody>
+    <tr><td>Martínez Ortega Uriel Alejandro</td><td>Director general</td><td>Aprueba el plan y la decisión de liberar cada versión.</td></tr>
+    <tr><td>Soria Flores Josep Aarón</td><td>Project manager</td><td>Lleva el calendario, da seguimiento a los defectos y coordina la prueba con usuarios.</td></tr>
+    <tr><td>González Azuara Arturo Leonardo</td><td>Subdirector de operaciones</td><td>Prepara los entornos (Azure, Raspberry Pi, teléfonos) y las pruebas de portabilidad.</td></tr>
+    <tr><td>Rodríguez Esparza Diego Alejandro</td><td>Desarrollador y QA</td><td>Diseña y automatiza los casos, ejecuta las suites y documenta la evidencia.</td></tr>
+    </tbody>
+  </table>
+  <h4>Entorno de pruebas</h4>
+  <table>
+    <thead><tr><th style="width:31%">Recurso</th><th>Detalle</th></tr></thead>
+    <tbody>
+    <tr><td>Hardware</td><td>Laptop Intel Core i7-10610U con 16 GB de RAM y Debian 13 (servidor de pruebas); computadora de escritorio con Debian 13 y Chromium 157; Raspberry Pi 5; teléfono Samsung Galaxy A55 con Android 16; emulador de Android 15.</td></tr>
+    <tr><td>Software</td><td>OpenJDK 17.0.20, Maven 3.9.9, Python 3.13, Playwright 1.64 con Chromium, LibreWolf (Firefox), Node.js 24, LibreOffice 25.2.</td></tr>
+    <tr><td>Datos de prueba</td><td>Cuentas ficticias creadas por cada prueba en una carpeta temporal que se borra al terminar; 47 archivos reales de Office (Open XML SDK de Microsoft, Apache POI y el libro de ejemplo oficial de Excel).</td></tr>
+    </tbody>
+  </table>
+  <h4>Calendario</h4>
+  <table class="gantt">
+    <thead><tr><th style="width:42%">Actividad</th><th class="c">13 oct</th><th class="c">20 oct</th><th class="c">27 oct</th><th class="c">3 nov</th><th class="c">10 nov</th><th class="c">17 nov</th><th class="c">24 nov</th></tr></thead>
+    <tbody>
+    <tr><td>Pruebas de la primera versión</td><td class="h"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>Base de datos, roles y Azure; teléfono real</td><td></td><td class="h"></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>Funciones de Office, carpetas y citas</td><td></td><td></td><td></td><td class="h"></td><td></td><td></td><td></td></tr>
+    <tr><td>Conversión de Office, red y seguridad (0.12.1)</td><td></td><td></td><td></td><td></td><td class="h"></td><td></td><td></td></tr>
+    <tr><td>Ejecución de este plan y registro de resultados</td><td></td><td></td><td></td><td></td><td class="h"></td><td></td><td></td></tr>
+    <tr><td>Corrección y re-prueba del defecto DEF-18</td><td></td><td></td><td></td><td></td><td></td><td class="b"></td><td></td></tr>
+    <tr><td>Pruebas en el A55 y con 5 dispositivos reales</td><td></td><td></td><td></td><td></td><td></td><td class="b"></td><td></td></tr>
+    <tr><td>Prueba de aceptación con usuarios</td><td></td><td></td><td></td><td></td><td></td><td class="b"></td><td></td></tr>
+    <tr><td>Regresión final y entrega (27 de noviembre)</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="e"></td></tr>
+    </tbody>
+  </table>
+  <p class="leyenda"><i style="background:var(--verde)"></i>Ejecutado <i style="background:var(--azul)"></i>Programado <i style="background:var(--coral)"></i>Entrega. Cada columna es la semana que empieza en esa fecha.</p>
+  <h4>Criterios de aceptación de las pruebas</h4>
+  <ul>
+    <li>Un caso <b>se aprueba</b> cuando el resultado obtenido coincide con el esperado (incluido el código de respuesta del servidor) y la página no muestra errores de JavaScript; en cualquier otro caso se rechaza y se registra un defecto.</li>
+    <li>Una versión <b>se libera</b> con el 100 % de los casos críticos y altos aprobados, ninguna falla crítica o alta abierta y todas las suites aprobadas contra el programa final.</li>
+    <li>Las pruebas <b>se suspenden</b> si el servidor no compila o no arranca, o si más del 20 % de una suite falla por la misma causa; se reanudan al corregirla, repitiendo la suite completa.</li>
+  </ul>
+  <h4>Riesgos y contingencias</h4>
+  <table>
+    <thead><tr><th style="width:36%">Riesgo</th><th>Contingencia</th></tr></thead>
+    <tbody>
+    <tr><td>Agotar el crédito de estudiante de Azure</td><td>Las pruebas se hacen en el servidor local; Azure solo recibe pruebas de humo.</td></tr>
+    <tr><td>Un solo teléfono Android físico</td><td>Se complementa con el emulador y con los teléfonos de los integrantes.</td></tr>
+    <tr><td>La red de la escuela bloquea el descubrimiento automático</td><td>Se prueba también escribiendo la dirección y con el punto de acceso del teléfono.</td></tr>
+    <tr><td>Falta de tiempo antes de la entrega</td><td>Se prueban primero los casos críticos; los de prioridad baja pasan al siguiente ciclo.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================== 6.2 UNITARIAS ============================== -->
+<section class="capitulo">
+  <h3 id="s6-2">6.2 Plan de pruebas unitarias</h3>
+  <p>Las pruebas unitarias revisan cada pieza del programa por separado, viendo su código (caja blanca). Se aplicaron a las dos piezas donde un error interno no se notaría en la pantalla pero haría perder información: el motor de sincronización y el cifrado de la copia que se guarda en el equipo.</p>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Aseguramiento de la calidad</span></div><div class="r">Documento: PP-NOMCOLAB-01</div><div class="d">Aplicación / módulo: M3 Documentos y colaboración · M1 Gestión de cuentas</div><div class="r">Revisión: 1</div><div class="d">Nombre: Pruebas unitarias del motor CRDT y del cifrado</div><div class="r">Estado: Concluida</div></div>
+  <table class="ficha">
+    <tr><td>Responsable</td><td>Rodríguez Esparza Diego Alejandro</td></tr>
+    <tr><td class="sec" colspan="2">Detalle de la prueba</td></tr>
+    <tr><td>Fecha de realización</td><td>12 de noviembre de 2026 · Duración: 3 minutos</td></tr>
+    <tr><td>Requerimientos de la prueba</td><td>Código fuente compilado; JUnit 5 y Node.js</td></tr>
+    <tr><td>Objetivo</td><td>Comprobar que todas las copias de un documento terminan iguales sin importar el orden en que llegan los cambios ni si llegan repetidos, y que el cifrado produce exactamente los resultados de los vectores oficiales.</td></tr>
+    <tr><td>Tipo de prueba</td><td>Unitaria, caja blanca</td></tr>
+    <tr><td>Hardware requerido</td><td>Una computadora con 4 GB de RAM o más</td></tr>
+    <tr><td>Software requerido</td><td>OpenJDK 17, Maven 3.9, Node.js 24</td></tr>
+    <tr><td>Datos de prueba</td><td>Historias de cambios generadas al azar (5 personas, 20 historias, 10 órdenes de llegada); vectores de prueba FIPS 180-2, FIPS-197, RFC 4231 y RFC 7914</td></tr>
+    <tr><td>Procedimiento de prueba</td><td>Ejecutar <code>mvn test</code> y <code>node src/test/js/cripto.test.js</code>; comparar cada resultado con el esperado.</td></tr>
+    <tr><td>Resultado esperado</td><td>Estados finales idénticos en todas las réplicas; cifrado igual a los vectores oficiales; un byte alterado se detecta.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 35 de 35 casos aprobados</td></tr>
+  </table>
+  <table>
+    <thead><tr><th style="width:42%">Caso unitario</th><th>Qué comprueba</th><th style="width:13%" class="c">Resultado</th></tr></thead>
+    <tbody>
+    <tr><td><code>convergeConCualquierOrden</code></td><td>5 personas, 20 historias, 10 órdenes de llegada: el resultado es idéntico.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>duplicadosNoCambianNada</code></td><td>Recibir el mismo cambio dos veces no altera el documento.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>empateSeResuelveIgualEnTodosLados</code></td><td>Dos cambios al mismo campo con el mismo reloj se resuelven igual en todas las copias.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>restaurarDevuelveElEstadoDeLaVersion</code></td><td>Restaurar una versión deja el documento como estaba.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>convergeEnCualquierOrdenYSinRepetir</code></td><td>El texto letra por letra converge y ninguna letra se repite.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>juntaLaEscrituraSeguidaEnUnSoloTramo</code></td><td>Lo escrito de corrido se guarda como un solo tramo (ahorra espacio).</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>duenosDeParrafo</code></td><td>Un párrafo asignado a una persona conserva su dueño.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>restaurarDejaVisibilidadYFormatoComoEnLaVersion</code></td><td>Restaurar devuelve también el formato y lo borrado.</td><td class="c ok">Aprobado</td></tr>
+    <tr><td><code>cripto.test.js</code> (31 casos)</td><td>SHA-256, HMAC, PBKDF2, AES-256 y AES-GCM contra vectores oficiales y contra Node; un byte alterado se detecta; otra llave no descifra.</td><td class="c ok">27 de 27</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================== 6.3 INTEGRACIÓN ============================== -->
+<section class="capitulo">
+  <h3 id="s6-3">6.3 Plan de pruebas de integración</h3>
+  <p>Las pruebas de integración arrancan el servidor real con una carpeta de datos temporal y comprueban que sus partes trabajan juntas: la API, el servicio de cuentas, los permisos de los espacios, el almacenamiento y el canal en vivo. Se usa un enfoque de caja gris: se conoce el diseño para elegir los casos, pero se prueba desde fuera, enviando peticiones como lo haría la página.</p>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Aseguramiento de la calidad</span></div><div class="r">Documento: PP-NOMCOLAB-01</div><div class="d">Aplicación / módulo: M1, M2, M3 y M4 (servidor)</div><div class="r">Revisión: 1</div><div class="d">Nombre: Pruebas de integración de la API con el servidor real</div><div class="r">Estado: Concluida</div></div>
+  <table class="ficha">
+    <tr><td>Responsable</td><td>Rodríguez Esparza Diego Alejandro</td></tr>
+    <tr><td class="sec" colspan="2">Detalle de la prueba</td></tr>
+    <tr><td>Fecha de realización</td><td>12 de noviembre de 2026 · Duración: 4 minutos</td></tr>
+    <tr><td>Requerimientos de la prueba</td><td>Servidor <code>nom-colab.jar</code> 0.12.1 compilado</td></tr>
+    <tr><td>Objetivo</td><td>Comprobar que sesión, roles, bloqueo, enlaces para unirse, papelera, versiones, almacenamiento y canal en vivo funcionan juntos y que los límites del sistema se respetan.</td></tr>
+    <tr><td>Tipo de prueba</td><td>Integración, caja gris; partición de equivalencia, valores límite y tabla de decisión</td></tr>
+    <tr><td>Hardware requerido</td><td>Una computadora con 4 GB de RAM o más</td></tr>
+    <tr><td>Software requerido</td><td>OpenJDK 17, Python 3</td></tr>
+    <tr><td>Datos de prueba</td><td>Cuentas ficticias: <i>duena</i>, <i>lectora</i>, <i>editora</i>, <i>ajena</i>, <i>maestra</i>, <i>alumno1</i>, <i>alumno2</i>, <i>miembro1</i> a <i>miembro5</i></td></tr>
+    <tr><td>Procedimiento de prueba</td><td>Ejecutar <code>pruebas/seguridad.py</code> (226 casos) y <code>prueba_limites.py</code> (18 casos); cada caso compara el código de respuesta obtenido con el esperado.</td></tr>
+    <tr><td>Resultado esperado</td><td>Todas las respuestas iguales a las esperadas.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 244 de 244 (el 12 de noviembre fueron 242 de 244 por DEF-18; se corrigió y se repitió el 13)</td></tr>
+  </table>
+  <h4>Partición de equivalencia y valores límite</h4>
+  <p>Los límites se tomaron de las reglas del código del servidor. Para cada uno se probó un valor dentro y otro fuera del borde.</p>
+  <table>
+    <thead><tr><th style="width:8%">ID</th><th>Entrada</th><th style="width:16%">Clase</th><th style="width:11%" class="c">Esperado</th><th style="width:11%" class="c">Obtenido</th><th style="width:12%" class="c">Resultado</th></tr></thead>
+    <tbody>
+    <tr><td class="id">VL-01</td><td>Nombre de usuario de 2 caracteres</td><td>Inválida (límite)</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-02</td><td>Nombre de 3 caracteres</td><td>Válida (límite)</td><td class="c">201</td><td class="c">201</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-03</td><td>Nombre de 24 caracteres</td><td>Válida (límite)</td><td class="c">201</td><td class="c">201</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-04</td><td>Nombre de 25 caracteres</td><td>Inválida (límite)</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-05</td><td>Nombre con espacio (<code>ana luz</code>)</td><td>Inválida</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-06</td><td>Contraseña de 7 caracteres</td><td>Inválida (límite)</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-07</td><td>Contraseña de 8 caracteres</td><td>Válida (límite)</td><td class="c">201</td><td class="c">201</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-08</td><td>Nombre ya registrado</td><td>Inválida</td><td class="c">409</td><td class="c">409</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-09</td><td>Mismo nombre en mayúsculas</td><td>Inválida</td><td class="c">409</td><td class="c">409</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-10</td><td>Quinto intento fallido de inicio de sesión</td><td>Válida (límite)</td><td class="c">401</td><td class="c">401</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-11</td><td>Sexto intento fallido</td><td>Bloqueo (límite)</td><td class="c">423</td><td class="c">423</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-12</td><td>Contraseña correcta durante el bloqueo</td><td>Bloqueo</td><td class="c">423</td><td class="c">423</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-13</td><td>Cinco personas conectadas a la vez</td><td>Válida (límite)</td><td class="c">200 ×5</td><td class="c">200 ×5</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-14</td><td>Sexta persona intenta conectarse</td><td>Inválida (límite)</td><td class="c">409</td><td class="c">409</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-15</td><td>Agregar 1 MB de texto a un documento</td><td>Válida</td><td class="c">200</td><td class="c">200</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-16</td><td>Agregar 26 MB de una vez (tope: 25 MB)</td><td>Inválida (límite)</td><td class="c">400</td><td class="c">200</td><td class="c no">Rechazado</td></tr>
+    <tr><td class="id">VL-17</td><td>Después, agregar 10 bytes más</td><td>Inválida</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-18</td><td>Agregar 60 MB de una vez a un documento nuevo</td><td>Inválida</td><td class="c">400</td><td class="c">200</td><td class="c no">Rechazado</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:10pt">Códigos de respuesta: 200 o 201 correcto · 400 dato inválido · 401 sin sesión · 403 sin permiso · 409 conflicto · 423 bloqueado.</p>
+  <div class="caja coral"><p><b>Defecto encontrado (DEF-18), corregido el 13 de noviembre.</b> Los casos VL-16 y VL-18 muestran que el tope de 25 MB por documento se puede rebasar con un solo envío grande. El servidor compara el tamaño de lo que <i>ya estaba guardado en disco</i> y no el de lo que está llegando; por eso el primer envío que cruza el límite se acepta completo (hasta 60 MB en la prueba) y solo se rechaza el siguiente (VL-17). La corrección mide lo guardado, lo que creció sin guardar y lo que llega, <i>antes</i> de aplicar nada; VL-16 y VL-18 ahora responden 413 y VL-17 confirma que el documento quedó sano.</p></div>
+  <h4>Tabla de decisión de permisos</h4>
+  <p>Cada celda es el resultado esperado para esa combinación de rol y acción. Todas las combinaciones forman parte de <code>seguridad.py</code> y se obtuvieron tal como se esperaba.</p>
+  <table>
+    <thead><tr><th style="width:31%">Acción \ Rol</th><th class="c">Propietario</th><th class="c">Puede editar</th><th class="c">Solo lectura</th><th class="c">Sin acceso</th><th class="c">Sin sesión</th></tr></thead>
+    <tbody>
+    <tr><td>Abrir el espacio y sus documentos</td><td class="c ok">Sí</td><td class="c ok">Sí</td><td class="c ok">Sí</td><td class="c no">403</td><td class="c no">401</td></tr>
+    <tr><td>Escribir en un documento</td><td class="c ok">Sí</td><td class="c ok">Sí</td><td class="c no">403</td><td class="c no">403</td><td class="c no">401</td></tr>
+    <tr><td>Dar o quitar accesos</td><td class="c ok">Sí</td><td class="c no">403</td><td class="c no">403</td><td class="c no">403</td><td class="c no">401</td></tr>
+    <tr><td>Crear enlace o QR para unirse</td><td class="c ok">Sí</td><td class="c no">No</td><td class="c no">No</td><td class="c no">403</td><td class="c no">401</td></tr>
+    <tr><td>Mandar a la papelera</td><td class="c ok">Sí</td><td class="c ok">Sí</td><td class="c no">No</td><td class="c no">403</td><td class="c no">401</td></tr>
+    <tr><td>Vaciar la papelera</td><td class="c ok">Sí</td><td class="c no">No</td><td class="c no">No</td><td class="c no">403</td><td class="c no">401</td></tr>
+    </tbody>
+  </table>
+  <h4>Transición de estados de una cuenta</h4>
+  <div class="fig">
+    <svg viewBox="0 0 640 150" width="100%" font-family="Carlito, Arial" font-size="11.5">
+      <defs><marker id="f3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1F1B24"/></marker></defs>
+      <circle cx="22" cy="70" r="8" fill="#1F1B24"/><line x1="30" y1="70" x2="68" y2="70" stroke="#1F1B24" stroke-width="1.5" marker-end="url(#f3)"/>
+      <text x="48" y="62" text-anchor="middle" font-size="10">registro</text>
+      <rect x="70" y="45" width="130" height="50" rx="12" fill="#E3F2EA" stroke="#1D7A4C" stroke-width="1.5"/>
+      <text x="135" y="66" text-anchor="middle" font-weight="700" fill="#1D7A4C">Activa</text><text x="135" y="82" text-anchor="middle" font-size="10">fallos desde una red: 0 a 5</text>
+      <rect x="300" y="8" width="160" height="50" rx="12" fill="#FBE7E1" stroke="#D9573A" stroke-width="1.5"/>
+      <text x="380" y="29" text-anchor="middle" font-weight="700" fill="#D9573A">Bloqueada desde esa red</text><text x="380" y="45" text-anchor="middle" font-size="10">423; el dueño entra desde la suya</text>
+      <rect x="300" y="92" width="160" height="50" rx="12" fill="#F8D7DA" stroke="#B42318" stroke-width="1.5"/>
+      <text x="380" y="113" text-anchor="middle" font-weight="700" fill="#B42318">Bloqueada por completo</text><text x="380" y="129" text-anchor="middle" font-size="10">423 desde cualquier red</text>
+      <g stroke="#1F1B24" stroke-width="1.4" fill="none" marker-end="url(#f3)">
+        <path d="M200,58 L298,33"/><path d="M300,48 C250,60 230,70 202,70"/><path d="M200,84 L298,112"/><path d="M300,128 C250,140 180,130 150,97"/><path d="M100,45 C80,10 170,10 160,43"/>
+      </g>
+      <text x="250" y="34" text-anchor="middle" font-size="10">6.º fallo</text><text x="262" y="75" text-anchor="middle" font-size="10">pasan 15 min</text>
+      <text x="236" y="118" text-anchor="middle" font-size="10">más de 50 fallos en 1 h</text><text x="196" y="146" text-anchor="middle" font-size="10">pasan 15 min</text>
+      <text x="130" y="12" text-anchor="middle" font-size="10">acierto: el contador vuelve a 0</text>
+      <rect x="500" y="45" width="130" height="50" rx="12" fill="#fff" stroke="#5E5A66" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="565" y="66" text-anchor="middle" font-weight="700" fill="#5E5A66">Borrada</text><text x="565" y="82" text-anchor="middle" font-size="10">el nombre queda libre</text>
+      <path d="M200,62 C320,62 400,70 498,70" stroke="#5E5A66" stroke-width="1.2" fill="none" stroke-dasharray="4 3" marker-end="url(#f3)"/>
+      <text x="560" y="112" text-anchor="middle" font-size="10" fill="#5E5A66">con su contraseña y</text><text x="560" y="125" text-anchor="middle" font-size="10" fill="#5E5A66">escribiendo su nombre</text>
+    </svg>
+    <div class="pie-fig"><b>Figura 3.</b> Estados de una cuenta; cada flecha se comprobó con al menos un caso de prueba.</div>
+  </div>
+</section>
+
+<!-- ============================== 6.4 REQUERIMIENTOS ============================== -->
+<section class="capitulo">
+  <h3 id="s6-4">6.4 Plan de pruebas de requerimientos (validación)</h3>
+  <p>El objetivo de estas pruebas es buscar discrepancias entre los requerimientos y la ejecución del software. Se basan en la tabla de requerimientos de cada módulo, tomada de la especificación de casos de uso, y comprueban que cada uno se encuentre satisfecho con el resultado final del sistema. Para cada requerimiento se indica si cumplió y la evidencia que lo respalda.</p>
+
+  <h4 id="s6-4-1">6.4.1 Módulo M1: Gestión de cuentas</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: M1 Gestión de cuentas · Submódulo: registro, sesión y seguridad de la cuenta</div><div class="r">Duración: 6 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Comparar el funcionamiento del programa con el esperado según los requerimientos funcionales, desde la página y desde la API (<code>seguridad.py</code>, <code>prueba_cuentas_equipo</code>, valores límite).</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 10 de 10 requerimientos</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>El usuario puede registrarse con nombre, contraseña y empresa opcional (CU-01).</td><td class="x">X</td><td class="x"></td><td>Correcto. Al registrarse entra directo y ve la bienvenida.</td></tr>
+    <tr><td>Se valida que el nombre tenga de 3 a 24 caracteres sin espacios y que la contraseña tenga al menos 8.</td><td class="x">X</td><td class="x"></td><td>Correcto en los cuatro bordes (VL-01 a VL-07); el mensaje explica qué corregir.</td></tr>
+    <tr><td>No puede haber dos cuentas con el mismo nombre.</td><td class="x">X</td><td class="x"></td><td>Correcto; tampoco con distinto uso de mayúsculas (VL-08, VL-09).</td></tr>
+    <tr><td>Solo entra quien escribe la contraseña correcta (CU-02).</td><td class="x">X</td><td class="x"></td><td>Correcto. El mensaje de error es el mismo para usuario y contraseña, para no revelar qué cuentas existen.</td></tr>
+    <tr><td>Al cerrar sesión, el token deja de servir (CU-03).</td><td class="x">X</td><td class="x"></td><td>Correcto: la siguiente petición responde 401.</td></tr>
+    <tr><td>Tras 5 intentos fallidos se bloquea el acceso 15 minutos (CU-04).</td><td class="x">X</td><td class="x"></td><td>Correcto. Además, el dueño puede entrar desde su propia red, así que nadie lo deja fuera a propósito.</td></tr>
+    <tr><td>Las contraseñas se guardan cifradas (CU-05).</td><td class="x">X</td><td class="x"></td><td>PBKDF2-SHA256 con 120 000 iteraciones y sal aleatoria de 16 bytes por cuenta; la base nunca guarda la contraseña.</td></tr>
+    <tr><td>El usuario puede cambiar y recuperar su contraseña.</td><td class="x">X</td><td class="x"></td><td>Correcto. Al cambiarla se cierran las demás sesiones y lo guardado en el equipo no se pierde.</td></tr>
+    <tr><td>El usuario puede borrar su cuenta.</td><td class="x">X</td><td class="x"></td><td>Pide la contraseña y escribir el nombre; lo que escribió en espacios ajenos se queda y el nombre queda libre.</td></tr>
+    <tr><td>Las preferencias (tema, autoguardado, movimiento) se guardan por cuenta (CU-27).</td><td class="x">X</td><td class="x"></td><td>Correcto; al cancelar se regresa al tema anterior.</td></tr>
+    </tbody>
+  </table>
+  <div class="capturas">
+    <div class="fig"><img src="../imagenes/cuentas-sin-cifrar.jpg" alt="Inicio de sesión" class="borde"><div class="pie-fig"><b>Figura 4.</b> Inicio de sesión durante la prueba.</div></div>
+    <div class="fig"><img src="../imagenes/cuentas-borrar.jpg" alt="Borrar cuenta" class="borde"><div class="pie-fig"><b>Figura 5.</b> Borrar la cuenta: pide contraseña y nombre.</div></div>
+  </div>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-4-2">6.4.2 Módulo M2: Espacios de trabajo y permisos</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: M2 Espacios de trabajo · Submódulo: accesos, roles y unirse</div><div class="r">Duración: 4 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Crear un espacio con cuentas en cada rol y comprobar cada acción permitida y prohibida, también enviando las peticiones directo al servidor.</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 8 de 8 requerimientos</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>El usuario puede crear espacios de trabajo y queda como propietario (CU-13).</td><td class="x">X</td><td class="x"></td><td>Correcto.</td></tr>
+    <tr><td>El propietario da acceso con el rol Puede editar o Solo lectura (CU-17).</td><td class="x">X</td><td class="x"></td><td>Correcto; el cambio de rol se aplica en el siguiente cambio de esa persona, sin que vuelva a entrar.</td></tr>
+    <tr><td>Quien tiene Solo lectura puede ver pero no editar.</td><td class="x">X</td><td class="x"></td><td>Correcto. El servidor responde 403 aunque se salte la interfaz.</td></tr>
+    <tr><td>Solo el propietario administra los accesos y nadie le quita el espacio.</td><td class="x">X</td><td class="x"></td><td>Correcto (403 y 400).</td></tr>
+    <tr><td>Una cuenta sin acceso no puede ver el espacio ni sus documentos.</td><td class="x">X</td><td class="x"></td><td>Correcto (403).</td></tr>
+    <tr><td>Se puede entrar con un enlace o código QR que caduca y se puede revocar (CU-16).</td><td class="x">X</td><td class="x"></td><td>Correcto. Un enlace revocado o inventado ya no sirve, ni para entrar con apodo.</td></tr>
+    <tr><td>Máximo 5 personas conectadas a la vez en un espacio.</td><td class="x">X</td><td class="x"></td><td>La sexta recibe “El espacio está lleno” (VL-13, VL-14).</td></tr>
+    <tr><td>El espacio se puede compartir en la red local sin internet (CU-14, CU-15).</td><td class="x">X</td><td class="x"></td><td>La app encontró sola el servidor en el Wi-Fi (prueba del 16 de octubre); falta repetirlo en la red de la escuela.</td></tr>
+    </tbody>
+  </table>
+  <div class="capturas">
+    <div class="fig"><img src="../imagenes/lf-permisos-compartir.jpg" alt="Compartir" class="borde"><div class="pie-fig"><b>Figura 6.</b> Compartir el espacio con cada rol.</div></div>
+    <div class="fig"><img src="../imagenes/lf-permisos-solo-lectura.jpg" alt="Solo lectura" class="borde"><div class="pie-fig"><b>Figura 7.</b> Documento abierto con Solo lectura.</div></div>
+  </div>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-4-3">6.4.3 Módulo M3: Documentos, edición y colaboración</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: M3 Documentos · Submódulo: editores, colaboración y versiones</div><div class="r">Duración: 8 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Abrir el mismo documento en dos páginas y en la interfaz de la app, escribir a la vez y comparar; revisar cada editor en el navegador real (Chromium con Playwright).</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 7 de 7 requerimientos</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>Se pueden crear documentos de texto, hoja, presentación y diagrama, cuyo tipo no cambia (CU-18, CU-20).</td><td class="x">X</td><td class="x"></td><td>Correcto.</td></tr>
+    <tr><td>El texto se edita con formato, listas, tablas y estilos (CU-19).</td><td class="x">X</td><td class="x"></td><td>Correcto; lo escrito queda en el documento y sobrevive a recargar.</td></tr>
+    <tr><td>La hoja calcula fórmulas (SUMA, PROMEDIO, SI, SIERROR…).</td><td class="x">X</td><td class="x"></td><td>Correcto. Dividir entre cero muestra #DIV/0!.</td></tr>
+    <tr><td>Varias personas editan a la vez y todas ven lo mismo (CU-21).</td><td class="x">X</td><td class="x"></td><td>Dos páginas y la app quedan idénticas; se ve quién está conectado.</td></tr>
+    <tr><td>Los cambios de otra persona llegan en tiempo real.</td><td class="x">X</td><td class="x"></td><td>Mediana de 20 ms en la red local (medido el 22 de octubre), muy por debajo de la meta de 100 ms.</td></tr>
+    <tr><td>Se muestran micro-textos de ayuda sobre los botones (CU-22).</td><td class="x">X</td><td class="x"></td><td>Correcto en computadora (al pasar el cursor) y en celular (al mantener presionado).</td></tr>
+    <tr><td>Se guardan versiones y se puede restaurar cualquiera (CU-23).</td><td class="x">X</td><td class="x"></td><td>Restaurar crea una versión nueva, así que no se pierde lo anterior.</td></tr>
+    </tbody>
+  </table>
+  <div class="fig"><img src="../imagenes/red-pagina.jpg" alt="Edición en vivo" class="borde" style="width:80%"><div class="pie-fig"><b>Figura 8.</b> Documento editado al mismo tiempo desde la página y la app durante la prueba de red (arriba a la derecha, las dos personas conectadas).</div></div>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-4-4">6.4.4 Módulo M4: Almacenamiento, Android y sin conexión</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: M4 · Submódulo: almacenamiento, app Android y trabajo sin conexión</div><div class="r">Duración: 7 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Cortar y devolver la red a la página y a la app con cambios pendientes (<code>prueba_red</code>); revisar el almacenamiento de la cuenta y los límites de tamaño.</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( &nbsp; ) &nbsp; NO ( X ) &nbsp;— 6 de 7 requerimientos; el tope de 25 MB no se cumplió</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>Lo escrito sin conexión se guarda en el equipo y se envía solo al volver la red (CU-26).</td><td class="x">X</td><td class="x"></td><td>Correcto en la página, el navegador del celular y la app.</td></tr>
+    <tr><td>Un documento con cambios sin enviar se puede reabrir sin red.</td><td class="x">X</td><td class="x"></td><td>Correcto (el defecto DEF-13 de este punto se corrigió el 11 de noviembre).</td></tr>
+    <tr><td>La app Android se conecta al servidor y comparte la cuenta con la página (CU-25).</td><td class="x">X</td><td class="x"></td><td>Correcto: lo que se escribe en la app aparece en la página y al revés.</td></tr>
+    <tr><td>El teléfono puede ser el servidor con la misma seguridad.</td><td class="x">X</td><td class="x"></td><td>206 de 206 casos de seguridad contra el teléfono como servidor (emulador de Android 15, 11 de noviembre).</td></tr>
+    <tr><td>Cada cuenta ve cuánto espacio usa y su límite (CU-24).</td><td class="x">X</td><td class="x"></td><td>Correcto: “Guardados en NOM-COLAB en Internet” con su barra; solo cuentan sus propios espacios.</td></tr>
+    <tr><td>Los documentos se guardan comprimidos en el servidor.</td><td class="x">X</td><td class="x"></td><td>Correcto; los guardados con versiones anteriores siguen abriendo tras reiniciar.</td></tr>
+    <tr><td>Un documento no puede pasar de 25 MB.</td><td class="x">X</td><td class="x"></td><td>Corregido el 13 de noviembre (DEF-18): un envío que lo rebasaría se rechaza (413) antes de aplicarse y lo escrito se queda en el equipo.</td></tr>
+    </tbody>
+  </table>
+  <div class="capturas">
+    <div class="fig" style="flex:0 0 22%"><img src="../imagenes/red-app.jpg" alt="App" class="borde"><div class="pie-fig"><b>Figura 9.</b> Interfaz de la app durante la prueba.</div></div>
+    <div class="fig"><img src="../imagenes/cuentas-almacenamiento.jpg" alt="Almacenamiento" class="borde"><div class="pie-fig"><b>Figura 10.</b> Almacenamiento de la cuenta a la vista.</div></div>
+  </div>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-4-5">6.4.5 Módulo M5: Importar y exportar</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: M5 Importar y exportar · Submódulo: Word, Excel y PowerPoint</div><div class="r">Duración: 9 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Importar en la página real 47 archivos de Office, editarlos, mirarlos en pantalla tecleando de verdad y volverlos a exportar; comparar el original con el resultado.</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 5 de 5 requerimientos</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>Se pueden importar archivos .docx, .xlsx y .pptx (CU-28).</td><td class="x">X</td><td class="x"></td><td>Los 47 archivos se abrieron sin errores de JavaScript.</td></tr>
+    <tr><td>Un archivo que no se cambia se descarga igual que el original (CU-29).</td><td class="x">X</td><td class="x"></td><td>Fidelidad del 100 % en los 47 archivos.</td></tr>
+    <tr><td>Al editar un archivo importado, sale el cambio y nada más se mueve.</td><td class="x">X</td><td class="x"></td><td>144 de 144 ediciones correctas, revisadas con python-docx, openpyxl, python-pptx y LibreOffice.</td></tr>
+    <tr><td>El documento importado se ve en el editor como en Office.</td><td class="x">X</td><td class="x"></td><td>32 de 32 revisiones en computadora y 19 de 19 en ancho de celular (hoja, márgenes, fuentes, bordes, tablas, SmartArt).</td></tr>
+    <tr><td>Se puede exportar a PDF, SVG, HTML, Markdown y .nom.</td><td class="x">X</td><td class="x"></td><td>Correcto; el .nom vuelve a abrir igual.</td></tr>
+    </tbody>
+  </table>
+  <p>Además de la fidelidad sin cambios, se midió qué tanto entiende NOM-COLAB de cada archivo sin apoyarse en la copia original que guarda dentro: <b>Word 91.9 %</b>, <b>PowerPoint 78.5 %</b> y <b>Excel 59.2 %</b>. No es un criterio de aceptación, pero indica que la siguiente mejora debe ser el importador de Excel (formato condicional, gráficas y comentarios).</p>
+</section>
+
+<!-- ============================== 6.5 SISTEMA ============================== -->
+<section class="sigue">
+  <h3 id="s6-5">6.5 Plan de pruebas de sistema</h3>
+  <p>El propósito primordial de las pruebas de sistema es ejercitar profundamente el sistema completo, verificando que se hayan integrado adecuadamente todos sus elementos y que realizan las funciones apropiadas. Comprenden las pruebas de <b>usabilidad</b>, de <b>seguridad</b> y de <b>portabilidad</b>. Cada criterio se califica en la escala <b>Excelente</b>, <b>Bueno</b>, <b>Elemental</b> o <b>Insuficiente</b>, y cada calificación se justifica con la evidencia obtenida.</p>
+
+  <h4 id="s6-5-1">6.5.1 Prueba de usabilidad</h4>
+  <p>Determina el grado de facilidad de uso del sistema, la operatividad que presenta y que el usuario entienda cómo funciona.</p>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Pruebas de usabilidad</span></div><div class="r">Fecha: 12/11/2026</div><div class="d">Módulo: todos (página web, celular y app)</div><div class="r">Revisión: 1</div><div class="d">Evaluador: equipo WACK (evaluación interna)</div><div class="r">Estado: Concluida</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Recorrer las tareas principales (crear cuenta, crear espacio, compartir, escribir, calcular, presentar, exportar) en computadora, a 320, 360, 390 y 430 px de ancho, en tema oscuro y en el teléfono real; medir contraste y tamaño de los botones.</td></tr>
+    <tr><td>Resultado esperado</td><td>El sistema es fácil de usar para cualquier usuario y le da confianza para manejar el programa.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ). La interfaz es clara y se opera igual en computadora y celular; falta validarla con usuarios externos.</td></tr>
+  </table>
+  <table class="escala">
+    <thead><tr><th style="width:17%">Criterios e indicadores</th><th>Descripción</th><th class="c">Exc.</th><th class="c">Bueno</th><th class="c">Elem.</th><th class="c">Insuf.</th><th style="width:30%">Comentario</th></tr></thead>
+    <tbody>
+    <tr><td><b>Inteligibilidad</b></td><td>Que el usuario entienda qué hace cada parte del sistema.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Un color por tipo de documento, íconos con texto y avisos que dicen qué pasó y qué hacer.</td></tr>
+    <tr><td><b>Facilidad de aprendizaje</b></td><td>Qué tan fácil aprende a usarlo alguien nuevo.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Bienvenida, lista de “Primeros pasos” y consejos; falta medirlo con personas ajenas al equipo.</td></tr>
+    <tr><td><b>Operabilidad</b></td><td>Que el usuario pueda operarlo y controlarlo.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Botones de al menos 44 px, deshacer y rehacer, teclado y toque; de 320 a 430 px sin nada que se salga.</td></tr>
+    <tr><td><b>Atractividad</b></td><td>Que la presentación sea agradable al usuario.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Diseño propio con tema claro y oscuro; animaciones que respetan la preferencia de movimiento.</td></tr>
+    <tr><td><b>Herramientas de ayuda</b></td><td>Apoyo al usuario sobre cómo se usa el sistema.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Micro-textos, hoja de atajos (tecla ?) y guía de uso; no hay ayuda en video.</td></tr>
+    <tr><td><b>Cumplimiento de la usabilidad</b></td><td>Apego a estándares relacionados con la usabilidad.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Contraste WCAG AA: 12.8:1, 5.4:1 y 4.9:1 (mínimo 4.5:1). No se ha hecho una auditoría completa de WCAG.</td></tr>
+    </tbody>
+  </table>
+  <div class="caja azul"><p><b>Validación con usuarios (programada).</b> En la semana del 17 de noviembre, cinco personas que no conocen la app harán tareas guiadas (unirse con el QR, escribir juntas un acta, llenar una hoja de calificaciones y exportar una presentación) y contestarán el cuestionario SUS. Criterio: al menos 4 de 5 terminan cada tarea sin ayuda y el promedio SUS es de 68 o más.</p></div>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-5-2">6.5.2 Prueba de seguridad</h4>
+  <p>Intenta verificar que los mecanismos de protección incorporados en el sistema lo protegerán, de hecho, de accesos impropios.</p>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de seguridad</span></div><div class="r">Revisión: 1</div><div class="d">Aplicación del módulo: M1 Gestión de cuentas y M2 Espacios (servidor y página)</div><div class="r">Estado: Concluida</div><div class="d">Nombre: Prueba de seguridad de NOM-COLAB 0.12.1 · Responsable: Rodríguez Esparza Diego Alejandro</div><div class="r">Fecha: 12/11/2026</div></div>
+  <table class="ficha">
+    <tr><td class="sec" colspan="2">Detalles de la prueba</td></tr>
+    <tr><td>Duración de la prueba</td><td>4 minutos (226 casos automatizados)</td></tr>
+    <tr><td>Tipo de prueba</td><td>Pruebas de sistema (seguridad)</td></tr>
+    <tr><td>Requerimientos de la prueba</td><td>Disponer del servidor 0.12.1 y de la página web</td></tr>
+    <tr><td>Procedimiento de prueba</td><td>Se intenta entrar sin sesión, con tokens inventados, con inyección SQL y con HTML malicioso; se intenta hacer con cada rol lo que no le corresponde; se piden direcciones internas a la función Investigar; se revisan las cabeceras de seguridad.</td></tr>
+    <tr><td>Resultado esperado</td><td>Los elementos del sistema cumplen con los parámetros de seguridad.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 226 de 226 casos</td></tr>
+  </table>
+  <table class="escala">
+    <thead><tr><th style="width:19%">Criterios e indicadores</th><th>Descripción</th><th class="c">EX</th><th class="c">BU</th><th class="c">EL</th><th class="c">IN</th><th style="width:30%">Comentario</th></tr></thead>
+    <tbody>
+    <tr><td><b>Cifrado de contraseñas</b></td><td>La contraseña del usuario se guarda con algún tipo de cifrado.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>PBKDF2-SHA256, 120 000 iteraciones y sal propia por cuenta.</td></tr>
+    <tr><td><b>Control de acceso</b></td><td>Cada usuario solo hace lo que su rol permite.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Toda la tabla de decisión se cumple en el servidor, no solo en la interfaz.</td></tr>
+    <tr><td><b>Integridad de la información</b></td><td>La información no se modifica sin permiso de su dueño.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Partes con dueño y recibos verificables; el tope de tamaño se respeta (DEF-18 corregido).</td></tr>
+    <tr><td><b>Datos cifrados durante la conexión</b></td><td>Los datos van cifrados entre el cliente y el servidor.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>HTTPS en Azure y en el servidor propio. En la red local va sin cifrar y la página lo avisa.</td></tr>
+    <tr><td><b>Protección contra ataques comunes</b></td><td>Inyección SQL, código malicioso y lectura de direcciones internas.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Consultas con parámetros; HTML rechazado; 22 de 22 direcciones internas bloqueadas; cabeceras y política de contenido.</td></tr>
+    <tr><td><b>Sesiones y bloqueo</b></td><td>Las sesiones caducan y los intentos repetidos se bloquean.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Bloqueo al sexto fallo; canal en vivo con boleto de un solo uso de 30 s.</td></tr>
+    <tr><td><b>Datos guardados en el equipo</b></td><td>Lo que se guarda sin conexión no lo puede leer otra cuenta.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>Copia cifrada con AES-GCM por cuenta; 27 de 27 pruebas del cifrado.</td></tr>
+    </tbody>
+  </table>
+  <p><b>Comentarios:</b> el sistema protege de forma correcta las cuentas y los espacios. El tope de tamaño de los documentos (DEF-18) ya se corrigió; el área de mejora que queda es la conexión en la red local, que no puede llevar un certificado de confianza; por eso se avisa a la persona en la pantalla de entrada.</p>
+</section>
+
+<section class="sigue">
+  <h4 id="s6-5-3">6.5.3 Prueba de portabilidad</h4>
+  <p>La portabilidad es la característica que posee un software para ejecutarse en diferentes plataformas: el código se reutiliza en vez de crear uno nuevo cuando el software pasa de una plataforma a otra. A mayor portabilidad, menor es la dependencia del software con respecto a la plataforma.</p>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de portabilidad</span></div><div class="r">Documento: PP-NOMCOLAB-01</div><div class="d">Aplicación / módulo: todo el sistema (servidor, página y app)</div><div class="r">Revisión: 1</div><div class="d">Nombre: Prueba de portabilidad · Responsable: González Azuara Arturo Leonardo</div><div class="r">Estado: Concluida</div></div>
+  <table class="ficha">
+    <tr><td class="sec" colspan="2">Detalle de la prueba</td></tr>
+    <tr><td>Fecha de realización</td><td>Del 16 de octubre al 12 de noviembre de 2026 (una plataforma por ciclo)</td></tr>
+    <tr><td>Requerimientos de la prueba</td><td>El mismo <code>jar</code> y la misma carpeta de interfaz en cada plataforma</td></tr>
+    <tr><td>Objetivo</td><td>Comprobar que NOM-COLAB funciona en distintas plataformas sin cambiar su código.</td></tr>
+    <tr><td>Tipo de prueba</td><td>Pruebas de sistema (portabilidad)</td></tr>
+    <tr><td>Hardware requerido</td><td>Laptop x86-64, Raspberry Pi 5 (ARM), Samsung Galaxy A55, servidor de Azure</td></tr>
+    <tr><td>Software requerido</td><td>Linux en x86-64 (Debian 13) y en ARM (Raspberry Pi), Android 15 y 16, Azure App Service (Java 21); Chromium, Firefox y WebView</td></tr>
+    <tr><td>Datos de prueba</td><td>Cuentas ficticias y los 47 archivos de Office del corpus</td></tr>
+    <tr><td>Procedimiento de prueba</td><td>Instalar el servidor o la app en cada plataforma, ejecutar la prueba de humo (crear cuenta, espacio y documento, editar desde dos equipos) y, donde aplica, la suite de seguridad completa.</td></tr>
+    <tr><td>Resultado esperado</td><td>La misma funcionalidad en todas las plataformas.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; )</td></tr>
+    <tr><td class="sec" colspan="2">Eficiencia: portabilidad</td></tr>
+  </table>
+  <table class="escala">
+    <thead><tr><th style="width:19%">Subatributos</th><th>Criterios e indicadores</th><th class="c">Exc.</th><th class="c">Bueno</th><th class="c">Elem.</th><th class="c">Insuf.</th><th style="width:31%">Comentario</th></tr></thead>
+    <tbody>
+    <tr><td><b>Adaptabilidad</b></td><td>El software se adapta correctamente al sistema y cumple con su funcionamiento.</td><td class="x">X</td><td class="x"></td><td class="x"></td><td class="x"></td><td>El mismo núcleo corre en la laptop, la Raspberry Pi (ARM), Azure y el teléfono; la interfaz es la misma en navegador y app.</td></tr>
+    <tr><td><b>Facilidad de instalación</b></td><td>Es posible la instalación sin necesidad de alterar ningún componente del software o el sistema.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>El servidor trae Java incluido y arranca con doble clic. La app pide permitir “orígenes desconocidos” y Windows pregunta por el firewall.</td></tr>
+    <tr><td><b>Coexistencia</b></td><td>Coexiste con otro software independiente en un entorno común, compartiendo recursos comunes.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>No instala una base de datos ni servicios; guarda todo en su carpeta y el puerto se puede cambiar si está ocupado.</td></tr>
+    <tr><td><b>Reemplazabilidad</b></td><td>El software es capaz de reemplazar a otro con la misma funcionalidad.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Abre y guarda archivos de Word, Excel y PowerPoint (100 % sin cambios), pero entiende Excel solo al 59.2 %.</td></tr>
+    <tr><td><b>Conformidad de portabilidad</b></td><td>Se cumple con todos los subatributos anteriormente mencionados.</td><td class="x"></td><td class="x">X</td><td class="x"></td><td class="x"></td><td>Cumple todos; ninguno está en Elemental o Insuficiente.</td></tr>
+    </tbody>
+  </table>
+  <h4>Plataformas probadas</h4>
+  <table>
+    <thead><tr><th style="width:28%">Plataforma</th><th>Qué se probó</th><th style="width:15%" class="c">Resultado</th></tr></thead>
+    <tbody>
+    <tr><td>Laptop Debian 13 (x86-64)</td><td>Todas las suites de este plan</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Raspberry Pi 5 (ARM)</td><td>Servidor propio en internet; prueba con una cuenta de prueba por el túnel</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Azure App Service y Azure SQL</td><td>Inicio de sesión, roles de la base y misma cuenta en computadora y celular (9 de 9)</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Emulador Android 15</td><td>APK publicable; teléfono como servidor (206 de 206)</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Samsung Galaxy A55, Android 16</td><td>App 0.12.2 y Chrome con toques reales (ruedita, teclado del teléfono, conectores), el teléfono como servidor (212 de 212) y sincronización con la nube propia (13 nov); falta confirmar dos casos de la app (una celda tecleada muy rápido y la fecha de entrega)</td><td class="c prog">Parcial</td></tr>
+    <tr><td>Chromium, Firefox y WebView</td><td>Mismas pantallas sin errores de JavaScript, de 320 a 430 px y en horizontal</td><td class="c ok">Aprobado</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================== 6.6 DEFECTOS ============================== -->
+<section class="capitulo">
+  <h3 id="s6-6">6.6 Defectos encontrados</h3>
+  <p>Cada defecto se registra con su fecha, la prueba que lo descubrió, su severidad y su corrección. La severidad es <b>crítica</b> si se pierde trabajo o se expone información, <b>alta</b> si una función importante falla sin forma de rodearla, <b>media</b> si falla en un caso particular y <b>baja</b> si es un detalle visual. Todos los defectos cerrados tienen una prueba que comprueba que ya no ocurren.</p>
+  <table>
+    <thead><tr><th style="width:10%">ID</th><th style="width:9%">Fecha</th><th>Descripción y corrección</th><th style="width:11%" class="c">Severidad</th><th style="width:10%" class="c">Estado</th></tr></thead>
+    <tbody>
+    <tr><td class="id">DEF-01</td><td>16 oct</td><td>La primera petición tardaba unos 5 s: el servidor solo escuchaba IPv4. Ahora escucha IPv4 e IPv6.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-02</td><td>16 oct</td><td>Un “-” dentro de una fórmula se leía como signo menos y daba un resultado incorrecto.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-03</td><td>16 oct</td><td>Tab y Enter movían dos celdas en la hoja; ahora mueven una.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-04</td><td>16 oct</td><td><code>SI()</code> mostraba el error de la rama que no tomaba; ahora lo ignora, como Excel.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-05</td><td>16 oct</td><td>La presentación no cargaba porque no encontraba el escenario.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-06</td><td>16 oct</td><td>Las flechas del diagrama no se veían por una regla de estilo que borraba su relleno.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-07</td><td>16 oct</td><td>En Android el contenido quedaba debajo de las barras del sistema.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-08</td><td>16 oct</td><td>El indicador decía “Sincronizando” sin red; ahora dice “Sin conexión”.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-09</td><td>22 oct</td><td>En Chrome, Edge y la app, lo escrito con el teclado solo se veía en pantalla: no se guardaba ni se sincronizaba.</td><td class="c"><span class="pill p-crit">Crítica</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-10</td><td>22 oct</td><td>El texto escrito después del último párrafo se perdía con un error de JavaScript.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-11</td><td>22 oct</td><td>En el teléfono real, el botón flotante “+” quedaba fuera de su lugar.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-12</td><td>11 nov</td><td>Al teclear en un párrafo importado de Word el cursor saltaba y el párrafo perdía su formato al descargarlo.</td><td class="c"><span class="pill p-crit">Crítica</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-13</td><td>11 nov</td><td>Un documento con cambios sin enviar no se podía reabrir sin conexión.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-14</td><td>11 nov</td><td>Restablecer la contraseña borraba sin avisar lo guardado solo en el equipo.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-15</td><td>11 nov</td><td>Quien supiera un nombre de usuario podía dejarlo bloqueado fallando a propósito.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-16</td><td>11 nov</td><td>El canal en vivo llevaba el token de la sesión en la dirección; ahora usa un boleto de un solo uso.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-17</td><td>11 nov</td><td>Detrás de Azure todas las personas contaban como una sola red para el tope de cuentas nuevas.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-18</td><td>12 nov</td><td>El tope de 25 MB por documento se comparaba con lo ya guardado y no con lo que llega. Ahora se revisa antes de aplicar (también al crear) y responde 413.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-19</td><td>13 nov</td><td>Deshacer la creación de una figura dejaba un bloque vacío escondido en el documento.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-20</td><td>13 nov</td><td>Un documento con cambios sin enviar de una hoja o una presentación no se abría sin conexión.</td><td class="c"><span class="pill p-crit">Crítica</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-21</td><td>13 nov</td><td>La API no pedía <code>no-store</code>: el navegador guardaba documentos en claro y Firefox, sin red, daba una copia vieja.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-22</td><td>13 nov</td><td>La ruedita cerca de la orilla (número de fila) elegía una acción sola al soltar; podía ser “Eliminar fila”.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-23</td><td>13 nov</td><td>En el celular, tocar el número de una fila no la elegía: el toque se iba a la manija de tamaño.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-24</td><td>13 nov</td><td>En el celular, el selector de tamaño de “Insertar tabla” salía fuera de la pantalla.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-25</td><td>13 nov</td><td>Sin páginas (lo normal en el celular) no se veían las notas al pie.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-26</td><td>13 nov</td><td>Con un grupo elegido, la ruedita ofrecía “Agrupar” y no “Desagrupar”.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-27</td><td>13 nov</td><td>Una parte dañada dentro de un archivo de Office tumbaba la exportación fiel y el .nom (salía vacío).</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-28</td><td>13 nov</td><td>Un archivo de Office sin cambios salía distinto por unos bytes si se abría en el editor (marca UTF-8 y sangría del XML).</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-29</td><td>13 nov</td><td>En la red del salón (http) se decía “copiado” sin copiar, también con el código de recuperación.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-30</td><td>13 nov</td><td>“Pegar” de la ruedita no funcionaba en la red del salón (http).</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-31</td><td>13 nov</td><td>El orden “solo para mí” movía el encabezado si la fila 1 tenía una fórmula.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-32</td><td>13 nov</td><td>Elegir una fila, una columna o todo corría la hoja hasta la última celda.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-33</td><td>13 nov</td><td>Las manijas de selección de Android tapaban la ruedita del texto.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-34</td><td>13 nov</td><td>La bienvenida, al desvanecerse, se tragaba el primer clic.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================== 6.7 RESUMEN ============================== -->
+<section class="sigue">
+  <h3 id="s6-7">6.7 Resumen de resultados y trazabilidad</h3>
+  <table>
+    <thead><tr><th style="width:29%">Suite</th><th style="width:10%" class="c">Casos</th><th style="width:12%" class="c">Aprobados</th><th>Avance</th><th style="width:12%" class="c">Resultado</th></tr></thead>
+    <tbody>
+    <tr><td>Unitarias (JUnit y cifrado)</td><td class="c">35</td><td class="c">35</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Integración y seguridad (API)</td><td class="c">226</td><td class="c">226</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Seguridad con el teléfono A55 como servidor</td><td class="c">212</td><td class="c">212</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Valores límite</td><td class="c">18</td><td class="c">18</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Office sin cambios (90 archivos reales de Microsoft)</td><td class="c">90</td><td class="c">90</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Ediciones de Office</td><td class="c">144</td><td class="c">144</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Office por la interfaz (computadora y celular)</td><td class="c">180</td><td class="c">180</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>En pantalla (computadora y celular)</td><td class="c">51</td><td class="c">51</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Red: página, celular y app</td><td class="c">24</td><td class="c">24</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Cuentas y datos del equipo</td><td class="c">57</td><td class="c">57</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Funciones de la interfaz (computadora, celular y Firefox)</td><td class="c">501</td><td class="c">501</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr style="font-weight:700"><td>Total</td><td class="c">1538</td><td class="c">1538</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c">100.0 %</td></tr>
+    </tbody>
+  </table>
+  <h4>Requerimientos por módulo</h4>
+  <table>
+    <thead><tr><th>Módulo</th><th style="width:16%" class="c">Requerimientos</th><th style="width:13%" class="c">Cumplió</th><th style="width:13%" class="c">No cumplió</th></tr></thead>
+    <tbody>
+    <tr><td>M1 Gestión de cuentas</td><td class="c">10</td><td class="c">10</td><td class="c">0</td></tr>
+    <tr><td>M2 Espacios de trabajo y permisos</td><td class="c">8</td><td class="c">8</td><td class="c">0</td></tr>
+    <tr><td>M3 Documentos, edición y colaboración</td><td class="c">7</td><td class="c">7</td><td class="c">0</td></tr>
+    <tr><td>M4 Almacenamiento, Android y sin conexión</td><td class="c">7</td><td class="c">7</td><td class="c">0</td></tr>
+    <tr><td>M5 Importar y exportar</td><td class="c">5</td><td class="c">5</td><td class="c">0</td></tr>
+    <tr style="font-weight:700"><td>Total</td><td class="c">37</td><td class="c">37 (100 %)</td><td class="c">0</td></tr>
+    </tbody>
+  </table>
+  <h4>Matriz de trazabilidad</h4>
+  <p>Cada caso de uso tiene al menos una prueba, como pide el objetivo del proceso de pruebas.</p>
+  <table>
+    <thead><tr><th style="width:24%">Casos de uso</th><th>Pruebas que los comprueban</th><th style="width:14%" class="c">Cobertura</th></tr></thead>
+    <tbody>
+    <tr><td>CU-01 a CU-05, CU-27</td><td>Requerimientos M1; integración (VL-01 a VL-12, estados de la cuenta); seguridad; unitarias del cifrado</td><td class="c ok">Completa</td></tr>
+    <tr><td>CU-13, CU-16, CU-17</td><td>Requerimientos M2; tabla de decisión de permisos; VL-13 y VL-14; seguridad</td><td class="c ok">Completa</td></tr>
+    <tr><td>CU-14, CU-15</td><td>Requerimientos M2 (red local); portabilidad: el A55 como servidor con la app, una laptop y un escritorio a la vez (13 nov). Falta el descubrimiento por UDP en la red de la escuela</td><td class="c prog">Parcial</td></tr>
+    <tr><td>CU-18 a CU-23</td><td>Requerimientos M3; unitarias del CRDT; prueba de red; usabilidad</td><td class="c ok">Completa</td></tr>
+    <tr><td>CU-24</td><td>Requerimientos M4; VL-15 a VL-18 (DEF-18 corregido)</td><td class="c ok">Completa</td></tr>
+    <tr><td>CU-25, CU-26</td><td>Requerimientos M4; prueba de red; portabilidad</td><td class="c ok">Completa</td></tr>
+    <tr><td>CU-28, CU-29</td><td>Requerimientos M5; fidelidad, ediciones y pantalla</td><td class="c ok">Completa</td></tr>
+    </tbody>
+  </table>
+  <h4>Pendientes</h4>
+  <ul>
+    <li>Probar con cinco dispositivos reales en el mismo espacio, también en la red de la escuela (el A55, una laptop y un escritorio ya se probaron juntos, en la red de casa y por la nube propia).</li>
+    <li>Ver en pantalla los dibujos de Word (lienzos y grupos de formas); hoy se muestran como recuadros con su texto y se descargan completos.</li>
+    <li>Confirmar en la app del A55 dos casos que no se pudieron repetir el 13 de noviembre (la depuración inalámbrica del teléfono se apagó): una celda tecleada muy rápido y guardar la fecha de entrega.</li>
+    <li>Prueba de aceptación con usuarios y cuestionario SUS.</li>
+  </ul>
+</section>
+
+<!-- ============================== 7. REFERENCIAS ============================== -->
+<section class="capitulo">
+  <h2 id="s7">7. Referencias</h2>
+  <p class="ref">Brooke, J. (1996). SUS: A “quick and dirty” usability scale. En P. W. Jordan, B. Thomas, B. A. Weerdmeester y I. L. McClelland (Eds.), <i>Usability evaluation in industry</i> (pp. 189–194). Taylor &amp; Francis.</p>
+  <p class="ref">Institute of Electrical and Electronics Engineers. (2008). <i>IEEE Standard for Software and System Test Documentation</i> (IEEE Std 829-2008). IEEE.</p>
+  <p class="ref">Institute of Electrical and Electronics Engineers. (2016). <i>IEEE Standard for System, Software, and Hardware Verification and Validation</i> (IEEE Std 1012-2016). IEEE.</p>
+  <p class="ref">International Organization for Standardization. (2011). <i>Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models</i> (ISO/IEC 25010:2011). ISO.</p>
+  <p class="ref">International Organization for Standardization. (2021). <i>Software and systems engineering — Software testing — Part 3: Test documentation</i> (ISO/IEC/IEEE 29119-3:2021). ISO.</p>
+  <p class="ref">International Software Testing Qualifications Board. (2023). <i>Certified Tester Foundation Level Syllabus</i> (v4.0). ISTQB.</p>
+  <p class="ref">Pressman, R. S. (2010). <i>Ingeniería del software: un enfoque práctico</i> (7.ª ed.). McGraw-Hill.</p>
+  <p class="ref">Sommerville, I. (2011). <i>Ingeniería de software</i> (9.ª ed.). Pearson Educación.</p>
+  <p class="ref">World Wide Web Consortium. (2023). <i>Web Content Accessibility Guidelines (WCAG) 2.2</i>. W3C.</p>
+  <p class="ref">WACK. (2026). <i>NOM-COLAB: especificación de casos de uso, bitácora del proyecto y pruebas automatizadas</i> [Repositorio de código]. Equipo 6, grupo 5IM7, CECyT 9.</p>
+</section>
+
+<!-- ============================== 8. CONCLUSIONES ============================== -->
+<section class="capitulo">
+  <h2 id="s8">8. Conclusiones</h2>
+  <p>Como empresa de pruebas, WACK aplicó a NOM-COLAB un plan para cada tipo de prueba: unitarias, de integración, de requerimientos y de sistema (usabilidad, seguridad y portabilidad). Se ejecutaron 1538 casos, de los cuales se aprobaron 1538 (100.0 %), y de los 37 requerimientos revisados se cumplieron los 37. Cada caso de uso quedó cubierto por al menos una prueba.</p>
+  <p>Las pruebas mostraron que la seguridad es el punto más fuerte del sistema: los 226 casos de seguridad y permisos se aprobaron, las contraseñas se guardan cifradas y ningún rol puede hacer más de lo que le corresponde, aunque alguien intente saltarse la página. También quedó demostrado lo que distingue al proyecto: varias personas pueden escribir a la vez sin pisarse, lo escrito sin conexión llega al volver la red y los archivos de Office se descargan igual que como entraron.</p>
+  <p>El plan además cumplió su objetivo de encontrar defectos antes que el usuario. Durante el desarrollo se registraron 34 defectos; catorce eran críticos o altos, y varios de ellos habrían hecho perder trabajo a quien usa la aplicación. El último, DEF-18, lo descubrieron las pruebas de valores límite de este plan: el tope de 25 MB por documento se puede rebasar en un solo envío. Se corrigió el 13 de noviembre, junto con dieciséis defectos más (DEF-19 a DEF-34) que salieron al probar cada función en equipos reales: el Samsung A55 (la app y Chrome), una computadora de escritorio y la nube propia en la Raspberry Pi.</p>
+  <p>Con estos resultados, la decisión de WACK es <b>liberar la versión 0.12.2</b>, que corrige todos los defectos registrados, y completar en la semana del 17 de noviembre lo que falta: cinco dispositivos en el mismo espacio en la red de la escuela y la validación con usuarios que nunca han usado la aplicación. Todas las suites se repitieron sobre la versión final, porque una prueba solo tiene valor si se vuelve a ejecutar después de cada cambio.</p>
+  <h3>Aprobaciones</h3>
+  <div class="firma">
+    <div>Martínez Ortega Uriel Alejandro<span>Director general</span></div>
+    <div>Soria Flores Josep Aarón<span>Project manager</span></div>
+    <div>González Azuara Arturo Leonardo<span>Subdirector de operaciones</span></div>
+    <div>Rodríguez Esparza Diego Alejandro<span>Desarrollador y QA</span></div>
+  </div>
+</section>
+
+<script>
+// El índice se arma con los títulos; imprimir.py le pone el número de página a cada uno.
+(function () {
+  const ul = document.getElementById('indice');
+  document.querySelectorAll('h2[id], h3[id], h4[id]').forEach(function (h) {
+    const li = document.createElement('li');
+    li.className = h.tagName === 'H2' ? 'n1' : (h.tagName === 'H3' ? 'sub' : 'sub2');
+    li.innerHTML = '<span class="t"></span><span class="puntos"></span><span class="pg" data-para="' + h.id + '">·</span>';
+    li.querySelector('.t').textContent = h.textContent;
+    ul.appendChild(li);
+  });
+})();
+</script>
+</body></html>

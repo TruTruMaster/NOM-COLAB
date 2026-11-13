@@ -15,7 +15,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 SALIDA_SVG = os.path.join(AQUI, "..", "svg", "07-navegacion.svg")
 SALIDA_PNG = os.path.join(AQUI, "..", "png", "07-navegacion.png")
 
-ANCHO, ALTO = 2560, 1420
+ANCHO, ALTO = 2600, 1560
 CAJA_W, CAJA_H = 236, 76
 FILAS = [150, 290, 430, 600, 770, 930, 1100, 1290]
 
@@ -33,44 +33,52 @@ C = {
 }
 
 # id: (texto (\n = renglón), x del centro, fila, estilo)
+# Revisado el 13 de noviembre de 2026 contra la app 0.12 (rutas de app.js y menús de cada pantalla).
 N = {
     "bienvenida": ("Bienvenida", 1180, 0, "inicio"),
     "login": ("Iniciar sesión", 860, 1, "cuentas"),
-    "registro": ("Crear cuenta\nnombre, contraseña, empresa", 1260, 1, "cuentas"),
+    "registro": ("Crear cuenta\nusuario, contraseña · código de recuperación", 1330, 1, "cuentas"),
+    "codigo": ("Tengo un código\n→ unirse con apodo o con cuenta", 1830, 1, "espacios"),
     "sincuenta": ("Usar sin cuenta", 2300, 1, "sistema"),
     "inicio": ("Inicio\nrecientes y tus espacios", 860, 2, "inicio"),
+    "recuperar": ("¿Olvidaste tu contraseña?\ncon el código de recuperación", 1290, 2, "cuentas"),
     "locales": ("Mis documentos locales\nsolo en este equipo", 2300, 2, "sistema"),
     "continua": ("Continúa donde lo dejaste\n→ abre el editor", 170, 3, "inicio"),
     "espacio": ("Espacio de trabajo", 700, 3, "espacios"),
-    "unirse": ("Unirse a un espacio\nred local o compartido", 1110, 3, "espacios"),
-    "dispositivo": ("Este dispositivo\ncopias y espacio usado", 1390, 3, "sistema"),
-    "cuenta": ("Menú de la cuenta\najustes · cerrar sesión", 1670, 3, "inicio"),
+    "unirse": ("Unirse a un espacio\ncódigo, QR, apodo o Wi-Fi", 1110, 3, "espacios"),
+    "dispositivo": ("Este dispositivo\ncopias · teléfono como servidor", 1430, 3, "sistema"),
+    "cuenta": ("Menú de la cuenta\najustes · contraseña · salir · borrar", 1780, 3, "inicio"),
+    "buscar": ("Buscar o ir a (Ctrl+K)\nen la barra de arriba, siempre", 2010, 4, "inicio"),
     "editorlocal": ("Editor local\nmismos 4 tipos", 2300, 3, "sistema"),
-    "subir": ("Subir a un espacio\nal crear cuenta o entrar", 2300, 4, "sistema"),
-    "docs": ("Documentos del espacio\nfiltrar por tipo · buscar", 330, 4, "espacios"),
-    "accesos": ("Compartir y accesos\nlectura · edición · quitar", 610, 4, "espacios"),
-    "conexion": ("Conexión del proyecto\nsolo en red local", 890, 4, "espacios"),
-    "almacen": ("Almacenamiento\nconsumo · depurar", 1170, 4, "espacios"),
+    "subir": ("Subir a un espacio\nal crear cuenta o entrar", 2300, 5, "sistema"),
+    "docs": ("Documentos del espacio\ncarpetas · destacados · buscar", 300, 4, "espacios"),
+    "accesos": ("Invitar y miembros\ncódigo/QR · lectura · edición", 620, 4, "espacios"),
+    "conexion": ("Visible en el mismo Wi-Fi\nsolo en red local", 920, 4, "espacios"),
+    "almacen": ("Cuánto ocupa\nconsumo · depurar versiones", 1210, 4, "espacios"),
+    "papelera": ("Papelera y menciones\n30 días · restaurar", 1500, 4, "espacios"),
     "nuevo": ("Nuevo documento\nnombre + TIPO + plantilla", 190, 5, "espacios"),
     "abrir": ("Abrir documento\nse abre en su tipo", 470, 5, "espacios"),
-    "etexto": ("Editor de Texto", 150, 6, "texto"),
-    "ehoja": ("Editor de Hoja", 410, 6, "hoja"),
-    "epres": ("Editor de Presentación", 670, 6, "pres"),
-    "ediag": ("Editor de Diagrama", 930, 6, "diag"),
-    "historial": ("Historial y actividad\nversiones · quién cambió", 250, 7, "editor"),
-    "descargar": ("Descargar\n.docx .xlsx .pptx PDF", 540, 7, "editor"),
-    "volver": ("Volver al espacio\nya está guardado", 830, 7, "editor"),
+    "etexto": ("Editor de Texto\nInvestigar · citas APA", 150, 6, "texto"),
+    "ehoja": ("Editor de Hoja\nfórmulas · gráficas", 440, 6, "hoja"),
+    "epres": ("Editor de Presentación\npresentar · notas", 740, 6, "pres"),
+    "ediag": ("Editor de Diagrama\nUML · diagramas listos", 1040, 6, "diag"),
+    "comentarios": ("Comentarios\nsugerencias · @menciones", 160, 7, "editor"),
+    "historial": ("Historial y recibo\nversiones · quién cambió", 450, 7, "editor"),
+    "descargar": ("Exportar\n.docx .xlsx .pptx .nom PDF", 750, 7, "editor"),
+    "volver": ("Volver al espacio\nya está guardado", 1040, 7, "editor"),
+    "enlace": ("Enlace para ver\nsin cuenta · con QR", 1380, 7, "editor"),
 }
 
 # (padre, [hijos], etiqueta opcional junto al padre)
 ARBOL = [
-    ("bienvenida", ["login", "registro", "sincuenta"], None),
-    ("login", ["inicio"], "sesión válida · cuenta en la BD"),
+    ("bienvenida", ["login", "registro", "codigo", "sincuenta"], None),
+    ("login", ["inicio", "recuperar"], "sesión válida · cuenta en la BD"),
     ("sincuenta", ["locales"], None),
     ("locales", ["editorlocal"], None),
     ("editorlocal", ["subir"], None),
     ("inicio", ["continua", "espacio", "unirse", "dispositivo", "cuenta"], None),
-    ("espacio", ["docs", "accesos", "conexion", "almacen"], None),
+    ("cuenta", ["buscar"], None),
+    ("espacio", ["docs", "accesos", "conexion", "almacen", "papelera"], None),
     ("docs", ["nuevo", "abrir"], None),
 ]
 
@@ -153,10 +161,10 @@ def generar():
     partes.append(linea([(min(xs), yb), (max(xs), yb)], flecha=False))
     for x in xs:
         partes.append(linea([(x, yb), (x, ytop - 2)]))
-    partes.append(etiqueta(1100, yb + 5, "el tipo se elige al crear y queda fijo"))
+    partes.append(etiqueta(1250, yb + 5, "el tipo se elige al crear y queda fijo"))
 
     # Los 4 editores → acciones comunes
-    acciones = ["historial", "descargar", "volver"]
+    acciones = ["comentarios", "historial", "descargar", "volver", "enlace"]
     yb2 = (ytop + CAJA_H + caja("historial")[1]) / 2
     for x in xs:
         partes.append(linea([(x, ytop + CAJA_H), (x, yb2)], flecha=False))
@@ -164,7 +172,7 @@ def generar():
     partes.append(linea([(min(xs + xa), yb2), (max(xs + xa), yb2)], flecha=False))
     for x in xa:
         partes.append(linea([(x, yb2), (x, caja("historial")[1] - 2)]))
-    partes.append(etiqueta(1100, yb2 + 5, "cada cambio se guarda solo y queda en la bitácora"))
+    partes.append(etiqueta(1480, yb2 + 5, "cada cambio se guarda solo y queda en la bitácora"))
 
     # Atajos al editor (punteados): Continúa donde lo dejaste y Este dispositivo
     cx_, cy_, cw_, ch_, *_ = caja("continua")
@@ -172,7 +180,7 @@ def generar():
     # Volver al espacio → Documentos (punteado, sube por la izquierda)
     vx, vy, vw, vh, *_ = caja("volver")
     dx_, dy_, dw_, dh_, *_ = caja("docs")
-    xr = max(caja(t)[0] + caja(t)[2] for t in tipos) + 36   # por fuera de los editores
+    xr = max([caja(t)[0] + caja(t)[2] for t in tipos] + [vx + vw]) + 36   # por fuera de los editores y de "Volver"
     partes.append(linea([(vx + vw, vy + vh / 2), (xr, vy + vh / 2), (xr, dy_ + dh_ / 2 + 60),
                          (dx_ + dw_ + 4, dy_ + dh_ / 2 + 60)], guiones=True, color="#5B5BD6"))
     # Unirse → Espacio (acceso concedido)
@@ -184,7 +192,7 @@ def generar():
     cajas = "\n".join(svg_caja(n) for n in N)
 
     # Leyenda y notas
-    lx0, ly0 = 1500, 1080
+    lx0, ly0 = 1560, 1235
     ley = [f'<rect x="{lx0}" y="{ly0}" width="1010" height="300" rx="18" fill="#FBFAF7" stroke="#D9D4CA"/>',
            etiqueta(lx0 + 28, ly0 + 44, "Cómo leer el mapa", color="#1E1B2E")]
     items = [("cuentas", "Gestión de cuentas"), ("inicio", "Inicio y cuenta"), ("espacios", "Espacios de trabajo"),

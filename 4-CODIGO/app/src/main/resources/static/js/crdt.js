@@ -36,11 +36,13 @@
       this.estadoSync = this.opc.local ? "local" : this.pendientes.length ? "pendiente" : "ok";
       // Último reloj que se sabe que el servidor tiene (para el resumen al reconectar, 6.3).
       this.relojServidor = this.estado.reloj || 0;
-      // Lo que quedó en cola de una sesión anterior también cuenta para el reloj.
-      this.pendientes.forEach((op) => this._fusionar(op));
+      // Primero cómo se guarda la copia del equipo: reaplicar la cola de abajo la usa (antes se definía
+      // después y un documento con cambios sin enviar de una hoja o una diapositiva no se abría).
       this._guardarCache = this.opc.soloMemoria ? () => {}
         : this.opc.local ? NOM.throttle(() => NOM.local.guardarEstado(this.id, this.estado), 500)
         : NOM.throttle(() => NOM.guardar(NOM.api.clave("doc." + this.id), { estado: this.estado, meta: this.opc.meta || null, guardado: Date.now() }), 2000);
+      // Lo que quedó en cola de una sesión anterior también cuenta para el reloj.
+      this.pendientes.forEach((op) => this._fusionar(op));
     }
 
     // ---------------------------------------------------------- lectura
@@ -209,10 +211,15 @@
           inverso.items.push({ seq: it.seq, ss: inv });
           return;
         }
+        // Deshacer la creación de una figura (su "tipo" vuelve a no existir) la borra de verdad: si solo
+        // se vaciaran sus campos quedaría un bloque vacío en la primera página (capas, exportar…).
+        // Al rehacer, "eliminado" vuelve a null junto con lo demás.
+        const campos = ("tipo" in it.previos && it.previos.tipo == null && this.valor(it.bloque, "tipo") != null)
+          ? Object.assign({}, it.previos, { eliminado: true }) : it.previos;
         const actuales = {};
-        for (const c in it.previos) { const v = this.valor(it.bloque, c); actuales[c] = v === undefined ? null : v; }
+        for (const c in campos) { const v = this.valor(it.bloque, c); actuales[c] = v === undefined ? null : v; }
         inverso.items.push({ bloque: it.bloque, previos: actuales });
-        this.cambiar(it.bloque, it.previos, { deshacible: false });
+        this.cambiar(it.bloque, campos, { deshacible: false });
       });
       a.push(inverso);
       return true;

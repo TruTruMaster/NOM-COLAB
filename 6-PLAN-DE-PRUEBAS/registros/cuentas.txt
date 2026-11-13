@@ -1,0 +1,48 @@
+=== prueba_cuentas_equipo
+  ok   los canales en vivo abren con un boleto de un solo uso
+  ok   el token de la sesión no viaja en ninguna dirección
+  ok   cada conexión usa un boleto distinto
+== 4. Cambiar la contraseña con la sesión abierta
+  ok   con la contraseña actual equivocada no cambia y lo dice
+  ok   si las dos nuevas no coinciden, lo dice
+  ok   con la actual correcta cambia y la sesión de este equipo sigue abierta
+  ok   la sesión que tenía en otro equipo se cerró
+  ok   la contraseña vieja ya no entra
+  ok   al volver a entrar con la nueva, el documento de este equipo sigue ahí
+  ok   …y no se pide la contraseña anterior
+== 5. La contraseña cambia desde otro equipo
+  ok   (otro equipo) cambia la contraseña
+  ok   aquí, con la contraseña nueva, lo de este equipo queda apartado (no borrado)
+  ok   se ofrece recuperarlo, diciendo cuánto hay
+  ok   con «Ahora no» nada se borra
+  ok   con una contraseña que no era, lo dice y no pierde nada
+  ok   con la anterior correcta, el documento de este equipo vuelve
+  ok   …con su contenido
+  ok   …y los 16 cambios que no se habían enviado llegan al servidor
+== 3. Restablecer la contraseña con el código
+  ok   al recuperar se avisa qué pasa con lo guardado solo en el equipo
+  ok   con el código se pone una contraseña nueva (y da un código nuevo)
+  ok   al entrar con la nueva, se ofrece recuperar lo que estaba en el equipo
+  ok   y con la contraseña anterior vuelve el documento
+  ok   …y aparece en la pantalla de inicio
+  ok   «Borrarlos» pide confirmar y entonces sí los borra del equipo
+== 10. Borrar la cuenta
+  ok   antes de borrar dice qué se borra (su espacio y su documento) y que no se puede deshacer
+  ok   sin escribir bien el nombre no borra
+  ok   con la contraseña equivocada tampoco
+  ok   con nombre y contraseña, la cuenta se borra y se vuelve a la pantalla de entrada
+  ok   en el servidor ya no existe (ni su sesión, ni su documento)
+  ok   y en este equipo no queda nada suyo
+== 2. Contenido malicioso guardado por un miembro (XSS)
+  ok   HTML metido a la fuerza en una diapositiva, un nombre de documento o de espacio no ejecuta nada
+  ok   un enlace javascript: metido a la fuerza en un texto no queda como enlace activo
+  ok   …y nada de eso queda en la página con un manejador de eventos
+== 9. Aviso de conexión sin cifrar
+  ok   en el propio equipo (localhost) no sale el aviso
+  ok   entrando por la red local (http) sale «Conexión sin cifrar»
+  ok   por la red local (cifrado propio) también se recupera lo de la contraseña anterior
+  ok   la página no reporta errores (tampoco de la política de contenido)
+
+Cuentas y equipo: 57 de 57
+Capturas y archivos en: (carpeta de capturas)
+FIN 0

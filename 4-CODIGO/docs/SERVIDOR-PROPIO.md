@@ -3,14 +3,18 @@
 Además de Azure (que se queda para la entrega escolar), NOM-COLAB puede correr en una
 computadora de la casa y estar en internet **gratis**, sin abrir puertos del módem y con HTTPS.
 
-| | Azure | Servidor propio |
+> **Estado actual (13 de noviembre de 2026):** el servidor propio corre en la **Raspberry Pi 5**
+> (ver "En la Raspberry Pi", abajo). Los servicios de la laptop (`nomcolab.service`,
+> `nomcolab-tunel.service`) están apagados y deshabilitados; lo que se describe de la laptop queda
+> como la forma de montarlo en otra computadora.
+
+| | Azure | Servidor propio (Raspberry Pi) |
 |---|---|---|
-| Dirección | `https://nomcolab-wack.azurewebsites.net` | **`https://nomcolab.dpdns.org`** (y `https://nomcolab.tailfd65f2.ts.net`) |
-| Enlace corto | — | `https://is.gd/nomcolab` (lo crea el dueño en is.gd) |
-| Base de datos | Azure SQL (serverless, oferta gratis) | H2 en `~/nomcolab-servidor/datos` |
-| Límites | F1: 60 min de CPU al día, se duerme sin visitas, 1 GB de RAM compartida | Los de la computadora (la laptop actual: i7-10610U, 16 GB) y el internet de la casa |
+| Dirección | `https://nomcolab-wack.azurewebsites.net` | **`https://nomcolab.dpdns.org`** |
+| Base de datos | Azure SQL (serverless, oferta gratis) | H2 en `/var/lib/nomcolab/datos` |
+| Límites | F1: 60 min de CPU al día, se duerme sin visitas, 1 GB de RAM compartida | Raspberry Pi 5 (8 GB) y el internet de la casa; 200 MB por cuenta, a la vista |
 | Costo | $0 (crédito de Azure for Students sin tocar) | $0 más la luz |
-| Encendido | Normalmente apagado; `nomcolab` → 1 Azure | **Siempre prendido**: arranca solo con la computadora; `nomcolab` → 2 Local |
+| Encendido | Normalmente apagado; `nomcolab` → 1 Azure | **Siempre prendido** (s6 lo levanta si se cae) |
 
 Las dos son independientes: cuentas, espacios y documentos de una no aparecen en la otra.
 
@@ -214,19 +218,33 @@ cifrar en la tarjeta: la Pi no sale de casa y tiene que arrancar sola. Cifrarlos
 programa" con una llave guardada en la misma tarjeta no protegería nada. Las contraseñas sí van
 protegidas (PBKDF2 + sal) y los respaldos solo los leen `root` y el grupo `adm`.
 
-## Pasarlo a la Raspberry Pi
+## En la Raspberry Pi (así está montado)
 
-La Pi (`pi5` en Tailscale, Raspberry Pi 5, `linux_arm64`) ya está prendida todo el tiempo y
-corre `cloudflared` para `vefose.pp.ua`, así que es mejor casa para NOM-COLAB que una laptop.
-Pasos (necesitan entrar a la Pi: `sudo tailscale set --ssh` en ella, o una llave SSH):
+La Pi (`pi5` en Tailscale, Raspberry Pi 5, Alpine Linux con s6-rc) corre NOM-COLAB desde el 10 de
+noviembre de 2026. Se instaló con `servidor-propio/pi/instalar-pi.sh` (se puede volver a correr:
+no repite lo que ya está hecho):
 
-1. En la Pi: `sudo apt install openjdk-21-jre-headless` (el Java de `2-PAGINA-Servidor/java-linux`
-   es para x86_64) y copiar `~/NOM` (o al menos `2-PAGINA-Servidor/nom-colab.jar` y
-   `4-CODIGO/servidor-propio`, `4-CODIGO/azure/nomcolab`).
-2. En la laptop: `nomcolab local down` (deja de escribir datos y hace un respaldo).
-3. Copiar `~/nomcolab-servidor/datos` y `~/.cloudflared/{nomcolab.yml,869abbea-….json}` a la Pi.
-4. En la Pi: cambiar `ExecStart` de `nomcolab.service` a `/usr/bin/java` y correr
-   `instalar.sh` (encuentra el túnel y no crea otro). El túnel `pi5` de `vefose.pp.ua` no se toca.
+| Qué | Dónde |
+|---|---|
+| Servicios supervisados por s6 (arrancan con la Pi y se levantan solos si se caen) | `nomcolab-servidor` (el jar, usuario `nomcolab` sin privilegios), `nomcolab-tunel` (Cloudflare Tunnel → `nomcolab.dpdns.org`), `nomcolab-vigia` (cada minuto revisa que contesten) |
+| El jar | `/opt/nomcolab/nom-colab.jar` |
+| Datos | `/var/lib/nomcolab/datos` |
+| Ajustes (puerto, cuota por cuenta…) | `/etc/nomcolab.conf` |
+| Bitácoras | `/var/log/<servicio>` (10 archivos de 1 MB) |
+| Respaldo | diario a las 02:00 en la Pi (se guardan 14) y copia diaria en la laptop (`~/nomcolab-servidor/respaldos-pi/`, ver la sección anterior) |
+
+La orden `nomcolab-pi` (con `doas`, sin contraseña solo para ella) hace lo de todos los días:
+
+```
+ssh pi5 doas nomcolab-pi estado      # servicios, túnel, jar, datos, respaldo y temperatura
+ssh pi5 doas nomcolab-pi reiniciar
+ssh pi5 doas nomcolab-pi respaldo    # un respaldo ahora
+ssh pi5 doas nomcolab-pi bitacora
+# Actualizar el servidor: copiar el jar nuevo y pedir el cambio (respalda antes y vuelve al anterior si no arranca)
+scp 2-PAGINA-Servidor/nom-colab.jar pi5:/home/user/nom-colab.jar.nuevo && ssh pi5 doas nomcolab-pi actualizar
+```
+
+El túnel `pi5` de `vefose.pp.ua` (otro sitio del dueño en la misma Pi) no se toca.
 
 ## Historia del dominio
 

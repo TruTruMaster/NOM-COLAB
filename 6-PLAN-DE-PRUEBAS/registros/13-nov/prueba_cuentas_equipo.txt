@@ -1,0 +1,70 @@
+== 1. Dos cuentas en el mismo navegador
+  ok   con la sesión abierta, la copia local va cifrada (el texto no está en claro en el disco)
+  ok   nombres de documentos o espacios no quedan en claro
+  ok   al cerrar sesión se borra la llave de A del equipo
+  ok   y sus copias de consulta se borran (quedan sus documentos de este equipo y lo no enviado, cifrados)
+  ok   sin sesión no queda token ni texto en claro
+  ok   B no ve en pantalla nada de A
+  ok   el servidor le niega a B leer el documento y el espacio de A
+  ok   y le niega escribir en el documento de A
+  ok   la bóveda no le entrega a B nada de A
+  ok   sin conexión, B tampoco abre la copia guardada del documento de A
+  ok   ni el documento de este equipo de A
+  ok   A recupera su documento de este equipo al entrar con su contraseña
+  ok   …sin que se le pida ninguna contraseña anterior
+  ok   y su documento del servidor sigue con lo que escribió
+== 6. Almacenamiento a la vista
+  ok   el inicio dice dónde están guardados los espacios y cuánto lleva usado la cuenta
+  ok   al tocarlo se abre el detalle (por espacio, y que solo se guardan documentos de NOM-COLAB)
+  ok   la barra lateral tiene «En el servidor» junto a lo guardado en el equipo
+== 7. Nuevo documento e Importar del inicio preguntan dónde
+  ok   «Nuevo documento» pregunta dónde, con el espacio primero y «Solo en este equipo» después
+  ok   …y al elegir el espacio, el documento queda en el servidor
+  ok   «Importar» también pregunta, y lo importado queda en el espacio
+== 8. Canal en vivo con boleto
+  ok   los canales en vivo abren con un boleto de un solo uso
+  ok   el token de la sesión no viaja en ninguna dirección
+  ok   cada conexión usa un boleto distinto
+== 4. Cambiar la contraseña con la sesión abierta
+  ok   con la contraseña actual equivocada no cambia y lo dice
+  ok   si las dos nuevas no coinciden, lo dice
+  ok   con la actual correcta cambia y la sesión de este equipo sigue abierta
+  ok   la sesión que tenía en otro equipo se cerró
+  ok   la contraseña vieja ya no entra
+  ok   al volver a entrar con la nueva, el documento de este equipo sigue ahí
+  ok   …y no se pide la contraseña anterior
+== 5. La contraseña cambia desde otro equipo
+  ok   (otro equipo) cambia la contraseña
+  ok   aquí, con la contraseña nueva, lo de este equipo queda apartado (no borrado)
+  ok   se ofrece recuperarlo, diciendo cuánto hay
+  ok   con «Ahora no» nada se borra
+  ok   con una contraseña que no era, lo dice y no pierde nada
+  ok   con la anterior correcta, el documento de este equipo vuelve
+  ok   …con su contenido
+  ok   …y los 16 cambios que no se habían enviado llegan al servidor
+== 3. Restablecer la contraseña con el código
+  ok   al recuperar se avisa qué pasa con lo guardado solo en el equipo
+  ok   con el código se pone una contraseña nueva (y da un código nuevo)
+  ok   al entrar con la nueva, se ofrece recuperar lo que estaba en el equipo
+  ok   y con la contraseña anterior vuelve el documento
+  ok   …y aparece en la pantalla de inicio
+  ok   «Borrarlos» pide confirmar y entonces sí los borra del equipo
+== 10. Borrar la cuenta
+  ok   antes de borrar dice qué se borra (su espacio y su documento) y que no se puede deshacer
+  ok   sin escribir bien el nombre no borra
+  ok   con la contraseña equivocada tampoco
+  ok   con nombre y contraseña, la cuenta se borra y se vuelve a la pantalla de entrada
+  ok   en el servidor ya no existe (ni su sesión, ni su documento)
+  ok   y en este equipo no queda nada suyo
+== 2. Contenido malicioso guardado por un miembro (XSS)
+  ok   HTML metido a la fuerza en una diapositiva, un nombre de documento o de espacio no ejecuta nada
+  ok   un enlace javascript: metido a la fuerza en un texto no queda como enlace activo
+  ok   …y nada de eso queda en la página con un manejador de eventos
+== 9. Aviso de conexión sin cifrar
+  ok   en el propio equipo (localhost) no sale el aviso
+  ok   entrando por la red local (http) sale «Conexión sin cifrar»
+  ok   por la red local (cifrado propio) también se recupera lo de la contraseña anterior
+  ok   la página no reporta errores (tampoco de la política de contenido)
+
+Cuentas y equipo: 57 de 57
+FIN 0

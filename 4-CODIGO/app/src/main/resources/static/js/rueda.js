@@ -51,6 +51,10 @@
     if (!items.length) return null;
     const n = items.length;
     const v = visible();
+    // Cerca de la orilla la rueda se recorre hacia adentro. Al mantener presionado, la dirección se
+    // mide desde donde se puso el dedo (x0, y0), no desde el centro recorrido: si no, soltar sin
+    // moverse elegía la acción que quedaba de ese lado (en el número de fila: "Fijar" o "Eliminar fila").
+    const x0 = x, y0 = y;
     x = Math.min(v.x + v.w - R - 8, Math.max(v.x + R + 8, x));
     y = Math.min(v.y + v.h - R - 8, Math.max(v.y + R + 8, y));
     const velo = html(`<div class="rueda-velo" role="presentation">
@@ -81,8 +85,8 @@
       etq.textContent = i < 0 ? (opc.titulo || "Elige") : items[i].texto;
       if (i >= 0 && navigator.vibrate && opc.tactil) navigator.vibrate(5);
     }
-    function porPunto(cx, cy) {
-      const dx = cx - x, dy = cy - y;
+    function porPunto(cx, cy, desdeInicio) {
+      const dx = cx - (desdeInicio ? x0 : x), dy = cy - (desdeInicio ? y0 : y);
       if (Math.hypot(dx, dy) < MUERTA) return -1;
       let a = Math.atan2(dy, dx) + Math.PI / 2 + Math.PI / n;
       a = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -99,10 +103,10 @@
       if (NOM.hito) NOM.hito("rueda");
     }
     function atras() { if (opc.padre) abrir(x, y, opc.padre.items, opc.padre.opc, true); else cerrar(); }
-    function mover(e) { if (modo === "mantener" || e.pointerType === "mouse") marcar(porPunto(e.clientX, e.clientY)); }
+    function mover(e) { if (modo === "mantener" || e.pointerType === "mouse") marcar(porPunto(e.clientX, e.clientY, modo === "mantener")); }
     function soltar(e) {
       if (modo !== "mantener") return;
-      const i = porPunto(e.clientX, e.clientY);
+      const i = porPunto(e.clientX, e.clientY, true);
       // Soltar sin haber ido hacia ninguna acción: se queda abierta para elegir con un toque.
       if (i < 0) { if (!seMovio) { modo = "clic"; soltado = { t: Date.now(), x: e.clientX, y: e.clientY }; marcar(-1); } else cerrar(); return; }
       elegir(i);
@@ -165,6 +169,7 @@
    * opc.tactilPorSistema: con el dedo manda la pulsación larga del sistema (texto seleccionable);
    *   opc.alPulsacionLarga(e) decide: "propia" (no dejar que el sistema seleccione) o "sistema".
    * opc.alPreparar(e): se llama justo antes de abrir (para guardar la selección).
+   * opc.alAbrir(e, tactil) y opc.alCerrar(e, tactil): al abrir y al cerrar (también al elegir una acción).
    */
   function enlazar(el, items, opc) {
     opc = Object.assign({ izquierdo: true, tactil: true, ms: MANTENER_MS }, opc);
@@ -174,8 +179,9 @@
       opc.alPreparar && opc.alPreparar(ev);
       const l = items(ev);
       if (!l) return null;
-      const r = abrir(x, y, l, { modo, titulo: l.titulo || opc.titulo, tactil });
+      const r = abrir(x, y, l, { modo, titulo: l.titulo || opc.titulo, tactil, alCerrar: opc.alCerrar ? () => opc.alCerrar(ev, tactil) : undefined });
       if (r && tactil && navigator.vibrate) navigator.vibrate(12);
+      if (r && opc.alAbrir) opc.alAbrir(ev, tactil);
       return r;
     };
     el.addEventListener("contextmenu", (e) => {

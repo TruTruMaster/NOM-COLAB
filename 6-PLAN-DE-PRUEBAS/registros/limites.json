@@ -1,0 +1,146 @@
+[
+ {
+  "id": "VL-01",
+  "desc": "Nombre de 2 caracteres (ab)",
+  "esperado": 400,
+  "obtenido": 400,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-02",
+  "desc": "Nombre de 3 caracteres (abc)",
+  "esperado": 201,
+  "obtenido": 201,
+  "ok": true,
+  "msg": "Registro exitoso"
+ },
+ {
+  "id": "VL-03",
+  "desc": "Nombre de 24 caracteres",
+  "esperado": 201,
+  "obtenido": 201,
+  "ok": true,
+  "msg": "Registro exitoso"
+ },
+ {
+  "id": "VL-04",
+  "desc": "Nombre de 25 caracteres",
+  "esperado": 400,
+  "obtenido": 400,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-05",
+  "desc": "Nombre con espacio (ana luz)",
+  "esperado": 400,
+  "obtenido": 400,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-06",
+  "desc": "Contraseña de 7 caracteres",
+  "esperado": 400,
+  "obtenido": 400,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-07",
+  "desc": "Contraseña de 8 caracteres",
+  "esperado": 201,
+  "obtenido": 201,
+  "ok": true,
+  "msg": "Registro exitoso"
+ },
+ {
+  "id": "VL-08",
+  "desc": "Nombre repetido (abc)",
+  "esperado": 409,
+  "obtenido": 409,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-09",
+  "desc": "Nombre repetido con mayúsculas (ABC)",
+  "esperado": 409,
+  "obtenido": 409,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-10",
+  "desc": "5.º intento fallido (aún no bloquea)",
+  "esperado": 401,
+  "obtenido": 401,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-11",
+  "desc": "6.º intento fallido (bloquea 15 min)",
+  "esperado": 423,
+  "obtenido": 423,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-12",
+  "desc": "Contraseña correcta durante el bloqueo",
+  "esperado": 423,
+  "obtenido": 423,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-13",
+  "desc": "5 personas conectadas a la vez al espacio",
+  "esperado": "[200, 200, 200, 200, 200]",
+  "obtenido": "[200, 200, 200, 200, 200]",
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-14",
+  "desc": "La 6.ª persona intenta conectarse",
+  "esperado": 409,
+  "obtenido": 409,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-15",
+  "desc": "Agregar 1 MB de texto a un documento",
+  "esperado": 200,
+  "obtenido": 200,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-16",
+  "desc": "Agregar 26 MB de texto de una vez (tope: 25 MB)",
+  "esperado": 413,
+  "obtenido": 413,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-17",
+  "desc": "Después del rechazo, el documento sigue sano y acepta 10 bytes más",
+  "esperado": 200,
+  "obtenido": 200,
+  "ok": true,
+  "msg": ""
+ },
+ {
+  "id": "VL-18",
+  "desc": "Agregar 60 MB de una vez a un documento nuevo",
+  "esperado": 413,
+  "obtenido": 413,
+  "ok": true,
+  "msg": ""
+ }
+]

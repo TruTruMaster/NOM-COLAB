@@ -229,12 +229,12 @@
     const entradas = new Map(), listos = new Map();
     for (let k = 0; k < n; k++) {
       if (off + 46 > u8.length || dv.getUint32(off, true) !== 0x02014b50) break;
-      const metodo = dv.getUint16(off + 10, true), comp = dv.getUint32(off + 20, true), tam = dv.getUint32(off + 24, true);
+      const metodo = dv.getUint16(off + 10, true), crc = dv.getUint32(off + 16, true), comp = dv.getUint32(off + 20, true), tam = dv.getUint32(off + 24, true);
       const ln = dv.getUint16(off + 28, true), le = dv.getUint16(off + 30, true), lc = dv.getUint16(off + 32, true), loc = dv.getUint32(off + 42, true);
       const nombre = dec.decode(u8.subarray(off + 46, off + 46 + ln));
       if (loc + 30 <= u8.length) {
         const ini = loc + 30 + dv.getUint16(loc + 26, true) + dv.getUint16(loc + 28, true);
-        if (!nombre.endsWith("/")) entradas.set(nombre, { metodo, datos: u8.subarray(ini, ini + comp), tam });
+        if (!nombre.endsWith("/")) entradas.set(nombre, { metodo, crc, datos: u8.subarray(ini, ini + comp), tam });
       }
       off += 46 + ln + le + lc;
     }
@@ -244,12 +244,24 @@
       if (!e) return null;
       let r;
       if (e.metodo === 0) r = e.datos;
-      else if (e.metodo === 8) r = C().inflar(e.datos, { tam: e.tam });
-      else throw new Error("Compresión no soportada en " + nombre);
+      else if (e.metodo === 8) {
+        // Una parte dañada (Office la abre igual, sin esa parte): se lee como si no estuviera y, al
+        // escribir el archivo otra vez, se copia tal cual venía (crudo). Antes una sola parte así
+        // tumbaba la exportación fiel y el .nom.
+        try { r = C().inflar(e.datos, { tam: e.tam }); }
+        catch (x) { e.danada = true; console.warn("Parte dañada en el archivo de Office:", nombre); r = null; }
+      } else throw new Error("Compresión no soportada en " + nombre);
       listos.set(nombre, r);
       return r;
     }
-    const z = { entradas, nombres: () => [...entradas.keys()], tiene: (nm) => entradas.has(nm), bytes, texto: (nm) => { const b = bytes(nm); return b ? dec.decode(b) : null; } };
+    /** Las partes que no se pudieron descomprimir, para copiarlas sin tocar: { datos (comprimidos), crc, tam }. */
+    function crudo(nombre) {
+      const e = entradas.get(nombre);
+      if (!e) return null;
+      if (!listos.has(nombre)) bytes(nombre);
+      return e.danada ? { datos: e.datos, crc: e.crc, tam: e.tam } : null;
+    }
+    const z = { entradas, nombres: () => [...entradas.keys()], tiene: (nm) => entradas.has(nm), bytes, crudo, texto: (nm) => { const b = bytes(nm); return b ? dec.decode(b) : null; } };
     // nombres de antes (los lectores de Office los usan con await; devolver el valor directo también sirve)
     z.leer = bytes;
     return z;

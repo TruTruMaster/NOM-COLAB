@@ -200,13 +200,13 @@
       const s = $("[data-base]", cont);
       if (s) s.onchange = () => { base = bs[s.selectedIndex]; pintar(); };
       const c = $("[data-copiar]", cont);
-      if (c) c.onclick = () => { try { navigator.clipboard.writeText(url).then(() => aviso("Dirección copiada", { tipo: "ok" })); } catch (e) { aviso(url); } };
+      if (c) c.onclick = () => NOM.copiarConAviso(url, "Dirección copiada");
       const sh = $("[data-compartir]", cont);
       if (sh) sh.onclick = () => {
         const t = `Únete a "${esp.nombre}" en NOM-COLAB: ${url}\n(Código: ${enlace.codigo}. Hay que estar en la misma red Wi-Fi.)`;
         if (window.NomAndroid && window.NomAndroid.compartirTexto) window.NomAndroid.compartirTexto(t);
         else if (navigator.share) navigator.share({ title: "NOM-COLAB", text: t }).catch(() => {});
-        else { try { navigator.clipboard.writeText(t); aviso("Invitación copiada", { tipo: "ok" }); } catch (e) { aviso(t); } }
+        else NOM.copiarConAviso(t, "Invitación copiada");
       };
       $("[data-grande]", cont).onclick = () => grande(url, enlace.codigo, esp.nombre);
     };
