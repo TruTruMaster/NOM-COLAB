@@ -64,6 +64,8 @@ final class Repositorios {
             return Optional.empty();
         }
 
+        @Override public synchronized List<Usuario> todos() { return new ArrayList<>(usuarios.values()); }
+
         @Override public synchronized void guardar(Usuario u) {
             usuarios.put(u.id, u);
             almacen.escribir("usuarios.json", usuarios);
@@ -164,6 +166,16 @@ final class Repositorios {
                 EstadoDocumento e = Json.aObjeto(almacen.leer("docs/" + id + "/estado.json", null), EstadoDocumento.class);
                 return e == null ? new EstadoDocumento() : e;
             });
+        }
+
+        @Override public void guardarAnexo(String docId, String nombre, Object valor) {
+            if (nombre == null || !nombre.matches("[a-z][a-z0-9-]{0,30}")) throw new IllegalArgumentException("Anexo no válido");
+            almacen.escribir("docs/" + docId + "/" + nombre + ".json", valor);
+        }
+
+        @Override public Object anexo(String docId, String nombre) {
+            if (nombre == null || !nombre.matches("[a-z][a-z0-9-]{0,30}")) throw new IllegalArgumentException("Anexo no válido");
+            return almacen.leer("docs/" + docId + "/" + nombre + ".json", null);
         }
 
         @Override public void guardarEstado(String docId, EstadoDocumento estado) {

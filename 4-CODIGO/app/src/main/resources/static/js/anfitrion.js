@@ -21,8 +21,22 @@
     if (!disponible()) throw new Error("Esta opción solo está en la app Android");
     const e = leer(window.NomAndroid.iniciarServidor());
     if (!e.activo) throw new Error(e.error || "No se pudo empezar a compartir desde este teléfono");
-    if (conectar) api().fijarServidor(e.local);
+    if (conectar) pasarAlTelefono(e.local);
     return e;
+  }
+
+  /**
+   * La app se cambia al servidor de este teléfono. Fase 13: aquí no hay cuentas con contraseña; el
+   * dueño entra con su alias (lo hace la pantalla de entrar, sola). Si había sesión en la nube, se
+   * guarda (para pedir pases y para volver sin escribir la contraseña).
+   */
+  function pasarAlTelefono(local) {
+    if (api().token()) {
+      const nube = NOM.acceso && NOM.acceso.guardarSesionNube();
+      NOM.boveda.cerrar(!nube).catch(() => {});
+      api().limpiarSesion();
+    }
+    api().fijarServidor(local);
   }
 
   function detener() {
@@ -90,7 +104,7 @@
         <div class="clay anfitrion-caja">
           <p class="suave" style="font-weight:650">${e.activo
             ? `Listo: los demás pueden entrar si están en el mismo Wi-Fi que este teléfono (o conectados a su punto de acceso)${e.equipo ? `; lo verán como <b>${esc(e.equipo)}</b>` : ""}. Lo más fácil: invítalos con un código QR.`
-            : "Este teléfono puede guardar las cuentas y los documentos de tu equipo para que trabajen juntos sin Internet y sin computadora. Mientras esté encendido verás un aviso arriba y gasta un poco más de batería."}</p>
+            : "Este teléfono puede guardar los espacios y los documentos de tu equipo para que trabajen juntos sin Internet y sin computadora. Aquí no hay cuentas: quien llega entra con un alias al azar (o con su cuenta, si su equipo tiene Internet). Mientras esté encendido verás un aviso arriba y gasta un poco más de batería."}</p>
           ${e.activo ? (dirs.length
             ? `<div class="lista">${dirs.map((d) => `<div class="lista-item"><span class="anfitrion-icono chico">${ico("wifi", "ico-s")}</span><span class="crece"><b style="font-family:var(--mono)">${esc(d.replace(/^http:\/\//, ""))}</b><small>${esc(d)}</small></span>
                 <button class="icono-btn" data-qr-dir="${esc(d)}" aria-label="Mostrar QR" data-micro="Código QR|Quien lo escanea abre NOM-COLAB de este teléfono en su navegador.">${ico("qr-code")}</button>
@@ -120,11 +134,10 @@
       if (enc) enc.onclick = () => { try { encender(false); aviso("Listo: este teléfono ya comparte", { tipo: "ok" }); } catch (err) { aviso(err.message, { tipo: "error" }); } pintar(); };
       const usar = $("[data-usar]", sec);
       if (usar) usar.onclick = async () => {
-        if (!(await NOM.confirmar("Entrar a los espacios de este teléfono", "La app se conectará a este teléfono. Tus espacios del otro lugar siguen ahí; para volver, elígelo al entrar.", { si: "Entrar" }))) return;
-        // La sesión era del otro servidor: aquí se entra (o se crea la cuenta) de nuevo.
-        api().limpiarSesion();
-        api().fijarServidor(e.local);
-        NOM.app.irACuentas("registro");
+        if (!(await NOM.confirmar("Entrar a los espacios de este teléfono", "La app se conectará a este teléfono y entrarás como su dueño, con tu alias. Tus espacios del otro lugar siguen ahí; para volver, elígelo al entrar.", { si: "Entrar" }))) return;
+        // La sesión era del otro servidor: aquí se entra con el alias del dueño (sin contraseña).
+        pasarAlTelefono(e.local);
+        NOM.app.irACuentas();
       };
       const apg = $("[data-apagar]", sec);
       if (apg) apg.onclick = async () => {

@@ -117,6 +117,26 @@ public class ServicioCuentas {
         if (registros.size() > 5_000) registros.values().removeIf(java.util.ArrayDeque::isEmpty);
     }
 
+    /** Pedidos de pases (dar o presentar) por hora: por red y en total. */
+    private final Map<String, java.util.ArrayDeque<Long>> pasesHora = new java.util.HashMap<>();
+    private int pasesHoraLugar = 60, pasesHoraTotal = 1000;
+
+    public void limitarPases(int porLugar, int total) { pasesHoraLugar = porLugar; pasesHoraTotal = total; }
+
+    /** A.2 Limite contra el abuso de /api/cuentas/pase (un programa no debe poder pedir pases sin fin). */
+    public synchronized void limitarPases(String origen) {
+        long ahora = System.currentTimeMillis();
+        for (String k : new String[] { lugar(origen), "*" }) {
+            int tope = "*".equals(k) ? pasesHoraTotal : pasesHoraLugar;
+            java.util.ArrayDeque<Long> l = pasesHora.computeIfAbsent(k, x -> new java.util.ArrayDeque<>());
+            while (!l.isEmpty() && ahora - l.peekFirst() > HORA) l.pollFirst();
+            if (tope > 0 && l.size() >= tope) throw new ErrorNom(ErrorNom.DEMASIADOS, "Se pidieron demasiados pases en la última hora. Intenta más tarde.");
+        }
+        pasesHora.get(lugar(origen)).addLast(ahora);
+        pasesHora.get("*").addLast(ahora);
+        if (pasesHora.size() > 5_000) pasesHora.values().removeIf(java.util.ArrayDeque::isEmpty);
+    }
+
     /** CU-01 Crear usuario. */
     public Usuario registrar(String nombre, String contrasena, String empresa) { return registrar(nombre, contrasena, empresa, null); }
 
@@ -163,32 +183,154 @@ public class ServicioCuentas {
         return sb.toString();
     }
 
+    // ------------------------------------------------------------ alias (fase 13: sin Internet no hay cuentas)
+    /** Animales para los alias: nombres cortos, faciles de decir en voz alta en el salon. */
+    private static final String[] ANIMALES = {
+        "Ajolote", "Colibrí", "Quetzal", "Jaguar", "Nutria", "Tlacuache", "Coyote", "Tucán", "Iguana", "Mariposa",
+        "Delfín", "Búho", "Zorro", "Venado", "Tortuga", "Pelícano", "Flamenco", "Lince", "Puma", "Ocelote",
+        "Cenzontle", "Gaviota", "Garza", "Pingüino", "Koala", "Panda", "Castor", "Mapache", "Ardilla", "Conejo",
+        "Halcón", "Águila", "Cóndor", "Ballena", "Manatí", "Jilguero", "Lagartija", "Camaleón", "Liebre", "Tejón",
+        "Armadillo", "Correcaminos", "Golondrina", "Luciérnaga", "Abeja", "Grillo", "Pulpo", "Caracol", "Foca", "Cacomixtle",
+    };
+
+    /** Un nombre de alias que nadie mas tiene en este servidor: "Colibrí 37". */
+    private String nombreAlias() {
+        for (int i = 0; i < 200; i++) {
+            String n = ANIMALES[azar.nextInt(ANIMALES.length)] + " " + (10 + azar.nextInt(90));
+            if (repo.porNombre(n).isEmpty()) return n;
+        }
+        return ANIMALES[azar.nextInt(ANIMALES.length)] + " " + codigo(4);
+    }
+
+    private final java.security.SecureRandom azar = new java.security.SecureRandom();
+
+    /** SHA-256 en hexadecimal (la llave del alias es larga y al azar: no hace falta un hash lento). */
+    static String sha256(String t) {
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-256").digest(t.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : h) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
+
+    private static void exigirLlave(String llave) {
+        if (llave == null || !llave.matches("[A-Za-z0-9_-]{32,128}"))
+            throw ErrorNom.invalido("Falta la llave de este equipo (actualiza la app o recarga la página)", "llave");
+    }
+
     /**
-     * Cuenta de invitado: alguien entra con un apodo (sin registrarse) desde un enlace o QR del
-     * espacio. Queda ligada a ese espacio; no tiene contrasena que se pueda usar, asi que solo
-     * entra desde el dispositivo donde abrio la sesion.
+     * Un alias nuevo: nombre y color al azar, sin contrasena. Lo que el equipo guarda es la llave
+     * (al azar, larga): con ella vuelve a entrar como el mismo alias. espacioId: el espacio al que
+     * queda ligado (quien llega con el QR); null + dueno: el dueno del telefono que comparte.
      */
-    public synchronized Sesion crearInvitado(String apodo, String espacioId) {
-        apodo = apodo == null ? "" : apodo.trim().replaceAll("\\s+", " ");
-        if (apodo.isEmpty()) throw ErrorNom.invalido("Escribe tu apodo", "apodo");
-        if (!apodo.matches("[\\p{L}\\p{N} ._-]{2,16}"))
-            throw ErrorNom.invalido("Usa de 2 a 16 letras o números (puede llevar espacios)", "apodo");
+    public synchronized Sesion crearAlias(String espacioId, String llave, boolean dueno) {
+        if (llave != null) exigirLlave(llave);
         Usuario u = new Usuario();
         u.id = cifrado.id();
-        for (int i = 0; i < 20; i++) {
-            u.nombre = apodo + "·" + codigo(3);
-            u.nombreClave = u.nombre.toLowerCase(Locale.ROOT);
-            if (repo.porNombre(u.nombre).isEmpty()) break;
-        }
+        u.nombre = nombreAlias();
+        u.nombreClave = u.nombre.toLowerCase(Locale.ROOT);
         u.sal = cifrado.nuevaSal();
-        // Contrasena al azar que nadie conoce: la cuenta solo se usa con su sesion.
+        // Contrasena al azar que nadie conoce (la base pide una): el alias entra solo con su llave.
         u.hashContrasena = cifrado.hash(cifrado.token().toCharArray(), u.sal);
         u.creado = System.currentTimeMillis();
-        u.color = COLORES[Math.floorMod(u.nombreClave.hashCode(), COLORES.length)];
+        u.color = COLORES[azar.nextInt(COLORES.length)];
         u.invitadoDe = espacioId;
+        u.alias = true;
+        u.dueno = dueno;
+        u.hashLlave = llave == null ? null : sha256(llave);
         repo.guardar(u);
-        log.info("Invitado {} en el espacio {}", u.nombre, espacioId);
+        log.info("Alias {} {}", u.nombre, dueno ? "(dueño del teléfono)" : "en el espacio " + espacioId);
         return nuevaSesion(u, u.creado);
+    }
+
+    /** Volver a entrar como el mismo alias, con la llave que guardo su equipo. */
+    public synchronized Sesion entrarAlias(String id, String llave, String origen) {
+        exigirLlave(llave);
+        Usuario u = id == null ? null : repo.porId(id).orElse(null);
+        long ahora = System.currentTimeMillis();
+        if (u == null || !u.alias || u.retirada || u.hashLlave == null)
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Este equipo ya no tiene ese alias. Entra con uno nuevo.");
+        exigirSinBloqueo(u, origen, ahora);
+        if (!java.security.MessageDigest.isEqual(sha256(llave).getBytes(java.nio.charset.StandardCharsets.UTF_8), u.hashLlave.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+            fallo(u, origen, ahora);
+            throw new ErrorNom(ErrorNom.SIN_SESION, "Este equipo ya no tiene ese alias. Entra con uno nuevo.");
+        }
+        acierto(u, origen);
+        return nuevaSesion(u, ahora);
+    }
+
+    /** El alias del dueno del telefono (o null si todavia no hay). */
+    public Optional<Usuario> duenoDelTelefono() {
+        for (Usuario u : repo.todos()) if (u.alias && u.dueno && !u.retirada) return Optional.of(u);
+        return Optional.empty();
+    }
+
+    /**
+     * Modo salon de antes: entrar "con apodo". Ya no se escribe el nombre (asi nadie se hace pasar
+     * por otro): se da un alias al azar ligado al espacio. Se conserva para las apps anteriores.
+     */
+    public synchronized Sesion crearInvitado(String apodo, String espacioId) {
+        return crearAlias(espacioId, null, false);
+    }
+
+    /**
+     * A.2 Una cuenta de la nube que llego con un pase firmado (ya revisado): se crea o se actualiza su
+     * copia aqui con el MISMO id, asi lo que escriba aqui queda a su nombre al subir a la nube.
+     */
+    public synchronized Sesion desdePase(Map<String, Object> pase) {
+        String uid = String.valueOf(pase.get("uid")), nube = String.valueOf(pase.get("nube"));
+        String nombre = String.valueOf(pase.get("nombre")).trim();
+        Object c = pase.get("color");
+        Usuario u = repo.porId(uid).orElse(null);
+        if (u != null && !nube.equals(u.nube))
+            throw new ErrorNom(ErrorNom.CONFLICTO, "Ya hay una cuenta distinta con ese identificador en este equipo");
+        boolean nueva = u == null;
+        if (nueva) {
+            u = new Usuario();
+            u.id = uid;
+            u.sal = cifrado.nuevaSal();
+            u.hashContrasena = cifrado.hash(cifrado.token().toCharArray(), u.sal);
+            u.creado = System.currentTimeMillis();
+            u.nube = nube;
+        }
+        // El nombre de la nube, salvo que aqui ya lo use otra cuenta (entonces con una marca).
+        Usuario otro = repo.porNombre(nombre).orElse(null);
+        if (otro != null && !otro.id.equals(u.id)) {
+            String base = nombre.length() > 18 ? nombre.substring(0, 18) : nombre;
+            for (int i = 0; i < 20 && repo.porNombre(nombre).filter(x -> !x.id.equals(uid)).isPresent(); i++) nombre = base + "·" + codigo(3);
+        }
+        u.nombre = nombre;
+        u.nombreClave = nombre.toLowerCase(Locale.ROOT);
+        if (c instanceof String cs && cs.matches("#[0-9A-Fa-f]{6}")) u.color = cs;
+        else if (u.color == null) u.color = COLORES[Math.floorMod(u.nombreClave.hashCode(), COLORES.length)];
+        repo.guardar(u);
+        log.info("Cuenta de {} {} con pase: {}", nube, nueva ? "copiada" : "actualizada", u.nombre);
+        return nuevaSesion(u, System.currentTimeMillis());
+    }
+
+    /**
+     * Telefono que comparte (fase 13): ya no hay cuentas con contrasena. Las de antes se retiran: no
+     * vuelven a entrar (sin contrasena ni sesiones) pero se queda su nombre, que aparece como autor de
+     * lo que escribieron. Devuelve cuantas se retiraron.
+     */
+    public synchronized int retirarCuentasConContrasena() {
+        int n = 0;
+        for (Usuario u : repo.todos()) {
+            if (u.alias || u.nube != null || u.retirada || u.esInvitado()) continue;
+            u.retirada = true;
+            u.sal = cifrado.nuevaSal();
+            u.hashContrasena = cifrado.hash(cifrado.token().toCharArray(), u.sal);
+            u.hashRecuperacion = null;
+            u.salRecuperacion = null;
+            repo.guardar(u);
+            repo.borrarSesionesDe(u.id);
+            n++;
+        }
+        // Los invitados con apodo de antes pasan a ser alias (sin llave: al vencer su sesion, otro alias).
+        for (Usuario u : repo.todos()) if (u.esInvitado() && !u.alias) { u.alias = true; repo.guardar(u); }
+        if (n > 0) log.info("Se retiraron {} cuenta(s) con contraseña de este teléfono", n);
+        return n;
     }
 
     // ------------------------------------------------------------ recuperar la contrasena
@@ -196,7 +338,7 @@ public class ServicioCuentas {
 
     /** Nuevo codigo de recuperacion (el anterior deja de servir). Se muestra una sola vez. */
     public String nuevoCodigoRecuperacion(Usuario u) {
-        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no tienen contraseña");
+        if (u.sinContrasena()) throw ErrorNom.prohibido("Los alias y las cuentas de invitado no tienen contraseña");
         String c = codigo(16);
         u.salRecuperacion = cifrado.nuevaSal();
         u.hashRecuperacion = cifrado.hash(c.toCharArray(), u.salRecuperacion);
@@ -216,7 +358,7 @@ public class ServicioCuentas {
         if (nueva == null || nueva.length() < 8) throw ErrorNom.invalido("La contraseña nueva necesita al menos 8 caracteres", "nueva");
         long ahora = System.currentTimeMillis();
         Usuario u = repo.porNombre(nombre).orElse(null);
-        if (u == null || u.esInvitado() || u.hashRecuperacion == null) throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
+        if (u == null || u.sinContrasena() || u.hashRecuperacion == null) throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o código incorrectos");
         exigirSinBloqueo(u, origen, ahora);
         if (!cifrado.coincide(normalizarCodigo(codigo).toCharArray(), u.salRecuperacion, u.hashRecuperacion)) {
             fallo(u, origen, ahora);
@@ -254,6 +396,8 @@ public class ServicioCuentas {
             throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos");
         }
         Usuario u = encontrado.get();
+        // Alias, copias de la nube y cuentas retiradas no tienen contrasena que se pueda usar.
+        if (u.sinContrasena()) throw new ErrorNom(ErrorNom.SIN_SESION, "Usuario o contraseña incorrectos");
         exigirSinBloqueo(u, origen, ahora);
         if (!cifrado.coincide(contrasena.toCharArray(), u.sal, u.hashContrasena)) {
             int quedan = fallo(u, origen, ahora);
@@ -268,7 +412,7 @@ public class ServicioCuentas {
 
     /** Comprueba la contrasena de la cuenta abierta (para lo delicado: cambiarla, borrar la cuenta). */
     private void exigirContrasena(Usuario u, String contrasena, String origen, String campo) {
-        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no tienen contraseña");
+        if (u.sinContrasena()) throw ErrorNom.prohibido("Los alias y las cuentas de invitado no tienen contraseña");
         if (contrasena == null || contrasena.isEmpty()) throw ErrorNom.invalido("Escribe tu contraseña actual", campo);
         long ahora = System.currentTimeMillis();
         exigirSinBloqueo(u, origen, ahora);
@@ -363,6 +507,10 @@ public class ServicioCuentas {
         m.put("color", u.color);
         m.put("creado", u.creado);
         if (u.esInvitado()) m.put("invitado", true);
+        if (u.alias) m.put("alias", true);
+        if (u.dueno) m.put("dueno", true);
+        if (u.nube != null) m.put("nube", u.nube);
+        if (u.retirada) m.put("retirada", true);
         return m;
     }
 }

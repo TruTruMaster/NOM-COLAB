@@ -24,6 +24,7 @@ import mx.wack.nom.servidor.seguridad.FiltroSesion;
 public class PublicoApi {
 
     public record Apodo(String apodo) { }
+    public record Alias(String id, String llave) { }
 
     private final ServicioEspacios espacios;
     private final ServicioDocumentos documentos;
@@ -41,6 +42,12 @@ public class PublicoApi {
     @PostMapping("/api/enlaces/{codigo}/invitado")
     public Map<String, Object> invitado(@PathVariable String codigo, @RequestBody Apodo a) {
         return espacios.entrarComoInvitado(codigo, a.apodo());
+    }
+
+    /** Fase 13: entrar con un alias al azar (o volver a ser el mismo, con la llave de este equipo). */
+    @PostMapping("/api/enlaces/{codigo}/alias")
+    public Map<String, Object> alias(@PathVariable String codigo, @RequestBody(required = false) Alias a, jakarta.servlet.http.HttpServletRequest req) {
+        return espacios.entrarConAlias(codigo, a == null ? null : a.id(), a == null ? null : a.llave(), mx.wack.nom.servidor.seguridad.Origen.de(req));
     }
 
     /** Con sesion: la cuenta abierta entra al espacio con el permiso del enlace. */

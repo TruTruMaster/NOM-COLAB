@@ -40,4 +40,9 @@ public interface RepositorioDocumentos {
         aunque el documento ya no exista. */
     void guardarRecibo(String huella, Map<String, Object> registro);
     Map<String, Object> recibo(String huella);
+
+    /** Datos aparte de un documento, en su carpeta (docs/{id}/{nombre}.json): p. ej. lo que cambio
+        quien abrio una rama (fase 13). Se borran con el documento. */
+    void guardarAnexo(String docId, String nombre, Object valor);
+    Object anexo(String docId, String nombre);
 }

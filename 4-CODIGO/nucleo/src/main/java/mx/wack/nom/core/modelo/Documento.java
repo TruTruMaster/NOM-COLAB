@@ -43,6 +43,28 @@ public class Documento {
     /** 8.5 Enlace para ver el documento sin cuenta, en solo lectura (el propietario lo quita cuando quiere). */
     public String enlaceVer;
 
+    /** Fase 13, parte B: rama de otro documento (lo que alguien edito sin Internet mientras otros
+        cambiaban el original). El original no se toca; la rama se compara, se fusiona o se deja aparte. */
+    public String ramaDe;
+    /** La base: el reloj mas alto de cada nodo que tenia quien edito sin conexion (nodo -> reloj). */
+    public Map<String, Long> ramaBase;
+    /** Los nodos (pestanas) de quien edito sin conexion: lo suyo desde la base. */
+    public List<String> ramaNodos;
+    public String ramaAutorId;
+    public String ramaAutor;
+    public long ramaCreada;
+    /** abierta | fusionada */
+    public String ramaEstado;
+    /** cambios (otros cambiaron el original) | entrega (se edito despues de la fecha limite) |
+        protegido (lo protegieron mientras tanto) | telefono (el telefono que comparte, al subir) */
+    public String ramaMotivo;
+    public long ramaFusionada;
+    public String ramaFusionadaPor;
+    /** Cuando se quedo sin conexion quien la creo (para el nombre y la ayuda). */
+    public long ramaDesde;
+    /** Solo en las copias que se mandan (en lo guardado queda en 0): cuantas ramas abiertas tiene. */
+    public int ramasAbiertas;
+
     /** Copia de los metadatos (para mandarle a cada persona solo lo que le toca ver). */
     public Documento copia() {
         Documento c = new Documento();
@@ -52,6 +74,9 @@ public class Documento {
         c.entregaLimite = entregaLimite; c.entregaCerrada = entregaCerrada; c.entregaRecibos = entregaRecibos;
         c.eliminado = eliminado; c.eliminadoPor = eliminadoPor; c.carpeta = carpeta; c.destacadoPor = destacadoPor;
         c.plantilla = plantilla; c.enlaceVer = enlaceVer;
+        c.ramaDe = ramaDe; c.ramaBase = ramaBase; c.ramaNodos = ramaNodos; c.ramaAutorId = ramaAutorId; c.ramaAutor = ramaAutor;
+        c.ramaCreada = ramaCreada; c.ramaEstado = ramaEstado; c.ramaMotivo = ramaMotivo; c.ramaFusionada = ramaFusionada;
+        c.ramaFusionadaPor = ramaFusionadaPor; c.ramaDesde = ramaDesde;
         return c;
     }
 }

@@ -19,6 +19,38 @@ import jakarta.servlet.http.HttpServletRequest;
 public final class Origen {
     private Origen() { }
 
+    /**
+     * La direccion publica de este servidor tal como la ve quien llama (p. ej. https://nomcolab.dpdns.org):
+     * NOM_NUBE si esta puesta; si no, el esquema (el que dice el tunel si la peticion viene de este
+     * equipo) y el nombre del Host. Va dentro de los pases que firma este servidor.
+     */
+    public static String publico(HttpServletRequest req) {
+        String fija = System.getenv("NOM_NUBE");
+        if (fija != null && !fija.isBlank()) return fija.trim().replaceAll("/+$", "");
+        String remota = req.getRemoteAddr();
+        boolean confiable;
+        try {
+            InetAddress a = remota == null ? null : InetAddress.getByName(remota);
+            confiable = a == null || a.isLoopbackAddress() || a.isLinkLocalAddress();
+        } catch (Exception e) { confiable = false; }
+        String esquema = req.getScheme();
+        String fp = req.getHeader("X-Forwarded-Proto");
+        if (confiable && fp != null && fp.matches("(?i)https?")) esquema = fp.toLowerCase(java.util.Locale.ROOT);
+        String host = req.getHeader("Host");
+        if (host == null || host.isBlank()) host = req.getServerName() + ":" + req.getServerPort();
+        return esquema + "://" + host.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** ¿Es un origen de la red local (10.x, 192.168.x, 172.16-31.x), con cualquier puerto? */
+    public static boolean deRedPrivada(String origen) {
+        if (origen == null) return false;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^https?://(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(:\\d{1,5})?$").matcher(origen.trim());
+        if (!m.matches()) return false;
+        int a = Integer.parseInt(m.group(1)), b = Integer.parseInt(m.group(2));
+        if (a > 255 || b > 255 || Integer.parseInt(m.group(3)) > 255 || Integer.parseInt(m.group(4)) > 255) return false;
+        return a == 10 || (a == 192 && b == 168) || (a == 172 && b >= 16 && b <= 31);
+    }
+
     public static String de(HttpServletRequest req) {
         String remota = req.getRemoteAddr();
         boolean local, enlace = false;

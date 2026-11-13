@@ -494,6 +494,15 @@
   }
 
   // ================================================================== Nuevo documento (CU-18 / CU-28)
+  /** Fase 13, parte C: documento nuevo de un espacio, creado sin Internet. Vive en este equipo
+      (cifrado en la bóveda de la cuenta) marcado con su espacio, y se sube solo al volver la red. */
+  function crearSinRed(esp, nombre, modo, ops) {
+    const d = NOM.local.crear(nombre, modo, ops, { destino: { id: esp.id, nombre: esp.nombre } });
+    aviso(`Sin conexión: «${d.nombre}» se guarda en este equipo y se sube solo a ${esp.nombre} en cuanto vuelva la red.`, { tipo: "aviso", ms: 7000 });
+    location.hash = "#/local/" + d.id;
+    return d;
+  }
+
   function nuevoDocumento(esp, modoInicial) {
     let modo = modoInicial || "TEXTO", plantilla = null;
     const cuerpo = html(`<form class="col" novalidate>
@@ -532,7 +541,15 @@
         }
         const ops = plantilla ? plantilla.crear() : [];
         if (!esp) { const d = NOM.local.crear(nombre, modo, ops); h.cerrar(true); location.hash = "#/local/" + d.id; return; }
-        const d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre, modo, ops });
+        let d;
+        try { d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre, modo, ops }); }
+        catch (err) {
+          // Fase 13, parte C: sin Internet también se crea dentro del espacio (se sube al volver).
+          if (!err.red || !api.token()) throw err;
+          crearSinRed(esp, nombre, modo, ops);
+          h.cerrar(true);
+          return;
+        }
         h.cerrar(true);
         location.hash = "#/doc/" + d.id;
       } catch (err) { aviso(err.message, { tipo: "error" }); $("[data-crear]", pie).disabled = false; }
@@ -554,7 +571,14 @@
           h.cerrar(true);
           location.hash = "#/local/" + d.id;
         } else {
-          const d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre: r.nombre, modo: r.modo, ops: NOM.DocCRDT.partir(r.ops) });
+          let d;
+          try { d = await api.post(`/api/espacios/${esp.id}/documentos`, { nombre: r.nombre, modo: r.modo, ops: NOM.DocCRDT.partir(r.ops) }, { ms: 60000 }); }
+          catch (err) {
+            if (!err.red || !api.token()) throw err;
+            h.cerrar(true);
+            crearSinRed(esp, r.nombre, r.modo, r.ops);
+            return;
+          }
           h.cerrar(true);
           location.hash = "#/doc/" + d.id;
         }
@@ -570,7 +594,7 @@
     return `<a class="tarjeta doc-tarjeta clay modo-${esc(d.modo)}" href="#/local/${esc(d.id)}">
       <div class="miniatura">${NOM.miniatura(d.modo)}</div>
       <div class="cuerpo"><span class="titulo recorta" style="font-size:15px">${esc(d.nombre)}</span>
-        <span class="meta"><span>${ico("hard-drive", "ico-s")} En este equipo</span><span>${esc(haceCuanto(d.modificado))}</span></span></div>
+        <span class="meta">${d.destino ? `<span class="chip chico aviso" data-micro="Esperando conexión|Lo creaste sin Internet dentro de este espacio. Se sube solo en cuanto vuelva la red.">${ico("cloud-off", "ico-s")} Se sube a ${esc(d.destinoNombre || "su espacio")} al volver la red</span>` : `<span>${ico("hard-drive", "ico-s")} En este equipo</span>`}<span>${esc(haceCuanto(d.modificado))}</span></span></div>
       <div class="acciones"><button class="icono-btn" data-menu-local="${esc(d.id)}" aria-label="Más opciones">${ico("more-horizontal")}</button></div>
     </a>`;
   }
@@ -716,7 +740,18 @@
         <div class="entrada" style="min-height:42px;width:min(320px,100%)">${ico("search")}<input placeholder="Buscar por nombre o por lo que dice" data-buscar aria-label="Buscar en los documentos"></div>
       </div>
       <div class="fila-e carpetas-fila" data-carpetas></div>
+      <div data-pendientes-subir></div>
       <div data-docs></div>`;
+    // Fase 13, parte C: lo que se creó aquí sin Internet y espera subirse.
+    const pendientesSubir = NOM.local.pendientesDe(id);
+    if (pendientesSubir.length) {
+      const ps = $("[data-pendientes-subir]", cont);
+      ps.innerHTML = `<div class="alerta aviso" style="margin-bottom:12px">${ico("cloud-off")}<span class="crece">${pendientesSubir.length === 1 ? "Un documento que creaste sin conexión espera" : pendientesSubir.length + " documentos que creaste sin conexión esperan"} a que vuelva la red para subirse a este espacio. Puedes seguir trabajándolos.</span>${api.enLinea ? `<button class="btn chico" data-subir-ya>${ico("upload", "ico-s")} Subir ahora</button>` : ""}</div>
+        <div class="rejilla doc-rejilla" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin-bottom:18px">${pendientesSubir.map(tarjetaLocal).join("")}</div>`;
+      const ya = $("[data-subir-ya]", ps);
+      if (ya) ya.onclick = async () => { ya.disabled = true; await NOM.cola.vaciar(); };
+      $$("[data-menu-local]", ps).forEach((b) => (b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); location.hash = "#/local/" + b.dataset.menuLocal; }));
+    }
 
     const pintarRed = (activa) => {
       $("[data-chip-red]", cont).innerHTML = !api.lan
@@ -747,6 +782,9 @@
         x.entregaLimite ? `<span class="chip chico ${Date.now() >= x.entregaLimite ? "aviso" : "acento"}">${ico("calendar", "ico-s")} ${Date.now() >= x.entregaLimite ? "Entrega cerrada" : "Entrega " + esc(new Date(x.entregaLimite).toLocaleDateString("es-MX", { day: "numeric", month: "short" }))}</span>` : "",
         x.carpeta && carpetaSel == null ? `<span class="chip chico">${ico("folder", "ico-s")} ${esc(x.carpeta)}</span>` : "",
         x.enlaceVer ? `<span class="chip chico" data-micro="Con enlace para ver|Cualquiera con el enlace lo ve, sin cuenta.">${ico("link-2", "ico-s")} Enlace</span>` : "",
+        // Fase 13, parte B: ramas de lo editado sin Internet.
+        x.ramaDe && x.ramaEstado === "abierta" ? `<span class="chip chico acento" data-micro="Rama|Lo que ${esc(x.ramaAutor || "alguien")} editó sin conexión mientras otros cambiaban el original. Ábrela para compararla y fusionarla.">${ico("git-branch", "ico-s")} Rama</span>` : "",
+        x.ramasAbiertas ? `<span class="chip chico aviso" data-micro="Ramas|Versiones de este documento que alguien editó sin conexión. Ábrelo para verlas.">${ico("git-branch", "ico-s")} Ramas (${x.ramasAbiertas})</span>` : "",
       ].filter(Boolean).join("");
       return c ? `<span class="meta">${c}</span>` : "";
     }
@@ -991,7 +1029,7 @@
     function pintarAvisos() {
       const c = $("[data-avisos]", cont);
       if (!c) return;
-      c.innerHTML = d.avisos ? `<button class="btn primario-suave" data-a="avisos" data-micro="Menciones|Alguien te escribió @${esc((api.usuario() || {}).nombre || "")} en un comentario.">${ico("at-sign")} Menciones <span class="insignia">${d.avisos}</span></button>` : "";
+      c.innerHTML = d.avisos ? `<button class="btn primario-suave" data-a="avisos" data-micro="Avisos|Menciones en comentarios y ramas de lo editado sin conexión.">${ico("at-sign")} Avisos <span class="insignia">${d.avisos}</span></button>` : "";
       const b = $("[data-a=avisos]", c);
       if (b) b.onclick = () => menciones();
     }
@@ -999,9 +1037,11 @@
       let l;
       try { l = await api.get(`/api/espacios/${d.id}/avisos`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
       d.avisos = 0; pintarAvisos();
-      const cuerpo = html(`<div class="col"><div class="lista">${l.length ? l.map((a) => `<a class="lista-item" href="#/doc/${esc(a.docId)}${a.comentario ? "?comentario=" + encodeURIComponent(a.comentario) : ""}">${avatar({ nombre: a.por, color: a.color })}<span class="crece"><b>${esc(a.por)}</b> te mencionó en <b>${esc(a.documento)}</b><small>“${esc(a.texto)}” · ${esc(haceCuanto(a.t))}</small></span>${a.leido ? "" : '<span class="punto vivo"></span>'}</a>`).join("")
+      const cuerpo = html(`<div class="col"><div class="lista">${l.length ? l.map((a) => a.tipo === "rama"
+        ? `<a class="lista-item" href="#/doc/${esc(a.docId)}">${ico("git-branch")}<span class="crece"><b>${esc(a.por)}</b> editó <b>${esc(a.original)}</b> sin conexión y se abrió una rama<small>${esc(a.documento)} · ${esc(haceCuanto(a.t))}</small></span>${a.leido ? "" : '<span class="punto vivo"></span>'}</a>`
+        : `<a class="lista-item" href="#/doc/${esc(a.docId)}${a.comentario ? "?comentario=" + encodeURIComponent(a.comentario) : ""}">${avatar({ nombre: a.por, color: a.color })}<span class="crece"><b>${esc(a.por)}</b> te mencionó en <b>${esc(a.documento)}</b><small>“${esc(a.texto)}” · ${esc(haceCuanto(a.t))}</small></span>${a.leido ? "" : '<span class="punto vivo"></span>'}</a>`).join("")
         : `<div class="vacio" style="padding:20px"><div class="burbuja">${ico("at-sign")}</div><h3>Nadie te ha mencionado</h3><p>Cuando alguien escriba @${esc((api.usuario() || {}).nombre || "tu-nombre")} en un comentario, aparecerá aquí.</p></div>`}</div></div>`);
-      const h = hoja({ titulo: "Menciones", icono: "at-sign", cuerpo });
+      const h = hoja({ titulo: "Avisos", icono: "at-sign", cuerpo });
       cuerpo.onclick = (e) => { if (e.target.closest("a")) h.cerrar(true); };
     }
     pintarDocs();
@@ -1185,7 +1225,7 @@
         <label class="lista-item">${ico("hand")}<span class="crece"><b>Reducir movimiento</b><small>Quita animaciones y transiciones</small></span><span class="interruptor"><input type="checkbox" data-mov ${p.movimientoReducido ? "checked" : ""}><span></span></span></label>
         <label class="lista-item">${ico("scan-eye")}<span class="crece"><b>Atenuar en modo enfoque</b><small>Resalta solo el párrafo que escribes</small></span><span class="interruptor"><input type="checkbox" data-atenuar ${p.enfoqueAtenuar ? "checked" : ""}><span></span></span></label>
       </div>
-      ${sinCuenta || u.invitado ? "" : `<div class="lista-item">${ico("key-round")}<span class="crece"><b>Código para recuperar tu contraseña</b><small data-rec>${recuperacion === false ? "Aún no tienes uno: genéralo y guárdalo en un lugar seguro." : "Si olvidas tu contraseña, con él pones una nueva."}</small></span><button type="button" class="btn chico" data-recuperacion>${recuperacion === false ? "Generar" : "Generar otro"}</button></div>`}
+      ${sinCuenta || NOM.sinContrasena(u) ? "" : `<div class="lista-item">${ico("key-round")}<span class="crece"><b>Código para recuperar tu contraseña</b><small data-rec>${recuperacion === false ? "Aún no tienes uno: genéralo y guárdalo en un lugar seguro." : "Si olvidas tu contraseña, con él pones una nueva."}</small></span><button type="button" class="btn chico" data-recuperacion>${recuperacion === false ? "Generar" : "Generar otro"}</button></div>`}
     </div>`);
     const pie = html(`<div style="display:contents"><button class="btn plano" data-fabrica>Valores de fábrica</button><span class="crece"></span><button class="btn primario" data-guardar>Guardar</button></div>`);
     let guardado = false;

@@ -160,6 +160,19 @@ public class RepositorioDocumentosJson implements RepositorioDocumentos {
         }
     }
 
+    private static String anexoValido(String nombre) {
+        if (nombre == null || !nombre.matches("[a-z][a-z0-9-]{0,30}")) throw new IllegalArgumentException("Anexo no válido");
+        return nombre;
+    }
+
+    @Override public void guardarAnexo(String docId, String nombre, Object valor) {
+        almacen.escribir("docs/" + docId + "/" + anexoValido(nombre) + ".json", valor);
+    }
+
+    @Override public Object anexo(String docId, String nombre) {
+        return almacen.leer("docs/" + docId + "/" + anexoValido(nombre) + ".json", Object.class, null);
+    }
+
     @Override public synchronized long depurar(String docId, int conservar) {
         List<Version> h = historial(docId);
         if (h.size() <= conservar) return 0;

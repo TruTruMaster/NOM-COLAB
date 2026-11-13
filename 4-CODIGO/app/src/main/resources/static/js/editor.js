@@ -14,6 +14,9 @@
     let datos, sinRed = false;
     try {
       if (enLocal) {
+        // Ya se subió a su espacio (desde otra pestaña o al volver la red): se abre el del espacio.
+        const yaSubido = NOM.local.subidoComo && NOM.local.subidoComo(docId);
+        if (yaSubido && !NOM.local.meta(docId)) { location.hash = "#/doc/" + yaSubido; return () => {}; }
         const est = NOM.local.estado(docId), m = NOM.local.meta(docId);
         if (!est || !m) throw Object.assign(new Error("Este documento ya no existe en este equipo (¿se borraron " + (NOM.enApp() ? "los datos de la app" : "los datos del navegador") + "?)"), { estado: 404 });
         datos = { estado: est, documento: m, permiso: "EDICION", espacio: { id: null, nombre: "Solo en este equipo" } };
@@ -42,11 +45,16 @@
     };
     ed.soloLectura = ed.permiso === "LECTURA";
     ed.local = enLocal;
+    // Fase 13, parte C: creado sin Internet dentro de un espacio (se sube al volver la red).
+    ed.destino = enLocal && datos.documento && datos.documento.destino ? { id: datos.documento.destino, nombre: datos.documento.destinoNombre } : null;
     // El propietario del espacio (aunque haya pasado la fecha de entrega, él sigue editando).
     ed.esPropietario = !enLocal && ((datos.espacio || {}).miPermiso || datos.permiso) === "PROPIETARIO";
     ed.entrega = datos.entrega || null;
     ed.protegido = !!(datos.documento && datos.documento.protegido);
     ed.visita = datos.visita || null;
+    // Fase 13, parte B: si este documento es una rama (y de cuál), y cuántas ramas abiertas tiene.
+    ed.rama = datos.rama || null;
+    ed.ramasAbiertas = (datos.documento && datos.documento.ramasAbiertas) || 0;
     ed.cambiosVisita = datos.cambios || null;
     if (!enLocal) NOM.anotarReciente({ id: docId, nombre: (datos.documento || {}).nombre, modo: (datos.documento || {}).modo }, ed.espacio);
 
@@ -58,6 +66,7 @@
       alEliminado: () => documentoEliminado(),
       alRechazadas: (r) => cambiosRechazados(r),
       alLleno: (e) => aviso(e.message, { tipo: "error", ms: 9000 }),
+      alRama: (d) => ramaCreada(d),
     });
     ed.doc = doc;
     NOM.editorActual = ed;   // útil para depurar desde la consola
@@ -70,7 +79,7 @@
     const vista = html(`
       <div class="editor sin-selector modo-${tipo} ${ed.soloLectura ? "lectura" : ""} ${NOM.leer("nom.pref", {}).enfoqueAtenuar === false ? "" : "atenuar"}">
         <header class="ed-barra">
-          <a class="icono-btn" href="${ed.local ? "#/" : "#/espacio/" + esc(ed.espacio.id || "")}" aria-label="Volver" data-micro="Volver|Regresa a la lista de documentos del espacio.">${ico("chevron-left")}</a>
+          <a class="icono-btn" href="${ed.local ? (ed.destino ? "#/espacio/" + esc(ed.destino.id) : "#/") : "#/espacio/" + esc(ed.espacio.id || "")}" aria-label="Volver" data-micro="Volver|Regresa a la lista de documentos del espacio.">${ico("chevron-left")}</a>
           <div class="ed-titulos">
             <input class="ed-nombre" data-nombre aria-label="Nombre del documento" ${ed.soloLectura ? "readonly" : ""} maxlength="120">
             <span class="ed-espacio recorta"><span class="ed-tipo">${ico(MODOS[tipo].icono, "ico-s")} ${esc(MODOS[tipo].nombre)}</span> · ${esc(ed.espacio.nombre || "")}</span>
@@ -197,10 +206,12 @@
         lectura: [ico("eye", "ico-s"), "Solo ver", "lectura"],
         lleno: [ico("hard-drive", "ico-s"), `Sin espacio en la nube${n ? " · " + n + (n === 1 ? " cambio guardado aquí" : " cambios guardados aquí") : ""}`, "sin-red"],
         local: [ico("hard-drive", "ico-s"), "Solo en este equipo", "pendiente"],
-      }[ed.soloLectura ? "lectura" : ed.local ? "local" : e] || ["", "", ""];
+        destino: [ico("cloud-off", "ico-s"), "Se sube al volver la red", "sin-red"],
+      }[ed.soloLectura ? "lectura" : ed.local ? (ed.destino ? "destino" : "local") : e] || ["", "", ""];
       s.className = "estado-sync " + t[2];
       s.innerHTML = `${t[0]}<span class="solo-escritorio">${t[1]}</span>`;
-      s.setAttribute("data-micro", ed.local ? "Solo en este equipo|Se guarda automáticamente " + NOM.aqui().en + ", pero si " + NOM.aqui().borrar + " se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
+      s.setAttribute("data-micro", ed.local && ed.destino ? "Se sube al volver la red|Lo creaste sin Internet dentro de " + (ed.destino.nombre || "un espacio") + ". Se guarda aquí, cifrado, y se sube solo cuando haya conexión."
+        : ed.local ? "Solo en este equipo|Se guarda automáticamente " + NOM.aqui().en + ", pero si " + NOM.aqui().borrar + " se pierde. Descárgalo (Exportar → .nom) o crea una cuenta y súbelo a un espacio."
         : ed.soloLectura ? "Solo ver|Tu permiso deja ver el documento, no cambiarlo."
         : e === "lleno" ? "Sin espacio en la nube|El propietario del espacio usó toda su cuota. Tus cambios se quedan en este equipo; liberen versiones viejas en Almacenamiento."
         : e === "sin-red" ? "Sin conexión|Sigue trabajando: tus cambios se guardan en este equipo y se envían solos al volver la red."
@@ -211,6 +222,8 @@
     // Sin conexión no se intenta: el canal en tiempo real lo retoma solo al volver la red.
     if (doc.pendientes.length && !sinRed) doc.reanudar();
     if (sinRed) aviso("Sin conexión: abriste la copia guardada en este equipo. Tus cambios se enviarán al volver la red.", { tipo: "aviso", ms: 6000 });
+    // B.2: lo que se edite en un documento abierto ya sin Internet se revisa al volver (rama si otros lo cambiaron).
+    if (sinRed && !enLocal && NOM.ramas) NOM.ramas.marcar(docId, datos.estado, { abierto: true, meta });
 
     // ------------------------------------------------------------ presencia (quién edita qué)
     ed.seleccion = null;
@@ -279,6 +292,8 @@
       },
       entrega: () => refrescarEntrega(true),
       documento: (x) => { if ("protegido" in x) { ed.protegido = !!x.protegido; pintarAvisos(); } },
+      // Fase 13, parte B: se creó, fusionó o apartó una rama de este documento (o este es la rama).
+      rama: () => refrescarRamas(),
       expulsado: (x) => { aviso(x.motivo, { tipo: "aviso" }); location.hash = "#/"; },
       rechazo: (e) => {
         if (e.estado === 409) {
@@ -368,6 +383,11 @@
       const cont = $("[data-avisos-doc]", vista);
       if (!cont) return;
       const l = [];
+      // Fase 13, parte C: creado sin Internet dentro de un espacio.
+      if (ed.destino) l.push(`<div class="banda ${api.enLinea ? "info" : "aviso"}">${ico(api.enLinea ? "cloud-upload" : "cloud-off", "ico-s")}<span class="crece">${api.enLinea
+        ? `Ya hay conexión: súbelo a <b>${esc(ed.destino.nombre || "su espacio")}</b> para trabajarlo en equipo (también se sube solo al salir).`
+        : `Lo creaste sin conexión dentro de <b>${esc(ed.destino.nombre || "un espacio")}</b>: se guarda aquí, cifrado, y se sube solo en cuanto vuelva la red.`}</span>
+        ${api.enLinea ? `<button class="btn chico primario" data-a="subir-destino">${ico("upload", "ico-s")} Subir ahora</button>` : ""}</div>`);
       const e = ed.entrega;
       if (e && e.limite) {
         const vencida = e.vencida || Date.now() >= e.limite;
@@ -376,6 +396,20 @@
           : `Entrega: fecha límite ${esc(fechaLarga(e.limite))}`}</span>
           ${ed.esPropietario ? `<button class="btn chico" data-a="entrega">Cambiar</button>` : ""}${vencida && ed.esPropietario && (e.recibos || []).length ? `<button class="btn chico" data-a="recibos-entrega">${ico("shield-check", "ico-s")} Recibos (${e.recibos.length})</button>` : ""}</div>`);
       }
+      // Fase 13, parte B: ramas.
+      const dm = (datos.documento || {});
+      if (ed.rama && dm.ramaEstado === "abierta") {
+        l.push(`<div class="banda rama">${ico("git-branch", "ico-s")}<span class="crece">${ed.rama.existe
+          ? `Esta es una <b>rama</b> de «${esc(ed.rama.original || "el original")}»: lo que ${esc(dm.ramaAutor || "alguien")} editó sin conexión mientras otros lo cambiaban. El original no se tocó.`
+          : `Esta rama es de un documento que ya no está (se borró o está en la papelera). Puedes dejarla como documento aparte.`}</span>
+          ${ed.rama.existe ? `<button class="btn chico" data-a="rama-comparar">${ico("git-compare", "ico-s")} Comparar</button>${ed.soloLectura ? "" : `<button class="btn chico primario" data-a="rama-fusionar">${ico("git-merge", "ico-s")} Fusionar</button>`}` : ""}
+          ${ed.soloLectura ? "" : `<button class="icono-btn chico" data-a="rama-mas" aria-label="Más opciones de la rama">${ico("more-horizontal", "ico-s")}</button>`}</div>`);
+      } else if (ed.rama && dm.ramaEstado === "fusionada") {
+        l.push(`<div class="banda ok">${ico("git-merge", "ico-s")}<span class="crece">Esta rama ya se fusionó con «${esc(ed.rama.original || "el original")}»${dm.ramaFusionadaPor ? " (lo hizo " + esc(dm.ramaFusionadaPor) + ")" : ""}.</span>${ed.rama.existe ? `<a class="btn chico" href="#/doc/${esc(ed.rama.de)}">Abrir el original</a>` : ""}</div>`);
+      }
+      if (ed.ramasAbiertas > 0 && !ed.previa) {
+        l.push(`<div class="banda rama">${ico("git-branch", "ico-s")}<span class="crece">Este documento tiene <b>${ed.ramasAbiertas === 1 ? "una rama" : ed.ramasAbiertas + " ramas"}</b>: ${ed.ramasAbiertas === 1 ? "una versión" : "versiones"} que alguien editó sin conexión mientras otros lo cambiaban.</span><button class="btn chico" data-a="ver-ramas">Ramas (${ed.ramasAbiertas})</button></div>`);
+      }
       const c = ed.cambiosVisita;
       if (c && c.personas && c.personas.length && !ed.previa) {
         l.push(`<div class="banda cambios">${ico("sparkles", "ico-s")}<span class="crece">Cambios de <b>${esc(listaNombres(c.personas))}</b> ${esc(desdeCuando(c.desde))}${ed.resaltando ? " · resaltados" : ""}.</span>
@@ -383,6 +417,14 @@
       }
       cont.innerHTML = l.join("");
       const b = (a) => $(`[data-a="${a}"]`, cont);
+      if (b("subir-destino")) b("subir-destino").onclick = subirDestino;
+      if (b("ver-ramas")) b("ver-ramas").onclick = () => NOM.ramas.lista(docId);
+      if (b("rama-comparar")) b("rama-comparar").onclick = () => NOM.ramas.comparar(docId, (r) => { location.hash = "#/doc/" + r.original; });
+      if (b("rama-fusionar")) b("rama-fusionar").onclick = () => NOM.ramas.comparar(docId, (r) => { location.hash = "#/doc/" + r.original; });
+      if (b("rama-mas")) b("rama-mas").onclick = (e) => NOM.menu(e.currentTarget, [
+        { texto: "Dejar como documento aparte", icono: "file-text", fn: async () => { if (await NOM.ramas.apartar(docId)) window.dispatchEvent(new HashChangeEvent("hashchange")); } },
+        { texto: "Descartar la rama (a la papelera)", icono: "trash-2", peligro: true, fn: async () => { if (await NOM.ramas.descartar(docId)) location.hash = ed.rama && ed.rama.existe ? "#/doc/" + ed.rama.de : "#/espacio/" + ed.espacio.id; } },
+      ]);
       if (b("entrega")) b("entrega").onclick = dialogoEntrega;
       if (b("recibos-entrega")) b("recibos-entrega").onclick = () => NOM.recibo.lista(ed.entrega.recibos);
       if (b("ver-cambios")) b("ver-cambios").onclick = () => resaltarCambios(!ed.resaltando);
@@ -391,6 +433,46 @@
       // Si la fecha límite llega con el documento abierto, pasa a solo lectura en ese momento.
       if (e && e.limite && !ed.esPropietario && Date.now() < e.limite && e.limite - Date.now() < 2 ** 31 - 1) tEntrega = setTimeout(() => refrescarEntrega(false), e.limite - Date.now() + 1500);
     }
+    /** Fase 13, parte B: al volver la red se creó una rama con lo de esta persona; el original se
+        vuelve a cargar como está en el servidor (sin lo que quedó en la rama). */
+    async function ramaCreada(d) {
+      NOM.ramas.avisar(d, nombre.value || (datos.documento || {}).nombre);
+      try {
+        const r = await api.get(`/api/documentos/${docId}`);
+        doc.reemplazarEstado(r.estado);
+        if (r.documento && typeof r.documento.ramasAbiertas === "number") ed.ramasAbiertas = r.documento.ramasAbiertas;
+        if (!ed.previa) montar(ed.modo, true);
+      } catch (e) { if (d.tipo === "rama") ed.ramasAbiertas++; }
+      pintarAvisos();
+    }
+    async function refrescarRamas() {
+      try {
+        const r = await api.get(`/api/documentos/${docId}`);
+        ed.ramasAbiertas = (r.documento && r.documento.ramasAbiertas) || 0;
+        if (r.documento) Object.assign(datos.documento || (datos.documento = {}), { ramaEstado: r.documento.ramaEstado, ramaFusionadaPor: r.documento.ramaFusionadaPor, ramaDe: r.documento.ramaDe });
+        ed.rama = r.rama || null;
+        pintarAvisos();
+      } catch (e) { /* sin red */ }
+    }
+
+    /** Parte C: sube ya el documento creado sin Internet a su espacio y abre el del espacio. */
+    let subiendo = false;
+    async function subirDestino() {
+      if (subiendo || !ed.destino) return;
+      subiendo = true;
+      try {
+        doc.guardarYa();
+        const d = await NOM.local.subir(docId, ed.destino.id);
+        // La copia de este equipo ya no existe: que el editor no la vuelva a escribir al cerrarse.
+        doc.opc.soloMemoria = true; doc._guardarCache = () => {};
+        ed.destino = null;
+        aviso("Listo: ya está en el espacio", { tipo: "ok" });
+        location.hash = "#/doc/" + d.id;
+      } catch (e) { aviso(e.red ? "Todavía no hay conexión con el servidor" : e.message, { tipo: e.red ? "aviso" : "error" }); }
+      subiendo = false;
+    }
+    const quitarRedDestino = ed.destino ? api.alCambiarRed(() => pintarAvisos()) : null;
+
     function resaltarCambios(si) {
       ed.resaltando = !!si && !!ed.cambiosVisita;
       if (ed.modoApi && ed.modoApi.resaltarCambios) ed.modoApi.resaltarCambios(ed.resaltando ? { visita: ed.visita, cambios: ed.cambiosVisita } : null);
@@ -767,6 +849,9 @@
 
     return () => {
       clearTimeout(tEntrega);
+      if (quitarRedDestino) quitarRedDestino();
+      // Parte C: al salir del documento creado sin Internet, si ya hay red, se sube solo.
+      if (ed.destino && api.enLinea && NOM.cola) setTimeout(() => NOM.cola.vaciar().catch(() => {}), 400);
       removeEventListener("pagehide", alOcultarPagina);
       document.removeEventListener("keydown", teclas);
       document.removeEventListener("fullscreenchange", alSalirPantalla);

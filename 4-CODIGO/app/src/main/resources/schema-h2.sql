@@ -45,3 +45,7 @@ CREATE INDEX IF NOT EXISTS ix_sesion_usuario ON sesion(id_usuario);
 ALTER TABLE usuario ADD COLUMN IF NOT EXISTS invitado_de VARCHAR(16);
 ALTER TABLE usuario ADD COLUMN IF NOT EXISTS hash_recuperacion VARCHAR(64);
 ALTER TABLE usuario ADD COLUMN IF NOT EXISTS sal_recuperacion VARCHAR(32);
+
+-- 13 de noviembre de 2026 (fase 13): alias sin contraseña, cuentas que llegan de la nube con un pase
+-- firmado y qué versión de los términos aceptó cada cuenta. Van juntos como JSON en una sola columna.
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS extra VARCHAR(16000);

@@ -134,3 +134,19 @@ servidor no necesita conocer el orden de las letras: guarda las operaciones sin 
 y, para restaurar una versión, oculta, revela y reformatea letras por su id.
 Los documentos de antes (un bloque por párrafo) se convierten solos la primera vez que
 se abren, con ids deterministas para que dos equipos que los abren a la vez coincidan.
+
+## Licencia
+
+NOM-COLAB es **software libre** bajo la **Licencia Pública General de GNU, versión 3**
+(GPL-3.0; el texto completo está en `LICENSE`, en la raíz del repositorio). Puedes usarlo,
+estudiarlo, cambiarlo y compartirlo; si distribuyes una versión modificada, tiene que ir con su
+código fuente y bajo la misma licencia.
+
+Las bibliotecas y fuentes de terceros conservan su propia licencia, todas compatibles con la
+GPL-3.0: Spring Boot (Apache-2.0), H2 (se usa bajo la MPL-2.0), mssql-jdbc (MIT),
+qrcode-generator (MIT), jsQR (Apache-2.0), los íconos Lucide (ISC) y las fuentes Nunito, Carlito,
+Caladea, Liberation y Comic Neue (OFL-1.1, se distribuyen aparte). El detalle está en
+`app/src/main/resources/static/js/vendor/LICENCIAS.md` y `static/fonts/LICENCIAS-FUENTES.txt`.
+
+Es un proyecto escolar (equipo WACK, CECyT 9, 5IM7): al terminar, el código queda en GitHub como
+portafolio de sus cuatro integrantes.

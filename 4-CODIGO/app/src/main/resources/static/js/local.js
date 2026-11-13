@@ -43,19 +43,24 @@
       const l = NOM.leer(INDICE(), []) || [];
       const d = l.find((x) => x.id === id);
       if (!d) return;
-      Object.keys(cambios).forEach((k) => { if (cambios[k] !== undefined) d[k] = cambios[k]; });
+      Object.keys(cambios).forEach((k) => { if (cambios[k] === null) delete d[k]; else if (cambios[k] !== undefined) d[k] = cambios[k]; });
       NOM.guardar(INDICE(), l);
     },
 
-    /** Crea un documento local con las operaciones iniciales (plantilla o importación). */
-    crear(nombre, modo, ops) {
+    /** Crea un documento local con las operaciones iniciales (plantilla o importación).
+        opc.destino = { id, nombre }: fase 13, parte C — se creó DENTRO de un espacio sin Internet;
+        se queda aquí marcado con ese espacio y se sube solo en cuanto vuelva la red. */
+    crear(nombre, modo, ops, opc) {
+      opc = opc || {};
       const id = "L" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       nombre = (nombre || "").trim() || "Documento sin título";
       const doc = new NOM.DocCRDT(id, { bloques: {}, reloj: 0 }, { local: true });
       doc._fusionar({ id: "local:c1", bloque: "_doc", campos: { nombre, modo, paginas: ["p1"] }, t: 1, n: "local" });
       (ops || []).forEach((op) => doc._fusionar(op));
       const l = NOM.leer(INDICE(), []) || [];
-      l.push({ id, nombre, modo, creado: Date.now(), modificado: Date.now() });
+      const meta = { id, nombre, modo, creado: Date.now(), modificado: Date.now() };
+      if (opc.destino && opc.destino.id) { meta.destino = opc.destino.id; meta.destinoNombre = opc.destino.nombre || ""; }
+      l.push(meta);
       NOM.guardar(INDICE(), l);
       if (!local.guardarEstado(id, doc.estado)) throw new Error(NOM.aqui().sinEspacio + " para crear el documento");
       return { id, nombre, modo };
@@ -83,9 +88,40 @@
     /** Sube el documento a un espacio; si sale bien, se borra la copia local. */
     async subir(id, espacioId) {
       const m = local.meta(id);
-      const d = await NOM.api.post(`/api/espacios/${espacioId}/documentos`, { nombre: m.nombre, modo: m.modo, ops: local.opsDe(id) });
+      const d = await NOM.api.post(`/api/espacios/${espacioId}/documentos`, { nombre: m.nombre, modo: m.modo, ops: local.opsDe(id) }, { ms: 60000 });
       local.eliminar(id);
+      // Si alguien lo tenía abierto (otra pestaña o el editor), sabe a dónde se fue.
+      if (conCuenta()) { const sub = NOM.leer(NOM.api.clave("subidos"), {}) || {}; sub[id] = { doc: d.id, t: Date.now() }; NOM.guardar(NOM.api.clave("subidos"), sub); }
       return d;
+    },
+
+    /** Parte C: los creados sin Internet dentro de un espacio que aún esperan subirse (de uno o de todos). */
+    pendientesDe: (espacioId) => local.lista().filter((d) => d.destino && (!espacioId || d.destino === espacioId)),
+
+    /** El documento de un espacio en que se convirtió uno de este equipo al subirse (o null). */
+    subidoComo: (id) => (conCuenta() ? ((NOM.leer(NOM.api.clave("subidos"), {}) || {})[id] || {}).doc || null : null),
+
+    /**
+     * Al volver la red: sube a su espacio cada documento creado sin Internet (el que está abierto en
+     * el editor espera a que se cierre, para no perder lo que se está escribiendo). Devuelve los subidos.
+     */
+    async subirPendientes() {
+      if (!conCuenta()) return [];
+      const ed = NOM.editorActual, abierto = ed && ed.local && ed.vista && ed.vista.isConnected ? ed.id : null;
+      const hechos = [];
+      for (const m of local.pendientesDe()) {
+        if (m.id === abierto) continue;
+        try {
+          const d = await local.subir(m.id, m.destino);
+          hechos.push({ local: m.id, doc: d.id, nombre: m.nombre, espacio: m.destinoNombre });
+        } catch (e) {
+          if (e.red) break;   // otra vez sin red: al volver
+          // El espacio ya no existe o ya no se puede editar en él: se queda aquí, como documento suelto.
+          local.actualizarMeta(m.id, { destinoError: e.message || "No se pudo subir" });
+          if (e.estado === 403 || e.estado === 404) { local.actualizarMeta(m.id, { destino: null }); NOM.aviso(`«${m.nombre}» no se pudo subir a ${m.destinoNombre || "su espacio"} (${e.message}). Se quedó en este equipo.`, { tipo: "aviso", ms: 9000 }); }
+        }
+      }
+      return hechos;
     },
   };
 

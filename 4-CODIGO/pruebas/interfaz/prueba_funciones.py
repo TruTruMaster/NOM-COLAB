@@ -431,7 +431,7 @@ def texto_doc(P):
 
 
 def prueba_colaboracion(P, c, e, salida):
-    print("\n== Colaboración: invitar con código y QR, apodo, en vivo, permisos, partes con dueño, comentarios, sugerencias, recibo", flush=True)
+    print("\n== Colaboración: invitar con código y QR, alias al azar, en vivo, permisos, partes con dueño, comentarios, sugerencias, recibo", flush=True)
     p = P.p
     esp = N.api("POST", "/api/espacios", {"nombre": "Equipo " + str(int(time.time()) % 100000)}, c["token"])[1]
     d = N.documento(c["token"], esp["id"], "TEXTO", "Trabajo en equipo")
@@ -456,11 +456,15 @@ def prueba_colaboracion(P, c, e, salida):
     enlace = (qr or "").replace("http://" + (qr or "x/").split("/")[2], OTRO["base_local"]) if qr else OTRO["base_local"] + "/unirse?c=" + codigo
     B.p.goto(enlace); B.t(1500)
     check("el enlace del QR abre «Te invitan a…» con el nombre del espacio", esp["nombre"] in (B.ev("() => document.body.innerText") or ""), (B.ev("() => document.body.innerText") or "")[:200])
+    # Fase 13: ya no se escribe un apodo (nadie se hace pasar por otro): se entra con un alias al azar.
+    check("no hay campo para escribir un apodo", not B.ev("() => !!document.querySelector('#ap')"), "hay #ap")
     try:
-        B.p.fill("#ap", "Beto"); B.boton("Entrar con apodo", "body"); B.t(2500)
+        B.boton("Entrar con un alias", "body"); B.t(2500)
         B.ev("() => document.querySelectorAll('.velo').forEach(v => v.remove())")
-    except Exception as ex: check("entrar con apodo", False, str(ex)[:200])
-    check("entra con apodo, sin cuenta, directo al espacio", B.ev("() => location.hash").startswith("#/espacio/" + esp["id"]), B.ev("() => location.hash"))
+    except Exception as ex: check("entrar con un alias", False, str(ex)[:200])
+    check("entra con un alias, sin cuenta ni escribir nada, directo al espacio", B.ev("() => location.hash").startswith("#/espacio/" + esp["id"]), B.ev("() => location.hash"))
+    alias_beto = B.ev("() => (JSON.parse(localStorage.getItem('nom.usuario') || '{}').nombre) || ''") or ""
+    check("…su nombre es un alias al azar (animal y número)", bool(re.match(r"^\S+ \d{2,4}$", alias_beto)), alias_beto)
     # 3. Los dos abren el mismo documento y escriben: cada uno ve lo del otro en vivo
     P.abrir(d)
     xy = P.centro("[contenteditable=true]"); p.mouse.click(xy[0], xy[1] - 10); P.t(200)
@@ -548,7 +552,7 @@ def prueba_colaboracion(P, c, e, salida):
     N.api("DELETE", f"/api/espacios/{esp['id']}/enlaces/{codigo}", None, c["token"])
     st, _ = N.api("GET", f"/api/enlaces/{codigo}")
     check("un código anulado ya no sirve", st in (404, 410, 403), st)
-    check("Beto (con apodo) y el lector no tuvieron errores de JavaScript", not B.errores and not L.errores, (B.errores + L.errores)[:3])
+    check("Beto (con alias) y el lector no tuvieron errores de JavaScript", not B.errores and not L.errores, (B.errores + L.errores)[:3])
 
 
 # ============================================================ LIENZO (presentación y diagrama)

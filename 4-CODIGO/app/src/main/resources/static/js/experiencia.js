@@ -135,6 +135,8 @@
       l.push({ grupo: "Crear", texto: "Nuevo documento (en este equipo)", icono: "file-plus", fn: nuevoDoc(null), claves: "crear documento nuevo" });
       l.push({ grupo: "Crear", texto: "Crear una cuenta", icono: "user-plus", fn: () => NOM.app.irACuentas("registro"), claves: "registrarse cuenta" });
     }
+    // Fase 13, parte C: instalar la página como programa (Chrome y Edge).
+    if (NOM.instalar && NOM.instalar.disponible()) l.push({ grupo: "Este equipo", texto: "Instalar en esta computadora", icono: "monitor-down", fn: () => NOM.instalar.pedir(), claves: "instalar programa escritorio pwa sin internet aplicacion" });
 
     // Recientes primero; luego todos los documentos.
     const vistos = new Set();

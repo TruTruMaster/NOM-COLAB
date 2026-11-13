@@ -22,7 +22,7 @@ que los documentos se guarden comprimidos (y sigan abriendo tras reiniciar el se
 Imprime cada prueba y termina con error si alguna falla.
 Los roles de la base de Azure SQL se prueban aparte con azure/desplegar.sh roles.
 """
-import glob, gzip, json, os, shutil, subprocess, time, urllib.request, urllib.parse
+import base64, glob, gzip, json, os, re, secrets, shutil, subprocess, time, urllib.request, urllib.parse
 import sys, tempfile
 AQUI = os.path.dirname(os.path.abspath(__file__))
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, "..", "app", "target", "nom-colab.jar")
@@ -168,7 +168,8 @@ try:
     ti = (inv[1] or {}).get("token")
     prueba("2.2 El invitado ve el espacio del enlace", 200, r("GET", f"/api/espacios/{salon}", t=ti)[0])
     prueba("2.2 El invitado no puede crear espacios", 403, r("POST", "/api/espacios", {"nombre": "Mío"}, ti)[0])
-    prueba("2.2 Un apodo con HTML no se acepta", 400, r("POST", f"/api/enlaces/{cod}/invitado", {"apodo": "<b>x</b>"})[0])
+    viejo_apodo = r("POST", f"/api/enlaces/{cod}/invitado", {"apodo": "<b>x</b>"})
+    prueba("2.2 El apodo escrito ya no se usa: el nombre es un alias al azar", [200, False], [viejo_apodo[0], "<" in ((viejo_apodo[1] or {}).get("usuario", {}).get("nombre", "<"))])
     prueba("2.3 El propietario revoca el enlace", 200, r("DELETE", f"/api/espacios/{salon}/enlaces/{cod}", t=tk["maestra"])[0])
     prueba("2.3 …y ya no sirve", 403, r("GET", f"/api/enlaces/{cod}")[0])
     prueba("2.3 …ni para entrar con apodo", 403, r("POST", f"/api/enlaces/{cod}/invitado", {"apodo": "Beto"})[0])
@@ -433,6 +434,293 @@ try:
     prueba("12.1 …y su nombre queda libre", 201, r("POST", "/api/cuentas/registro", {"nombre": "borrable", "contrasena": CL})[0])
     prueba("12.1 …la cuenta nueva no hereda nada", [], r("GET", "/api/espacios", t=r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[1]["token"])[1])
 
+    # ================================================================ fase 13 (13-nov-2026): alias, pases y CORS
+    def rq(base, m, u, b=None, t=None, de=None, cab=None):
+        h = {"Content-Type": "application/json"}
+        if t: h["Authorization"] = "Bearer " + t
+        if de: h["X-Forwarded-For"] = de
+        if cab: h.update(cab)
+        q = urllib.request.Request(base + u, method=m, data=json.dumps(b).encode() if b is not None else None, headers=h)
+        try:
+            with urllib.request.urlopen(q, timeout=30) as x:
+                c = x.read(); return x.status, (json.loads(c) if c and c[:1] in b"{[" else None), {k.lower(): v for k, v in x.headers.items()}
+        except urllib.error.HTTPError as e: return e.code, None, {k.lower(): v for k, v in e.headers.items()}
+    def llave(): return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("=")
+    en13 = (r("POST", f"/api/espacios/{salon}/enlaces", {"permiso": "EDICION", "horas": 2, "invitados": True}, tk["maestra"])[1] or {}).get("codigo", "X")
+    l1 = llave()
+    a1 = r("POST", f"/api/enlaces/{en13}/alias", {"llave": l1})
+    prueba("13.1 Se entra con un alias al azar, sin escribir nada", 200, a1[0])
+    u1 = (a1[1] or {}).get("usuario", {})
+    ta = (a1[1] or {}).get("token")
+    prueba("13.1 …el nombre es un animal y un número", True, bool(re.match(r"^\S+ \d{2,4}$", u1.get("nombre", ""))))
+    prueba("13.1 …y la cuenta es un alias", True, u1.get("alias"))
+    prueba("13.1 …que ya ve el espacio del código", 200, r("GET", f"/api/espacios/{salon}", t=ta)[0])
+    a1b = r("POST", f"/api/enlaces/{en13}/alias", {"id": u1.get("id"), "llave": l1})
+    prueba("13.1 Con la misma llave vuelve a ser el mismo alias", [u1.get("id"), False], [(a1b[1] or {}).get("usuario", {}).get("id"), (a1b[1] or {}).get("nuevo")])
+    a1c = r("POST", f"/api/enlaces/{en13}/alias", {"id": u1.get("id"), "llave": llave()})
+    prueba("13.1 Con otra llave nadie se hace pasar por él: alias nuevo", True, (a1c[1] or {}).get("usuario", {}).get("id") not in (None, u1.get("id")))
+    prueba("13.1 Una llave corta no sirve", 400, r("POST", f"/api/enlaces/{en13}/alias", {"llave": "corta"})[0])
+    prueba("13.1 Se vuelve con el alias guardado aunque no se tenga el código", u1.get("id"), (r("POST", "/api/cuentas/alias/entrar", {"id": u1.get("id"), "llave": l1})[1] or {}).get("usuario", {}).get("id"))
+    prueba("13.1 …pero no con otra llave", 401, r("POST", "/api/cuentas/alias/entrar", {"id": u1.get("id"), "llave": llave()})[0])
+    prueba("13.1 Un alias no entra con contraseña", 401, r("POST", "/api/cuentas/sesion", {"nombre": u1.get("nombre", "x"), "contrasena": CL})[0])
+    prueba("13.1 Un alias no crea espacios", 403, r("POST", "/api/espacios", {"nombre": "Mío"}, ta)[0])
+    prueba("13.1 Un alias no tiene código de recuperación", 403, r("POST", "/api/cuentas/recuperacion", {}, ta)[0])
+    prueba("13.1 …ni contraseña que cambiar", 403, r("PUT", "/api/cuentas/contrasena", {"actual": "x", "nueva": "Otra-Clave-123"}, ta)[0])
+    prueba("13.1 Nadie se registra con el nombre de un alias (lleva espacio)", 400, r("POST", "/api/cuentas/registro", {"nombre": u1.get("nombre", "a b"), "contrasena": CL})[0])
+    prueba("13.1 Aquí no hay alias de dueño (son del teléfono que comparte)", 403, r("POST", "/api/cuentas/alias", {"llave": llave()})[0])
+    ll = r("GET", "/api/cuentas/pase/llave")
+    prueba("13.2 La llave pública de los pases se ve sin sesión", True, ll[0] == 200 and len((ll[1] or {}).get("llave") or "") > 80)
+    prueba("13.2 Pedir un pase pide sesión", 401, r("POST", "/api/cuentas/pase", {})[0])
+    prueba("13.2 Un alias no se lleva pases a otro equipo", 403, r("POST", "/api/cuentas/pase", {}, ta)[0])
+    pa = r("POST", "/api/cuentas/pase", {}, tk["alumno1"])
+    ahora_ms = int(time.time() * 1000)
+    prueba("13.2 Una cuenta pide un pase que dura 10 minutos", True, pa[0] == 200 and "." in (pa[1] or {}).get("pase", "") and 590_000 <= ((pa[1] or {}).get("caduca", 0) - ahora_ms) <= 601_000)
+    prueba("13.2 Un servidor que no confía en ninguna nube no acepta pases", 403, r("POST", "/api/cuentas/pase/entrar", {"pase": (pa[1] or {}).get("pase", "x.y")})[0])
+    if not EXTERNO and pa[0] == 200 and ll[0] == 200:
+        # Otro NOM-COLAB (como el teléfono que comparte) que confía en la llave de este.
+        D2 = tempfile.mkdtemp(prefix="nomcolab-pruebas-b-")
+        P2 = 8093; B2 = f"http://localhost:{P2}"
+        nubes = json.dumps([{"nube": f"http://localhost:{P}", "llave": ll[1]["llave"]}])
+        srv2 = subprocess.Popen([JAVA, "-jar", JAR], env=dict(os.environ, NOM_PUERTO=str(P2), NOM_DATOS=D2, NOM_DESCUBRIMIENTO="false", NOM_NUBES_CONFIABLES=nubes), stdout=open(os.path.join(D2, "servidor.log"), "a"), stderr=subprocess.STDOUT)
+        r2 = lambda *a, **k: rq(B2, *a, **k)
+        try:
+            for _ in range(90):
+                try: urllib.request.urlopen(B2 + "/api/red/info", timeout=2); break
+                except Exception: time.sleep(1)
+            prueba("13.2 El otro servidor dice que acepta pases", True, (r2("GET", "/api/red/info")[1] or {}).get("pases"))
+            e1 = r2("POST", "/api/cuentas/pase/entrar", {"pase": pa[1]["pase"]})
+            prueba("13.2 Acepta el pase de la nube en la que confía", 200, e1[0])
+            prueba("13.2 …y la cuenta queda con el mismo id que en la nube", uid["alumno1"], (e1[1] or {}).get("usuario", {}).get("id"))
+            tm1 = (e1[1] or {}).get("token")
+            prueba("13.2 El mismo pase no sirve dos veces", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": pa[1]["pase"]})[0])
+            p2 = (r("POST", "/api/cuentas/pase", {}, tk["alumno2"])[1] or {}).get("pase", "x.y")
+            c2, f2 = p2.split(".")
+            contenido = json.loads(base64.urlsafe_b64decode(c2 + "=" * (-len(c2) % 4)))
+            contenido["uid"] = uid["maestra"]
+            cambiado = base64.urlsafe_b64encode(json.dumps(contenido).encode()).decode().rstrip("=")
+            prueba("13.2 Un pase con el contenido cambiado no sirve", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": cambiado + "." + f2})[0])
+            prueba("13.2 Un pase inventado no sirve", 400, r2("POST", "/api/cuentas/pase/entrar", {"pase": "no-es-un-pase"})[0])
+            # Pases firmados con la llave de la nube (con openssl) para los casos que no se pueden pedir.
+            priv = os.path.join(D + "-llaves", "pases-privada.p8")
+            pem = os.path.join(D2, "llave.pem")
+            subprocess.run(["openssl", "pkey", "-inform", "DER", "-in", priv, "-out", pem], check=True, capture_output=True)
+            def firmar(c):
+                datos = json.dumps(c, separators=(",", ":")).encode()
+                fa = os.path.join(D2, "datos.bin"); open(fa, "wb").write(datos)
+                fi = subprocess.run(["openssl", "dgst", "-sha256", "-sign", pem, fa], check=True, capture_output=True).stdout
+                b64 = lambda x: base64.urlsafe_b64encode(x).decode().rstrip("=")
+                return b64(datos) + "." + b64(fi)
+            ah = int(time.time() * 1000)
+            base_pase = {"v": 1, "uid": "Prueba12345", "nombre": "firmado", "color": "#123456", "emitido": ah, "caduca": ah + 600_000, "nube": f"http://localhost:{P}", "nonce": "n0"}
+            prueba("13.2 (control) un pase bien firmado a mano sí entra", 200, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(base_pase)})[0])
+            prueba("13.2 Un pase vencido no sirve", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(dict(base_pase, emitido=ah - 30 * 60_000, caduca=ah - 20 * 60_000, nonce="n1"))})[0])
+            prueba("13.2 Un pase que dura más de 10 minutos no sirve", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(dict(base_pase, caduca=ah + 3_600_000, nonce="n2"))})[0])
+            prueba("13.2 Un pase de una nube que no conoce no sirve", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(dict(base_pase, nube="https://otra-nube.example", nonce="n3"))})[0])
+            prueba("13.2 Un pase de otra versión no sirve", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(dict(base_pase, v=2, nonce="n4"))})[0])
+            rq(B2, "POST", "/api/cuentas/registro", {"nombre": "local1", "contrasena": CL})
+            loc = (rq(B2, "POST", "/api/cuentas/sesion", {"nombre": "local1", "contrasena": CL})[1] or {}).get("usuario", {}).get("id", "zzzzzzzzz")
+            prueba("13.2 Un pase con el id de una cuenta de aquí no se la quita", 409, r2("POST", "/api/cuentas/pase/entrar", {"pase": firmar(dict(base_pase, uid=loc, nonce="n5"))})[0])
+            pb = (rq(B2, "POST", "/api/cuentas/pase", {}, (rq(B2, "POST", "/api/cuentas/sesion", {"nombre": "local1", "contrasena": CL})[1] or {}).get("token"))[1] or {}).get("pase", "x.y")
+            prueba("13.2 Un servidor no acepta sus propios pases (no confía en sí mismo)", 401, r2("POST", "/api/cuentas/pase/entrar", {"pase": pb})[0])
+            prueba("13.2 La copia de la cuenta no tiene contraseña aquí", 403, r2("POST", "/api/cuentas/recuperacion", {}, tm1)[0])
+            prueba("13.2 …ni entra aquí con la contraseña de la nube", 401, r2("POST", "/api/cuentas/sesion", {"nombre": "alumno1", "contrasena": CL})[0])
+            cods = [r2("POST", "/api/cuentas/pase/entrar", {"pase": "x.y"}, de="203.0.113.9")[0] for _ in range(61)]
+            prueba("13.2 Más de 60 pases por hora desde una red se rechazan", 429, cods[-1])
+        finally:
+            srv2.kill(); srv2.wait(30)
+            shutil.rmtree(D2, ignore_errors=True); shutil.rmtree(D2 + "-llaves", ignore_errors=True)
+    # 13.4 Ramas de lo editado sin Internet
+    def vector(est):
+        v = {}
+        for b in est.get("bloques", {}).values():
+            for reg in b.values():
+                if reg and reg.get("n"): v[reg["n"]] = max(v.get(reg["n"], 0), reg["t"])
+        for sq in est.get("seq", {}).values():
+            for e in sq.get("ins", []): v[e["n"]] = max(v.get(e["n"], 0), e["t"] + (0 if e.get("e") else max(0, len(e.get("x", "")) - 1)))
+            for k in ("vis", "fmt"):
+                for e in sq.get(k, []): v[e["n"]] = max(v.get(e["n"], 0), e["t"])
+        return v
+    def replica(est):
+        ops = []
+        for b, campos in est.get("bloques", {}).items():
+            g = {}
+            for c, reg in campos.items():
+                if not reg or not reg.get("n") or (b == "_doc" and c == "modo"): continue
+                g.setdefault((reg["t"], reg["n"]), {})[c] = reg["v"]
+            for (t, n), cs in g.items(): ops.append({"id": f"rx:{n}:{t}:{b}", "bloque": b, "campos": cs, "t": t, "n": n})
+        for b, sq in est.get("seq", {}).items():
+            for lista, k in (("ins", "i"), ("vis", "v"), ("fmt", "f")):
+                for e in sq.get(lista, []):
+                    x = {kk: vv for kk, vv in e.items() if kk not in ("t", "n")}; x["k"] = k
+                    ops.append({"id": f"rx:{k}:{e['n']}:{e['t']}:{b}", "bloque": b, "campos": {}, "t": e["t"], "n": e["n"], "s": x})
+        return ops
+    rdoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Informe final", "modo": "TEXTO", "ops": []}, tk["maestra"])[1]["id"]
+    r("POST", f"/api/documentos/{rdoc}/ops", lote("r1a", {"bloque": "cuerpo", "t": 5000, "s": {"k": "i", "iz": None, "x": "Base del informe\n"}}), tk["alumno1"])
+    est_base = (r("GET", f"/api/documentos/{rdoc}", t=tk["alumno1"])[1] or {}).get("estado", {})
+    base = vector(est_base)
+    T[0] = max(T[0], 6000)
+    r("POST", f"/api/documentos/{rdoc}/ops", lote("r2b", {"bloque": "cuerpo", "s": {"k": "i", "iz": "5016@r1a", "x": " DE ALUMNO2"}}), tk["alumno2"])
+    cd = r("POST", f"/api/documentos/{rdoc}/cambios-desde", {"base": base, "nodos": ["r1a", "r1x"], "desde": int(time.time() * 1000) - 60_000}, tk["alumno1"])
+    prueba("13.4 Se sabe si alguien más cambió el documento desde la base", [200, True], [cd[0], (cd[1] or {}).get("otros")])
+    prueba("13.4 …y quién", True, "alumno2" in (cd[1] or {}).get("personas", []))
+    base2 = vector((r("GET", f"/api/documentos/{rdoc}", t=tk["alumno1"])[1] or {}).get("estado", {}))
+    prueba("13.4 Si nadie más lo cambió desde la base: se sube tal cual", False, (r("POST", f"/api/documentos/{rdoc}/cambios-desde", {"base": base2, "nodos": ["r1a"]}, tk["alumno1"])[1] or {}).get("otros"))
+    prueba("13.4 Lo propio no cuenta como cambio de otros", False, (r("POST", f"/api/documentos/{rdoc}/cambios-desde", {"base": base, "nodos": ["r1a", "r2b"]}, tk["alumno1"])[1] or {}).get("otros"))
+    r("POST", "/api/cuentas/registro", {"nombre": "fuera13", "contrasena": CL})
+    tf13 = (r("POST", "/api/cuentas/sesion", {"nombre": "fuera13", "contrasena": CL})[1] or {}).get("token")
+    prueba("13.4 Quien no es del espacio no pregunta", 403, r("POST", f"/api/documentos/{rdoc}/cambios-desde", {"base": base, "nodos": []}, tf13)[0])
+    # Lo que alumno1 tenía "sin conexión": la base más su cambio (que el original no tiene).
+    local = json.loads(json.dumps(est_base))
+    local["seq"]["cuerpo"]["ins"].append({"t": 7000, "n": "r1x", "iz": "5016@r1a", "x": " SOLO EN LA RAMA"})
+    propio = {"id": "r1x:1", "bloque": "cuerpo", "campos": {}, "t": 7000, "n": "r1x", "s": {"k": "i", "iz": "5016@r1a", "x": " SOLO EN LA RAMA"}}
+    cr = r("POST", f"/api/documentos/{rdoc}/ramas", {"nombre": "Informe final — rama de alumno1 (sin conexión, 13 nov 10:42)", "ops": replica(local), "base": base, "nodos": ["r1a", "r1x"], "propios": [propio], "motivo": "cambios", "desde": int(time.time() * 1000) - 300_000}, tk["alumno1"])
+    prueba("13.4 Se crea la rama (documento nuevo ligado al original)", [201, rdoc], [cr[0], (cr[1] or {}).get("ramaDe")])
+    rama = (cr[1] or {}).get("id")
+    xs_o = "".join(e["x"] for e in ((r("GET", f"/api/documentos/{rdoc}", t=tk["maestra"])[1] or {}).get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", [])))
+    prueba("13.4 El original no se toca", [False, True], ["SOLO EN LA RAMA" in xs_o, "DE ALUMNO2" in xs_o])
+    dr = r("GET", f"/api/documentos/{rama}", t=tk["alumno1"])[1] or {}
+    xs_r = "".join(e["x"] for e in dr.get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", []))
+    prueba("13.4 La rama tiene lo que la persona tenía (sin lo que otros hicieron mientras)", [True, False], ["SOLO EN LA RAMA" in xs_r, "DE ALUMNO2" in xs_r])
+    prueba("13.4 …con su nombre de rama", "Informe final — rama de alumno1 (sin conexión, 13 nov 10:42)", dr.get("documento", {}).get("nombre"))
+    prueba("13.4 El original dice cuántas ramas tiene", 1, (r("GET", f"/api/documentos/{rdoc}", t=tk["maestra"])[1] or {}).get("documento", {}).get("ramasAbiertas"))
+    prueba("13.4 …y la lista de ramas", [1, "abierta"], [len(r("GET", f"/api/documentos/{rdoc}/ramas", t=tk["maestra"])[1] or []), ((r("GET", f"/api/documentos/{rdoc}/ramas", t=tk["maestra"])[1] or [{}])[0]).get("estado")])
+    prueba("13.4 En la lista del espacio el original lleva Ramas (1)", 1, next((x.get("ramasAbiertas") for x in (r("GET", f"/api/espacios/{salon}/documentos", t=tk["maestra"])[1] or []) if x.get("id") == rdoc), None))
+    prueba("13.4 Se avisa a quien la creó y al propietario", True, any(a.get("tipo") == "rama" for a in (r("GET", f"/api/espacios/{salon}/avisos", t=tk["maestra"])[1] or [])))
+    lect = r("POST", f"/api/espacios/{salon}/enlaces", {"permiso": "LECTURA", "horas": 1}, tk["maestra"])[1]["codigo"]
+    r("POST", f"/api/enlaces/{lect}/entrar", t=tk["visitante"])
+    prueba("13.4 Con «Solo ver» no se crean ramas", 403, r("POST", f"/api/documentos/{rdoc}/ramas", {"ops": [], "base": {}, "nodos": []}, tk["visitante"])[0])
+    prueba("13.4 Con «Solo ver» no se fusiona", 403, r("POST", f"/api/documentos/{rama}/fusionar", {}, tk["visitante"])[0])
+    fu = r("POST", f"/api/documentos/{rama}/fusionar", {}, tk["alumno2"])
+    prueba("13.4 Quien edita el original fusiona la rama", 200, fu[0])
+    est_f = (r("GET", f"/api/documentos/{rdoc}", t=tk["maestra"])[1] or {})
+    xs_f = "".join(e["x"] for e in est_f.get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", []))
+    prueba("13.4 …el original queda con lo de los dos", [True, True], ["SOLO EN LA RAMA" in xs_f, "DE ALUMNO2" in xs_f])
+    prueba("13.4 …sin cambiarle el nombre", "Informe final", est_f.get("documento", {}).get("nombre"))
+    vs = r("GET", f"/api/documentos/{rdoc}/versiones", t=tk["maestra"])[1] or []
+    prueba("13.4 …y con una versión «Antes de fusionar» para regresar", True, any("Antes de fusionar la rama de alumno1" in (v.get("etiqueta") or "") for v in vs))
+    prueba("13.4 La rama queda como fusionada", "fusionada", (r("GET", f"/api/documentos/{rama}", t=tk["alumno1"])[1] or {}).get("documento", {}).get("ramaEstado"))
+    prueba("13.4 Una rama fusionada no se fusiona dos veces", 409, r("POST", f"/api/documentos/{rama}/fusionar", {}, tk["alumno2"])[0])
+    prueba("13.4 Un documento que no es rama no se fusiona", 400, r("POST", f"/api/documentos/{rdoc}/fusionar", {}, tk["maestra"])[0])
+    # Dejar aparte y las partes con dueño al fusionar
+    cr2 = r("POST", f"/api/documentos/{rdoc}/ramas", {"ops": replica(local), "base": base, "nodos": ["r1x"], "motivo": "cambios"}, tk["alumno1"])
+    rama2 = (cr2[1] or {}).get("id")
+    prueba("13.4 Sin nombre, el servidor le pone «— rama de …»", True, "— rama de alumno1" in ((cr2[1] or {}).get("nombre") or ""))
+    prueba("13.4 Dejar la rama aparte quita el lazo con el original", [200, None], [r("PUT", f"/api/documentos/{rama2}/rama", {"accion": "aparte"}, tk["alumno1"])[0], (r("GET", f"/api/documentos/{rama2}", t=tk["alumno1"])[1] or {}).get("documento", {}).get("ramaDe")])
+    fdoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Láminas", "modo": "DIAGRAMA", "ops": []}, tk["maestra"])[1]["id"]
+    r("POST", f"/api/documentos/{fdoc}/ops", lote("m9", {"bloque": "f1", "campos": {"tipo": "forma", "pagina": "p1", "x": 1, "y": 1, "w": 9, "h": 9, "dueno": uid["alumno2"]}}), tk["maestra"])
+    ef = (r("GET", f"/api/documentos/{fdoc}", t=tk["alumno1"])[1] or {}).get("estado", {})
+    basef = vector(ef)
+    lf = json.loads(json.dumps(ef)); lf["bloques"]["f1"]["x"] = {"v": 500, "t": 90000, "n": "a1z"}
+    T[0] = max(T[0], 90001)
+    r("POST", f"/api/documentos/{fdoc}/ops", lote("m9", {"bloque": "_doc", "campos": {"nota": "cambio de la maestra"}}), tk["maestra"])
+    rf = (r("POST", f"/api/documentos/{fdoc}/ramas", {"ops": replica(lf), "base": basef, "nodos": ["a1z"]}, tk["alumno1"])[1] or {}).get("id")
+    prueba("13.4 Al fusionar se respetan las partes con dueño", True, ((r("POST", f"/api/documentos/{rf}/fusionar", {}, tk["alumno1"])[1] or {}).get("rechazadas") or 0) >= 1)
+    prueba("13.4 …la figura de alumno2 no se movió", 1, ((r("GET", f"/api/documentos/{fdoc}", t=tk["maestra"])[1] or {}).get("estado", {}).get("bloques", {}).get("f1", {}).get("x") or {}).get("v"))
+
+    # 13.5 El teléfono que comparte, al subir a la nube: rama si los dos cambiaron y estuvo sin conexión.
+    if not EXTERNO:
+        import socket, threading
+        class Puente:
+            """Un proxy TCP mínimo: mientras está prendido, el «teléfono» llega a la nube; apagarlo es quedarse sin red."""
+            def __init__(self, de, a):
+                self.de, self.a, self.activo, self.socks = de, a, False, []
+            def prender(self):
+                for _ in range(40):
+                    self.srv = socket.socket(); self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    try: self.srv.bind(("127.0.0.1", self.de)); break
+                    except OSError: self.srv.close(); time.sleep(0.1)
+                self.srv.listen(50); self.activo = True
+                threading.Thread(target=self._aceptar, daemon=True).start()
+            def _aceptar(self):
+                while self.activo:
+                    try: c, _ = self.srv.accept()
+                    except OSError: return
+                    try: d = socket.create_connection(("127.0.0.1", self.a))
+                    except OSError: c.close(); continue
+                    self.socks += [c, d]
+                    for x, y in ((c, d), (d, c)): threading.Thread(target=self._pasar, args=(x, y), daemon=True).start()
+            def _pasar(self, x, y):
+                try:
+                    while True:
+                        b = x.recv(65536)
+                        if not b: break
+                        y.sendall(b)
+                except OSError: pass
+                finally:
+                    for z in (x, y):
+                        try: z.close()
+                        except OSError: pass
+            def apagar(self):
+                self.activo = False
+                try: self.srv.shutdown(socket.SHUT_RDWR)
+                except OSError: pass
+                try: self.srv.close()
+                except OSError: pass
+                for z in self.socks:
+                    try: z.close()
+                    except OSError: pass
+                self.socks = []
+        D3 = tempfile.mkdtemp(prefix="nomcolab-pruebas-tel-")
+        P3 = 8094; B3 = f"http://localhost:{P3}"
+        srv3 = subprocess.Popen([JAVA, "-Dnom.umbralRama=1000", "-jar", JAR], env=dict(os.environ, NOM_PUERTO=str(P3), NOM_DATOS=D3, NOM_DESCUBRIMIENTO="false"), stdout=open(os.path.join(D3, "servidor.log"), "a"), stderr=subprocess.STDOUT)
+        puente = Puente(8096, P)
+        r3 = lambda *a, **k: rq(B3, *a, **k)
+        try:
+            for _ in range(90):
+                try: urllib.request.urlopen(B3 + "/api/red/info", timeout=2); break
+                except Exception: time.sleep(1)
+            puente.prender()
+            r3("POST", "/api/cuentas/registro", {"nombre": "tel", "contrasena": CL})
+            tt = (r3("POST", "/api/cuentas/sesion", {"nombre": "tel", "contrasena": CL})[1] or {}).get("token")
+            e3 = (r3("POST", "/api/espacios", {"nombre": "Salón del teléfono" + SUFIJO}, tt)[1] or {}).get("id")
+            d3 = (r3("POST", f"/api/espacios/{e3}/documentos", {"nombre": "Acta", "modo": "TEXTO", "ops": []}, tt)[1] or {}).get("id")
+            r3("POST", f"/api/documentos/{d3}/ops", {"cliente": "tel1", "dispositivo": "prueba", "ops": [{"id": "tel1:1", "bloque": "cuerpo", "campos": {}, "t": 20, "n": "tel1", "s": {"k": "i", "iz": None, "x": "Acta de la reunión\n"}}]}, tt)
+            time.sleep(1.2)
+            c1 = r3("PUT", f"/api/espacios/{e3}/sincronia", {"servidor": "http://localhost:8096", "usuario": "maestra", "contrasena": CL}, tt)
+            prueba("13.5 (antes) el espacio del teléfono se copia a la nube", [200, "ok"], [c1[0], (c1[1] or {}).get("estado")])
+            nube_esp = next((x["id"] for x in (r("GET", "/api/espacios", t=tk["maestra"])[1] or []) if x["nombre"] == "Salón del teléfono" + SUFIJO), None)
+            nube_doc = next((x["id"] for x in (r("GET", f"/api/espacios/{nube_esp}/documentos", t=tk["maestra"])[1] or []) if x["nombre"] == "Acta"), None) if nube_esp else None
+            puente.apagar()
+            prueba("13.5 Sin red, la copia queda pendiente", "sin-red", (r3("POST", f"/api/espacios/{e3}/sincronia", {}, tt)[1] or {}).get("estado"))
+            time.sleep(1.5)
+            r3("POST", f"/api/documentos/{d3}/ops", {"cliente": "tel1", "dispositivo": "prueba", "ops": [{"id": "tel1:2", "bloque": "cuerpo", "campos": {}, "t": 100, "n": "tel1", "s": {"k": "i", "iz": None, "x": "EN EL TELEFONO "}}]}, tt)
+            r("POST", f"/api/documentos/{nube_doc}/ops", {"cliente": "nube1", "dispositivo": "prueba", "ops": [{"id": "nube1:1", "bloque": "cuerpo", "campos": {}, "t": 200, "n": "nube1", "s": {"k": "i", "iz": None, "x": "EN LA NUBE "}}]}, tk["maestra"])
+            time.sleep(1.2)
+            puente.prender()
+            c2 = r3("POST", f"/api/espacios/{e3}/sincronia", {}, tt)
+            prueba("13.5 Al volver: los dos cambiaron y estuvo sin conexión → rama del teléfono", [200, "ok", 1], [c2[0], (c2[1] or {}).get("estado"), (c2[1] or {}).get("ramas")])
+            nube_lista = r("GET", f"/api/espacios/{nube_esp}/documentos", t=tk["maestra"])[1] or []
+            rama3 = next((x for x in nube_lista if x.get("ramaDe") == nube_doc), {})
+            prueba("13.5 …en la nube aparece la rama, ligada al original", True, bool(rama3) and "rama del teléfono de maestra" in rama3.get("nombre", ""))
+            txt = lambda doc_id: "".join(e["x"] for e in ((r("GET", f"/api/documentos/{doc_id}", t=tk["maestra"])[1] or {}).get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", [])))
+            prueba("13.5 …el original de la nube no se toca", [True, False], ["EN LA NUBE" in txt(nube_doc), "EN EL TELEFONO" in txt(nube_doc)])
+            prueba("13.5 …y la rama tiene lo del teléfono", [True, False], ["EN EL TELEFONO" in txt(rama3.get("id", "x")), "EN LA NUBE" in txt(rama3.get("id", "x"))] if rama3 else None)
+            act = r("GET", f"/api/documentos/{rama3.get('id', 'x')}/actividad", t=tk["maestra"])[1] or []
+            prueba("13.5 Lo que escribió cada quien en el teléfono llega a su nombre", True, any(a.get("externo") and a.get("usuario", "").startswith("tel") for a in act))
+            r3("POST", f"/api/espacios/{e3}/sincronia", {}, tt)
+            prueba("13.5 Después, el original de la nube también llega al teléfono (aparte)", 2, len(r3("GET", f"/api/espacios/{e3}/documentos", t=tt)[1] or []))
+            puente.apagar(); time.sleep(0.3); puente.prender()
+            r3("POST", f"/api/documentos/{d3}/ops", {"cliente": "tel1", "dispositivo": "prueba", "ops": [{"id": "tel1:3", "bloque": "cuerpo", "campos": {}, "t": 300, "n": "tel1", "s": {"k": "i", "iz": None, "x": "OTRO "}}]}, tt)
+            c3 = r3("POST", f"/api/espacios/{e3}/sincronia", {}, tt)
+            prueba("13.5 Con conexión todo el tiempo, se junta como siempre (sin rama)", [200, 0], [c3[0], (c3[1] or {}).get("ramas")])
+        finally:
+            puente.apagar()
+            srv3.kill(); srv3.wait(30)
+            shutil.rmtree(D3, ignore_errors=True); shutil.rmtree(D3 + "-llaves", ignore_errors=True)
+
+    def previo(u, origen, metodo="POST"):
+        x = rq(B, "OPTIONS", u, cab={"Origin": origen, "Access-Control-Request-Method": metodo, "Access-Control-Request-Headers": "authorization,content-type"})
+        return [x[0], x[2].get("access-control-allow-origin")]
+    prueba("13.3 La página de un teléfono (red local) puede iniciar sesión aquí", [204, "http://192.168.0.50:8080"], previo("/api/cuentas/sesion", "http://192.168.0.50:8080"))
+    prueba("13.3 …y pedir un pase", [204, "http://10.0.0.7:8080"], previo("/api/cuentas/pase", "http://10.0.0.7:8080"))
+    prueba("13.3 …y cerrar esa sesión", [204, "http://172.20.1.2:8080"], previo("/api/cuentas/sesion", "http://172.20.1.2:8080", "DELETE"))
+    prueba("13.3 …pero nada más (sus espacios)", [403, None], previo("/api/espacios", "http://192.168.0.50:8080", "GET"))
+    prueba("13.3 Una página de Internet no puede iniciar sesión desde su sitio", [403, None], previo("/api/cuentas/sesion", "https://malo.example"))
+    prueba("13.3 Un nombre que empieza como red local no engaña", [403, None], previo("/api/cuentas/sesion", "http://192.168.0.50.malo.example"))
+    prueba("13.3 172.32.x no es red local", [403, None], previo("/api/cuentas/sesion", "http://172.32.0.1:8080"))
+    prueba("13.3 La app (desde sus archivos, origen null) sí puede", [204, "null"], previo("/api/espacios", "null", "GET"))
+    prueba("13.3 Otro sitio no puede leer las respuestas", None, rq(B, "GET", "/api/red/info", cab={"Origin": "https://malo.example"})[2].get("access-control-allow-origin"))
+
     if not EXTERNO:
         # Reiniciar el servidor: lo guardado comprimido abre igual, y también un estado sin
         # comprimir como los que dejaron las versiones anteriores.
@@ -470,6 +758,7 @@ try:
 finally:
     if srv: srv.kill(); srv.wait(30)
     shutil.rmtree(D, ignore_errors=True)
+    shutil.rmtree(D + "-llaves", ignore_errors=True)
 for n, e, o, ok in res: print(("OK " if ok else "MAL"), f"{n:<66} esperado {e} obtenido {o}")
 print(sum(ok for *_, ok in res), "de", len(res))
 sys.exit(0 if all(ok for *_, ok in res) else 1)

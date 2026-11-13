@@ -43,8 +43,14 @@
     if (!r.tipo || !r.codigo) return aviso("Ese código QR no es de un espacio de NOM-COLAB", { tipo: "error" });
     if (api().empaquetada) {
       if (r.origen && r.origen !== api().servidor()) {
-        if (api().token() && !(await confirmar("Otro lugar", `Ese código es de ${r.origen.replace(/^https?:\/\//, "")}. La app se conectará ahí (aquí se cierra tu sesión en este teléfono; tus documentos no se tocan).`, { si: "Conectar" }))) return;
-        if (api().token()) { try { await NOM.boveda.cerrar(); } catch (e) { /* sin bóveda */ } api().limpiarSesion(); }
+        if (api().token() && !(await confirmar("Otro lugar", `Ese código es de ${r.origen.replace(/^https?:\/\//, "")}. La app se conectará ahí (tus documentos no se tocan; para volver, elige otra vez dónde trabajas).`, { si: "Conectar" }))) return;
+        if (api().token()) {
+          // Si era la sesión de la nube, se guarda: sirve para entrar al teléfono con la misma cuenta
+          // (pase) y para volver a la nube sin escribir la contraseña.
+          const nube = NOM.acceso && NOM.acceso.guardarSesionNube();
+          try { await NOM.boveda.cerrar(!nube); } catch (e) { /* sin bóveda */ }
+          api().limpiarSesion();
+        }
         api().fijarServidor(r.origen);
       }
     } else if (r.origen && r.origen !== location.origin) {
@@ -80,23 +86,16 @@
     return true;
   }
 
-  /** Secreto de este dispositivo para la bóveda de un invitado (no tiene contraseña). */
-  function secretoInvitado(uid) {
-    const k = "nom.inv." + uid;
-    let s = NOM.leer(k, null);
-    if (!s) { s = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join(""); NOM.guardar(k, s); }
-    return s;
-  }
-
   // ================================================================== pantalla /#/unirse/<código>
   async function pantalla(raiz, codigo) {
     codigo = limpiarCodigo(codigo);
     raiz.innerHTML = `<main class="union"><section class="union-tarjeta clay" data-t><div class="esqueleto" style="height:180px"></div></section></main>`;
     const t = $("[data-t]", raiz);
-    let info;
+    let info, srv = null;
     try {
       if (api().empaquetada && !api().servidor()) throw Object.assign(new Error("Primero elige dónde trabaja tu equipo (o escanea su QR)."), { estado: 0 });
       info = await api().get(`/api/enlaces/${encodeURIComponent(codigo)}`, undefined, { sin401: true });
+      try { srv = await NOM.acceso.infoServidor(); } catch (e) { srv = null; }
     } catch (e) {
       t.innerHTML = `<div class="col" style="align-items:center;text-align:center">
         <div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div>
@@ -106,26 +105,38 @@
       const b = $("[data-esc]", t); if (b) b.onclick = escanear;
       return () => {};
     }
+    const telefono = !!info.telefono || NOM.acceso.esTelefono(srv);
     const conSesion = !!api().token();
     const u = api().usuario() || {};
+    // Un alias de OTRO espacio no sirve aquí: se entra con un alias de este.
+    const aliasAjeno = conSesion && u.alias && u.invitado;
+    // ¿Este equipo ya tiene un alias en este espacio? (se guarda por servidor y espacio)
+    const mismo = srv && info.espacioId ? NOM.acceso.aliasGuardado(srv.servidor, info.espacioId) : null;
+    const opcionAlias = info.invitados ? `<button class="btn ${conSesion && !aliasAjeno ? "" : "primario"} ancho" data-alias>${ico("sparkles")} <span class="btn-sub">${mismo ? "Entrar otra vez como " + esc(mismo.nombre) : "Entrar con un alias"}<small>${mismo ? "El alias que este equipo ya tiene en este espacio" : "Sin escribir nada: te toca un nombre al azar, como «Colibrí 37»"}</small></span></button>
+        ${mismo ? `<p class="suave chico" style="text-align:center"><a href="#" data-otro-alias>Quiero otro alias</a></p>` : ""}` : "";
     t.innerHTML = `<div class="col">
       <div class="fila" style="gap:14px;align-items:center">
         <span class="icono-espacio grande" style="background:${esc(info.color || "#7AA7FF")}">${esc((info.espacio || "?").trim()[0].toUpperCase())}</span>
         <div class="crece"><span class="etiqueta">Te invitan a</span><h2 style="margin-top:2px">${esc(info.espacio)}</h2>
           <span class="suave chico" style="font-weight:700">de ${esc(info.propietario)} · ${esc(PERMISO[info.permiso] || info.permiso)} · el código sirve hasta el ${esc(new Date(info.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span></div>
       </div>
+      ${telefono ? `<div class="alerta info chico">${ico("smartphone")}<span>Este espacio está en un <b>teléfono que comparte</b>, sin Internet. Aquí no se crean cuentas: entra con un alias, o con tu cuenta si este equipo tiene Internet.</span></div>` : ""}
       <div class="alerta error" data-err hidden></div>
-      ${conSesion ? `<button class="btn primario ancho" data-entrar>${ico("log-in")} Entrar como ${esc(u.nombre || "")}</button>
-        <p class="suave chico" style="text-align:center">¿No eres tú? <a href="#" data-otra>Usar otra cuenta</a></p>`
-      : `${info.invitados ? `<form class="col" data-apodo>
-          <div class="campo"><label for="ap">Tu apodo</label><div class="entrada">${ico("users")}<input id="ap" name="apodo" maxlength="16" autocomplete="nickname" placeholder="Así te verán los demás" required></div>
-          <div class="ayuda">Sin registrarte: entras solo a este espacio y desde este celular o computadora.</div></div>
-          <button class="btn primario ancho">${ico("arrow-right")} Entrar con apodo</button></form>
-        <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o con tu cuenta<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>` : ""}
-        <div class="fila"><button class="btn crece" data-cuenta="entrar">${ico("log-in")} Iniciar sesión</button><button class="btn crece ${info.invitados ? "" : "primario"}" data-cuenta="registro">${ico("user-plus")} Crear cuenta</button></div>`}
+      ${conSesion && !aliasAjeno ? `<button class="btn primario ancho" data-entrar>${ico("log-in")} Entrar como ${esc(u.nombre || "")}</button>
+        <p class="suave chico" style="text-align:center">¿No eres tú? <a href="#" data-otra>${telefono ? "Salir de esta sesión" : "Usar otra cuenta"}</a></p>${telefono ? opcionAlias : ""}`
+      : `${opcionAlias}
+        ${telefono ? `<button class="btn ancho" data-mi-cuenta hidden>${ico("cloud")} <span class="btn-sub">Entrar con mi cuenta<small>Este equipo tiene Internet: lo tuyo queda a tu nombre</small></span></button>
+          <p class="suave chico" data-sin-internet style="text-align:center">${ico("wifi-off", "ico-s")} Revisando si este equipo tiene Internet…</p>`
+        : `${info.invitados ? `<div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o con tu cuenta<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>` : ""}
+        <div class="fila"><button class="btn crece" data-cuenta="entrar">${ico("log-in")} Iniciar sesión</button><button class="btn crece ${info.invitados ? "" : "primario"}" data-cuenta="registro">${ico("user-plus")} Crear cuenta</button></div>`}`}
     </div>`;
     const err = $("[data-err]", t);
     const mostrarError = (e) => { err.hidden = false; err.innerHTML = `${ico("triangle-alert")}<span>${esc(e.message)}</span>`; };
+    const alEntrar = (r, nuevo, espacioId) => {
+      if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
+      NOM.app.alIniciarSesion(r);
+      setTimeout(() => (location.hash = "#/espacio/" + espacioId), 0);
+    };
     const entrar = $("[data-entrar]", t);
     if (entrar) entrar.onclick = async () => {
       entrar.disabled = true;
@@ -138,25 +149,35 @@
     const otra = $("[data-otra]", t);
     if (otra) otra.onclick = async (e) => { e.preventDefault(); NOM.guardar(PENDIENTE, codigo); await NOM.app.cerrarSesion(true); };
     $$("[data-cuenta]", t).forEach((b) => (b.onclick = () => { NOM.guardar(PENDIENTE, codigo); NOM.app.irACuentas(b.dataset.cuenta); }));
-    const f = $("[data-apodo]", t);
-    if (f) {
-      f.onsubmit = async (e) => {
-        e.preventDefault();
-        const apodo = f.apodo.value.trim();
-        if (!apodo) return f.apodo.focus();
-        const b = $("button", f);
-        b.disabled = true;
+    const conAlias = async (otro, b) => {
+      b.disabled = true;
+      try {
+        if (api().token()) { try { await NOM.boveda.cerrar(); } catch (x) { /* sin bóveda */ } api().limpiarSesion(); }
+        const r = await NOM.acceso.entrarConAlias(codigo, { otro, espacioId: info.espacioId });
+        aviso(r.nuevo ? `Entraste como ${r.usuario.nombre}` : `Hola de nuevo, ${r.usuario.nombre}`, { tipo: "ok" });
+        alEntrar(r, r.nuevo, r.espacio.id);
+      } catch (x) { b.disabled = false; mostrarError(x); }
+    };
+    const ba = $("[data-alias]", t);
+    if (ba) ba.onclick = () => conAlias(false, ba);
+    const oa = $("[data-otro-alias]", t);
+    if (oa) oa.onclick = (e) => { e.preventDefault(); conAlias(true, ba || oa); };
+    // A.2 Quien tiene Internet conserva su cuenta: se ofrece si este equipo llega a la nube.
+    const mi = $("[data-mi-cuenta]", t), sinInt = $("[data-sin-internet]", t);
+    if (mi) {
+      NOM.acceso.nubeAlcanzable().then((ok) => {
+        if (!mi.isConnected) return;
+        mi.hidden = !ok;
+        if (sinInt) sinInt.innerHTML = ok ? "" : `${ico("wifi-off", "ico-s")} Este equipo no tiene Internet: por eso se entra con alias.`;
+      });
+      mi.onclick = async () => {
+        const r = await NOM.acceso.dialogoCuenta();
+        if (!r) return;
         try {
-          const r = await api().post(`/api/enlaces/${encodeURIComponent(codigo)}/invitado`, { apodo }, { sin401: true });
-          api().fijarSesion(r.token, r.usuario);
-          try { await NOM.boveda.abrir(r.usuario.id, secretoInvitado(r.usuario.id)); } catch (x) { console.warn(x); }
-          NOM.aplicarPreferencias(r.preferencias);
-          if (NOM.bienvenida) NOM.bienvenida(r.usuario, true);
-          NOM.app.alIniciarSesion(r);
-          setTimeout(() => (location.hash = "#/espacio/" + r.espacio.id), 0);
-        } catch (x) { b.disabled = false; mostrarError(x); }
+          const esp = await api().post(`/api/enlaces/${encodeURIComponent(codigo)}/entrar`);
+          alEntrar(r, false, esp.id);
+        } catch (x) { mostrarError(x); }
       };
-      setTimeout(() => f.apodo.focus(), 40);
     }
     return () => {};
   }

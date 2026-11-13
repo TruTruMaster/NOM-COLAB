@@ -55,3 +55,7 @@ CREATE INDEX ix_sesion_usuario ON dbo.sesion(id_usuario);
 -- datos aparte, hasta que "./desplegar.sh roles" corra este archivo con el administrador.
 IF COL_LENGTH(N'dbo.usuario', N'invitado_de') IS NULL
 EXEC sp_executesql N'BEGIN TRY ALTER TABLE dbo.usuario ADD invitado_de VARCHAR(16) NULL, hash_recuperacion VARCHAR(64) NULL, sal_recuperacion VARCHAR(32) NULL END TRY BEGIN CATCH END CATCH';
+
+-- 13 de noviembre de 2026 (fase 13): alias, cuentas de la nube y aceptación de términos, como JSON.
+IF COL_LENGTH(N'dbo.usuario', N'extra') IS NULL
+EXEC sp_executesql N'BEGIN TRY ALTER TABLE dbo.usuario ADD extra NVARCHAR(MAX) NULL END TRY BEGIN CATCH END CATCH';

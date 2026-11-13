@@ -64,7 +64,7 @@
         <nav class="riel-lista" data-riel-espacios></nav>`}
         <div class="riel-pie">
           ${avatar(u)}
-          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${!sinCuenta && u.invitado ? `<div class="chico suave recorta" style="font-weight:800">Invitado (sin cuenta)</div>` : !sinCuenta && u.empresa ? `<div class="chico suave recorta" style="font-weight:800">${esc(u.empresa)}</div>` : ""}</div>
+          <div class="crece"><div class="recorta" style="font-weight:800">${esc(u.nombre || "")}</div><div class="chico suave recorta" ${sinCuenta ? "" : "data-red-texto"} style="font-weight:700">${sinCuenta ? "Solo en este equipo" : api.enLinea ? "Conectado" : "Sin conexión"}</div>${!sinCuenta && NOM.tipoCuenta(u) ? `<div class="chico suave recorta" style="font-weight:800">${esc(NOM.tipoCuenta(u))}</div>` : !sinCuenta && u.empresa ? `<div class="chico suave recorta" style="font-weight:800">${esc(u.empresa)}</div>` : ""}</div>
           <button class="icono-btn" data-a="cuenta" aria-label="Cuenta y ajustes" data-micro="Cuenta|Preferencias y cerrar sesión.">${ico("settings")}</button>
         </div>
       </aside>
@@ -97,17 +97,22 @@
       { texto: NOM.etiquetaEquipo(), icono: api.empaquetada ? "smartphone" : "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
     ] : [
-      { titulo: u.nombre + (u.empresa ? " · " + u.empresa : "") },
+      { titulo: u.nombre + (NOM.tipoCuenta(u) ? " · " + NOM.tipoCuenta(u) : u.empresa ? " · " + u.empresa : "") },
       { texto: NOM.etiquetaEquipo(), icono: api.empaquetada ? "smartphone" : "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       ...(u.invitado ? [] : [{ texto: "En el servidor (tu almacenamiento)", icono: "cloud", fn: () => NOM.vistaEspacios.miAlmacenamiento() }]),
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
-      ...(api.empaquetada ? [{ texto: "Cambiar dónde trabaja tu equipo", icono: "server", fn: () => { api.fijarServidor(""); cerrarSesion(true); } }] : []),
-      // Los invitados no tienen contraseña ni cuenta que borrar.
-      ...(u.invitado ? [] : [{ texto: "Cambiar contraseña…", icono: "key-round", fn: NOM.vistaCuentas.cambiarContrasena }]),
+      ...(NOM.instalar && NOM.instalar.disponible() ? [{ texto: "Instalar en esta computadora", icono: "monitor-down", fn: () => NOM.instalar.pedir() }] : []),
+      ...(api.empaquetada ? [{ texto: "Cambiar dónde trabaja tu equipo", icono: "server", fn: async () => {
+        // La sesión de la nube se guarda (sirve para el pase y para volver sin contraseña).
+        if (NOM.acceso && NOM.acceso.guardarSesionNube()) { await NOM.boveda.cerrar(false); api.limpiarSesion(); app.espacios = []; api.fijarServidor(""); location.hash = "#/"; ruta(); return; }
+        api.fijarServidor(""); cerrarSesion(true);
+      } }] : []),
+      // Los alias, invitados y cuentas con pase no tienen contraseña ni cuenta que borrar aquí.
+      ...(NOM.sinContrasena(u) ? [] : [{ texto: "Cambiar contraseña…", icono: "key-round", fn: NOM.vistaCuentas.cambiarContrasena }]),
       ...(app.viejaPendiente ? [{ texto: "Recuperar lo de mi contraseña anterior…", icono: "hard-drive", fn: () => NOM.vistaCuentas.ofrecerRecuperar(true, true) }] : []),
       "-",
       { texto: "Cerrar sesión", icono: "log-out", peligro: true, fn: () => cerrarSesion() },
-      ...(u.invitado ? [] : [{ texto: "Borrar mi cuenta…", icono: "trash-2", peligro: true, fn: NOM.vistaCuentas.borrarCuenta }]),
+      ...(NOM.sinContrasena(u) ? [] : [{ texto: "Borrar mi cuenta…", icono: "trash-2", peligro: true, fn: NOM.vistaCuentas.borrarCuenta }]),
     ])));
     $("[data-fab]", c).onclick = () => fab && fab();
     pintarRielEspacios(actual);

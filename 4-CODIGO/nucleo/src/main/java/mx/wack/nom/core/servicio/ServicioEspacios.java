@@ -38,6 +38,13 @@ public class ServicioEspacios {
         this.cifrado = cifrado;
     }
 
+    /** Telefono que comparte (fase 13): no hay cuentas, asi que todo codigo deja entrar con alias. */
+    private volatile boolean telefono;
+
+    public void modoTelefono(boolean si) { this.telefono = si; }
+
+    public boolean esTelefono() { return telefono; }
+
     public Espacio requerir(String id) {
         return repo.porId(id).orElseThrow(() -> ErrorNom.noEncontrado("El espacio"));
     }
@@ -154,7 +161,9 @@ public class ServicioEspacios {
 
     /** CU-13 Crear espacio de trabajo. */
     public synchronized Espacio crear(Usuario u, String nombre) {
-        if (u.esInvitado()) throw ErrorNom.prohibido("Las cuentas de invitado no crean espacios. Crea una cuenta para tener los tuyos.");
+        if (u.esInvitado()) throw ErrorNom.prohibido(u.alias ? "Un alias solo trabaja en el espacio al que entró. Para tener espacios propios, entra con tu cuenta cuando tengas Internet."
+                : "Las cuentas de invitado no crean espacios. Crea una cuenta para tener los tuyos.");
+        if (u.retirada) throw ErrorNom.prohibido("Esta cuenta ya no se usa en este equipo");
         nombre = nombre == null ? "" : nombre.trim();
         if (nombre.isEmpty()) throw ErrorNom.invalido("Ponle un nombre al espacio", "nombre");
         if (nombre.length() > 60) throw ErrorNom.invalido("Máximo 60 caracteres", "nombre");
@@ -211,7 +220,7 @@ public class ServicioEspacios {
     public synchronized Map<String, Object> unirse(Usuario u, String id) {
         Espacio e = requerir(id);
         if (e.permisoDe(u.id) != null) return Map.of("estado", "miembro", "espacio", resumen(e, u));
-        if (u.esInvitado()) throw ErrorNom.prohibido("Tu cuenta de invitado solo sirve en el espacio donde entraste");
+        if (u.esInvitado()) throw ErrorNom.prohibido(u.alias ? "Un alias solo sirve en el espacio donde entró" : "Tu cuenta de invitado solo sirve en el espacio donde entraste");
         if (!e.conexion.activa) throw ErrorNom.prohibido("Este espacio ya no está visible en la red");
         boolean yaPidio = e.solicitudes.stream().anyMatch(s -> s.usuarioId.equals(u.id));
         if (!yaPidio) {
@@ -355,7 +364,8 @@ public class ServicioEspacios {
         x.permiso = permiso;
         x.creado = ahora;
         x.caduca = ahora + horas * 3_600_000L;
-        x.invitados = invitados;
+        // En el telefono no hay cuentas: quien llega sin Internet entra con alias (siempre).
+        x.invitados = invitados || telefono;
         e.enlaces.add(x);
         repo.guardar(e);
         Map<String, Object> m = enlacePublico(x, ahora);
@@ -408,12 +418,15 @@ public class ServicioEspacios {
         Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("codigo", x.codigo);
+        m.put("espacioId", e.id);
         m.put("espacio", e.nombre);
         m.put("color", e.color);
         m.put("propietario", cuentas.porId(e.propietarioId).map(y -> y.nombre).orElse("?"));
         m.put("permiso", x.permiso);
-        m.put("invitados", x.invitados);
+        m.put("invitados", x.invitados || telefono);
         m.put("caduca", x.caduca);
+        // El telefono que comparte no tiene cuentas: alias, o la cuenta de la nube con un pase.
+        if (telefono) m.put("telefono", true);
         return m;
     }
 
@@ -434,25 +447,68 @@ public class ServicioEspacios {
         return resumen(e, u);
     }
 
-    /** Entrar con apodo, sin registrarse (si el enlace lo permite): crea la cuenta de invitado. */
+    /**
+     * Modo salon de las apps anteriores ("entrar con apodo"): ahora el nombre no se escribe, se da un
+     * alias al azar ligado al espacio (asi nadie se hace pasar por otro).
+     */
     public synchronized Map<String, Object> entrarComoInvitado(String codigo, String apodo) {
+        return entrarConAlias(codigo, null, null, null);
+    }
+
+    /**
+     * Fase 13, A.1: entrar con un alias por el codigo o el QR del espacio, sin escribir nada. Si el
+     * equipo ya tenia un alias de este espacio (id y llave), vuelve a ser el mismo; si no (o pidio
+     * "Otro alias"), se crea uno nuevo con nombre al azar y el permiso del codigo.
+     */
+    public synchronized Map<String, Object> entrarConAlias(String codigo, String id, String llave, String origen) {
         Object[] r = enlaceVigente(codigo);
         Espacio e = (Espacio) r[0];
         Espacio.EnlaceUnion x = (Espacio.EnlaceUnion) r[1];
-        if (!x.invitados) throw ErrorNom.prohibido("Este enlace pide una cuenta. Inicia sesión o crea una.");
-        Sesion s = cuentas.crearInvitado(apodo, e.id);
+        if (!x.invitados && !telefono) throw ErrorNom.prohibido("Este código pide una cuenta. Inicia sesión o crea una.");
+        Sesion s = null;
+        if (id != null && !id.isBlank() && llave != null) {
+            Usuario viejo = cuentas.porId(id).orElse(null);
+            if (viejo != null && viejo.alias && e.id.equals(viejo.invitadoDe)) {
+                try { s = cuentas.entrarAlias(id, llave, origen); } catch (ErrorNom ex) { if (ex.estado == ErrorNom.BLOQUEADO) throw ex; }
+            }
+        }
+        boolean nuevo = s == null;
+        if (nuevo) s = cuentas.crearAlias(e.id, llave, false);
         Usuario u = cuentas.porId(s.usuarioId).orElseThrow();
-        e.accesos.put(u.id, x.permiso);
+        Permiso antes = e.permisoDe(u.id);
+        if (antes == null || !antes.alMenos(x.permiso)) {
+            e.accesos.put(u.id, x.permiso);
+            difusor.avisarTodoEspacio(e.id, "permiso", Map.of("usuarioId", u.id, "permiso", x.permiso.name()));
+        }
         x.usos++;
         repo.guardar(e);
-        difusor.avisarTodoEspacio(e.id, "permiso", Map.of("usuarioId", u.id, "permiso", x.permiso.name()));
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("token", s.token);
         m.put("expira", s.expira);
         m.put("usuario", ServicioCuentas.publico(u));
         m.put("preferencias", u.preferencias);
         m.put("espacio", resumen(e, u));
+        m.put("nuevo", nuevo);
         return m;
+    }
+
+    /**
+     * Telefono que comparte: los espacios de las cuentas con contrasena de antes (ya retiradas) pasan
+     * al dueno del telefono la primera vez que entra. Lo escrito sigue a nombre de quien lo escribio.
+     */
+    public synchronized int traspasarDeRetiradas(Usuario dueno) {
+        int n = 0;
+        for (Espacio e : repo.todos()) {
+            if (dueno.id.equals(e.propietarioId)) continue;
+            Usuario antes = cuentas.porId(e.propietarioId).orElse(null);
+            if (antes != null && !antes.retirada) continue;
+            if (antes != null) e.accesos.remove(antes.id);
+            e.propietarioId = dueno.id;
+            e.accesos.put(dueno.id, Permiso.PROPIETARIO);
+            repo.guardar(e);
+            n++;
+        }
+        return n;
     }
 
     /** CU-24 Consumo del espacio. */

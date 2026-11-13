@@ -22,6 +22,8 @@ import mx.wack.nom.servidor.seguridad.FiltroSesion;
 import mx.wack.nom.servidor.seguridad.Origen;
 import mx.wack.nom.core.servicio.ServicioCuentas;
 import mx.wack.nom.core.servicio.ServicioDocumentos;
+import mx.wack.nom.core.servicio.ServicioPases;
+import mx.wack.nom.core.servicio.ErrorNom;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -34,13 +36,17 @@ public class CuentasApi {
     public record Recuperacion(String nombre, String codigo, String nueva) { }
     public record CambioContrasena(String actual, String nueva) { }
     public record Confirmacion(String contrasena) { }
+    public record Pase(String pase) { }
+    public record Alias(String id, String llave) { }
 
     private final ServicioCuentas cuentas;
     private final ServicioDocumentos documentos;
+    private final ServicioPases pases;
 
-    public CuentasApi(ServicioCuentas cuentas, ServicioDocumentos documentos) {
+    public CuentasApi(ServicioCuentas cuentas, ServicioDocumentos documentos, ServicioPases pases) {
         this.cuentas = cuentas;
         this.documentos = documentos;
+        this.pases = pases;
     }
 
     @PostMapping("/registro")
@@ -110,6 +116,47 @@ public class CuentasApi {
     @PutMapping("/preferencias")
     public Preferencias preferencias(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @RequestBody Preferencias p) {
         return cuentas.guardarPreferencias(u, p);
+    }
+
+    // ------------------------------------------------------------ fase 13: pases y alias
+
+    /** A.2 Un pase firmado de 10 minutos para entrar con esta cuenta a un telefono que comparte sin Internet. */
+    @PostMapping("/pase")
+    public Map<String, Object> pase(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, HttpServletRequest req) {
+        cuentas.limitarPases(Origen.de(req));
+        return pases.emitir(u, Origen.publico(req));
+    }
+
+    /** Publico: la llave con la que este servidor firma los pases (para ponerla en el APK). */
+    @GetMapping("/pase/llave")
+    public Map<String, Object> llave(HttpServletRequest req) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("nube", Origen.publico(req));
+        m.put("llave", pases.llavePublica());
+        m.put("algoritmo", "ECDSA P-256 / SHA-256 (X.509, base64)");
+        return m;
+    }
+
+    /** Publico: presentar un pase de una nube de confianza (si este servidor acepta pases). */
+    @PostMapping("/pase/entrar")
+    public Map<String, Object> entrarConPase(@RequestBody Pase p, HttpServletRequest req) {
+        if (!pases.aceptaPases()) throw ErrorNom.prohibido("Este NOM-COLAB no acepta pases de otra nube");
+        cuentas.limitarPases(Origen.de(req));
+        Sesion s = cuentas.desdePase(pases.verificar(p == null ? null : p.pase()));
+        return yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira);
+    }
+
+    /** Volver a entrar con un alias que este equipo ya tenia (su llave), aunque el codigo ya haya vencido. */
+    @PostMapping("/alias/entrar")
+    public Map<String, Object> volverConAlias(@RequestBody Alias a, HttpServletRequest req) {
+        Sesion s = cuentas.entrarAlias(a == null ? null : a.id(), a == null ? null : a.llave(), Origen.de(req));
+        return yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira);
+    }
+
+    /** En la computadora o la nube se entra con una cuenta; los alias del dueno son del telefono que comparte. */
+    @PostMapping("/alias")
+    public Map<String, Object> alias() {
+        throw ErrorNom.prohibido("Aquí se entra con una cuenta. Los alias son para el teléfono que comparte sin Internet.");
     }
 
     private Map<String, Object> yo(Usuario u, String token, long expira) {

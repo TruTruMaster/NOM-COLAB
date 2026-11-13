@@ -35,6 +35,8 @@ public class ServicioSincronia {
 
     private static final Bitacora log = Bitacora.de(ServicioSincronia.class);
     private static final int LOTE = 300;
+    /** Lo que copia la sincronizacion no lo tecleo quien sincroniza: quien escribio que va en la bitacora aparte. */
+    private static final Map<String, Object> REACOMODO = Map.of("o", "r");
 
     private final ServicioEspacios espacios;
     private final ServicioDocumentos documentos;
@@ -130,11 +132,63 @@ public class ServicioSincronia {
 
     // ------------------------------------------------------------ copiar
 
+    /** Fase 13, parte B: el reloj mas alto de cada nodo en un estado tal como llega en JSON. */
+    @SuppressWarnings("unchecked")
+    static Map<String, Long> vector(Map<String, Object> estado) {
+        Map<String, Long> v = new LinkedHashMap<>();
+        if (estado == null) return v;
+        if (estado.get("bloques") instanceof Map<?, ?> bl)
+            for (Object campos : bl.values()) if (campos instanceof Map<?, ?> cs)
+                for (Object reg : cs.values()) if (reg instanceof Map<?, ?> rg && rg.get("n") != null && rg.get("t") instanceof Number t)
+                    v.merge(String.valueOf(rg.get("n")), t.longValue(), Math::max);
+        if (estado.get("seq") instanceof Map<?, ?> sq)
+            for (Object reg : sq.values()) if (reg instanceof Map<?, ?> rg)
+                for (String k : new String[] { "ins", "vis", "fmt" }) if (rg.get(k) instanceof List<?> l)
+                    for (Object o : l) if (o instanceof Map<?, ?> en && en.get("n") != null && en.get("t") instanceof Number t) {
+                        long fin = t.longValue();
+                        if ("ins".equals(k) && en.get("e") == null && en.get("x") instanceof String x) fin += Math.max(0, x.codePointCount(0, x.length()) - 1);
+                        v.merge(String.valueOf(en.get("n")), fin, Math::max);
+                    }
+        return v;
+    }
+
+    /** B.2/B.6: el telefono estuvo sin conexion con el otro servidor mas de 2 minutos. */
+    static final long UMBRAL_RAMA = Long.getLong("nom.umbralRama", 2 * 60_000L);   // solo las pruebas lo cambian
+
+    /** Los alias (y cuentas) que escribieron en un documento de aqui desde la ultima copia. */
+    private String quienes(List<Map<String, Object>> filas) {
+        java.util.LinkedHashSet<String> n = new java.util.LinkedHashSet<>();
+        for (Map<String, Object> f : filas) if (f.get("usuario") != null && n.size() < 6) n.add(String.valueOf(f.get("usuario")));
+        return String.join(", ", n);
+    }
+
+    /** Manda a alla quien escribio que en este documento (desde la ultima vez). */
+    private void mandarActividad(Espacio.Sincronia s, Documento d, String rid) throws IOException {
+        long hasta = s.actividadHasta.getOrDefault(d.id, 0L);
+        List<Map<String, Object>> filas = documentos.actividadDesde(d.id, hasta);
+        if (filas.isEmpty()) return;
+        Map<String, Object> c = new LinkedHashMap<>();
+        c.put("filas", filas);
+        c.put("via", "teléfono de " + (s.usuario == null ? "su dueño" : s.usuario));
+        try {
+            pedir("POST", s.servidor + "/api/documentos/" + rid + "/actividad-externa", s.token, c);
+        } catch (ErrorRemoto ex) {
+            if (ex.codigo != 404) throw ex;   // un servidor de antes no tiene esta ruta: se omite
+        }
+        long ultima = hasta;
+        for (Map<String, Object> f : filas) if (f.get("t") instanceof Number t) ultima = Math.max(ultima, t.longValue());
+        s.actividadHasta.put(d.id, ultima);
+    }
+
     @SuppressWarnings("unchecked")
     private synchronized Map<String, Object> sincronizarEspacio(Espacio e) {
         Espacio.Sincronia s = e.sincronia;
         Map<String, Object> r = new LinkedHashMap<>();
-        int subidas = 0, bajadas = 0, nuevosAqui = 0, nuevosAlla = 0;
+        int subidas = 0, bajadas = 0, nuevosAqui = 0, nuevosAlla = 0, ramas = 0;
+        if (s.bases == null) s.bases = new LinkedHashMap<>();
+        if (s.actividadHasta == null) s.actividadHasta = new LinkedHashMap<>();
+        long ahora = System.currentTimeMillis();
+        boolean estuvoSinRed = s.sinRedDesde > 0 && ahora - s.sinRedDesde > UMBRAL_RAMA;
         try {
             String base = s.servidor, tok = s.token, rem = s.espacioRemoto;
             List<Object> remotos = (List<Object>) pedir("GET", base + "/api/espacios/" + rem + "/documentos", tok, null);
@@ -171,6 +225,35 @@ public class ServicioSincronia {
                 boolean subir = !Long.valueOf(d.modificado).equals(s.copiados.get(d.id));
                 boolean bajar = !Long.valueOf(remMod).equals(s.remotos.get(rid));
                 if (!subir && !bajar) continue;
+                // Fase 13, B.6: el telefono estuvo sin conexion y alla tambien cambio: rama del telefono
+                // (el original de alla no se toca; este documento sigue en la rama).
+                if (subir && bajar && estuvoSinRed && s.bases.containsKey(d.id)) {
+                    Map<String, Object> cd = null;
+                    try { cd = (Map<String, Object>) pedir("POST", base + "/api/documentos/" + rid + "/cambios-desde", tok, Map.of("base", s.bases.get(d.id), "nodos", List.of(), "desde", s.sinRedDesde)); }
+                    catch (ErrorRemoto ex) { if (ex.codigo != 404) throw ex; }
+                    if (cd != null && Boolean.TRUE.equals(cd.get("otros"))) {
+                        List<Map<String, Object>> filas = documentos.actividadDesde(d.id, s.actividadHasta.getOrDefault(d.id, 0L));
+                        String quien = quienes(filas);
+                        String nombre = d.nombre + " — rama del teléfono de " + (s.usuario == null ? "su dueño" : s.usuario) + (quien.isEmpty() ? "" : " (" + quien + ")");
+                        if (nombre.length() > 120) nombre = nombre.substring(0, 119) + "…";
+                        Map<String, Object> cuerpo = new LinkedHashMap<>();
+                        cuerpo.put("nombre", nombre);
+                        cuerpo.put("ops", operaciones((Map<String, Object>) json.leer(new String(json.escribir(documentos.estadoParaCopiar(d.id)), StandardCharsets.UTF_8))));
+                        cuerpo.put("base", s.bases.get(d.id));
+                        cuerpo.put("nodos", List.of());
+                        cuerpo.put("motivo", "telefono");
+                        cuerpo.put("desde", s.sinRedDesde);
+                        Map<String, Object> rama = (Map<String, Object>) pedir("POST", base + "/api/documentos/" + rid + "/ramas", tok, cuerpo);
+                        String ramaId = String.valueOf(rama.get("id"));
+                        mandarActividad(s, d, ramaId);
+                        s.docs.put(d.id, ramaId);
+                        s.copiados.put(d.id, documentos.requerir(d.id).modificado);
+                        s.remotos.put(ramaId, rama.get("modificado") instanceof Number n ? n.longValue() : 0L);
+                        s.bases.remove(d.id);
+                        ramas++;
+                        continue;
+                    }
+                }
                 if (subir) {
                     List<Operacion> ops = operaciones((Map<String, Object>) json.leer(new String(json.escribir(documentos.estadoParaCopiar(d.id)), StandardCharsets.UTF_8)));
                     for (int i = 0; i < ops.size(); i += LOTE) {
@@ -182,21 +265,26 @@ public class ServicioSincronia {
                         subidas += ((Number) res.getOrDefault("aplicadas", 0)).intValue();
                     }
                 }
+                if (subir) mandarActividad(s, d, rid);
                 Map<String, Object> abierto = (Map<String, Object>) pedir("GET", base + "/api/documentos/" + rid, tok, null);
                 bajadas += documentos.fusionarExterno(d.id, operaciones((Map<String, Object>) abierto.get("estado")), "Sincronización con " + s.servidor.replaceFirst("^https?://", ""));
                 s.copiados.put(d.id, documentos.requerir(d.id).modificado);
                 Object doc = abierto.get("documento");
                 s.remotos.put(rid, doc instanceof Map<?, ?> dm && dm.get("modificado") instanceof Number n ? n.longValue() : remMod);
+                // La base para la proxima vez: lo que alla tiene ahora (ya con lo de aqui).
+                s.bases.put(d.id, vector((Map<String, Object>) abierto.get("estado")));
             }
             s.ultima = System.currentTimeMillis();
             s.estado = "ok";
             s.error = null;
+            s.sinRedDesde = 0;
         } catch (ErrorRemoto ex) {
             s.estado = ex.codigo == 401 ? "sesion" : "error";
             s.error = ex.codigo == 401 ? "La sesión en el otro NOM-COLAB venció: vuelve a conectar el espacio." : ex.getMessage();
         } catch (IOException ex) {
             s.estado = "sin-red";
             s.error = "Sin conexión con el otro NOM-COLAB; se vuelve a intentar solo.";
+            if (s.sinRedDesde == 0) s.sinRedDesde = ahora;
         }
         espacios.guardar(e);
         r.put("estado", s.estado);
@@ -206,6 +294,7 @@ public class ServicioSincronia {
         r.put("bajadas", bajadas);
         r.put("nuevosAqui", nuevosAqui);
         r.put("nuevosAlla", nuevosAlla);
+        r.put("ramas", ramas);
         r.put("documentos", s.docs.size());
         return r;
     }
@@ -240,7 +329,7 @@ public class ServicioSincronia {
                         for (String k : ks.subList(i, Math.min(ks.size(), i + 300))) trozo.put(k, g.getValue().get(k));
                         long t = relojes.get(g.getKey())[0];
                         String n = nodos.get(g.getKey());
-                        ops.add(new Operacion("sx:" + n + ":" + t + ":" + b.getKey() + (parte > 0 ? ":" + parte : ""), b.getKey(), trozo, t, n));
+                        ops.add(new Operacion("sx:" + n + ":" + t + ":" + b.getKey() + (parte > 0 ? ":" + parte : ""), b.getKey(), trozo, t, n, null, REACOMODO));
                     }
                 }
             }
@@ -259,7 +348,7 @@ public class ServicioSincronia {
                         s.remove("n");
                         s.put("k", k);
                         String n = String.valueOf(en.get("n"));
-                        ops.add(new Operacion("sx:" + k + ":" + n + ":" + t.longValue() + ":" + b.getKey(), b.getKey(), Map.of(), t.longValue(), n, s));
+                        ops.add(new Operacion("sx:" + k + ":" + n + ":" + t.longValue() + ":" + b.getKey(), b.getKey(), Map.of(), t.longValue(), n, s, REACOMODO));
                     }
                 }
             }

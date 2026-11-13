@@ -18,6 +18,7 @@ import mx.wack.nom.core.crdt.EstadoDocumento;
 import mx.wack.nom.core.crdt.MotorCRDT;
 import mx.wack.nom.core.crdt.Operacion;
 import mx.wack.nom.core.crdt.Registro;
+import mx.wack.nom.core.crdt.Replica;
 import mx.wack.nom.core.crdt.Secuencia;
 import mx.wack.nom.core.modelo.Documento;
 import mx.wack.nom.core.modelo.Espacio;
@@ -128,7 +129,10 @@ public class ServicioDocumentos {
     public List<Documento> listar(Usuario u, String espacioId) {
         Permiso p = espacios.exigir(espacios.requerir(espacioId), u, Permiso.LECTURA);
         List<Documento> r = new ArrayList<>();
-        for (Documento d : repo.delEspacio(espacioId)) if (d.eliminado <= 0) r.add(vistaPara(d, u, p));
+        List<Documento> todos = repo.delEspacio(espacioId);
+        Map<String, Integer> ramas = new HashMap<>();
+        for (Documento d : todos) if (d.ramaDe != null && d.eliminado <= 0 && "abierta".equals(d.ramaEstado)) ramas.merge(d.ramaDe, 1, Integer::sum);
+        for (Documento d : todos) if (d.eliminado <= 0) { Documento c = vistaPara(d, u, p); c.ramasAbiertas = ramas.getOrDefault(d.id, 0); r.add(c); }
         return r;
     }
 
@@ -274,8 +278,17 @@ public class ServicioDocumentos {
         Permiso p = permiso(u, d, Permiso.LECTURA);
         Espacio e = espacios.requerir(d.espacioId);
         Map<String, Object> r = new LinkedHashMap<>();
-        r.put("documento", vistaPara(d, u, p));
+        r.put("documento", conRamas(vistaPara(d, u, p)));
         r.put("permiso", p);
+        // Fase 13, parte B: si es una rama, de que documento; el original dice cuantas tiene abiertas.
+        if (d.ramaDe != null) {
+            Documento o = repo.porId(d.ramaDe).orElse(null);
+            Map<String, Object> ri = new LinkedHashMap<>();
+            ri.put("de", d.ramaDe);
+            ri.put("original", o == null ? null : o.nombre);
+            ri.put("existe", o != null && o.eliminado <= 0);
+            r.put("rama", ri);
+        }
         Map<String, Object> esp = new LinkedHashMap<>();
         esp.put("id", e.id);
         esp.put("nombre", e.nombre);
@@ -1601,6 +1614,263 @@ public class ServicioDocumentos {
         return r;
     }
 
+    // ------------------------------------------------------------ fase 13, parte B: ramas
+
+    private static final List<String> MOTIVOS_RAMA = List.of("cambios", "entrega", "protegido", "telefono");
+
+    /**
+     * B.3 ¿Alguien mas cambio el documento despues de la base de quien estuvo sin conexion? base: el
+     * reloj mas alto que tenia de cada nodo; nodos: los suyos (no cuentan); desde: cuando se quedo
+     * sin conexion (para decir quien, segun la bitacora).
+     */
+    public Map<String, Object> cambiosDesdeBase(Usuario u, String docId, Map<String, Long> base, List<String> nodos, long desde) {
+        Documento d = requerir(docId);
+        Permiso p = permiso(u, d, Permiso.LECTURA);
+        Map<String, Object> r;
+        synchronized (candado(docId)) { r = new LinkedHashMap<>(Replica.cambiosDeOtros(repo.estado(docId), base, nodos)); }
+        cerrarRachas(docId, true);
+        Set<String> personas = new LinkedHashSet<>();
+        if (desde > 0) for (Map<String, Object> a : repo.actividad(docId, 3000)) {
+            if (num(a.get("t")) < desde) break;
+            if (u.id.equals(String.valueOf(a.get("usuarioId"))) || a.get("usuario") == null) continue;
+            personas.add(String.valueOf(a.get("usuario")));
+        }
+        r.put("personas", new ArrayList<>(personas));
+        r.put("protegido", d.protegido);
+        r.put("entregaLimite", d.entregaLimite);
+        r.put("entregaVencida", entregaVencida(d) && p != Permiso.PROPIETARIO);
+        r.put("permiso", p);
+        r.put("nombre", d.nombre);
+        return r;
+    }
+
+    private static String fechaCorta(long ms) {
+        java.time.ZonedDateTime z = java.time.Instant.ofEpochMilli(ms <= 0 ? System.currentTimeMillis() : ms).atZone(java.time.ZoneId.of("America/Mexico_City"));
+        String[] meses = { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic" };
+        return z.getDayOfMonth() + " " + meses[z.getMonthValue() - 1] + " " + String.format("%02d:%02d", z.getHour(), z.getMinute());
+    }
+
+    /** «Informe final — rama de Ana (sin conexión, 13 nov 10:42)» y sus variantes. */
+    static String nombreRama(String original, String autor, long desde, String motivo) {
+        String base = original == null ? "Documento" : original;
+        String fin = switch (motivo) {
+            case "entrega" -> " — " + autor + " (editado después de la fecha límite)";
+            case "protegido" -> " — rama de " + autor + " (sin conexión; lo protegieron mientras tanto)";
+            default -> " — rama de " + autor + " (sin conexión, " + fechaCorta(desde) + ")";
+        };
+        String n = base + fin;
+        return n.length() > 120 ? base.substring(0, Math.max(1, 120 - fin.length())) + fin : n;
+    }
+
+    private static Map<String, Object> opAMapa(Operacion op) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", op.id());
+        m.put("bloque", op.bloque());
+        m.put("campos", op.campos());
+        m.put("t", op.t());
+        m.put("n", op.n());
+        if (op.s() != null) m.put("s", op.s());
+        if (op.m() != null) m.put("m", op.m());
+        return m;
+    }
+
+    /**
+     * B.4 La rama: un documento nuevo en el mismo espacio, con todo lo que la persona tenia en su
+     * equipo (la base mas sus cambios, como replica exacta) y ligado al original, que NO se toca.
+     * Si el original ya se borro (o esta en la papelera), queda como documento aparte «(recuperado)».
+     * Puede crearla quien edita en el espacio aunque el original ya este en solo lectura (fecha limite).
+     */
+    public Documento crearRama(Usuario u, String docId, String nombre, List<Operacion> ops, Map<String, Long> base,
+                               List<String> nodos, List<Operacion> propios, String motivo, long desde) {
+        Documento original = repo.porId(docId).orElse(null);
+        if (original == null) throw ErrorNom.noEncontrado("El documento original");
+        Espacio e = espacios.requerir(original.espacioId);
+        Permiso p = espacios.exigir(e, u, Permiso.EDICION);
+        boolean recuperado = original.eliminado > 0;
+        String m = motivo != null && MOTIVOS_RAMA.contains(motivo) ? motivo : "cambios";
+        String n = nombre == null || nombre.isBlank()
+                ? (recuperado ? (original.nombre.length() > 105 ? original.nombre.substring(0, 105) : original.nombre) + " (recuperado)" : nombreRama(original.nombre, u.nombre, desde, m))
+                : nombre.trim();
+        if (n.length() > 120) n = n.substring(0, 120);
+        Documento d = crear(u, e.id, n, original.modo == null ? "TEXTO" : original.modo.name(), ops);
+        // La copia trae el nombre del original con su reloj: el de la rama va encima.
+        renombrar(u, d.id, n);
+        d = repo.porId(d.id).orElseThrow();
+        d.carpeta = original.carpeta;
+        long ahora = System.currentTimeMillis();
+        if (!recuperado) {
+            d.ramaDe = original.id;
+            d.ramaBase = base == null ? new LinkedHashMap<>() : new LinkedHashMap<>(base);
+            d.ramaNodos = nodos == null ? new ArrayList<>() : new ArrayList<>(nodos.subList(0, Math.min(nodos.size(), 200)));
+            d.ramaAutorId = u.id;
+            d.ramaAutor = u.nombre;
+            d.ramaCreada = ahora;
+            d.ramaEstado = "abierta";
+            d.ramaMotivo = m;
+            d.ramaDesde = desde;
+        }
+        repo.guardar(d);
+        if (propios != null && !propios.isEmpty()) {
+            List<Map<String, Object>> l = new ArrayList<>();
+            for (Operacion op : propios) { if (op != null && l.size() < 20_000) l.add(opAMapa(op)); }
+            Map<String, Object> anexo = new LinkedHashMap<>();
+            anexo.put("propios", l);
+            anexo.put("creada", ahora);
+            repo.guardarAnexo(d.id, "rama", anexo);
+        }
+        // Avisos: a quien la creo y al propietario del espacio.
+        if (!recuperado) {
+            for (String uid : new LinkedHashSet<>(List.of(u.id, e.propietarioId))) {
+                Map<String, Object> a = new LinkedHashMap<>();
+                a.put("tipo", "rama");
+                a.put("docId", d.id);
+                a.put("documento", d.nombre);
+                a.put("originalId", original.id);
+                a.put("original", original.nombre);
+                a.put("por", u.nombre);
+                a.put("motivo", m);
+                try { espacios.agregarAviso(e.id, uid, a); difusor.avisarUsuario(uid, "aviso", a); } catch (RuntimeException ex) { log.aviso("No se pudo avisar la rama: {}", ex.getMessage()); }
+            }
+            difusor.avisarDocumento(original.id, "rama", Map.of("accion", "creada", "id", d.id, "nombre", d.nombre, "autor", u.nombre));
+        }
+        return conRamas(vistaPara(d, u, p));
+    }
+
+    private int ramasAbiertas(Documento d) {
+        int n = 0;
+        for (Documento x : repo.delEspacio(d.espacioId))
+            if (d.id.equals(x.ramaDe) && x.eliminado <= 0 && "abierta".equals(x.ramaEstado)) n++;
+        return n;
+    }
+
+    private Documento conRamas(Documento copia) {
+        copia.ramasAbiertas = ramasAbiertas(copia);
+        return copia;
+    }
+
+    /** Las ramas de un documento (abiertas y fusionadas; las que estan en la papelera no). */
+    public List<Map<String, Object>> ramas(Usuario u, String docId) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.LECTURA);
+        List<Map<String, Object>> r = new ArrayList<>();
+        for (Documento x : repo.delEspacio(d.espacioId)) {
+            if (!docId.equals(x.ramaDe) || x.eliminado > 0) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", x.id);
+            m.put("nombre", x.nombre);
+            m.put("autor", x.ramaAutor);
+            m.put("autorId", x.ramaAutorId);
+            m.put("creada", x.ramaCreada);
+            m.put("desde", x.ramaDesde);
+            m.put("estado", x.ramaEstado);
+            m.put("motivo", x.ramaMotivo);
+            m.put("modificado", x.modificado);
+            if (x.ramaFusionada > 0) { m.put("fusionada", x.ramaFusionada); m.put("fusionadaPor", x.ramaFusionadaPor); }
+            r.add(m);
+        }
+        r.sort((a, b) -> ("abierta".equals(a.get("estado")) == "abierta".equals(b.get("estado")))
+                ? Long.compare(num(b.get("creada")), num(a.get("creada"))) : "abierta".equals(a.get("estado")) ? -1 : 1);
+        return r;
+    }
+
+    /** Aplica muchas operaciones en lotes (el servidor acepta hasta 300 por envio). */
+    private Map<String, Object> aplicarEnLotes(Usuario u, String docId, List<Operacion> ops, String cliente, String dispositivo) {
+        int aplicadas = 0, rechazadas = 0;
+        String motivo = null;
+        for (int i = 0; i < ops.size(); i += 300) {
+            Map<String, Object> r = aplicar(u, docId, ops.subList(i, Math.min(ops.size(), i + 300)), cliente, dispositivo);
+            aplicadas += (int) num(r.get("aplicadas"));
+            if (r.get("rechazadas") instanceof List<?> l) rechazadas += l.size();
+            if (motivo == null && r.get("motivo") != null) motivo = String.valueOf(r.get("motivo"));
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("aplicadas", aplicadas);
+        m.put("rechazadas", rechazadas);
+        if (motivo != null) m.put("motivo", motivo);
+        return m;
+    }
+
+    /**
+     * B.5 Fusionar la rama en el original: antes se guarda una version «Antes de fusionar la rama de
+     * Ana» (para poder regresar) y luego el original recibe todo lo de la rama (el CRDT junta sin
+     * perder lo de los demas; el nombre del original no cambia). elecciones: en los campos que
+     * cambiaron los dos lados, cual se queda ("bloque|campo" -> "rama" u "original"). Las partes con
+     * dueno se respetan: solo su dueno (o el propietario del espacio) las cambia al fusionar.
+     */
+    public Map<String, Object> fusionarRama(Usuario u, String ramaId, Map<String, String> elecciones) {
+        Documento rama = requerir(ramaId);
+        if (rama.ramaDe == null) throw ErrorNom.invalido("Este documento no es una rama", null);
+        if ("fusionada".equals(rama.ramaEstado)) throw new ErrorNom(ErrorNom.CONFLICTO, "Esta rama ya se fusionó con el original");
+        permiso(u, rama, Permiso.LECTURA);
+        Documento original = repo.porId(rama.ramaDe).filter(x -> x.eliminado <= 0).orElse(null);
+        if (original == null) throw new ErrorNom(ErrorNom.NO_EXISTE, "El original ya no existe o está en la papelera: deja la rama como documento aparte");
+        permiso(u, original, Permiso.EDICION);
+        EstadoDocumento er;
+        synchronized (candado(ramaId)) { er = repo.estado(ramaId).copia(); }
+        Map<String, Object> antes = new LinkedHashMap<>();
+        synchronized (candado(original.id)) {
+            EstadoDocumento eo = repo.estado(original.id);
+            nuevaVersion(original, eo, u, "Antes de fusionar la rama de " + (rama.ramaAutor == null ? "otra persona" : rama.ramaAutor));
+            if (elecciones != null) for (String k : elecciones.keySet()) {
+                String[] bc = k.split("\\|", 2);
+                if (bc.length == 2) antes.put(k, eo.valor(bc[0], bc[1]));
+            }
+        }
+        int versionAntes = original.version;
+        // Todo lo de la rama, sin el nombre (gana el del original). Es reacomodo: no lo tecleo quien fusiona.
+        List<Operacion> ops = Replica.operaciones(er, Set.of("nombre"), Map.of("o", "r"));
+        Map<String, Object> r = new LinkedHashMap<>(aplicarEnLotes(u, original.id, ops, "rama-" + ramaId, "Fusión de una rama"));
+        // Donde los dos cambiaron el mismo campo, lo que se eligio.
+        if (elecciones != null && !elecciones.isEmpty()) {
+            List<Operacion> elegidas = new ArrayList<>();
+            synchronized (candado(original.id)) {
+                EstadoDocumento eo = repo.estado(original.id);
+                long t = eo.reloj;
+                String n = nodoServidor();
+                for (var x : elecciones.entrySet()) {
+                    String[] bc = x.getKey().split("\\|", 2);
+                    if (bc.length != 2 || bc[0].length() > 64 || bc[1].length() > 200 || ("_doc".equals(bc[0]) && "nombre".equals(bc[1]))) continue;
+                    Object quiero = "rama".equals(x.getValue()) ? er.valor(bc[0], bc[1]) : antes.get(x.getKey());
+                    if (java.util.Objects.equals(quiero, eo.valor(bc[0], bc[1]))) continue;
+                    Map<String, Object> campos = new LinkedHashMap<>();
+                    campos.put(bc[1], quiero);
+                    t++;
+                    elegidas.add(new Operacion(n + ":elige" + t, bc[0], campos, t, n, null, Map.of("o", "r")));
+                }
+            }
+            if (!elegidas.isEmpty()) {
+                Map<String, Object> r2 = aplicarEnLotes(u, original.id, elegidas, "rama-" + ramaId, "Fusión de una rama");
+                r.put("elegidas", r2.get("aplicadas"));
+            }
+        }
+        rama.ramaEstado = "fusionada";
+        rama.ramaFusionada = System.currentTimeMillis();
+        rama.ramaFusionadaPor = u.nombre;
+        repo.guardar(rama);
+        difusor.avisarDocumento(original.id, "rama", Map.of("accion", "fusionada", "id", ramaId, "por", u.nombre));
+        difusor.avisarDocumento(ramaId, "rama", Map.of("accion", "fusionada", "id", ramaId, "por", u.nombre));
+        difusor.avisarEspacio(original.espacioId, "documentos", Map.of("accion", "actualizado", "id", ramaId));
+        r.put("original", original.id);
+        r.put("versionAntes", versionAntes);
+        return r;
+    }
+
+    /** B.5 Dejar la rama como documento aparte: se quita el lazo con el original (no se borra nada). */
+    public Documento apartarRama(Usuario u, String ramaId) {
+        Documento d = requerir(ramaId);
+        Permiso p = permiso(u, d, Permiso.EDICION);
+        if (d.ramaDe == null) throw ErrorNom.invalido("Este documento no es una rama", null);
+        String de = d.ramaDe;
+        d.ramaDe = null;
+        d.ramaEstado = null;
+        d.ramaBase = null;
+        d.ramaNodos = null;
+        repo.guardar(d);
+        difusor.avisarDocumento(de, "rama", Map.of("accion", "aparte", "id", ramaId));
+        difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
+        return vistaPara(d, u, p);
+    }
+
     // ------------------------------------------------------------ 6.5 sincronizar con otro servidor
 
     /** Copia del estado, para mandarlo a otro servidor. */
@@ -1634,6 +1904,64 @@ public class ServicioDocumentos {
         }
         if (!aplicadas.isEmpty()) difusor.ops(docId, Map.of("ops", aplicadas, "cliente", "sincronia"));
         return aplicadas.size();
+    }
+
+    /**
+     * Fase 13: la bitacora de un documento despues de 'desde' para mandarla al otro servidor al
+     * sincronizar (asi lo que escribio un alias queda a su nombre alla). Sin lo que ya vino de alla.
+     */
+    List<Map<String, Object>> actividadDesde(String docId, long desde) {
+        cerrarRachas(docId, true);
+        List<Map<String, Object>> l = new ArrayList<>();
+        for (Map<String, Object> a : repo.actividad(docId, 5000)) {
+            if (num(a.get("t")) <= desde) break;
+            String uid = String.valueOf(a.get("usuarioId"));
+            if ("sincronia".equals(uid) || Boolean.TRUE.equals(a.get("externo"))) continue;
+            Map<String, Object> x = new LinkedHashMap<>(a);
+            x.remove("cliente");
+            cuentas.porId(uid).ifPresent(u -> { if (u.alias) x.put("alias", true); if (u.nube != null) x.put("nube", u.nube); });
+            l.add(x);
+        }
+        Collections.reverse(l);
+        return l;
+    }
+
+    /**
+     * Fase 13: bitacora que llega del telefono que comparte al subir el espacio: lo que escribio cada
+     * quien alla (un alias queda como «Colibri 37, sin conexion»; una cuenta que entro con pase, a su
+     * nombre, porque tiene el mismo id). Lo manda quien sincroniza (puede editar el espacio).
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> actividadExterna(Usuario u, String docId, List<Object> filas, String via) {
+        Documento d = requerir(docId);
+        permiso(u, d, Permiso.EDICION);
+        int n = 0;
+        String origen = via == null || via.isBlank() ? "otro NOM-COLAB" : (via.length() > 60 ? via.substring(0, 60) : via);
+        for (Object o : filas == null ? List.<Object>of() : filas.subList(0, Math.min(filas.size(), 500))) {
+            if (!(o instanceof Map<?, ?> m)) continue;
+            Map<String, Object> f = (Map<String, Object>) m;
+            String uid = String.valueOf(f.get("usuarioId"));
+            String nombre = String.valueOf(f.getOrDefault("usuario", "Alguien"));
+            if (nombre.length() > 40) nombre = nombre.substring(0, 40);
+            boolean propia = f.get("nube") != null && cuentas.porId(uid).filter(x -> !x.sinContrasena()).isPresent();
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("t", num(f.get("t")));
+            a.put("inicio", num(f.get("inicio")));
+            a.put("usuarioId", propia ? uid : "ext:" + (uid.length() > 24 ? uid.substring(0, 24) : uid));
+            a.put("usuario", propia ? nombre : nombre + (Boolean.TRUE.equals(f.get("alias")) ? ", sin conexión" : ""));
+            a.put("color", f.get("color") instanceof String c && c.matches("#[0-9A-Fa-f]{6}") ? c : "#6B6875");
+            a.put("cliente", "externo");
+            a.put("dispositivo", "Teléfono que comparte (" + origen + ")");
+            for (String k : List.of("operaciones", "escritas", "borradas", "tecleadas", "pegadas", "citadas")) a.put(k, Math.max(0, num(f.get(k))));
+            a.put("bloques", f.get("bloques") instanceof List<?> l ? l.subList(0, Math.min(l.size(), 12)) : List.of());
+            a.put("campos", f.get("campos") instanceof List<?> l ? l.subList(0, Math.min(l.size(), 12)) : List.of());
+            a.put("pegados", f.get("pegados") instanceof List<?> l ? l.subList(0, Math.min(l.size(), 100)) : List.of());
+            a.put("externo", true);
+            a.put("via", origen);
+            repo.anotarActividad(docId, a);
+            n++;
+        }
+        return Map.of("anotadas", n);
     }
 
     /** Documento nuevo que llego de otro servidor (lo crea el propietario del espacio). */

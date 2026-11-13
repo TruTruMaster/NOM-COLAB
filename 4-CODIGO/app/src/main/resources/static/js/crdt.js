@@ -304,6 +304,23 @@
       const lento = setTimeout(() => { if (this.enviando) this._fijarEstado("sin-red"); }, 2500);
       const lote = this.pendientes.slice(0, 300);
       try {
+        // Fase 13, parte B: lo editado sin conexión. Si otros cambiaron el documento mientras tanto,
+        // lo de esta persona va a una RAMA y el original no se toca; si no, se manda como siempre.
+        if (NOM.ramas && !this.opc.local && !this.opc.soloMemoria && NOM.ramas.marca(this.id)) {
+          const d = await NOM.ramas.decidir({ docId: this.id, estado: this.estado, pendientes: this.pendientes, nodo: this.nodo,
+            nombre: this.valor("_doc", "nombre"), modo: (this.opc.meta && this.opc.meta.documento && this.opc.meta.documento.modo) || this.valor("_doc", "modo"),
+            espacioId: this.opc.meta && this.opc.meta.espacio && this.opc.meta.espacio.id });
+          if (d && d.tipo) {
+            this.descartarCola();
+            this.relojDesconexion = null;
+            this.enviadasSinRed = [];
+            this.espera = 0;
+            this.sinRed = false;
+            this._fijarEstado("ok");
+            setTimeout(() => this.opc.alRama ? this.opc.alRama(d) : NOM.ramas.avisar(d, this.valor("_doc", "nombre")), 0);
+            return;
+          }
+        }
         const r = await NOM.api.post(`/api/documentos/${this.id}/ops`, { cliente: this.nodo, ops: lote, dispositivo: NOM.api.dispositivo }, { ms: 12000 });
         // 3.5: partes con dueño. El servidor no aplicó esas operaciones; el editor vuelve a cargar.
         if (r && r.rechazadas && r.rechazadas.length) setTimeout(() => this.opc.alRechazadas && this.opc.alRechazadas(r), 0);
@@ -320,6 +337,7 @@
       } catch (e) {
         if (e.red) {
           if (this.relojDesconexion == null) this.relojDesconexion = this.relojServidor || 0;
+          if (NOM.ramas && !this.opc.local) NOM.ramas.marcar(this.id, this.estado, { meta: this.opc.meta });
           this.sinRed = true;
           this.espera = Math.min((this.espera || 500) * 2, 4000);
           this._fijarEstado("sin-red");
@@ -354,6 +372,8 @@
     reanudar() { this.detenido = false; this.espera = 0; this._programar(); }
     marcarSinRed() {
       this.sinRed = true;
+      // Fase 13, parte B: la base (lo que se tenía de cada nodo) para saber después si otros cambiaron algo.
+      if (NOM.ramas && !this.opc.local && !this.opc.soloMemoria) NOM.ramas.marcar(this.id, this.estado, { meta: this.opc.meta });
       // 6.3: desde aquí, lo que cambien los demás se compara con lo que yo cambie sin conexión.
       if (this.relojDesconexion == null) this.relojDesconexion = this.relojServidor || 0;
       if (this.pendientes.length) this._fijarEstado("sin-red");

@@ -40,6 +40,12 @@ public class DocumentosApi {
     public record Destino(String espacioId) { }
     public record Carpeta(String carpeta) { }
     public record Destacado(Boolean destacado) { }
+    /** Fase 13, parte B. */
+    public record Base(Map<String, Long> base, List<String> nodos, Long desde) { }
+    public record NuevaRama(String nombre, List<Operacion> ops, Map<String, Long> base, List<String> nodos, List<Operacion> propios, String motivo, Long desde) { }
+    public record Fusion(Map<String, String> elecciones) { }
+    public record AccionRama(String accion) { }
+    public record ActividadExterna(List<Object> filas, String via) { }
 
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
@@ -52,6 +58,42 @@ public class DocumentosApi {
     @GetMapping("/{id}")
     public Map<String, Object> abrir(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
         return documentos.abrir(u, id);
+    }
+
+    // ---- fase 13, parte B: ramas de lo editado sin Internet
+
+    /** ¿Alguien mas lo cambio desde la base de quien estuvo sin conexion? */
+    @PostMapping("/{id}/cambios-desde")
+    public Map<String, Object> cambiosDesde(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Base b) {
+        return documentos.cambiosDesdeBase(u, id, b.base(), b.nodos(), b.desde() == null ? 0 : b.desde());
+    }
+
+    @PostMapping("/{id}/ramas")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public Documento nuevaRama(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody NuevaRama r) {
+        return documentos.crearRama(u, id, r.nombre(), r.ops(), r.base(), r.nodos(), r.propios(), r.motivo(), r.desde() == null ? 0 : r.desde());
+    }
+
+    /** Lo que llega del telefono que comparte al sincronizar: quien escribio que alla. */
+    @PostMapping("/{id}/actividad-externa")
+    public Map<String, Object> actividadExterna(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody ActividadExterna a) {
+        return documentos.actividadExterna(u, id, a.filas(), a.via());
+    }
+
+    @GetMapping("/{id}/ramas")
+    public List<Map<String, Object>> ramas(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return documentos.ramas(u, id);
+    }
+
+    @PostMapping("/{id}/fusionar")
+    public Map<String, Object> fusionar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody(required = false) Fusion f) {
+        return documentos.fusionarRama(u, id, f == null ? null : f.elecciones());
+    }
+
+    @PutMapping("/{id}/rama")
+    public Documento rama(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody AccionRama a) {
+        if (a == null || !"aparte".equals(a.accion())) throw mx.wack.nom.core.servicio.ErrorNom.invalido("¿Qué hacer con la rama? (aparte)", "accion");
+        return documentos.apartarRama(u, id);
     }
 
     @DeleteMapping("/{id}")

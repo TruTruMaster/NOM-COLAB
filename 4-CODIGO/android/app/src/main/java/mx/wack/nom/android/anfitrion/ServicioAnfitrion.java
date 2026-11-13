@@ -34,6 +34,7 @@ import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
 import mx.wack.nom.core.servicio.ServicioFuentes;
 import mx.wack.nom.core.servicio.ServicioSincronia;
+import mx.wack.nom.core.servicio.ServicioPases;
 
 /**
  * El teléfono como servidor de NOM-COLAB. Corre en primer plano (con su notificación) para que
@@ -127,7 +128,22 @@ public class ServicioAnfitrion extends Service {
         // Mismos valores que application.properties del servidor de la computadora.
         Difusor difusor = new Difusor(5);
         ServicioCuentas cuentas = new ServicioCuentas(usuarios, cifrado, 5, 15, 72);
+        // Fase 13: en el teléfono que comparte no hay cuentas con contraseña. Las de antes se retiran
+        // (conservan su nombre como autor); se entra con alias o con la cuenta de la nube (pase).
+        cuentas.retirarCuentasConContrasena();
         ServicioEspacios espacios = new ServicioEspacios(espaciosRepo, docsRepo, cuentas, difusor, nodo, cifrado);
+        espacios.modoTelefono(true);
+        // A.2 Las nubes cuyos pases acepta este teléfono: la lista que trae el APK (pases/nubes.json).
+        ServicioPases pases = new ServicioPases(Json.YO);
+        try (java.io.InputStream in = getAssets().open("pases/nubes.json")) {
+            pases.confiarLista(new String(leerTodo(in), java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException e) { log.aviso("Sin lista de nubes para los pases: {}", e.getMessage()); }
+        // Solo en un APK de depuración (pruebas): nubes extra en un archivo aparte.
+        File extra = new File(getFilesDir(), "nubes-extra.json");
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 && extra.isFile()) {
+            try (java.io.InputStream in = new java.io.FileInputStream(extra)) { pases.confiarLista(new String(leerTodo(in), java.nio.charset.StandardCharsets.UTF_8)); }
+            catch (Exception e) { log.aviso("nubes-extra.json: {}", e.getMessage()); }
+        }
         documentos = new ServicioDocumentos(docsRepo, espacios, cuentas, difusor, cifrado, nodo);
         descubrimiento = new Descubrimiento(nodo, espaciosRepo, usuarios, Json.YO, true, 47474);
         // 6.5: copia de los espacios conectados con Azure o con el servidor propio (cuando hay Internet).
@@ -135,7 +151,7 @@ public class ServicioAnfitrion extends Service {
 
         // Fase 9: fuentes para investigar (cuando el teléfono tiene Internet) y la biblioteca del espacio.
         ServicioFuentes fuentes = new ServicioFuentes(espacios, espaciosRepo, Json.YO, cifrado);
-        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo, sincronia, fuentes));
+        http = new ServidorHttp(getAssets(), new ApiTelefono(cuentas, espacios, documentos, difusor, descubrimiento, nodo, sincronia, fuentes, pases));
         puerto = http.iniciar(8080);
         nodo.fijarPuerto(puerto);
 
@@ -173,6 +189,14 @@ public class ServicioAnfitrion extends Service {
         reloj.scheduleWithFixedDelay(seguro(() -> Respaldo.diario(filesDir)), 20, 3600, TimeUnit.SECONDS);
         activo = this;
         log.info("Servidor del teléfono en el puerto {} ({})", puerto, nodo.direcciones());
+    }
+
+    private static byte[] leerTodo(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+        return b.toByteArray();
     }
 
     private static Runnable seguro(Runnable r) {

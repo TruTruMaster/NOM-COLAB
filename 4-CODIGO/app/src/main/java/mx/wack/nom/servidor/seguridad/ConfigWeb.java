@@ -1,7 +1,6 @@
 package mx.wack.nom.servidor.seguridad;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -19,18 +18,10 @@ public class ConfigWeb implements WebMvcConfigurer {
         registry.addInterceptor(filtro)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/cuentas/registro", "/api/cuentas/sesion", "/api/cuentas/recuperar", "/api/red/info",
-                        "/api/enlaces/*", "/api/enlaces/*/invitado", "/api/recibos/verificar", "/api/proyeccion/**", "/api/ver/*");
+                        "/api/enlaces/*", "/api/enlaces/*/invitado", "/api/enlaces/*/alias", "/api/recibos/verificar", "/api/proyeccion/**", "/api/ver/*",
+                        "/api/cuentas/alias", "/api/cuentas/alias/entrar", "/api/cuentas/pase/llave", "/api/cuentas/pase/entrar");
     }
 
-    /**
-     * La app Android carga la interfaz desde sus propios archivos (file://) y
-     * habla con este servidor por la LAN, asi que la API acepta cualquier
-     * origen. No hay cookies: la sesion viaja en la cabecera Authorization.
-     */
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**").allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*").maxAge(3600);
-    }
+    // CORS: lo decide FiltroCors (la app desde sus archivos; la pagina de un telefono de la red
+    // local solo para iniciar sesion y pedir un pase; nadie mas).
 }

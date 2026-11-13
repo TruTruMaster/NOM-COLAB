@@ -99,6 +99,10 @@
         <div><h1>${esc(NOM.etiquetaEquipo())}</h1>
           <p class="sub">Lo que NOM-COLAB guarda en este ${api.empaquetada ? "teléfono" : "navegador"} y cuánto ocupa</p></div>
       </div>
+      ${!api.empaquetada ? `<section class="clay instalar-caja" data-instalar ${NOM.instalar && NOM.instalar.disponible() ? "" : "hidden"} style="padding:16px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <span class="modo-insignia" style="background:var(--acento-tenue);color:var(--acento-tinta)">${ico("monitor-down")}</span>
+        <span class="crece" style="min-width:220px"><b>Instalar en esta computadora</b><br><span class="suave chico" style="font-weight:650">Queda como un programa más: se abre desde el escritorio o el menú de inicio, también sin Internet (lo que crees sin red se sube solo al volver).</span></span>
+        <button class="btn primario" data-a="instalar">${ico("monitor-down")} Instalar</button></section>` : ""}
       <section class="clay" style="padding:20px;display:flex;flex-direction:column;gap:12px">
         <div class="fila-e"><b style="font-size:20px">${esc(bytes(inv.total))} usados</b><span class="suave chico" style="font-weight:700">de ${esc(bytes(limite))} que permite este ${api.empaquetada ? "teléfono" : "navegador"}</span></div>
         <div style="height:12px;border-radius:999px;background:var(--sup-2);border:1px solid var(--borde);overflow:hidden" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Espacio usado">
@@ -132,6 +136,12 @@
           `<a class="btn chico" href="#/local/${esc(d.id)}">Abrir</a>`)).join("")
           || `<p class="suave chico" style="padding:4px 12px;font-weight:650">No hay documentos solo en este equipo.</p>`}</div>
       </section>`;
+    const cajaInstalar = $("[data-instalar]", cont);
+    if (cajaInstalar) {
+      $("[data-a=instalar]", cajaInstalar).onclick = async () => { if (await NOM.instalar.pedir()) cajaInstalar.hidden = true; };
+      const alCambiar = () => { if (cajaInstalar.isConnected) cajaInstalar.hidden = !NOM.instalar.disponible(); else document.removeEventListener("nom-instalable", alCambiar); };
+      document.addEventListener("nom-instalable", alCambiar);
+    }
     if (NOM.anfitrion) NOM.anfitrion.panel(cont);
 
     $$("[data-a=quitar]", cont).forEach((b) => (b.onclick = () => {

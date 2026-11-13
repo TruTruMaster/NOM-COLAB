@@ -62,6 +62,12 @@ public class Espacio {
         public long ultima;
         public String estado;
         public String error;
+        /** Fase 13, parte B: desde cuando no hay conexion con el otro servidor (0 = la ultima salio bien). */
+        public long sinRedDesde;
+        /** documento de aqui -> la base: el reloj mas alto de cada nodo del de alla al terminar la ultima copia. */
+        public Map<String, Map<String, Long>> bases = new LinkedHashMap<>();
+        /** documento de aqui -> hasta cuando ya se mando su bitacora (quien escribio que) al otro servidor. */
+        public Map<String, Long> actividadHasta = new LinkedHashMap<>();
     }
 
     public Permiso permisoDe(String usuarioId) {

@@ -319,6 +319,32 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String estadoServidor() { return ServicioAnfitrion.estadoJson(); }
 
+        /**
+         * Fase 13: la llave con la que el dueño de este teléfono entra a su propio servidor (su alias).
+         * Vive en la carpeta privada de la app que no se respalda (no va en "Exportar todo"): otra app
+         * del teléfono que hable con 127.0.0.1 no la conoce.
+         */
+        @JavascriptInterface
+        public String llaveDueno() {
+            File f = new File(Build.VERSION.SDK_INT >= 21 ? getNoBackupFilesDir() : getFilesDir(), "llave-dueno");
+            try {
+                if (f.isFile() && f.length() >= 32) {
+                    try (FileInputStream in = new FileInputStream(f)) {
+                        byte[] b = new byte[(int) f.length()];
+                        int n = in.read(b);
+                        return new String(b, 0, Math.max(0, n), StandardCharsets.US_ASCII).trim();
+                    }
+                }
+                byte[] r = new byte[32];
+                new java.security.SecureRandom().nextBytes(r);
+                String llave = Base64.encodeToString(r, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
+                try (FileOutputStream o = new FileOutputStream(f)) { o.write(llave.getBytes(StandardCharsets.US_ASCII)); }
+                return llave;
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
         /** Hoja de compartir de Android (WhatsApp, correo, Bluetooth…) con un texto, p. ej. la dirección del servidor. */
         @JavascriptInterface
         public void compartirTexto(String texto) {

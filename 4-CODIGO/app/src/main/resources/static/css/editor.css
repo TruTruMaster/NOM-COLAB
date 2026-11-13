@@ -593,6 +593,19 @@
 .banda.cambios { color: var(--tinta); }
 .banda.cambios > .ico { color: #E0A100; }
 .banda .btn.chico { min-height: 30px; }
+/* Fase 13, parte B: ramas de lo editado sin Internet */
+.banda.rama { color: var(--tinta); }
+.banda.rama > .ico { color: var(--acento); }
+.banda.ok { color: var(--ok); background: color-mix(in srgb, var(--ok-tenue) 90%, transparent); }
+.comparar .comp-lista { display: flex; flex-direction: column; gap: 10px; max-height: min(60vh, 640px); overflow: auto; padding-right: 2px; }
+.comp-fila { border: 1px solid var(--borde); border-radius: var(--r-m); padding: 10px 12px; background: var(--sup); display: flex; flex-direction: column; gap: 8px; }
+.comp-fila.conflicto { border-color: color-mix(in srgb, var(--aviso) 55%, var(--borde)); background: color-mix(in srgb, var(--aviso-tenue) 55%, var(--sup)); }
+.comp-cab { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.comp-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.comp-lado { min-width: 0; border-radius: var(--r-s); padding: 8px 10px; background: var(--sup-2); border: 1px solid var(--borde); }
+.comp-lado.rama { border-color: color-mix(in srgb, var(--acento) 40%, var(--borde)); }
+.comp-lado p { margin: 4px 0 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .comp-lados { grid-template-columns: 1fr; } }
 .historial-acciones { padding: 0 16px 8px; gap: 6px; }
 .historial-acciones .btn { flex: 1; }
 

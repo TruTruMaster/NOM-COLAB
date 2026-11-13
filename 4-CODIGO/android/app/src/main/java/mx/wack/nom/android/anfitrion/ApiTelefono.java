@@ -23,6 +23,7 @@ import mx.wack.nom.core.servicio.ServicioDocumentos;
 import mx.wack.nom.core.servicio.ServicioEspacios;
 import mx.wack.nom.core.servicio.ServicioFuentes;
 import mx.wack.nom.core.servicio.ServicioSincronia;
+import mx.wack.nom.core.servicio.ServicioPases;
 
 /**
  * La API del servidor del teléfono: las mismas rutas, respuestas y códigos que la de la
@@ -41,10 +42,12 @@ final class ApiTelefono {
     private final Nodo nodo;
     private final ServicioSincronia sincronia;
     private final ServicioFuentes fuentes;
+    private final ServicioPases pases;
 
     ApiTelefono(ServicioCuentas cuentas, ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor,
-                Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia, ServicioFuentes fuentes) {
+                Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia, ServicioFuentes fuentes, ServicioPases pases) {
         this.fuentes = fuentes;
+        this.pases = pases;
         this.cuentas = cuentas;
         this.espacios = espacios;
         this.documentos = documentos;
@@ -128,6 +131,19 @@ final class ApiTelefono {
 
     private static long largo(Object o) { return o instanceof Number ? ((Number) o).longValue() : 0; }
 
+    /** La base de una rama: nodo -> reloj. */
+    private static Map<String, Long> base(Object o) {
+        Map<String, Long> r = new LinkedHashMap<>();
+        if (o instanceof Map) for (Map.Entry<?, ?> e : ((Map<?, ?>) o).entrySet()) if (e.getValue() instanceof Number) r.put(String.valueOf(e.getKey()), ((Number) e.getValue()).longValue());
+        return r;
+    }
+
+    private static java.util.List<String> lista(Object o) {
+        java.util.List<String> r = new java.util.ArrayList<>();
+        if (o instanceof java.util.List) for (Object x : (java.util.List<?>) o) if (x != null) r.add(String.valueOf(x));
+        return r;
+    }
+
     Map<String, Object> info() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("nom", 1);
@@ -140,7 +156,37 @@ final class ApiTelefono {
         m.put("hora", System.currentTimeMillis());
         m.put("lan", descubrimiento.lanActiva());
         m.put("telefono", true);
+        // Fase 13: aquí no hay cuentas con contraseña (alias, o la cuenta de la nube con un pase).
+        m.put("cuentas", false);
+        m.put("firmaPases", false);
+        m.put("pases", pases.aceptaPases());
+        m.put("nubes", pases.nubes());
         return m;
+    }
+
+    /** Fase 13: el teléfono no tiene cuentas con contraseña. */
+    private static Respuesta sinCuentas() {
+        Map<String, Object> c = new LinkedHashMap<>();
+        c.put("error", "En este teléfono se entra con alias, o con tu cuenta si tienes Internet");
+        c.put("sinCuentas", true);
+        return Respuesta.json(403, c);
+    }
+
+    /**
+     * El dueño del teléfono entra a su propio servidor con su alias. Solo desde este mismo teléfono
+     * (127.0.0.1) y con la llave que guarda la app: la primera vez se crea el alias, y los espacios
+     * de las cuentas de antes (ya retiradas) pasan a él.
+     */
+    private Respuesta aliasDelDueno(Peticion p) {
+        if (p.origen != null) throw ErrorNom.prohibido("Desde otro equipo se entra con el código o el QR de un espacio");
+        String llave = texto(cuerpo(p), "llave");
+        Usuario dueno = cuentas.duenoDelTelefono().orElse(null);
+        Sesion s = dueno == null ? cuentas.crearAlias(null, llave, true) : cuentas.entrarAlias(dueno.id, llave, null);
+        Usuario u = cuentas.porId(s.usuarioId).orElseThrow();
+        int n = espacios.traspasarDeRetiradas(u);
+        Map<String, Object> r = new LinkedHashMap<>(yo(u, s.token, s.expira));
+        if (n > 0) r.put("espaciosRecibidos", n);
+        return ok(r);
     }
 
     // ------------------------------------------------------------------ rutas
@@ -158,14 +204,30 @@ final class ApiTelefono {
         Matcher x;
         // Públicas (las mismas que excluye ConfigWeb del filtro de sesión).
         if (r.equals("/api/red/info") && m.equals("GET")) return ok(info());
-        if (r.equals("/api/cuentas/registro") && m.equals("POST")) {
+        // Fase 13, A.1: en el teléfono que comparte nadie crea cuenta ni entra con contraseña.
+        if ((r.equals("/api/cuentas/registro") || r.equals("/api/cuentas/recuperar")) && m.equals("POST")) return sinCuentas();
+        // A.1 El dueño del teléfono (desde este mismo teléfono): su alias, con la llave de la app.
+        if (r.equals("/api/cuentas/alias") && m.equals("POST")) return aliasDelDueno(p);
+        // Volver a entrar con el alias que este equipo ya tenía (su llave), aunque el código haya vencido.
+        if (r.equals("/api/cuentas/alias/entrar") && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);
-            Usuario u = cuentas.registrar(texto(c, "nombre"), texto(c, "contrasena"), texto(c, "empresa"), p.origen);
-            return creado(Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u)));
+            // El alias del dueño solo entra desde este mismo teléfono.
+            if (p.origen != null && cuentas.porId(texto(c, "id")).map(cu -> cu.dueno).orElse(false))
+                throw ErrorNom.prohibido("Ese alias solo entra desde el teléfono que comparte");
+            Sesion s = cuentas.entrarAlias(texto(c, "id"), texto(c, "llave"), p.origen);
+            return ok(yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira));
         }
-        if (r.equals("/api/cuentas/recuperar") && m.equals("POST")) {
+        // A.2 Quien sí tiene Internet presenta el pase que le dio la nube.
+        if (r.equals("/api/cuentas/pase/entrar") && m.equals("POST")) {
+            if (!pases.aceptaPases()) throw ErrorNom.prohibido("Este teléfono no tiene la llave de ninguna nube");
+            cuentas.limitarPases(p.origen);
+            Sesion s = cuentas.desdePase(pases.verificar(texto(cuerpo(p), "pase")));
+            return ok(yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira));
+        }
+        if (r.equals("/api/cuentas/pase/llave") && m.equals("GET")) return Respuesta.json(404, Map.of("error", "El teléfono no firma pases"));
+        if ((x = coincide("/api/enlaces/" + ID + "/alias", r)) != null && m.equals("POST")) {
             Map<String, Object> c = cuerpo(p);
-            return ok(Map.of("recuperacion", cuentas.recuperar(texto(c, "nombre"), texto(c, "codigo"), texto(c, "nueva"), p.origen), "mensaje", "Listo: ya puedes entrar con tu contraseña nueva"));
+            return ok(espacios.entrarConAlias(x.group(1), texto(c, "id"), texto(c, "llave"), p.origen));
         }
         // Enlaces para unirse (QR), recibos y proyeccion: sin sesion (como en ConfigWeb).
         if ((x = coincide("/api/enlaces/" + ID, r)) != null && m.equals("GET")) return ok(espacios.infoEnlace(x.group(1)));
@@ -180,11 +242,7 @@ final class ApiTelefono {
             return Respuesta.sse(canal -> documentos.suscribirProyeccion(codigo, canal));
         }
         if (r.equals("/api/cuentas/sesion")) {
-            if (m.equals("POST")) {
-                Map<String, Object> c = cuerpo(p);
-                Sesion s = cuentas.iniciarSesion(texto(c, "nombre"), texto(c, "contrasena"), p.origen);
-                return ok(yo(cuentas.porId(s.usuarioId).orElseThrow(), s.token, s.expira));
-            }
+            if (m.equals("POST")) return sinCuentas();
             if (m.equals("DELETE")) {
                 String auth = p.cabecera("authorization");
                 if (auth != null && auth.startsWith("Bearer ")) cuentas.cerrarSesion(auth.substring(7).trim());
@@ -207,6 +265,7 @@ final class ApiTelefono {
             return ok(documentos.eliminarCuenta(u));
         }
         if (r.equals("/api/cuentas/boleto") && m.equals("POST")) return ok(Map.of("boleto", cuentas.boleto(token)));
+        if (r.equals("/api/cuentas/pase") && m.equals("POST")) throw ErrorNom.prohibido("El teléfono no da pases: se piden a la nube");
         if (r.equals("/api/cuentas/almacenamiento") && m.equals("GET")) return ok(documentos.almacenamientoDe(u));
         if (r.equals("/api/cuentas/preferencias") && m.equals("PUT")) {
             Object c = p.json();
@@ -327,6 +386,34 @@ final class ApiTelefono {
                 documentos.eliminar(u, x.group(1));
                 return ok(Map.of("ok", true));
             }
+        }
+        // ---- fase 13, parte B: ramas de lo editado sin Internet
+        if ((x = coincide("/api/documentos/" + ID + "/cambios-desde", r)) != null && m.equals("POST")) {
+            Map<String, Object> c = cuerpo(p);
+            return ok(documentos.cambiosDesdeBase(u, x.group(1), base(c.get("base")), lista(c.get("nodos")), largo(c.get("desde"))));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/ramas", r)) != null) {
+            if (m.equals("GET")) return ok(documentos.ramas(u, x.group(1)));
+            if (m.equals("POST")) {
+                Map<String, Object> c = cuerpo(p);
+                return creado(documentos.crearRama(u, x.group(1), texto(c, "nombre"), Json.operaciones(c.get("ops")), base(c.get("base")),
+                        lista(c.get("nodos")), Json.operaciones(c.get("propios")), texto(c, "motivo"), largo(c.get("desde"))));
+            }
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/actividad-externa", r)) != null && m.equals("POST")) {
+            Map<String, Object> c = cuerpo(p);
+            Object f = c.get("filas");
+            return ok(documentos.actividadExterna(u, x.group(1), f instanceof java.util.List ? new java.util.ArrayList<Object>((java.util.List<?>) f) : null, texto(c, "via")));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/fusionar", r)) != null && m.equals("POST")) {
+            Object e = cuerpo(p).get("elecciones");
+            Map<String, String> el = new LinkedHashMap<>();
+            if (e instanceof Map) for (Map.Entry<?, ?> en : ((Map<?, ?>) e).entrySet()) el.put(String.valueOf(en.getKey()), String.valueOf(en.getValue()));
+            return ok(documentos.fusionarRama(u, x.group(1), el));
+        }
+        if ((x = coincide("/api/documentos/" + ID + "/rama", r)) != null && m.equals("PUT")) {
+            if (!"aparte".equals(texto(cuerpo(p), "accion"))) throw ErrorNom.invalido("¿Qué hacer con la rama? (aparte)", "accion");
+            return ok(documentos.apartarRama(u, x.group(1)));
         }
         // ---- 8.5 papelera, nombre, copia, mover, carpeta, destacado y enlace para ver
         if ((x = coincide("/api/documentos/" + ID + "/restaurar", r)) != null && m.equals("POST")) return ok(documentos.sacarDePapelera(u, x.group(1)));

@@ -303,8 +303,13 @@ final class ServidorHttp {
         }
     }
 
-    static final String CORS = "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
-            + "Access-Control-Allow-Headers: *\r\nAccess-Control-Max-Age: 3600\r\n";
+    /**
+     * CORS (como FiltroCors en la computadora): la API solo se deja leer desde otro origen por la app
+     * (que carga la interfaz desde sus archivos: origen "null"). La página que sirve este teléfono es
+     * del mismo origen y no lo necesita; cualquier otra página no puede leer las respuestas.
+     */
+    static final String CORS = "Access-Control-Allow-Origin: null\r\nVary: Origin\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
+            + "Access-Control-Allow-Headers: Authorization, Content-Type, Accept\r\nAccess-Control-Max-Age: 3600\r\n";
 
     /** Las mismas cabeceras de seguridad que pone la computadora (FiltroCabeceras). */
     static final String SEGURAS = "X-Content-Type-Options: nosniff\r\nX-Frame-Options: SAMEORIGIN\r\nReferrer-Policy: no-referrer\r\n"

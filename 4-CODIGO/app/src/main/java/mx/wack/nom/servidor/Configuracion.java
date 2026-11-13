@@ -73,6 +73,38 @@ public class Configuracion {
         return new mx.wack.nom.core.servicio.ServicioFuentes(espacios, repo, json, cifrado);
     }
 
+    /**
+     * A.2 Pases firmados: este servidor firma pases para que sus cuentas entren a un telefono que
+     * comparte sin Internet, y acepta los de las nubes de confianza (pases/nubes.json, que trae la
+     * interfaz, mas NOM_NUBES_CONFIABLES). La llave para firmar vive FUERA de la carpeta de datos
+     * (NOM_LLAVES, o la carpeta "<datos>-llaves" junto a ella): no viaja en los respaldos.
+     */
+    @Bean
+    public mx.wack.nom.core.servicio.ServicioPases servicioPases(CodecJson json, @Value("${nom.datos}") String datos,
+                                                                 @Value("${nom.llaves:}") String llaves,
+                                                                 @Value("${nom.nubes-confiables:}") String extra) {
+        mx.wack.nom.core.servicio.ServicioPases s = new mx.wack.nom.core.servicio.ServicioPases(json);
+        s.cargarOCrear(carpetaLlaves(datos, llaves).toFile());
+        try (java.io.InputStream in = Configuracion.class.getResourceAsStream("/static/pases/nubes.json")) {
+            if (in != null) s.confiarLista(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException e) { /* sin lista */ }
+        if (extra != null && !extra.isBlank()) {
+            String t = extra.trim();
+            try {
+                if (!t.startsWith("[") && !t.startsWith("{")) t = java.nio.file.Files.readString(java.nio.file.Path.of(t));
+                s.confiarLista(t);
+            } catch (java.io.IOException e) { throw new IllegalStateException("No se pudo leer NOM_NUBES_CONFIABLES: " + e.getMessage(), e); }
+        }
+        return s;
+    }
+
+    /** Las llaves del servidor: NOM_LLAVES, o "<carpeta de datos>-llaves" (al lado, nunca adentro). */
+    public static java.nio.file.Path carpetaLlaves(String datos, String llaves) {
+        if (llaves != null && !llaves.isBlank()) return java.nio.file.Path.of(llaves).toAbsolutePath();
+        java.nio.file.Path d = java.nio.file.Path.of(datos).toAbsolutePath().normalize();
+        return d.resolveSibling(d.getFileName() + "-llaves");
+    }
+
     @Bean
     public ServicioSincronia servicioSincronia(ServicioEspacios espacios, ServicioDocumentos documentos, CodecJson json, NodoLocal nodo) {
         return new ServicioSincronia(espacios, documentos, json, nodo);

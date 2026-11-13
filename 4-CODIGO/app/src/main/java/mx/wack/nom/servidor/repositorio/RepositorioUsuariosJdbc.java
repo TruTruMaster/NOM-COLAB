@@ -2,6 +2,7 @@ package mx.wack.nom.servidor.repositorio;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -53,6 +54,8 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
     private final AlmacenJson almacen;
     /** null = aun no se sabe; se revisa la primera vez que hace falta. */
     private volatile Boolean nuevas;
+    /** ¿Ya existe la columna "extra" (fase 13: alias, cuentas de la nube, aceptacion de terminos)? */
+    private volatile Boolean conExtra;
 
     public RepositorioUsuariosJdbc(JdbcClient db, AlmacenJson almacen) {
         this.db = db;
@@ -72,8 +75,52 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         return nuevas;
     }
 
+    private boolean columnaExtra() {
+        if (conExtra == null) {
+            try {
+                db.sql("SELECT extra FROM usuario WHERE 1 = 0").query().listOfRows();
+                conExtra = true;
+            } catch (RuntimeException e) {
+                conExtra = false;
+                log.warn("La tabla usuario aún no tiene la columna extra (alias y términos): se guarda en {} hasta que se migre", EXTRA);
+            }
+        }
+        return conExtra;
+    }
+
     private String select() {
-        return String.format(COLUMNAS, columnasNuevas() ? " u.invitado_de, u.hash_recuperacion, u.sal_recuperacion," : "");
+        return String.format(COLUMNAS, (columnasNuevas() ? " u.invitado_de, u.hash_recuperacion, u.sal_recuperacion," : "")
+                + (columnaExtra() ? " u.extra," : ""));
+    }
+
+    /** Los campos de la fase 13 en adelante, como JSON (una sola columna: no hay que migrar por cada uno). */
+    private String extraJson(Usuario u) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (u.alias) m.put("alias", true);
+        if (u.hashLlave != null) m.put("hashLlave", u.hashLlave);
+        if (u.dueno) m.put("dueno", true);
+        if (u.nube != null) m.put("nube", u.nube);
+        if (u.retirada) m.put("retirada", true);
+        if (u.aceptoVersion != null) { m.put("aceptoVersion", u.aceptoVersion); m.put("aceptoFecha", u.aceptoFecha); }
+        return m.isEmpty() ? null : almacen.json().writeValueAsString(m);
+    }
+
+    private static void aplicarExtra(Usuario u, Map<String, Object> m) {
+        if (m == null) return;
+        u.alias = Boolean.TRUE.equals(m.get("alias"));
+        u.hashLlave = m.get("hashLlave") == null ? null : String.valueOf(m.get("hashLlave"));
+        u.dueno = Boolean.TRUE.equals(m.get("dueno"));
+        u.nube = m.get("nube") == null ? null : String.valueOf(m.get("nube"));
+        u.retirada = Boolean.TRUE.equals(m.get("retirada"));
+        u.aceptoVersion = m.get("aceptoVersion") == null ? null : String.valueOf(m.get("aceptoVersion"));
+        u.aceptoFecha = m.get("aceptoFecha") instanceof Number n ? n.longValue() : 0;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void leerExtra(Usuario u, String texto) {
+        if (texto == null || texto.isBlank()) return;
+        try { aplicarExtra(u, almacen.json().readValue(texto, LinkedHashMap.class)); }
+        catch (RuntimeException e) { log.warn("Datos extra dañados de la cuenta {}", u.id); }
     }
 
     // ------------------------------------------------------------ datos aparte (sin las columnas)
@@ -83,24 +130,38 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
 
     private synchronized void guardarExtra(Usuario u) {
         Map<String, Map<String, String>> x = extras();
-        if (u.invitadoDe == null && u.hashRecuperacion == null) { if (x.remove(u.id) != null) almacen.escribir(EXTRA, x); return; }
+        boolean viejas = !columnasNuevas(), extra = !columnaExtra();
+        String ej = extra ? extraJson(u) : null;
+        if ((!viejas || (u.invitadoDe == null && u.hashRecuperacion == null)) && ej == null) { if (x.remove(u.id) != null) almacen.escribir(EXTRA, x); return; }
         Map<String, String> m = new LinkedHashMap<>();
-        m.put("invitadoDe", u.invitadoDe);
-        m.put("hashRecuperacion", u.hashRecuperacion);
-        m.put("salRecuperacion", u.salRecuperacion);
+        if (viejas) {
+            m.put("invitadoDe", u.invitadoDe);
+            m.put("hashRecuperacion", u.hashRecuperacion);
+            m.put("salRecuperacion", u.salRecuperacion);
+        }
+        if (ej != null) m.put("extra", ej);
         x.put(u.id, m);
         almacen.escribir(EXTRA, x);
     }
 
     private Usuario conExtra(Usuario u) {
-        if (u == null || columnasNuevas()) return u;
+        if (u == null || (columnasNuevas() && columnaExtra())) return u;
         Map<String, String> m = extras().get(u.id);
         if (m != null) {
-            u.invitadoDe = m.get("invitadoDe");
-            u.hashRecuperacion = m.get("hashRecuperacion");
-            u.salRecuperacion = m.get("salRecuperacion");
+            if (!columnasNuevas()) {
+                u.invitadoDe = m.get("invitadoDe");
+                u.hashRecuperacion = m.get("hashRecuperacion");
+                u.salRecuperacion = m.get("salRecuperacion");
+            }
+            if (!columnaExtra()) leerExtra(u, m.get("extra"));
         }
         return u;
+    }
+
+    @Override public List<Usuario> todos() {
+        List<Usuario> l = new ArrayList<>(db.sql(select()).query(this::usuario).list());
+        l.replaceAll(this::conExtra);
+        return l;
     }
 
     @Override public Optional<Usuario> porId(String id) {
@@ -150,7 +211,8 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
                             u.intentosFallidos, u.bloqueadoHasta, u.creado, u.color)
                     .update();
         }
-        if (!c) guardarExtra(u);
+        if (columnaExtra()) db.sql("UPDATE usuario SET extra = ? WHERE id = ?").params(extraJson(u), u.id).update();
+        if (!c || !columnaExtra()) guardarExtra(u);
         Preferencias p = u.preferencias == null ? new Preferencias() : u.preferencias;
         n = db.sql("""
                 UPDATE preferencias SET tema = ?, autoguardado_min = ?, versiones_conservar = ?, calidad = ?,
@@ -213,11 +275,15 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
     @Transactional
     public void alArrancar() {
         db.sql("DELETE FROM sesion WHERE expira <= ?").param(System.currentTimeMillis()).update();
-        if (columnasNuevas()) {
+        if (columnasNuevas() && columnaExtra()) {
             Map<String, Map<String, String>> x = extras();
             if (!x.isEmpty()) {
-                x.forEach((id, m) -> db.sql("UPDATE usuario SET invitado_de = ?, hash_recuperacion = ?, sal_recuperacion = ? WHERE id = ?")
-                        .params(m.get("invitadoDe"), m.get("hashRecuperacion"), m.get("salRecuperacion"), id).update());
+                x.forEach((id, m) -> {
+                    if (m.containsKey("hashRecuperacion") || m.containsKey("invitadoDe"))
+                        db.sql("UPDATE usuario SET invitado_de = ?, hash_recuperacion = ?, sal_recuperacion = ? WHERE id = ?")
+                                .params(m.get("invitadoDe"), m.get("hashRecuperacion"), m.get("salRecuperacion"), id).update();
+                    if (m.get("extra") != null) db.sql("UPDATE usuario SET extra = ? WHERE id = ?").params(m.get("extra"), id).update();
+                });
                 log.info("Se pasaron a la base los datos de {} cuenta(s) de {}", x.size(), EXTRA);
                 almacen.escribir(EXTRA, new LinkedHashMap<>());
             }
@@ -248,6 +314,7 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
             u.hashRecuperacion = rs.getString("hash_recuperacion");
             u.salRecuperacion = rs.getString("sal_recuperacion");
         }
+        if (Boolean.TRUE.equals(conExtra)) leerExtra(u, rs.getString("extra"));
         Preferencias p = new Preferencias();
         if (rs.getString("tema") != null) {
             p.tema = rs.getString("tema");

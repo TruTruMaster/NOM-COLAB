@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const NOM = window.NOM;
-  const { esc, ico, html, $, api } = { ...NOM, api: NOM.api };
+  const { esc, ico, html, $, $$, api } = { ...NOM, api: NOM.api };
 
   function fuerza(c) {
     let n = 0;
@@ -318,6 +318,89 @@
       tarjeta.append(modo === "entrar" ? formEntrar() : formRegistro());
     }
 
+    // ------------------------------------------------------------ fase 13: el teléfono que comparte
+    /** En un teléfono que comparte no hay cuentas con contraseña: alias (con el código o el QR de un
+        espacio) o la cuenta de la nube si este equipo tiene Internet. El dueño entra solo. */
+    function pintarTelefono() {
+      tarjeta.innerHTML = "";
+      const propio = NOM.anfitrion && NOM.anfitrion.esLocal();
+      if (propio) {
+        const f = html(`<div class="col" style="align-items:center;text-align:center">
+          <div class="burbuja">${ico("smartphone")}</div>
+          <h2>Entrando a tu teléfono…</h2>
+          <p class="suave" style="font-weight:650">Este teléfono comparte sin Internet. Aquí eres su dueño, con un alias que se elige al azar: así lo verán los demás.</p>
+          <div class="alerta error" data-alerta hidden role="alert"></div>
+          <button class="btn primario ancho" data-dueno hidden>${ico("log-in")} Entrar a mi teléfono</button></div>`);
+        tarjeta.append(f);
+        enlazarComunes(f);
+        const b = $("[data-dueno]", f), al = $("[data-alerta]", f);
+        const intentar = async () => {
+          b.disabled = true;
+          try {
+            const r = await NOM.acceso.entrarComoDueno();
+            if (NOM.bienvenida) NOM.bienvenida(r.usuario, false);
+            NOM.app.alIniciarSesion(r);
+          } catch (e) {
+            al.hidden = false; al.className = "alerta error";
+            al.innerHTML = `${ico("triangle-alert")}<span>${esc(e.message)}</span>`;
+            b.hidden = false; b.disabled = false;
+          }
+        };
+        b.onclick = intentar;
+        intentar();
+        return;
+      }
+      const f = html(`<div class="col">
+        <div><h2>Un teléfono que comparte</h2><p class="suave" style="font-weight:650;margin-top:4px">Aquí no se crean cuentas ni se escribe contraseña: entra a un espacio con su <b>código</b> o su <b>QR</b> y te toca un alias al azar. Si este equipo tiene Internet, también puedes entrar con tu cuenta.</p></div>
+        <div class="alerta" data-alerta hidden role="alert"></div>
+        <div class="col" data-guardados></div>
+        ${NOM.qr && NOM.qr.hayCamara() ? `<button type="button" class="btn primario ancho" data-escanear>${ico("qr-code")} Escanear el código QR</button>` : ""}
+        <button type="button" class="btn ${NOM.qr && NOM.qr.hayCamara() ? "" : "primario"} ancho" data-codigo>${ico("key-round")} Tengo un código de invitación</button>
+        <button type="button" class="btn ancho" data-mi-cuenta hidden>${ico("cloud")} <span class="btn-sub">Entrar con mi cuenta<small>Este equipo tiene Internet: lo tuyo queda a tu nombre</small></span></button>
+        <p class="suave chico" data-sin-internet style="text-align:center">${ico("wifi-off", "ico-s")} Revisando si este equipo tiene Internet…</p>
+        <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
+        <button type="button" class="btn ancho" data-sin-cuenta data-micro="Usar sin cuenta|Trabaja sin registrarte. Tus documentos se guardan solo ${NOM.aqui().en}: si ${NOM.aqui().borrar} se pierden, salvo que los descargues.">${ico("hard-drive")} <span class="btn-sub">Usar sin cuenta<small>Tus documentos se quedan solo ${NOM.aqui().en}</small></span></button>
+      </div>`);
+      tarjeta.append(f);
+      enlazarComunes(f);
+      // Los alias que este equipo ya tiene en este teléfono: se vuelve a entrar sin el código.
+      NOM.acceso.infoServidor().then((i) => {
+        const ls = NOM.acceso.aliasDeEsteServidor(i.servidor), cont = $("[data-guardados]", f);
+        if (!ls.length || !cont) return;
+        cont.innerHTML = `<span class="etiqueta">Ya entraste desde este equipo</span>` + ls.slice(0, 4).map((g, k) => `<button type="button" class="btn ancho" data-g="${k}">${ico("sparkles")} <span class="btn-sub">Seguir como ${esc(g.nombre)}<small>${esc(g.espacio || "Espacio")}</small></span></button>`).join("");
+        $$("[data-g]", cont).forEach((b) => (b.onclick = async () => {
+          b.disabled = true;
+          try {
+            const r = await NOM.acceso.volverConAlias(ls[+b.dataset.g]);
+            NOM.app.alIniciarSesion(r);
+          } catch (e) {
+            b.disabled = false;
+            const al = $("[data-alerta]", f);
+            al.hidden = false; al.className = "alerta error";
+            al.innerHTML = `${ico("triangle-alert")}<span>${esc(e.message)}</span>`;
+          }
+        }));
+      }).catch(() => {});
+      const esc2 = $("[data-escanear]", f);
+      if (esc2) esc2.onclick = () => NOM.union && NOM.union.escanear();
+      $("[data-codigo]", f).onclick = async () => {
+        const c = await NOM.pedirTexto("Código para unirse", { etiqueta: "El código que te dio quien comparte el espacio", ph: "ABCD-2345", si: "Entrar", max: 60 });
+        if (c && NOM.union) NOM.union.usar(c);
+      };
+      const mi = $("[data-mi-cuenta]", f), sinInt = $("[data-sin-internet]", f);
+      NOM.acceso.nubeAlcanzable().then((ok) => {
+        if (!mi.isConnected) return;
+        mi.hidden = !ok;
+        sinInt.innerHTML = ok ? "" : `${ico("wifi-off", "ico-s")} Este equipo no tiene Internet: entra con el código o el QR de un espacio.`;
+      });
+      mi.onclick = async () => {
+        const r = await NOM.acceso.dialogoCuenta();
+        if (!r) return;
+        if (NOM.bienvenida) NOM.bienvenida(r.usuario, false);
+        NOM.app.alIniciarSesion(r);
+      };
+    }
+
     function cabecera(titulo, sub) {
       return `<div class="segmentado lleno" role="group" aria-label="Elegir acción">
           <button type="button" data-ir="entrar" aria-pressed="${modo === "entrar"}">Iniciar sesión</button>
@@ -503,7 +586,17 @@
       return f;
     }
 
-    render();
+    // ¿Es un teléfono que comparte? Lo último que se supo, y luego se confirma con el servidor.
+    const ig = NOM.acceso && NOM.acceso.infoGuardada();
+    if (ig && NOM.acceso.esTelefono(ig)) pintarTelefono();
+    else render();
+    if (NOM.acceso) NOM.acceso.infoServidor().then((i) => {
+      if (!tarjeta.isConnected || api.token()) return;
+      if (NOM.acceso.esTelefono(i)) { if (!(ig && NOM.acceso.esTelefono(ig))) pintarTelefono(); }
+      else if (ig && NOM.acceso.esTelefono(ig)) render();
+    }).catch(() => {});
+    // En la app, al volver a la nube: si quedó guardada su sesión (al irse a un teléfono), se retoma.
+    if (NOM.acceso && api.empaquetada && NOM.acceso.sesionNube()) NOM.acceso.retomarNube().then((ok) => { if (ok) NOM.app.alIniciarSesion({}); }).catch(() => {});
   }
 
   /** Solo en la app Android: elegir el equipo de la red que comparte los espacios. */

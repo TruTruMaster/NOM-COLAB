@@ -28,6 +28,13 @@
         let ops = NOM.leer(k, []) || [];
         if (!ops.length) continue;
         try {
+          // Fase 13, parte B: ¿alguien más lo cambió mientras no había conexión? Entonces, rama.
+          const copia = NOM.DocCRDT.cache(id);
+          if (NOM.ramas && NOM.ramas.marca(id) && copia && copia.estado) {
+            const meta = copia.meta || {};
+            const d = await NOM.ramas.decidir({ docId: id, estado: copia.estado, pendientes: ops, nombre: (meta.documento || {}).nombre, modo: (meta.documento || {}).modo, espacioId: (meta.espacio || {}).id });
+            if (d && d.tipo) { NOM.quitar(k); NOM.ramas.avisar(d, (meta.documento || {}).nombre); continue; }
+          }
           // Una petición por pestaña de origen (cliente = nodo), igual que si siguiera abierta.
           const nodos = [...new Set(ops.map((o) => o.n))];
           for (const n of nodos) {
@@ -48,6 +55,16 @@
       }
     } finally { enviando = false; }
     if (total) NOM.aviso(`Se enviaron ${total} cambio(s) que estaban guardados en este equipo`, { tipo: "ok" });
+    // Fase 13, parte C: lo creado sin Internet dentro de un espacio se sube solo a ese espacio.
+    if (NOM.local && NOM.local.subirPendientes) {
+      try {
+        const subidos = await NOM.local.subirPendientes();
+        if (subidos.length) {
+          NOM.aviso(subidos.length === 1 ? `«${subidos[0].nombre}», que creaste sin conexión, ya está en ${subidos[0].espacio || "su espacio"}` : `Se subieron ${subidos.length} documentos que creaste sin conexión`, { tipo: "ok", ms: 6000, accion: subidos.length === 1 ? { texto: "Abrir", fn: () => (location.hash = "#/doc/" + subidos[0].doc) } : null });
+          if (NOM.app && /^#\/(espacio\/|$)/.test(location.hash || "#/")) NOM.app.refrescar();
+        }
+      } catch (e) { console.warn(e); }
+    }
     return total;
   }
 
@@ -68,6 +85,38 @@
   }
 
   NOM.cola = { vaciar, arrancar };
+
+  // ================================================================== fase 13, parte C: instalar
+  /* Chrome y Edge ofrecen instalar la página como programa de la computadora (con el service
+     worker ya guardado, abre sin Internet). El navegador avisa con "beforeinstallprompt": se guarda
+     el aviso y la página pone su propio botón «Instalar en esta computadora». */
+  let pedidoInstalar = null;
+  const instalada = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    pedidoInstalar = e;
+    document.dispatchEvent(new CustomEvent("nom-instalable"));
+  });
+  window.addEventListener("appinstalled", () => {
+    pedidoInstalar = null;
+    NOM.aviso("Listo: NOM-COLAB quedó instalado en esta computadora. Ábrelo desde el menú de inicio o el escritorio, también sin Internet.", { tipo: "ok", ms: 8000 });
+    document.dispatchEvent(new CustomEvent("nom-instalable"));
+  });
+  NOM.instalar = {
+    /** ¿Se puede ofrecer ahora? (no en la app, ni si ya está instalada, ni si el navegador no lo ofrece) */
+    disponible: () => !!pedidoInstalar && !api().empaquetada && !instalada(),
+    instalada,
+    async pedir() {
+      if (!pedidoInstalar) {
+        NOM.aviso("Este navegador no ofrece instalar páginas. En Chrome o Edge: abre el menú del navegador → «Instalar NOM-COLAB». Igual puedes usarlo sin Internet desde aquí, después de una visita con red.", { tipo: "info", ms: 9000 });
+        return false;
+      }
+      const p = pedidoInstalar;
+      pedidoInstalar = null;
+      p.prompt();
+      try { const r = await p.userChoice; return r && r.outcome === "accepted"; } catch (e) { return false; }
+    },
+  };
 
   // ================================================================== 6.3 resumen al reconectar
   /* El CRDT junta todo en silencio; aquí se cuenta qué pasó: lo que yo cambié sin conexión (mi

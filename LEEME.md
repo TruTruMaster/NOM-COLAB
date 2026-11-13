@@ -93,3 +93,8 @@ H2 (`nom-db.mv.db`); espacios, documentos y versiones en JSON. Para empezar desd
 esa carpeta. **No hay administrador:** cada cuenta controla solo sus espacios y documentos. El
 propietario de un espacio decide quién entra, cambia a cada miembro entre *Puede editar* y
 *Solo lectura*, o le quita el acceso.
+
+## Licencia
+
+El código es software libre bajo la **GPL-3.0** (archivo `LICENSE`). Las bibliotecas y fuentes de
+terceros conservan sus licencias (ver `4-CODIGO/README.md`, sección Licencia).

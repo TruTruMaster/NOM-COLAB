@@ -18,18 +18,32 @@ public class RedApi {
 
     private final NodoLocal nodo;
     private final Descubrimiento descubrimiento;
+    private final mx.wack.nom.core.servicio.ServicioPases pases;
 
-    public RedApi(NodoLocal nodo, Descubrimiento descubrimiento) {
+    public RedApi(NodoLocal nodo, Descubrimiento descubrimiento, mx.wack.nom.core.servicio.ServicioPases pases) {
         this.nodo = nodo;
         this.descubrimiento = descubrimiento;
+        this.pases = pases;
     }
 
     /** Publico: la app Android lo usa para comprobar que una direccion es un servidor NOM. */
     @GetMapping("/info")
     public Map<String, Object> info() {
-        return Map.of("nom", 1, "servidor", nodo.id(), "equipo", nodo.equipo(), "puerto", nodo.puerto(),
-                "direcciones", nodo.direcciones(), "version", Version.APP, "interfaz", Version.INTERFAZ,
-                "hora", System.currentTimeMillis(), "lan", descubrimiento.lanActiva());
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("nom", 1);
+        m.put("servidor", nodo.id());
+        m.put("equipo", nodo.equipo());
+        m.put("puerto", nodo.puerto());
+        m.put("direcciones", nodo.direcciones());
+        m.put("version", Version.APP);
+        m.put("interfaz", Version.INTERFAZ);
+        m.put("hora", System.currentTimeMillis());
+        m.put("lan", descubrimiento.lanActiva());
+        // Fase 13: aqui hay cuentas con contrasena; si firma pases y si acepta los de otra nube.
+        m.put("cuentas", true);
+        m.put("firmaPases", pases.emite());
+        m.put("pases", pases.aceptaPases());
+        return m;
     }
 
     /** CU-15 Descubrir espacios en la LAN. */
