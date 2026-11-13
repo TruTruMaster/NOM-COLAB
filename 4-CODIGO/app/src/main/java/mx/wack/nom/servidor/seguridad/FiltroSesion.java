@@ -27,6 +27,10 @@ public class FiltroSesion implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {
         if ("OPTIONS".equals(req.getMethod())) return true;
+        // Despacho asíncrono del canal en vivo (cuando el cliente se fue o el canal se cerró): la sesión
+        // ya se revisó al abrirlo. Revisarla otra vez canjeaba de nuevo el boleto de un solo uso, fallaba
+        // y dejaba un error con todo su rastro en la bitácora cada vez que alguien cerraba la pestaña.
+        if (req.getDispatcherType() == jakarta.servlet.DispatcherType.ASYNC && req.getAttribute(ATRIBUTO) != null) return true;
         String token = null;
         String cab = req.getHeader("Authorization");
         if (cab != null && cab.startsWith("Bearer ")) token = cab.substring(7).trim();

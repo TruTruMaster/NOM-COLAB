@@ -264,6 +264,12 @@
     if (NOM.union) NOM.union.desdeDireccion();
     // App Android: si este teléfono era el servidor y Android lo cerró, se vuelve a encender.
     if (NOM.anfitrion) NOM.anfitrion.reanudar();
+    // El navegador se cerró de golpe y localStorage no alcanzó a guardar la sesión: se recupera de la
+    // copia que quedó junto a la llave de la bóveda (sin esto, sin Internet ya no se podría entrar).
+    if (!api.token() && NOM.boveda) {
+      const s = await NOM.boveda.rescatarSesion();
+      if (s) { NOM.guardar("nom.token", s.token); NOM.guardar("nom.usuario", s.usuario); }
+    }
     if (api.token()) {
       const u = api.usuario() || {};
       // Un invitado no tiene contraseña: si el navegador borró la bóveda, se abre otra con el

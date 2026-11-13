@@ -553,7 +553,7 @@ td.id { white-space: nowrap; }
   <table class="tabla-req">
     <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
     <tbody>
-    <tr><td>Lo escrito sin conexión se guarda en el equipo y se envía solo al volver la red (CU-26).</td><td class="x">X</td><td class="x"></td><td>Correcto en la página, el navegador del celular y la app.</td></tr>
+    <tr><td>Lo escrito sin conexión se guarda en el equipo y se envía solo al volver la red (CU-26).</td><td class="x">X</td><td class="x"></td><td>Correcto en la página, el navegador del celular y la app. En la computadora se comprobó contra la Raspberry: con el navegador cerrado (también de golpe) y sin Internet, la página abre, el documento se edita y al volver la red llega al servidor.</td></tr>
     <tr><td>Un documento con cambios sin enviar se puede reabrir sin red.</td><td class="x">X</td><td class="x"></td><td>Correcto (el defecto DEF-13 de este punto se corrigió el 11 de noviembre).</td></tr>
     <tr><td>La app Android se conecta al servidor y comparte la cuenta con la página (CU-25).</td><td class="x">X</td><td class="x"></td><td>Correcto: lo que se escribe en la app aparece en la página y al revés.</td></tr>
     <tr><td>El teléfono puede ser el servidor con la misma seguridad.</td><td class="x">X</td><td class="x"></td><td>206 de 206 casos de seguridad contra el teléfono como servidor (emulador de Android 15, 11 de noviembre).</td></tr>
@@ -680,7 +680,7 @@ td.id { white-space: nowrap; }
     <tr><td>Raspberry Pi 5 (ARM)</td><td>Servidor propio en internet; prueba con una cuenta de prueba por el túnel</td><td class="c ok">Aprobado</td></tr>
     <tr><td>Azure App Service y Azure SQL</td><td>Inicio de sesión, roles de la base y misma cuenta en computadora y celular (9 de 9)</td><td class="c ok">Aprobado</td></tr>
     <tr><td>Emulador Android 15</td><td>APK publicable; teléfono como servidor (206 de 206)</td><td class="c ok">Aprobado</td></tr>
-    <tr><td>Samsung Galaxy A55, Android 16</td><td>App 0.12.2 y Chrome con toques reales (ruedita, teclado del teléfono, conectores), el teléfono como servidor (212 de 212) y sincronización con la nube propia (13 nov); falta confirmar dos casos de la app (una celda tecleada muy rápido y la fecha de entrega)</td><td class="c prog">Parcial</td></tr>
+    <tr><td>Samsung Galaxy A55, Android 16</td><td>App 0.12.2 (la 0.12.3 solo agrega DEF-35 y DEF-36) y Chrome con toques reales (ruedita, teclado del teléfono, conectores), el teléfono como servidor (212 de 212) y sincronización con la nube propia (13 nov); falta confirmar dos casos de la app (una celda tecleada muy rápido y la fecha de entrega)</td><td class="c prog">Parcial</td></tr>
     <tr><td>Chromium, Firefox y WebView</td><td>Mismas pantallas sin errores de JavaScript, de 320 a 430 px y en horizontal</td><td class="c ok">Aprobado</td></tr>
     </tbody>
   </table>
@@ -727,6 +727,8 @@ td.id { white-space: nowrap; }
     <tr><td class="id">DEF-32</td><td>13 nov</td><td>Elegir una fila, una columna o todo corría la hoja hasta la última celda.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
     <tr><td class="id">DEF-33</td><td>13 nov</td><td>Las manijas de selección de Android tapaban la ruedita del texto.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
     <tr><td class="id">DEF-34</td><td>13 nov</td><td>La bienvenida, al desvanecerse, se tragaba el primer clic.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-35</td><td>13 nov</td><td>Si el navegador se cerraba de golpe (se va la luz, se traba), al volver sin Internet pedía iniciar sesión: Chromium no alcanzaba a guardar la sesión de <code>localStorage</code>. Ahora una copia queda junto a la llave de la bóveda (IndexedDB) y se recupera; cerrar sesión la borra.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-36</td><td>13 nov</td><td>Al cerrar una pestaña, el servidor volvía a revisar la sesión del canal en vivo con el boleto ya usado y dejaba un error en su bitácora.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
     </tbody>
   </table>
 </section>
@@ -746,9 +748,9 @@ td.id { white-space: nowrap; }
     <tr><td>Office por la interfaz (computadora y celular)</td><td class="c">180</td><td class="c">180</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>En pantalla (computadora y celular)</td><td class="c">51</td><td class="c">51</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Red: página, celular y app</td><td class="c">24</td><td class="c">24</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
-    <tr><td>Cuentas y datos del equipo</td><td class="c">57</td><td class="c">57</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Cuentas y datos del equipo</td><td class="c">61</td><td class="c">61</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Funciones de la interfaz (computadora, celular y Firefox)</td><td class="c">501</td><td class="c">501</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
-    <tr style="font-weight:700"><td>Total</td><td class="c">1538</td><td class="c">1538</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c">100.0 %</td></tr>
+    <tr style="font-weight:700"><td>Total</td><td class="c">1542</td><td class="c">1542</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c">100.0 %</td></tr>
     </tbody>
   </table>
   <h4>Requerimientos por módulo</h4>
@@ -804,10 +806,10 @@ td.id { white-space: nowrap; }
 <!-- ============================== 8. CONCLUSIONES ============================== -->
 <section class="capitulo">
   <h2 id="s8">8. Conclusiones</h2>
-  <p>Como empresa de pruebas, WACK aplicó a NOM-COLAB un plan para cada tipo de prueba: unitarias, de integración, de requerimientos y de sistema (usabilidad, seguridad y portabilidad). Se ejecutaron 1538 casos, de los cuales se aprobaron 1538 (100.0 %), y de los 37 requerimientos revisados se cumplieron los 37. Cada caso de uso quedó cubierto por al menos una prueba.</p>
+  <p>Como empresa de pruebas, WACK aplicó a NOM-COLAB un plan para cada tipo de prueba: unitarias, de integración, de requerimientos y de sistema (usabilidad, seguridad y portabilidad). Se ejecutaron 1542 casos, de los cuales se aprobaron 1542 (100.0 %), y de los 37 requerimientos revisados se cumplieron los 37. Cada caso de uso quedó cubierto por al menos una prueba.</p>
   <p>Las pruebas mostraron que la seguridad es el punto más fuerte del sistema: los 226 casos de seguridad y permisos se aprobaron, las contraseñas se guardan cifradas y ningún rol puede hacer más de lo que le corresponde, aunque alguien intente saltarse la página. También quedó demostrado lo que distingue al proyecto: varias personas pueden escribir a la vez sin pisarse, lo escrito sin conexión llega al volver la red y los archivos de Office se descargan igual que como entraron.</p>
-  <p>El plan además cumplió su objetivo de encontrar defectos antes que el usuario. Durante el desarrollo se registraron 34 defectos; catorce eran críticos o altos, y varios de ellos habrían hecho perder trabajo a quien usa la aplicación. El último, DEF-18, lo descubrieron las pruebas de valores límite de este plan: el tope de 25 MB por documento se puede rebasar en un solo envío. Se corrigió el 13 de noviembre, junto con dieciséis defectos más (DEF-19 a DEF-34) que salieron al probar cada función en equipos reales: el Samsung A55 (la app y Chrome), una computadora de escritorio y la nube propia en la Raspberry Pi.</p>
-  <p>Con estos resultados, la decisión de WACK es <b>liberar la versión 0.12.2</b>, que corrige todos los defectos registrados, y completar en la semana del 17 de noviembre lo que falta: cinco dispositivos en el mismo espacio en la red de la escuela y la validación con usuarios que nunca han usado la aplicación. Todas las suites se repitieron sobre la versión final, porque una prueba solo tiene valor si se vuelve a ejecutar después de cada cambio.</p>
+  <p>El plan además cumplió su objetivo de encontrar defectos antes que el usuario. Durante el desarrollo se registraron 36 defectos; catorce eran críticos o altos, y varios de ellos habrían hecho perder trabajo a quien usa la aplicación. El último, DEF-18, lo descubrieron las pruebas de valores límite de este plan: el tope de 25 MB por documento se puede rebasar en un solo envío. Se corrigió el 13 de noviembre, junto con dieciséis defectos más (DEF-19 a DEF-34) que salieron al probar cada función en equipos reales: el Samsung A55 (la app y Chrome), una computadora de escritorio y la nube propia en la Raspberry Pi. Los dos últimos (DEF-35 y DEF-36) aparecieron ese mismo día al comprobar a mano que la página abre sin Internet después de cerrar el navegador de golpe.</p>
+  <p>Con estos resultados, la decisión de WACK es <b>liberar la versión 0.12.3</b>, que corrige todos los defectos registrados, y completar en la semana del 17 de noviembre lo que falta: cinco dispositivos en el mismo espacio en la red de la escuela y la validación con usuarios que nunca han usado la aplicación. Todas las suites se repitieron sobre la versión final, porque una prueba solo tiene valor si se vuelve a ejecutar después de cada cambio.</p>
   <h3>Aprobaciones</h3>
   <div class="firma">
     <div>Martínez Ortega Uriel Alejandro<span>Director general</span></div>

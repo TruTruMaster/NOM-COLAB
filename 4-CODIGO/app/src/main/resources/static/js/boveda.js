@@ -95,9 +95,44 @@
       const kek = await C.llaveDeContrasena(contrasena, sal, alg);
       await put("cuentas", usuarioId, { sal, alg, envuelta: await C.cifrar(kek, datosLlave, alg) });
     }
-    await put("sesion", usuarioId, { llave: datosLlave, alg });
+    await put("sesion", usuarioId, { llave: datosLlave, alg, ...sesionDeCuenta(usuarioId) });
     await cargar(usuarioId, datosLlave, alg);
     return true;
+  }
+
+  /* La sesión (token y usuario) vive en localStorage, pero Chromium lo escribe al disco cuando
+     quiere: si el navegador se cierra de golpe (se va la luz, se traba, se mata el proceso), al
+     volver no está, y sin Internet ya no se puede iniciar sesión otra vez. IndexedDB sí queda
+     escrito, así que una copia va junto a la llave de la bóveda (que ya está ahí sin cifrar) y,
+     al abrir, si localStorage la perdió, se toma de aquí. Cerrar sesión borra el registro entero. */
+  function sesionDeCuenta(usuarioId) {
+    const token = leerPlano("nom.token", null), usuario = leerPlano("nom.usuario", null);
+    return token && usuario && usuario.id === usuarioId ? { token, usuario, t: Date.now() } : {};
+  }
+
+  /** Lo llama api.fijarSesion: si la bóveda de esa cuenta está abierta, actualiza la copia. */
+  async function recordarSesion(token, usuario) {
+    try {
+      if (!usuario || usuario.id !== uid) return;
+      const s = await get("sesion", uid);
+      if (s && (s.token !== token || JSON.stringify(s.usuario) !== JSON.stringify(usuario))) await put("sesion", uid, { ...s, token, usuario, t: Date.now() });
+    } catch (e) { /* sin IndexedDB */ }
+  }
+
+  /** Lo llama api.limpiarSesion: ninguna copia del token se queda en el equipo. */
+  async function soltarSesion() {
+    try {
+      for (const [k, s] of await todos("sesion")) if (s && s.token) { const { token, usuario, t, ...resto } = s; await put("sesion", k, resto); }
+    } catch (e) { /* sin IndexedDB */ }
+  }
+
+  /** Al abrir la página sin token en localStorage: la sesión más reciente que quedó en IndexedDB. */
+  async function rescatarSesion() {
+    try {
+      let mejor = null;
+      for (const [k, s] of await todos("sesion")) if (s && s.token && s.usuario && s.usuario.id === k && (!mejor || (s.t || 0) > (mejor.t || 0))) mejor = s;
+      return mejor ? { token: mejor.token, usuario: mejor.usuario } : null;
+    } catch (e) { return null; }
   }
 
   /** Al recargar la página con la sesión abierta. false = hay que volver a escribir la contraseña. */
@@ -313,7 +348,7 @@
   };
 
   NOM.boveda = {
-    abrir, reanudar, cerrar, vaciar,
+    abrir, reanudar, cerrar, vaciar, recordarSesion, soltarSesion, rescatarSesion,
     porRecuperar, recuperarCon, descartarVieja, cambiarContrasena, olvidarCuenta,
     activa: () => uid,
     cifrado: () => (alg === "gcm" ? "AES-256-GCM" : alg === "ctr" ? "AES-256-CTR + HMAC-SHA256" : null),

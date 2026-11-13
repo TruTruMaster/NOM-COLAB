@@ -24,8 +24,14 @@
     },
     token() { return NOM.leer("nom.token", null); },
     usuario() { return NOM.leer("nom.usuario", null); },
-    fijarSesion(token, usuario) { NOM.guardar("nom.token", token); NOM.guardar("nom.usuario", usuario); },
-    limpiarSesion() { NOM.quitar("nom.token"); NOM.quitar("nom.usuario"); },
+    fijarSesion(token, usuario) {
+      NOM.guardar("nom.token", token); NOM.guardar("nom.usuario", usuario);
+      if (NOM.boveda) NOM.boveda.recordarSesion(token, usuario);   // copia que sobrevive a un cierre de golpe
+    },
+    limpiarSesion() {
+      NOM.quitar("nom.token"); NOM.quitar("nom.usuario");
+      if (NOM.boveda) NOM.boveda.soltarSesion();
+    },
     /** Clave de localStorage de la cuenta actual: las copias y los cambios pendientes de una cuenta
         nunca se mezclan con los de otra que use el mismo dispositivo. */
     clave(resto) { return "nom.u." + ((api.usuario() || {}).id || "anon") + "." + resto; },

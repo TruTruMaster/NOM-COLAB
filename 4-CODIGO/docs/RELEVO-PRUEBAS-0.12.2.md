@@ -2,7 +2,8 @@
 
 Para la siguiente sesión de trabajo: qué se probó, cómo volver a correrlo, qué se corrigió y **qué
 queda por revisar a ojo** (lo que las pruebas automáticas no alcanzan a juzgar). La lista de
-defectos corregidos está en `PLAN-CONSTRUCCION.md`, fase 12, y en `LOG.md`, entrada 54.
+defectos corregidos está en `PLAN-CONSTRUCCION.md`, fase 12, y en `LOG.md`, entradas 54 y 55.
+Lo de la 0.12.3 (el mismo día, después) está en la sección 6.
 
 ## 1. Dónde se probó
 
@@ -86,13 +87,13 @@ $PY office/visor.py SALIDA ~/.cache/nom-pruebas/corpus-web/*/*     # capturas la
   que el teléfono quedó con el **APK de depuración** 0.12.2 y la app apuntando al servidor de pruebas
   de la laptop (`http://100.77.150.52:8099`, apagado) con una cuenta de prueba. Al reactivar la
   depuración inalámbrica (Opciones de desarrollador → Depuración inalámbrica; el puerto se ve con
-  `adb mdns services`): instalar `3-APP-Android/NOM-COLAB.apk`, regresar en la app el servidor que
+  `adb mdns services`): instalar `3-APP-Android/NOM-COLAB.apk` (ya es la 0.12.3), regresar en la app el servidor que
   tenía (`http://192.168.0.199:8080`, respaldo de sus ajustes en
   `~/.cache/nom-pruebas/respaldo-a55/app-ajustes-antes.json`), cerrar la sesión de prueba y
   `adb shell svc power stayon false` (estaba apagado). Los datos del teléfono como servidor ya se
   regresaron tal cual (respaldo en `~/.cache/nom-pruebas/respaldo-a55/servidor-antes.tar`).
-- Escritorio: el Chromium de pruebas y su perfil aparte se cerraron y se borraron.
-- Raspberry: jar 0.12.2 (`nomcolab-pi actualizar`); las cuentas de prueba se borraron.
+- Escritorio: el Chromium de pruebas y sus perfiles aparte se cerraron y se borraron.
+- Raspberry: jar 0.12.3 (`nomcolab-pi actualizar`); las cuentas de prueba (`prueba…`) se borraron.
 
 ## 5. Documentos al día y documentos ya entregados
 
@@ -103,3 +104,45 @@ actividades A1 y A2 (código de recuperación y bloqueo por red), la especificac
 pruebas (`6-PLAN-DE-PRUEBAS`). **No se tocaron** los PDF/DOCX que ya se entregaron en octubre
 (`1-ENTREGA-Diagramas-de-Actividades/`): muestran cómo era entonces; si se vuelven a entregar, hay que
 rehacerlos con las imágenes nuevas de `diagramas/actividades/png/`.
+
+## 6. Después: 0.12.3 (sin Internet tras cerrar el navegador de golpe)
+
+La pregunta fue si de verdad la página abre sin Internet en una computadora. Se probó en el Chromium
+real del escritorio contra la Raspberry: con Internet se entra, se abre un documento y se espera a
+que el *service worker* guarde la página (unos 20 s después de abrir: `cola.js`, 6.1); luego el
+navegador se cierra y se vuelve a abrir sin acceso al dominio. Resultado:
+
+- **Cerrado normal:** la página abre, el documento sale con su texto, dice «Sin conexión», se puede
+  seguir escribiendo («N cambios guardados aquí») y al volver la red llega a la Raspberry.
+- **Cerrado de golpe (`kill -9`, como si se fuera la luz) — DEF-35:** pedía iniciar sesión (y sin
+  Internet no se puede). La llave de la bóveda sí estaba en IndexedDB, pero el token y el usuario de
+  `localStorage` no: Chromium escribe `localStorage` al disco cuando le conviene. En la laptop, con
+  Chromium sin pantalla, no se pierde: hay que probarlo en un navegador de verdad. Arreglo: una copia
+  de la sesión va en el registro `sesion` de la bóveda (`boveda.js`: `recordarSesion`,
+  `soltarSesion`, `rescatarSesion`; `api.js` y `app.js`, `arrancar`); cerrar sesión borra el registro
+  y `limpiarSesion` (p. ej. al cambiar de servidor) quita la copia. Repetido dos veces con `kill -9`:
+  abre con la sesión y el documento. `prueba_cuentas_equipo.py`, sección 11, lo cuida (61 de 61).
+  En la app de Android pasa lo mismo cuando Android cierra la app para liberar memoria; por eso va
+  también en el APK 0.12.3.
+- **DEF-36:** al cerrar una pestaña, Spring volvía a pasar el despacho asíncrono del canal en vivo
+  por `FiltroSesion`, que canjeaba otra vez el boleto de un solo uso y dejaba un error con todo su
+  rastro en la bitácora (se vio en la de la Raspberry). Ahora el despacho asíncrono ya autenticado
+  no se revisa de nuevo.
+
+Cómo repetirlo en el escritorio (lo que costó encontrar):
+
+- El perfil **no** puede ir en `/tmp`: el Chromium de flatpak tiene su propio `/tmp` y lo borra al
+  cerrar. Usar `--user-data-dir=$HOME/.var/app/org.chromium.Chromium/data/nom-off`.
+- «Sin Internet» para un solo sitio: `--host-resolver-rules="MAP nomcolab.dpdns.org 127.0.0.1:1"`.
+- Para probar una versión que todavía no está en la Raspberry: `ssh -f -N -R 8099:localhost:8099
+  100.84.188.120` y abrir `http://localhost:8099` en el escritorio (localhost cuenta como seguro, así
+  que el service worker sí funciona); cerrar ese túnel es «quedarse sin Internet».
+- Para saber qué había guardado **antes** de que corra la app: `page.add_init_script(...)` que lea
+  `localStorage` (la app borra la sesión si no la puede reabrir, y luego ya no se distingue).
+- `pgrep -f`/`pkill -f` con un patrón que aparece en el mismo comando (o en un heredoc del mismo
+  comando) se matan a sí mismos: correr el script guardado en un comando aparte.
+
+Pendiente visto de paso: la Raspberry pasa por Cloudflare, que **mete su script de estadísticas**
+(`static.cloudflareinsights.com/beacon.min.js`) en la página; la política de contenido lo bloquea
+(bien), pero deja dos errores en la consola. Se quita en el panel de Cloudflare (Web Analytics /
+«Automatic setup» del dominio); no es del código.

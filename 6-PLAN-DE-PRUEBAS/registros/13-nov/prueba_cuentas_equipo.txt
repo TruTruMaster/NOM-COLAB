@@ -60,11 +60,15 @@
   ok   HTML metido a la fuerza en una diapositiva, un nombre de documento o de espacio no ejecuta nada
   ok   un enlace javascript: metido a la fuerza en un texto no queda como enlace activo
   ok   …y nada de eso queda en la página con un manejador de eventos
+== 11. El navegador se cierra de golpe
+  ok   si localStorage perdió la sesión, se recupera de la copia junto a la bóveda
+  ok   …y abre el documento sin pedir la contraseña
+  ok   al quitar la sesión (por ejemplo, al cambiar de servidor) la copia del token también se va
+  ok   después de cerrar sesión no queda ninguna copia y se pide entrar
 == 9. Aviso de conexión sin cifrar
   ok   en el propio equipo (localhost) no sale el aviso
   ok   entrando por la red local (http) sale «Conexión sin cifrar»
   ok   por la red local (cifrado propio) también se recupera lo de la contraseña anterior
   ok   la página no reporta errores (tampoco de la política de contenido)
 
-Cuentas y equipo: 57 de 57
-FIN 0
+Cuentas y equipo: 61 de 61

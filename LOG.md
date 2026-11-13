@@ -819,3 +819,39 @@ automáticas nuevas, y se corrigió todo lo que salió mal. El detalle para reto
   entrega) que no se pudieron repetir porque el teléfono apagó la depuración inalámbrica; cinco
   equipos a la vez en la red de la escuela; la prueba con usuarios (SUS); ver los dibujos de Word y
   los encabezados con tablas o logotipos igual que Word. Detalle en `docs/RELEVO-PRUEBAS-0.12.2.md`.
+
+## 55. ¿De verdad abre sin Internet en la computadora? Sí, también tras cerrar de golpe (0.12.3)
+
+La pregunta: en otras páginas, recargar sin Internet deja la pantalla del dinosaurio; ¿con NOM-COLAB
+no? Se comprobó a mano en el Chromium real del escritorio contra la Raspberry
+(`https://nomcolab.dpdns.org`), quitando el acceso al dominio.
+
+- **Cómo funciona:** la primera vez, con Internet, el *service worker* guarda la página entera (unos
+  20 s después de abrir) y cada documento abierto queda cifrado en la bóveda del navegador. Sin
+  Internet, la misma dirección abre la copia guardada y los documentos ya abiertos antes; lo escrito
+  se envía al volver la red. No sirve para entrar por primera vez, iniciar sesión, abrir un documento
+  que nunca se abrió en ese navegador, en una ventana privada ni por `http://IP:8080` (los navegadores
+  solo dejan usar el service worker en https o localhost; en el salón no hace falta, el servidor
+  está en la misma red).
+- **Navegador cerrado normal:** abre, el documento sale con su texto, dice «Sin conexión», se sigue
+  escribiendo y al volver la red llega a la Raspberry.
+- **Corregido (DEF-35):** si el navegador se cerraba de golpe (`kill -9`, como si se fuera la luz),
+  pedía iniciar sesión, y sin Internet eso no se puede. Chromium no había escrito al disco el token
+  de `localStorage` (la llave de la bóveda, en IndexedDB, sí). Ahora una copia de la sesión va junto
+  a esa llave y se recupera al abrir; cerrar sesión la borra. Lo mismo pasaba en la app cuando
+  Android la cierra para liberar memoria.
+- **Corregido (DEF-36):** el servidor dejaba un error en su bitácora cada vez que alguien cerraba una
+  pestaña (revisaba de nuevo la sesión del canal en vivo con el boleto ya usado).
+- **Pruebas con 0.12.3:** cuentas y equipo 61 de 61 (sección nueva, 11: cierre de golpe) ·
+  seguridad 226 de 226 · valores límite 18 de 18 · red 24 de 24 · funciones 167 de 167 en
+  computadora y con ancho de celular · unitarias 8 de 8 (JUnit) · ciclo real en el escritorio con
+  `kill -9` y sin red: abre con la sesión y el documento (dos de dos); cerrar sesión y luego `kill
+  -9`: no queda ninguna copia y pide entrar.
+- **Publicado:** jar 0.12.3 en `2-PAGINA-Servidor/` y en la Raspberry, APK 0.12.3 (versionCode 19,
+  misma llave) en `3-APP-Android/` y como release de GitHub; plan de pruebas regenerado (1542 de 1542,
+  DEF-35 y DEF-36). Cómo repetir la prueba en el escritorio: `4-CODIGO/docs/RELEVO-PRUEBAS-0.12.2.md`,
+  sección 6.
+- **Sigue faltando:** regresar el A55 (depuración inalámbrica apagada) y confirmar ahí los dos casos
+  de la app; quitar en Cloudflare el script de estadísticas que mete en la página (la política de
+  contenido lo bloquea, pero ensucia la consola).
+

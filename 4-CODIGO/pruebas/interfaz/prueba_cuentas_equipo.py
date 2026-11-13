@@ -14,6 +14,8 @@ Contra un servidor ya encendido (NOM_BASE, por omisión http://localhost:8099). 
   8. El canal en vivo abre con un boleto de un solo uso: el token no viaja en ninguna dirección.
   9. Aviso de conexión sin cifrar al entrar por la red local (http y no localhost).
  10. Borrar la cuenta: pide contraseña y nombre, borra lo del servidor y lo de este equipo.
+ 11. El navegador se cierra de golpe: si localStorage no alcanzó a guardar la sesión, se recupera
+     de la copia junto a la llave de la bóveda; cerrar sesión no deja ninguna copia.
 Termina con error si algo falla.
 """
 import os, sys, tempfile, socket, time
@@ -283,6 +285,28 @@ anota("un enlace javascript: metido a la fuerza en un texto no queda como enlace
 anota("…y nada de eso queda en la página con un manejador de eventos", p.evaluate("() => document.querySelectorAll('[onerror],[onload],[onclick]').length") == 0)
 salir()
 despues_xss = len(w.errores)
+
+# ================================================================== 11. Cierre de golpe
+# Chromium escribe localStorage al disco cuando le conviene: si el proceso muere (se va la luz, se
+# mata), al volver puede faltar la sesión aunque IndexedDB sí quedó. Visto en flast-desktop con kill -9.
+# Aquí se simula quitando la sesión de localStorage sin cerrarla.
+print("== 11. El navegador se cierra de golpe")
+JS_TOKENS = """async () => { const db = await new Promise((ok, mal) => { const r = indexedDB.open('nom-boveda'); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
+  return await new Promise((ok) => { const q = db.transaction('sesion').objectStore('sesion').getAll(); q.onsuccess = () => ok(q.result.filter((x) => x && x.token).length); }); }"""
+K = N.cuenta(); e11 = N.espacio(K["token"], "Golpe"); d11 = N.documento(K["token"], e11, "TEXTO", "Antes del golpe")
+entrar(K)
+p.evaluate("() => { localStorage.removeItem('nom.token'); localStorage.removeItem('nom.usuario'); }")
+p.goto(B + "/#/doc/" + d11); p.reload()
+try:
+    p.wait_for_function("() => !!localStorage.getItem('nom.token') && !!document.querySelector('.editor-hoja, [contenteditable=true]')", timeout=20000); ok = True
+except Exception: ok = False
+anota("si localStorage perdió la sesión, se recupera de la copia junto a la bóveda", ok and p.evaluate("() => (JSON.parse(localStorage.getItem('nom.usuario') || 'null') || {}).id") == K["id"], p.evaluate("() => localStorage.getItem('nom.usuario')"))
+anota("…y abre el documento sin pedir la contraseña", ok and not p.evaluate("() => !!document.querySelector('#u')"))
+p.evaluate("() => { location.hash = '#/'; }"); p.wait_for_timeout(600)
+p.evaluate("() => NOM.api.limpiarSesion()"); p.wait_for_timeout(800)
+anota("al quitar la sesión (por ejemplo, al cambiar de servidor) la copia del token también se va", p.evaluate(JS_TOKENS) == 0)
+entrar(K); salir(); p.reload(); p.wait_for_timeout(2500)
+anota("después de cerrar sesión no queda ninguna copia y se pide entrar", p.evaluate(JS_TOKENS) == 0 and not p.evaluate("() => !!localStorage.getItem('nom.token')") and p.evaluate("() => !!document.querySelector('#u')"))
 
 # ================================================================== 9. Aviso de red sin cifrar
 print("== 9. Aviso de conexión sin cifrar")

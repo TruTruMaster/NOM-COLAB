@@ -389,6 +389,11 @@ reales de Microsoft bajados de las pruebas de LibreOffice. Lo que se encontró y
 - [x] DEF-32: elegir una fila, una columna o todo corría la hoja hasta la última celda.
 - [x] DEF-33: las manijas de selección de Android tapaban la ruedita del texto.
 - [x] DEF-34: la bienvenida, al desvanecerse, se tragaba el primer clic.
+- [x] DEF-35 (0.12.3): si el navegador (o Android con la app) se cerraba de golpe, al volver sin
+  Internet pedía iniciar sesión: Chromium no alcanzaba a escribir la sesión de `localStorage`. Ahora
+  una copia va junto a la llave de la bóveda en IndexedDB y se recupera al abrir.
+- [x] DEF-36 (0.12.3): al cerrar una pestaña, el servidor revisaba otra vez la sesión del canal en
+  vivo con el boleto ya usado y dejaba un error en la bitácora.
 - [x] Pruebas nuevas: `pruebas/interfaz/rastreo.py` (toca cada botón, menú y acción de la ruedita),
   `pruebas/interfaz/prueba_funciones.py` (que cada función haga lo correcto), `pruebas/office/visor.py`
   (cómo se ve junto a LibreOffice) y un segundo corpus con 43 archivos reales de Microsoft.
