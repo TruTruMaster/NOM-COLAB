@@ -167,14 +167,15 @@ le puede pasar la página para trabajar en grupo? **Sí, ya lo hace:** el servid
 `http://IP-del-teléfono:8080`, por el mismo Wi-Fi o por el punto de acceso del teléfono.
 
 Decisión del equipo (el plan está en `PLAN-CUENTAS-PC-Y-AYUDA.md`): **con Internet hay cuenta, sin
-Internet no hay cuentas** (alias al azar), y lo editado sin Internet abre una **rama** si alguien
-más cambió el documento mientras tanto.
+Internet no hay cuentas** (alias al azar), por persona: en el mismo espacio del teléfono, quien sí
+tiene Internet conserva su cuenta. Lo editado sin Internet abre una **rama** si alguien más cambió
+el documento mientras tanto.
 
 | Situación | Qué se puede |
 |---|---|
 | Hay Internet | La nube (la Raspberry) con la cuenta de siempre, en la app y en cualquier navegador |
 | Sin Internet, con la página ya descargada o la app, y la sesión abierta en ese equipo | Editar la última versión de sus documentos y crear nuevos (fase 13); nada se actualiza hasta que vuelva Internet. No se puede iniciar sesión |
-| Sin Internet, un teléfono con la app comparte (Wi-Fi o punto de acceso) | Todos juntos con alias al azar: la app por «Buscar en la red» y los navegadores (aunque nunca hayan entrado) por la dirección o el QR |
+| Sin Internet, un teléfono con la app comparte (Wi-Fi o punto de acceso) | Todos juntos; quien no tiene Internet con alias al azar, quien sí con su cuenta: la app por «Buscar en la red» y los navegadores (aunque nunca hayan entrado) por la dirección o el QR |
 | Lo mismo, y el teléfono tiene datos móviles | El teléfono sube el espacio a la nube (tal cual o en rama); los equipos en su punto de acceso también tienen Internet |
 | Sin Internet, sin la app y navegadores que nunca entraron | Nada: no hay de dónde sacar la página |
 

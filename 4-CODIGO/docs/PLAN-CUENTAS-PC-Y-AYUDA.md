@@ -1,18 +1,19 @@
 # Plan: sin Internet sin cuentas (alias y ramas), cifrado, sitio de ayuda y legal
 
-13 de noviembre de 2026, segunda versión: ya con las decisiones del equipo. Solo es el plan: se
-construye en otras sesiones (fases 13, 14 y 15 de `PLAN-CONSTRUCCION.md`), en el orden de la parte H.
+13 de noviembre de 2026, versión final: con todas las decisiones del equipo. Solo es el plan; **se
+construye completo a partir de la siguiente sesión** (fases 13, 14 y 15 de `PLAN-CONSTRUCCION.md`),
+en el orden de la parte H. Ya no queda nada por decidir salvo lo de la parte G.
 
 Contenido:
 
 - **Decisiones tomadas** (y las que faltan, parte G).
-- **A. Sin Internet no hay cuentas:** alias al azar (fase 13).
+- **A. Cuentas en el espacio del teléfono:** quien tiene Internet conserva su cuenta; quien no, alias al azar (fase 13).
 - **B. Ramas para lo editado sin Internet** (fase 13).
 - **C. La computadora:** la página descargada basta (fase 13).
 - **D. Documentos cifrados en el servidor** (fase 14 y fase 15).
 - **E. Chat cifrado** (fase 15, solo lo que condiciona lo demás).
 - **F. Sitio de ayuda y legal**, aparte de la app (fase 14).
-- **G. Lo que falta decidir.**
+- **G. Lo que queda abierto.**
 - **H. Orden, pruebas y documentos.**
 
 ---
@@ -22,17 +23,19 @@ Contenido:
 | Tema | Decisión |
 |---|---|
 | Licencia del código | **GPL-3.0** (archivo `LICENSE` y sección en el README) |
-| Cuentas | **Con Internet hay cuenta** (la de la Raspberry, la misma en la app y en la página). **Sin Internet no se entra a ninguna cuenta**, pase lo que pase: solo alias generados al azar |
+| Cuentas | **Con Internet hay cuenta** (la de la Raspberry, la misma en la app y en la página). **Quien no tiene Internet no entra a ninguna cuenta**, pase lo que pase: alias generado al azar. Esto es **por persona**: si al mismo espacio (p. ej. el del teléfono que comparte) se une alguien que sí tiene Internet, **conserva su cuenta** |
 | Azure | **Se une con todo** (una sola cuenta), pero por ahora es de adorno: no se sabe si será requisito. No se trabaja en ello hasta que se pida |
 | Lo editado sin Internet | Si nadie más cambió el documento mientras tanto, se sube tal cual. Si alguien más lo cambió, **se abre una rama** y el original de la nube no se toca |
 | La computadora | Basta con la página descargada (service worker): crear documentos nuevos y editar la última versión que se tenga de cada uno. Sin Internet no se actualizan los espacios ni la nube: todo se queda en el equipo hasta que vuelva |
 | Documentos en el servidor | **Se cifran** (parte D) |
-| Edad | **Sin edad mínima** para usar NOM-COLAB. Para grupos de trabajo con chat, pendiente (G.2) |
+| Edad | **No hay edad.** Los espacios son cerrados: nadie entra sin invitación (sin ella, unirse solo deja una solicitud que el dueño acepta o no, `ServicioEspacios.unirse`). Cada quien es responsable de unirse o no a un grupo de trabajo; si es menor de edad, sus tutores son responsables, no el equipo. NOM-COLAB está pensado para empresas y escuelas, y la edición (texto, hojas, presentaciones, diagramas) es de uso libre para cualquiera |
+| Fin del servicio | Es un proyecto escolar: al terminar, **el proyecto se queda congelado en GitHub** como portafolio de los cuatro integrantes, y ya. Sin aviso previo ni proceso de cierre |
 | Responsable del aviso, buscadores, «¿Te resultó útil?» | Las recomendaciones de la primera versión: equipo WACK con un correo solo del proyecto; la ayuda de la Raspberry visible en buscadores y Azure con `noindex`; contador anónimo o nada |
 
-Se **quita** de la primera versión del plan: entrar al teléfono con la cuenta de la nube (copias de
-cuenta, verificador del teléfono, pase sin conexión firmado), el permiso «Acceso a la red local» de
-Chrome y empaquetar el jar con su propio Java. Ya no hacen falta con las decisiones de arriba.
+Se **quita** de la primera versión del plan: el verificador de contraseñas en el teléfono y el pase
+guardado para usarse sin Internet (sin Internet no hay cuenta), el permiso «Acceso a la red local»
+de Chrome, empaquetar el jar con su propio Java y todo lo de edades. Se **queda** el pase firmado,
+pero solo recién sacado con Internet (A.2).
 
 ## Cómo está hoy (comprobado en el código)
 
@@ -64,30 +67,56 @@ Chrome y empaquetar el jar con su propio Java. Ya no hacen falta con las decisio
 
 ---
 
-## A. Sin Internet no hay cuentas: alias al azar (fase 13)
+## A. Cuentas en el espacio del teléfono: con Internet tu cuenta, sin Internet un alias (fase 13)
 
-**Regla:** sin Internet nadie inicia sesión ni crea cuenta, en ningún lado. Lo que sí sigue:
+**Regla, por persona:** quien tiene Internet en ese momento entra con su cuenta de la nube; quien no
+tiene Internet no inicia sesión ni crea cuenta, en ningún lado, y entra con un alias al azar. En un
+mismo espacio pueden estar mezclados.
 
-1. **Quien ya tenía la sesión abierta en su equipo** sigue trabajando con lo que su equipo guardó
-   (su bóveda): no es «entrar a una cuenta», es seguir donde estaba. No puede iniciar sesión de
-   nuevo ni cambiar de cuenta hasta que haya Internet.
-2. **En el teléfono que comparte, todos entran con un alias generado al azar** (p. ej. «Colibrí
-   37», con un color), sin escribir nada: el QR o el código y listo. El alias se guarda en ese
-   equipo para ese espacio, así que al reconectarse al mismo teléfono es el mismo alias. Con
-   «Otro alias» se genera otro. No se escribe a mano (así nadie se hace pasar por otro).
-3. El dueño del teléfono también trabaja ahí con un alias; lo que lo distingue es que el teléfono es suyo.
+### A.1 Quien no tiene Internet
 
-Cambios:
+1. **Si ya tenía la sesión abierta en su equipo** sigue trabajando con lo que su equipo guardó (su
+   bóveda): no es «entrar a una cuenta», es seguir donde estaba. No puede iniciar sesión de nuevo ni
+   cambiar de cuenta hasta que haya Internet.
+2. **En el teléfono que comparte entra con un alias generado al azar** (p. ej. «Colibrí 37», con un
+   color), sin escribir nada: el QR o el código y listo. El alias se guarda en ese equipo para ese
+   espacio (al volver al mismo teléfono es el mismo); «Otro alias» genera otro. No se escribe a mano
+   (así nadie se hace pasar por otro). Aunque tenga una sesión abierta de antes, en el teléfono sin
+   Internet entra con alias.
+3. Lo que escribe un alias queda a nombre del alias («Colibrí 37, sin conexión») también al subir el
+   espacio a la nube. No se «reclama» después.
 
-- Teléfono como servidor: quitar el registro y el inicio de sesión de cuentas
-  (`/api/cuentas/registro` y `/api/cuentas/sesion` en `ApiTelefono` responden «Sin Internet se
-  entra con alias»); la pantalla de unirse ya no pide apodo, muestra el alias que tocó.
-- Las cuentas del teléfono que ya existan: se dejan de usar; sus documentos quedan en el espacio
-  con su nombre como autor. Se borran del teléfono en la primera versión que traiga esto.
-- Permisos en el espacio del teléfono: el dueño elige al encender si los alias **editan** o solo
-  **ven**; los permisos finos (partes con dueño, comentar) se quedan para la nube.
-- Al subir el espacio a la nube (`ServicioSincronia`), lo escrito por alias queda a nombre del alias
-  («Colibrí 37, sin conexión»). No se «reclama» después: así es más simple y no hay cuentas sin Internet.
+### A.2 Quien sí tiene Internet (aunque el teléfono no tenga)
+
+La pantalla de unirse al teléfono revisa si **este equipo** llega a la nube (una petición corta a
+`https://nomcolab.dpdns.org/api/red/info`). Si llega, ofrece **«Entrar con mi cuenta»** además del alias:
+
+1. El equipo inicia sesión **directo con la nube por https** (la contraseña nunca pasa por el
+   teléfono ni por la red del salón). En la app, si ya tiene sesión, usa esa.
+2. La nube le entrega un **pase firmado** recién hecho: `{ uid, nombre, color, emitido, caduca (10
+   minutos), nube }`, firmado con ECDSA P-256 (está en Java 17 y en Android desde la API 24).
+3. El equipo presenta el pase al teléfono (`POST /api/cuentas/pase`). El teléfono revisa la firma con
+   la **llave pública de la Raspberry, que va dentro del APK** (así funciona aunque el teléfono no
+   tenga Internet), crea o actualiza una copia de esa cuenta **con el mismo `id`** de la nube y da una
+   sesión del teléfono. El pase sirve una sola vez.
+4. Como la copia tiene el mismo `id`, al subir el espacio a la nube lo suyo queda a su nombre.
+
+Detalles:
+
+- **Página por `http://IP-del-teléfono`:** está en otro origen que la nube, así que para pedir el pase
+  llama a la nube con CORS. La Raspberry permite **solo** `POST /api/cuentas/sesion` y
+  `POST /api/cuentas/pase` desde orígenes de red privada (`http://10.*`, `192.168.*`, `172.16-31.*`,
+  con cualquier puerto), sin cookies. Una página `http` sí puede llamar a `https` (no es contenido mixto).
+- **Permisos:** en el espacio del teléfono, una cuenta con pase recibe el permiso que el dueño le dé
+  ahí; los alias, el que el dueño eligió al encender (editar o solo ver). La nube no se consulta.
+- Si en el mismo rato pierde Internet, ya entró: sigue con su cuenta en el teléfono hasta salir.
+- **Quitar** del teléfono el registro y el inicio de sesión con contraseña (`/api/cuentas/registro` y
+  `/api/cuentas/sesion` en `ApiTelefono` responden «Entra con alias, o con tu cuenta si tienes
+  Internet»). Las cuentas del teléfono que ya existan se dejan de usar (sus documentos quedan con su
+  nombre como autor) y se borran del teléfono en la primera versión que traiga esto.
+- Seguridad (`seguridad.py`): pase falso, vencido, repetido, de otra nube, con `uid` de otra persona;
+  CORS de la nube cerrado para todo lo demás y para orígenes públicos; límites contra el abuso en
+  `/api/cuentas/pase`; cambiar la llave de la Raspberry (y cómo se publica la nueva en el APK).
 - La página sin Internet que no tenga sesión abierta: solo «Usar sin cuenta» (documentos de este equipo).
 
 ## B. Ramas para lo editado sin Internet (fase 13)
@@ -220,7 +249,8 @@ espacio de D.2). Lo que ya hay que tener en cuenta:
   comparte los mensajes ya descifrados desde su equipo (la página «Reportar contenido» lo explica).
 - Tope de tamaño de imágenes y archivos, y que cuenten en el espacio de la cuenta.
 - Sin Internet, en el teléfono que comparte: el chat funciona entre los alias y se sube como el resto.
-- Por esto sigue pendiente la edad para los grupos (G.2).
+- El chat vive dentro del espacio, que es cerrado (solo por invitación): no hay chat abierto ni
+  búsqueda de personas.
 
 ## F. Sitio de ayuda y legal (fase 14)
 
@@ -289,13 +319,15 @@ lea: es un proyecto escolar, no asesoría legal.
   respaldos hasta 14 días después; lo del equipo hasta que la persona lo borre); **cifrado**: en el
   equipo siempre; en el servidor, lo que diga D según el nivel que ya esté hecho (no prometer el
   nivel 2 antes de tenerlo); derechos ARCO y revocación (correo; y lo que se hace solo: Descargar
-  todo, borrar la cuenta); menores de edad (sin edad mínima: a quien sea menor se le pide usarla con
-  su madre, padre o tutor; revisar qué pide la ley); cambios al aviso y fecha.
+  todo, borrar la cuenta); que los espacios son cerrados y por invitación; cambios al aviso y fecha.
 - **Aviso simplificado:** responsable, finalidades y dónde leer el integral.
-- **Términos:** servicio escolar gratis «tal como está», sin garantía de que esté prendido; qué pasa
-  si se apaga (G.1); una cuenta por persona; cuidar la contraseña y el código de recuperación;
+- **Términos:** proyecto escolar gratis «tal como está», sin garantía de que esté prendido; al
+  terminar, el servicio puede apagarse sin aviso y el proyecto queda congelado en GitHub; los
+  espacios son cerrados (solo por invitación) y cada quien es responsable de unirse a un grupo de
+  trabajo y de lo que hace ahí (si es menor de edad, sus tutores); pensado para empresas y escuelas,
+  y la edición es de uso libre para cualquiera; una cuenta por persona; cuidar la contraseña y el código de recuperación;
   **lo que escribes es tuyo**; sin Internet no hay cuentas, solo alias, y al volver se suben los
-  cambios o se abre una rama; reglas de uso; el código es software libre bajo **GPL-3.0**; «Word,
+  cambios o se abre una rama, y quien tiene Internet conserva su cuenta; reglas de uso; el código es software libre bajo **GPL-3.0**; «Word,
   Excel y PowerPoint son marcas de Microsoft; NOM-COLAB no está afiliado a Microsoft»; ley mexicana.
 - **Uso aceptable:** nada ilegal, acoso o burlas (entorno escolar), datos personales de otros sin
   permiso, archivos dañinos, abusar del servicio, intentar romper la seguridad (salvo reportarla).
@@ -315,11 +347,11 @@ lea: es un proyecto escolar, no asesoría legal.
 Primeros pasos: 1. ¿Qué es NOM-COLAB y en qué se parece y se diferencia de Word, Excel, PowerPoint o
 Canva? 2. ¿Cuesta, tiene anuncios, usa inteligencia artificial? 3. ¿Necesito cuenta? 4. ¿Por qué no
 me piden correo y cómo recupero la contraseña? 5. ¿En qué navegadores y teléfonos funciona? ¿Hay
-app para iPhone o computadora? 6. ¿Desde qué edad se puede usar?
+app para iPhone o computadora? 6. ¿Cualquiera puede entrar a mi espacio? (no: solo por invitación)
 
 Sin Internet: 7. ¿De verdad funciona sin Internet y qué necesito haber hecho antes? 8. Nunca entré a
-la página y no hay Internet: ¿cómo trabajamos juntos? 9. ¿Por qué sin Internet no puedo entrar con
-mi cuenta y me toca un alias? 10. ¿Puedo crear documentos sin Internet? 11. ¿Qué pasa con lo que
+la página y no hay Internet: ¿cómo trabajamos juntos? 9. ¿Por qué sin Internet me toca un alias, y por
+qué otros en el mismo espacio sí tienen su cuenta? 10. ¿Puedo crear documentos sin Internet? 11. ¿Qué pasa con lo que
 escribí sin Internet cuando vuelve la red? 12. ¿Qué es una rama y por qué se creó una de mi documento?
 13. ¿Cómo junto una rama con el original?
 
@@ -340,8 +372,7 @@ teléfono» y gasta mucha batería? 32. ¿El código es libre? (GPL-3.0)
 
 ### F.5 Cambios en la app que pide la parte legal
 
-- Registro: casilla «Leí y acepto los Términos y el Aviso de privacidad» con enlaces y la frase para
-  menores; guardar qué versión aceptó y cuándo (`aceptoVersion`, `aceptoFecha`); si cambia el aviso,
+- Registro: casilla «Leí y acepto los Términos y el Aviso de privacidad» con enlaces; guardar qué versión aceptó y cuándo (`aceptoVersion`, `aceptoFecha`); si cambia el aviso,
   pedir aceptar la nueva.
 - Pie de la entrada y menú de la cuenta: «Ayuda · Privacidad · Términos». Botón «?» en editores y
   diálogos importantes hacia su artículo.
@@ -377,31 +408,34 @@ módulo, `PENDIENTES.md` sección 6, `RELEVO-PRUEBAS-0.12.2.md` (lo que no se ve
 
 ---
 
-## G. Lo que falta decidir
+## G. Lo que queda abierto
 
-| # | Qué | Qué significa y propuesta |
+Todo lo demás está decidido. Se resolvió: el umbral de las ramas (más de 2 minutos sin conexión, o
+el documento abierto ya sin Internet, como en B.2; se puede ajustar si al probar molesta), que no hay
+edades y que al terminar el proyecto se queda congelado en GitHub.
+
+| # | Qué | Cuándo |
 |---|---|---|
-| G.1 | **Si se apaga el servicio, qué pasa con los datos** | Se refiere a la **nube** (la Raspberry, y Azure si se usa): si al terminar el proyecto o el ciclo escolar se apaga, las cuentas y documentos guardados ahí dejarían de estar. Lo guardado en cada equipo no se pierde. Propuesta: avisar en la página con 30 días, dejar descargar todo y después borrar la nube **y sus respaldos**; si se decide no apagarla nunca, decirlo así |
-| G.2 | **Edad para grupos con chat** | Usar NOM-COLAB: sin edad mínima (decidido). Para el chat cifrado nadie puede moderar lo que se manda. Opciones: (a) sin límite, con la frase para menores; (b) chat solo en espacios cuyo dueño sea un adulto (p. ej. modo salón del maestro); (c) edad mínima para el chat. Decidir antes de la fase 15 |
-| G.3 | **Cuánto tiempo sin conexión abre una rama** | Propuesta de B.2: más de 2 minutos, o abierto ya sin Internet. Confirmar al probar con el equipo |
-| G.4 | **Cómo se une Azure** (cuando sea requisito) | Una sola base para todo: o Azure usa la misma de la Raspberry, o una réplica. Se diseña cuando se pida |
-| G.5 | Crear el correo del proyecto | Para el aviso, `security.txt` y denuncias |
+| G.1 | **Cómo se une Azure** (una sola base para todo: o usa la de la Raspberry, o una réplica) | Solo si Azure llega a ser requisito |
+| G.2 | **Crear el correo del proyecto** (para el aviso, `security.txt` y denuncias) | Al empezar la fase 14; lo crea el equipo |
 
 ## H. Orden, pruebas y documentos
 
-1. **Ya:** archivo `LICENSE` con la GPL-3.0 y sección en el README; crear el correo del proyecto (G.5).
-2. **Fase 13 (sin Internet):** A (alias, quitar cuentas del teléfono), C (crear documentos en un
+1. **Al empezar:** archivo `LICENSE` con la GPL-3.0 y sección en el README; pedir al equipo el correo del proyecto (G.2).
+2. **Fase 13 (sin Internet):** A (alias, pase para quien tiene Internet, quitar cuentas del teléfono), C (crear documentos en un
    espacio sin Internet, botón «Instalar»), B (ramas: detectar, crear, mostrar, comparar, fusionar).
 3. **Fase 14 (ayuda, legal y cifrado en reposo):** infraestructura del sitio, D.1, páginas legales
    y cambios de F.5, después la ayuda (Sin Internet, Empezar, Cuentas, preguntas frecuentes,
    Problemas; luego editores, Office, novedades, fórmulas) y los «?» de la app.
-4. **Fase 15 (cuando se decida G.2):** cifrado de extremo a extremo (D.2) y chat (E).
+4. **Fase 15:** cifrado de extremo a extremo (D.2) y chat (E).
 5. En cada fase: versión nueva, todas las suites, publicar en la Raspberry, GitHub y el APK.
 
 Pruebas nuevas:
 
-- **Alias:** sin Internet no se puede iniciar sesión ni registrarse en el teléfono; el alias se
-  repite en el mismo equipo y espacio; no se puede escribir a mano.
+- **Alias y pase:** sin Internet no se puede iniciar sesión ni registrarse en el teléfono; el alias se
+  repite en el mismo equipo y espacio; no se puede escribir a mano; un equipo con Internet entra al
+  teléfono sin Internet con su cuenta (pase) y lo suyo sube a su nombre; un espacio con cuentas y
+  alias mezclados.
 - **Ramas:** sin cambios de otros → se sube tal cual; con cambios de otros → rama y original intacto;
   corte corto → se junta solo; cada caso de B.6; fusionar (con versión para regresar) y descartar;
   el teléfono subiendo con y sin cambios en la nube.
@@ -413,5 +447,5 @@ Pruebas nuevas:
 
 Documentos que hay que poner al día cuando se construya: mapa de navegación (ramas, alias, «Ayuda» y
 «Legal» fuera de la sesión), casos de uso (editar sin Internet con rama, fusionar, entrar con alias,
-consultar la ayuda, aceptar el aviso), diagramas de actividades de sin Internet, plan de pruebas,
+entrar con la cuenta teniendo Internet, consultar la ayuda, aceptar el aviso), diagramas de actividades de sin Internet, plan de pruebas,
 `README.md`, `LEEME.md`, `SERVIDOR-PROPIO.md` (la llave del cifrado en reposo y su respaldo), `LOG.md`.

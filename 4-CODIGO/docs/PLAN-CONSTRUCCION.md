@@ -402,26 +402,30 @@ reales de Microsoft bajados de las pruebas de LibreOffice. Lo que se encontró y
 ## Fase 13. Sin Internet: alias al azar, ramas y crear documentos (plan del 13 de noviembre de 2026)
 
 Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes A, B y C. Decidido: con Internet hay cuenta (la
-de la Raspberry, la misma en la app y en la página); **sin Internet no se entra a ninguna cuenta**,
-solo alias generados al azar; lo editado sin Internet se sube tal cual si nadie más cambió el
-documento, y si alguien lo cambió se abre una **rama** y el original no se toca.
+de la Raspberry, la misma en la app y en la página); **quien no tiene Internet no entra a ninguna
+cuenta**, solo con un alias generado al azar; lo editado sin Internet se sube tal cual si nadie más cambió el
+documento, y si alguien lo cambió se abre una **rama** y el original no se toca. Es por persona:
+quien tiene Internet conserva su cuenta aunque esté en el espacio del teléfono.
 
-- [ ] A: en el teléfono que comparte, alias al azar (sin escribir apodo); quitar registro e inicio de
-      sesión de cuentas en `ApiTelefono`; lo de alias queda a su nombre al subir a la nube.
+- [ ] A.1: quien no tiene Internet entra al teléfono que comparte con un alias al azar (sin escribir
+      apodo); quitar registro e inicio de sesión con contraseña en `ApiTelefono`.
+- [ ] A.2: quien sí tiene Internet conserva su cuenta: inicia sesión directo con la nube, recibe un
+      pase firmado de 10 minutos y lo presenta al teléfono (llave pública de la Raspberry dentro del APK;
+      CORS de la nube solo para eso y desde redes privadas).
 - [ ] C: crear documentos dentro de un espacio sin Internet (se suben solos al volver); botón
       «Instalar en esta computadora».
 - [ ] B.3: base al quedarse sin conexión y `GET /api/documentos/{id}/cambios-desde`.
 - [ ] B.4: crear la rama (`ramaDe`, `base`, cambios propios) en lugar de enviar la cola; «Ramas (n)» en el original.
 - [ ] B.5: comparar con el original, fusionar (con versión para regresar), dejar aparte, descartar.
 - [ ] B.6: casos especiales (borrado, renombrado, protegido o con fecha vencida, el teléfono al subir).
-- [ ] B.2 / G.3: confirmar con pruebas cuánto tiempo sin conexión abre una rama (propuesta: 2 minutos).
+- [ ] B.2: rama solo tras más de 2 minutos sin conexión o con el documento abierto ya sin Internet (decidido; ajustar si al probar molesta).
 - [ ] Pruebas de la parte H y ciclo real en `flast-desktop` con la Raspberry.
 
 ## Fase 14. Sitio de ayuda y legal, y cifrado en reposo (plan del 13 de noviembre de 2026)
 
 Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.1 y F.
 
-- [ ] Archivo `LICENSE` con la GPL-3.0 (decidida) y sección en el README; correo del proyecto (G.5).
+- [ ] Archivo `LICENSE` con la GPL-3.0 (decidida) y sección en el README; correo del proyecto (G.2, lo crea el equipo).
 - [ ] D.1: cifrado en reposo en el servidor (documentos, versiones, comentarios y respaldos).
 - [ ] Generador `4-CODIGO/ayuda/generar.py`, plantilla, buscador, rutas en Spring y en el teléfono, service worker.
 - [ ] `/legal/`: aviso integral y simplificado (LFPDPPP de 2025), términos, uso aceptable,
@@ -434,12 +438,12 @@ Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.1 y F.
 
 ## Fase 15. Cifrado de extremo a extremo y chat (plan del 13 de noviembre de 2026)
 
-Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.2 y E. Antes, decidir la edad para grupos con chat (G.2).
+Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.2 y E. No hay edades: los espacios son cerrados, solo por invitación.
 
 - [ ] Llave por espacio, par de llaves por cuenta (envuelto con la contraseña y con el código de recuperación).
 - [ ] Contenido cifrado, estructura en claro; proyección pública y recibos ajustados.
 - [ ] Chat por espacio con imágenes y documentos, cifrado; reportar compartiendo lo descifrado.
-- [ ] Azure unida a la misma cuenta cuando sea requisito (G.4).
+- [ ] Azure unida a la misma cuenta, solo si llega a ser requisito (G.1).
 
 ## Cómo quedó (8 de noviembre de 2026)
 
@@ -488,7 +492,7 @@ sesión anterior: `./desplegar.sh roles` para las columnas nuevas de usuarios.
 ## Orden recomendado para la siguiente sesión
 
 **Desde el 13 de noviembre de 2026:** el orden de la parte H de `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`
-(licencia y correo; fase 13; fase 14; fase 15 cuando se decida la edad para el chat). Antes, regresar el
+(licencia y correo; fase 13; fase 14; fase 15). El plan está completo: se construye desde la siguiente sesión. Antes, regresar el
 A55 (ver `docs/RELEVO-PRUEBAS-0.12.2.md`, sección 4). La lista de abajo es la de antes.
 
 1. Probar en el A55: la app 0.11.0, el teléfono como servidor con otra persona, el QR con la cámara
