@@ -82,10 +82,16 @@ $PY office/visor.py SALIDA ~/.cache/nom-pruebas/corpus-web/*/*     # capturas la
 
 ## 4. Estado en que quedaron los equipos
 
-- A55: APK publicable 0.12.2 instalado; la app apunta otra vez al servidor que tenía
-  (`http://192.168.0.199:8080`); los datos del teléfono como servidor se respaldaron antes y se
-  regresaron tal cual; "pantalla siempre prendida al cargar" se regresó a como estaba.
-- Escritorio: el Chromium de pruebas usa un perfil aparte en `/tmp/nom-perfil` (se puede cerrar).
+- **A55 (falta regresarlo):** la depuración inalámbrica se apagó sola a mitad de la última tanda, así
+  que el teléfono quedó con el **APK de depuración** 0.12.2 y la app apuntando al servidor de pruebas
+  de la laptop (`http://100.77.150.52:8099`, apagado) con una cuenta de prueba. Al reactivar la
+  depuración inalámbrica (Opciones de desarrollador → Depuración inalámbrica; el puerto se ve con
+  `adb mdns services`): instalar `3-APP-Android/NOM-COLAB.apk`, regresar en la app el servidor que
+  tenía (`http://192.168.0.199:8080`, respaldo de sus ajustes en
+  `~/.cache/nom-pruebas/respaldo-a55/app-ajustes-antes.json`), cerrar la sesión de prueba y
+  `adb shell svc power stayon false` (estaba apagado). Los datos del teléfono como servidor ya se
+  regresaron tal cual (respaldo en `~/.cache/nom-pruebas/respaldo-a55/servidor-antes.tar`).
+- Escritorio: el Chromium de pruebas y su perfil aparte se cerraron y se borraron.
 - Raspberry: jar 0.12.2 (`nomcolab-pi actualizar`); las cuentas de prueba se borraron.
 
 ## 5. Documentos al día y documentos ya entregados
