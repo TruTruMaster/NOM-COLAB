@@ -181,10 +181,10 @@ se reparten las visitas y cada uno tiene sus propios datos.
 - En el servidor solo se guardan **documentos de NOM-COLAB** (textos, hojas, presentaciones y
   diagramas). No hay forma de subir otros archivos: lo que se importa de Word, Excel o
   PowerPoint se convierte al formato propio (el original va dentro del documento, recomprimido).
-- En disco van **comprimidos**: el estado de cada documento (`docs/<id>/estado.json`) y las
-  fotos de sus versiones (`docs/<id>/v/<n>.json`) se escriben con gzip, con el mismo nombre de
-  archivo. Los datos de versiones anteriores (sin comprimir) se abren igual y se comprimen la
-  siguiente vez que se guardan. Para ver uno a mano: `zcat estado.json | head -c 300`.
+- En disco van **comprimidos y cifrados** (desde la 0.13.0, ver «Cifrado en reposo» abajo): el
+  estado de cada documento (`docs/<id>/estado.json`) y las fotos de sus versiones
+  (`docs/<id>/v/<n>.json`) se comprimen con gzip y luego se cifran. Los datos de versiones
+  anteriores (en claro o solo comprimidos) se abren igual y se cifran solos al arrancar.
 - **Límite por cuenta**: `NOM_CUOTA_MB` (en la Pi, 200 MB; 0 = sin límite). Cuenta lo de los
   espacios de los que la cuenta es propietaria (documentos y versiones, ya comprimidos). Cada
   quien ve cuánto lleva en el inicio ("Guardados en… · X de 200 MB") y en "En el servidor".
@@ -213,10 +213,43 @@ systemctl --user daemon-reload && systemctl --user enable --now nomcolab-traer-r
 Restaurar en la Pi: `scp` del respaldo a la Pi, `doas nomcolab-pi apagar`, descomprimirlo en
 `/var/lib/nomcolab` (`tar -xzf datos-….tar.gz`, deja la carpeta `datos`) y `doas nomcolab-pi prender`.
 
-**Cifrado del disco de la Pi: decidido que no** (11 de noviembre de 2026). Los datos van sin
-cifrar en la tarjeta: la Pi no sale de casa y tiene que arrancar sola. Cifrarlos "desde el
-programa" con una llave guardada en la misma tarjeta no protegería nada. Las contraseñas sí van
-protegidas (PBKDF2 + sal) y los respaldos solo los leen `root` y el grupo `adm`.
+## Cifrado en reposo (desde la 0.13.0)
+
+Decidido por el equipo el 13 de noviembre de 2026 (antes, el 11, se había dicho que no): lo que el
+servidor escribe en disco **va cifrado** con AES-256-GCM. Eso incluye documentos, versiones,
+comentarios (van dentro de los documentos), bitácoras (cada línea por separado), espacios,
+recibos, la biblioteca y la base de cuentas H2 (cifrado de archivo de H2 con una contraseña
+derivada de la misma llave). Como los respaldos son una copia de la carpeta de datos, **los
+respaldos también van cifrados**.
+
+- **La llave** es `reposo.key` en la carpeta de llaves: `NOM_LLAVES`, o si no, la carpeta
+  `<datos>-llaves` **junto** a la de datos (nunca adentro, así no viaja en los respaldos). En la
+  Pi: `/var/lib/nomcolab/datos-llaves/reposo.key` (solo la lee el usuario `nomcolab`). En Azure se
+  puede dar en la configuración como `NOM_LLAVE_REPOSO` (base64). Ahí mismo vive la llave con la
+  que el servidor firma los pases (`pases-privada.p8`, fase 13).
+- **La primera vez** que arranca la 0.13.0 crea la llave y cifra todo lo que estaba en claro
+  (cada archivo se reemplaza de una vez: si se va la luz a la mitad, sigue al volver). Se ensayó
+  con la copia de un respaldo real de la Pi: los 89 archivos se descifran idénticos al original y
+  la base abre con las mismas cuentas.
+- **Sin la llave, el servidor no arranca** (para no empezar de cero creyendo que no hay datos), y
+  tampoco con una llave que no es la de esos datos: lo comprueba descifrando `datos/cifrado.json`.
+- **Guardar una copia de la llave, aparte** (en una memoria USB o un gestor de contraseñas; no en
+  la misma laptop que guarda los respaldos): `ssh pi5 doas -n /usr/local/sbin/nomcolab-pi llave`
+  (la orden `llave` llega a la Pi al volver a correr `instalar-pi.sh`; mientras, con la contraseña:
+  `ssh -t pi5 doas cat /var/lib/nomcolab/datos-llaves/reposo.key`). **Si se pierde la llave, los
+  datos y los respaldos ya no se pueden abrir.**
+- **Restaurar un respaldo** en otra máquina: la carpeta `datos` del respaldo más la llave en
+  `datos-llaves/reposo.key` (o `NOM_LLAVE_REPOSO`).
+- Protege contra que se roben la tarjeta o el disco, o que un respaldo se copie a otro lado.
+  **No** protege contra quien administra el servidor (tiene la llave); para eso está el cifrado de
+  extremo a extremo (fase 15).
+- `NOM_CIFRAR=false` hace que un servidor **nuevo** guarde en claro (solo para pruebas); si ya hay
+  datos cifrados, se sigue usando la llave.
+- Los respaldos de antes de la 0.13.0 (en la Pi se guardan 14; en la laptop, 30) siguen en claro
+  hasta que se borran solos por antigüedad.
+- La bitácora del servidor no guarda direcciones IP ni el contenido ni los nombres de los
+  documentos (solo sus identificadores y, en los eventos de seguridad, el nombre de la cuenta);
+  en la Pi la rotan los servicios s6 (10 archivos de 1 MB por servicio).
 
 ## En la Raspberry Pi (así está montado)
 

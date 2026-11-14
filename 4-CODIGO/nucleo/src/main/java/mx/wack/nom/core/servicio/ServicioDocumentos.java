@@ -747,7 +747,7 @@ public class ServicioDocumentos {
         repo.guardar(d);
         difusor.avisarDocumento(d.id, "entrega", Map.of("limite", d.entregaLimite, "cerrada", true));
         difusor.avisarEspacio(d.espacioId, "documentos", Map.of("accion", "actualizado", "id", d.id));
-        log.info("Entrega cerrada: {} ({} recibos)", d.nombre, recibos.size());
+        log.info("Entrega cerrada: documento {} ({} recibos)", d.id, recibos.size());
     }
 
     /** Cada minuto (con el autoguardado): cierra las entregas cuya fecha ya paso. */
@@ -867,7 +867,7 @@ public class ServicioDocumentos {
                     nuevaVersion(d, repo.estado(id), autor, "Autoguardado");
                 }
                 difusor.avisarDocumento(id, "guardado", Map.of("numero", d.version, "auto", true));
-                log.detalle("Autoguardado {} v{}", d.nombre, d.version);
+                log.detalle("Autoguardado del documento {} v{}", d.id, d.version);
             });
         }
         revisarEntregas();

@@ -103,32 +103,18 @@ public class RepositorioDocumentosJson implements RepositorioDocumentos {
     }
 
     @Override public void anotarActividad(String docId, Map<String, Object> entrada) {
-        Path p = almacen.ruta("docs/" + docId + "/actividad.jsonl");
-        try {
-            Files.createDirectories(p.getParent());
-            synchronized (this) {
-                Files.writeString(p, almacen.json().writeValueAsString(entrada) + "\n", StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo anotar la actividad de " + docId, e);
-        }
+        // D.1: cada linea va cifrada por separado (asi se sigue agregando sin reescribir el archivo).
+        synchronized (this) { almacen.agregarLinea("docs/" + docId + "/actividad.jsonl", almacen.json().writeValueAsString(entrada)); }
     }
 
     @Override public List<Map<String, Object>> actividad(String docId, int max) {
-        Path p = almacen.ruta("docs/" + docId + "/actividad.jsonl");
-        if (!Files.exists(p)) return List.of();
-        try {
-            List<String> lineas = Files.readAllLines(p, StandardCharsets.UTF_8);
-            List<Map<String, Object>> r = new ArrayList<>();
-            for (int i = lineas.size() - 1; i >= 0 && r.size() < max; i--) {
-                if (lineas.get(i).isBlank()) continue;
-                r.add(almacen.json().readValue(lineas.get(i), new TypeReference<LinkedHashMap<String, Object>>() { }));
-            }
-            return r;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        List<String> lineas = almacen.lineas("docs/" + docId + "/actividad.jsonl");
+        List<Map<String, Object>> r = new ArrayList<>();
+        for (int i = lineas.size() - 1; i >= 0 && r.size() < max; i--) {
+            if (lineas.get(i).isBlank()) continue;
+            r.add(almacen.json().readValue(lineas.get(i), new TypeReference<LinkedHashMap<String, Object>>() { }));
         }
+        return r;
     }
 
     @Override public synchronized Map<String, Map<String, Object>> visitas(String docId) {

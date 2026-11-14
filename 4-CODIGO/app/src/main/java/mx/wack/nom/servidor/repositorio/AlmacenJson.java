@@ -32,6 +32,10 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class AlmacenJson {
 
+    /** D.1: lo que se escribe va cifrado (AES-256-GCM, ver CifradoReposo); lo que se lee puede venir
+        cifrado, comprimido o en claro (datos de versiones anteriores), y se cifra la siguiente vez. */
+    private final mx.wack.nom.core.servicio.CifradoReposo cifrado = mx.wack.nom.servidor.ArranqueCifrado.cifrado();
+
     private final Path raiz;
     private static final long CADA_RESPALDO = 10 * 60_000L;
     private static final int RESPALDOS = 3;
@@ -44,6 +48,84 @@ public class AlmacenJson {
     public AlmacenJson(@Value("${nom.datos}") String carpeta) throws IOException {
         this.raiz = Path.of(carpeta).toAbsolutePath();
         Files.createDirectories(raiz);
+        if (cifrado.activo()) migrarACifrado();
+    }
+
+    private String relativa(java.io.File f) {
+        return raiz.relativize(f.toPath().toAbsolutePath()).toString().replace('\\', '/');
+    }
+
+    /** Lo que no es de AlmacenJson: la base H2 (se cifra aparte), el canario y las bitacoras del servidor. */
+    private static boolean ajeno(String rel) {
+        String n = rel.contains("/") ? rel.substring(rel.lastIndexOf('/') + 1) : rel;
+        return n.startsWith("nom-db") || n.equals(mx.wack.nom.servidor.ArranqueCifrado.CANARIO) || n.endsWith(".log") || n.endsWith(".lock") || n.endsWith(".tmp");
+    }
+
+    /**
+     * D.1 Al arrancar con cifrado: todo lo que quedo en claro (o solo comprimido) de antes se cifra
+     * ahora, tambien los .resp de respaldo y las bitacoras. Cada archivo se reemplaza de una vez
+     * (temporal + mover): si se va la luz a la mitad, al volver sigue donde se quedo.
+     */
+    private void migrarACifrado() throws IOException {
+        int n = 0;
+        java.util.List<Path> archivos;
+        try (var s = Files.walk(raiz)) { archivos = s.filter(Files::isRegularFile).toList(); }
+        for (Path p : archivos) {
+            String rel = raiz.relativize(p).toString().replace('\\', '/');
+            if (ajeno(rel)) continue;
+            byte[] b = Files.readAllBytes(p);
+            if (rel.endsWith(".jsonl") || rel.matches(".*\\.jsonl\\.resp\\d+$")) {
+                String t = new String(b, java.nio.charset.StandardCharsets.UTF_8);
+                if (t.lines().allMatch(l -> l.isBlank() || cifrado.lineaCifrada(l))) continue;
+                StringBuilder sb = new StringBuilder();
+                for (String l : t.split("\n")) if (!l.isBlank()) sb.append(cifrado.lineaCifrada(l) ? l : cifrado.cifrarLinea(l, rel)).append('\n');
+                reemplazar(p, sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                n++;
+                continue;
+            }
+            if (mx.wack.nom.core.servicio.CifradoReposo.cifrado(b)) continue;
+            boolean gz = b.length >= 2 && (b[0] & 0xFF) == 0x1F && (b[1] & 0xFF) == 0x8B;
+            long real = b.length;
+            if (gz && b.length >= 18) real = Math.max(b.length, (b[b.length - 4] & 0xFFL) | (b[b.length - 3] & 0xFFL) << 8 | (b[b.length - 2] & 0xFFL) << 16 | (b[b.length - 1] & 0xFFL) << 24);
+            reemplazar(p, cifrado.cifrar(b, gz, real, rel));
+            n++;
+        }
+        if (n > 0) log.info("Cifrado en reposo: {} archivo(s) que estaban en claro ahora van cifrados", n);
+    }
+
+    private static void reemplazar(Path p, byte[] b) throws IOException {
+        Path tmp = p.resolveSibling(p.getFileName() + ".tmp");
+        Files.write(tmp, b);
+        try { Files.move(tmp, p, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
+        catch (AtomicMoveNotSupportedException e) { Files.move(tmp, p, StandardCopyOption.REPLACE_EXISTING); }
+    }
+
+    // ------------------------------------------------------------ bitacoras (una linea por entrada)
+
+    /** Agrega una linea (cifrada si toca) a una bitacora .jsonl. */
+    public synchronized void agregarLinea(String relativa, String linea) {
+        Path p = ruta(relativa);
+        try {
+            Files.createDirectories(p.getParent());
+            Files.writeString(p, (cifrado.activo() ? cifrado.cifrarLinea(linea, relativa) : linea) + "\n", java.nio.charset.StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo anotar en " + relativa, e);
+        }
+    }
+
+    /** Las lineas de una bitacora, ya descifradas (las de antes, en claro, tambien). */
+    public java.util.List<String> lineas(String relativa) {
+        Path p = ruta(relativa);
+        if (!Files.exists(p)) return java.util.List.of();
+        try {
+            java.util.List<String> l = Files.readAllLines(p, java.nio.charset.StandardCharsets.UTF_8);
+            java.util.List<String> r = new java.util.ArrayList<>(l.size());
+            for (String x : l) if (!x.isBlank()) r.add(cifrado.descifrarLinea(x, relativa));
+            return r;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public Path raiz() { return raiz; }
@@ -71,11 +153,11 @@ public class AlmacenJson {
     }
 
     public <T> T leer(String relativa, TypeReference<T> tipo, T siFalta) {
-        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
+        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f, relativa)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
     }
 
     public <T> T leer(String relativa, Class<T> tipo, T siFalta) {
-        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
+        return leerCon(ruta(relativa), f -> { try (java.io.InputStream in = abrir(f, relativa)) { return json.readValue(in, tipo); } catch (IOException e) { throw new UncheckedIOException(e); } }, siFalta);
     }
 
     /** ¿Va comprimido? El estado de los documentos y las fotos de sus versiones. */
@@ -83,15 +165,22 @@ public class AlmacenJson {
         return relativa.startsWith("docs/") && (relativa.endsWith("/estado.json") || relativa.contains("/v/"));
     }
 
-    /** Abre un archivo, venga comprimido (empieza con 1F 8B) o como JSON tal cual. */
-    private static java.io.InputStream abrir(java.io.File f) throws IOException {
+    /** Abre un archivo, venga cifrado (NOMC), comprimido (empieza con 1F 8B) o como JSON tal cual. */
+    private java.io.InputStream abrir(java.io.File f, String relativa) throws IOException {
         java.io.BufferedInputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(f), 64 * 1024);
         try {
-            in.mark(2);
-            int a = in.read(), b = in.read();
+            in.mark(4);
+            byte[] ini = in.readNBytes(4);
             in.reset();
-            return a == 0x1F && b == 0x8B ? new java.util.zip.GZIPInputStream(in, 64 * 1024) : in;
-        } catch (IOException e) {
+            if (mx.wack.nom.core.servicio.CifradoReposo.cifrado(ini)) {
+                byte[] todo;
+                try (in) { todo = in.readAllBytes(); }
+                byte[] claro = cifrado.descifrar(todo, relativa);
+                java.io.InputStream b = new java.io.ByteArrayInputStream(claro);
+                return mx.wack.nom.core.servicio.CifradoReposo.conGzip(todo) ? new java.util.zip.GZIPInputStream(b, 64 * 1024) : b;
+            }
+            return ini.length >= 2 && (ini[0] & 0xFF) == 0x1F && (ini[1] & 0xFF) == 0x8B ? new java.util.zip.GZIPInputStream(in, 64 * 1024) : in;
+        } catch (IOException | RuntimeException e) {
             in.close();
             throw e;
         }
@@ -122,7 +211,18 @@ public class AlmacenJson {
         try {
             Files.createDirectories(p.getParent());
             Path tmp = p.resolveSibling(p.getFileName() + ".tmp");
-            if (comprimido(relativa)) {
+            if (cifrado.activo()) {
+                // D.1: el contenido (comprimido si toca) se cifra completo antes de escribirlo.
+                byte[] claro = json.writeValueAsBytes(valor);
+                boolean gz = comprimido(relativa);
+                byte[] adentro = claro;
+                if (gz) {
+                    java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream(Math.max(256, claro.length / 4));
+                    try (java.io.OutputStream out = new Gzip(b, relativa.contains("/v/") ? 9 : 5)) { out.write(claro); }
+                    adentro = b.toByteArray();
+                }
+                Files.write(tmp, cifrado.cifrar(adentro, gz, claro.length, relativa));
+            } else if (comprimido(relativa)) {
                 try (java.io.OutputStream out = new Gzip(new java.io.FileOutputStream(tmp.toFile()), relativa.contains("/v/") ? 9 : 5)) { json.writeValue(out, valor); }
             } else json.writeValue(tmp.toFile(), valor);
             // Las fotos de versiones y los recibos no se reescriben: no necesitan respaldo.
@@ -153,6 +253,13 @@ public class AlmacenJson {
             if (!Files.exists(p)) return 0;
             try (java.io.RandomAccessFile f = new java.io.RandomAccessFile(p.toFile(), "r")) {
                 long n = f.length();
+                // D.1: un archivo cifrado anota en su cabecera lo que mide por dentro.
+                if (n >= mx.wack.nom.core.servicio.CifradoReposo.CABECERA) {
+                    byte[] cab = new byte[mx.wack.nom.core.servicio.CifradoReposo.CABECERA];
+                    f.readFully(cab);
+                    if (mx.wack.nom.core.servicio.CifradoReposo.cifrado(cab)) return Math.max(n, mx.wack.nom.core.servicio.CifradoReposo.largoReal(cab));
+                    f.seek(0);
+                }
                 if (n < 18 || f.read() != 0x1F || f.read() != 0x8B) return n;
                 f.seek(n - 4);
                 long a = f.read(), b = f.read(), c = f.read(), d = f.read();

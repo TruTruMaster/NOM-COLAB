@@ -59,6 +59,10 @@ def canal(u):
         try: return x.status, (x.headers.get("Content-Type") or "").split(";")[0]
         finally: x.close()
     except urllib.error.HTTPError as e: return e.code, ""
+def cifrado_con_gzip(f):
+    """D.1: los archivos van cifrados ("NOMC"); la cabecera (en claro) dice si adentro va gzip."""
+    b = open(f, "rb").read(6)
+    return b[:4] == b"NOMC" and (b[5] & 1) == 1
 import random as _r
 # Nombres de espacio únicos: así se puede correr dos veces contra el mismo servidor (la Pi, el teléfono).
 SUFIJO = " " + "".join(_r.choice("abcdefghijkmnpqrstuvwxyz") for _ in range(5))
@@ -382,11 +386,11 @@ try:
     if not EXTERNO:
         # Los documentos se guardan comprimidos en el servidor
         estados = glob.glob(os.path.join(D, "docs", "*", "estado.json"))
-        prueba("12.1 El estado de los documentos se guarda comprimido", True, len(estados) > 0 and all(open(f, "rb").read(2) == b"\x1f\x8b" for f in estados))
+        prueba("12.1 El estado de los documentos se guarda comprimido (y cifrado)", True, len(estados) > 0 and all(cifrado_con_gzip(f) for f in estados))
         fotos = glob.glob(os.path.join(D, "docs", "*", "v", "*.json"))
         r("POST", f"/api/documentos/{pres}/versiones", {"etiqueta": "Para la prueba"}, tk["maestra"])
         fotos = glob.glob(os.path.join(D, "docs", "*", "v", "*.json"))
-        prueba("12.1 …y las fotos de sus versiones también", True, len(fotos) > 0 and all(open(f, "rb").read(2) == b"\x1f\x8b" for f in fotos))
+        prueba("12.1 …y las fotos de sus versiones también", True, len(fotos) > 0 and all(cifrado_con_gzip(f) for f in fotos))
 
         # Bloqueo de intentos por red: quien falla desde su red no deja fuera al dueño
         r("POST", "/api/cuentas/registro", {"nombre": "asediada", "contrasena": CL})
@@ -726,8 +730,9 @@ try:
         # comprimir como los que dejaron las versiones anteriores.
         time.sleep(2)
         f_pres = os.path.join(D, "docs", pres, "estado.json")
+        # Un estado en claro, como los que dejaron las versiones anteriores (el de ahora va cifrado).
+        plano = json.dumps((r("GET", f"/api/documentos/{pres}", t=tk["maestra"])[1] or {}).get("estado", {})).encode()
         srv.terminate(); srv.wait(60)
-        plano = gzip.open(f_pres, "rb").read()
         open(f_pres, "wb").write(plano)
         srv = arrancar(); esperar()
         tm = r("POST", "/api/cuentas/sesion", {"nombre": "maestra", "contrasena": CL})[1]["token"]
@@ -738,9 +743,81 @@ try:
         prueba("12.1 …con sus versiones", True, len(r("GET", f"/api/documentos/{pres}/versiones", t=tm)[1] or []) >= 1 and r("GET", f"/api/documentos/{pres}/versiones/1", t=tm)[0] == 200)
         r("POST", f"/api/documentos/{pres}/ops", lote("m1", {"bloque": "fig1", "campos": {"x": 301}}), tm)
         time.sleep(2.5)
-        prueba("12.1 …y al volver a guardarse queda comprimido", b"\x1f\x8b", open(f_pres, "rb").read(2))
+        prueba("12.1 …y al arrancar se cifró (comprimido adentro)", True, cifrado_con_gzip(f_pres))
         tk["maestra"] = tm
         tk["alumno1"] = r("POST", "/api/cuentas/sesion", {"nombre": "alumno1", "contrasena": CL})[1]["token"]
+
+    # 14.1 Cifrado en reposo: en el disco y en los respaldos no aparece texto en claro; sin la llave no arranca.
+    if not EXTERNO:
+        def en_claro(carpeta, marcas):
+            hallados = []
+            for raiz_, _, fs in os.walk(carpeta):
+                for f in fs:
+                    if f == "servidor.log": continue   # el registro de esta prueba (en la Pi va en /var/log)
+                    b = open(os.path.join(raiz_, f), "rb").read()
+                    for m in marcas:
+                        if m.encode() in b: hallados.append(os.path.relpath(os.path.join(raiz_, f), carpeta) + ":" + m)
+            return hallados
+        time.sleep(3)   # que se escriba lo pendiente (cada 0.8 s) y la bitácora (cada 10 s)
+        prueba("14.1 En la carpeta de datos no aparece texto en claro", [], en_claro(D, ["Base del informe", "SOLO EN LA RAMA", "maestra", "Salón 3B", "Informe final"])[:5])
+        prueba("14.1 Los archivos de datos van cifrados (NOMC) y la base de cuentas también (H2)", [True, True],
+               [all(open(f, "rb").read(4) == b"NOMC" for f in glob.glob(os.path.join(D, "docs", "*", "*.json")) + glob.glob(os.path.join(D, "*.json"))),
+                open(os.path.join(D, "nom-db.mv.db"), "rb").read(9) == b"H2encrypt"])
+        prueba("14.1 La llave vive fuera de la carpeta de datos", [True, False], [os.path.exists(os.path.join(D + "-llaves", "reposo.key")), any("reposo.key" in f for _, _, fs in os.walk(D) for f in fs)])
+        # Un servidor nuevo sin cifrar, con datos en claro: al arrancar con cifrado, se cifran solos.
+        D4 = tempfile.mkdtemp(prefix="nomcolab-pruebas-claro-")
+        P4 = 8097; B4 = f"http://localhost:{P4}"
+        def arrancar4(**extra):
+            return subprocess.Popen([JAVA, "-jar", JAR], env=dict(os.environ, NOM_PUERTO=str(P4), NOM_DATOS=D4, NOM_DESCUBRIMIENTO="false", **extra), stdout=open(os.path.join(D4 + ".log"), "a"), stderr=subprocess.STDOUT)
+        def esperar4(proc, s=90):
+            for _ in range(s):
+                if proc.poll() is not None: return False
+                try: urllib.request.urlopen(B4 + "/api/red/info", timeout=2); return True
+                except Exception: time.sleep(1)
+            return False
+        r4 = lambda *a, **k: rq(B4, *a, **k)
+        s4 = arrancar4(NOM_CIFRAR="false")
+        try:
+            esperar4(s4)
+            r4("POST", "/api/cuentas/registro", {"nombre": "claro1", "contrasena": CL})
+            t4 = (r4("POST", "/api/cuentas/sesion", {"nombre": "claro1", "contrasena": CL})[1] or {}).get("token")
+            e4 = (r4("POST", "/api/espacios", {"nombre": "Espacio en claro"}, t4)[1] or {}).get("id")
+            d4 = (r4("POST", f"/api/espacios/{e4}/documentos", {"nombre": "Diario", "modo": "TEXTO", "ops": []}, t4)[1] or {}).get("id")
+            r4("POST", f"/api/documentos/{d4}/ops", {"cliente": "c4", "dispositivo": "prueba", "ops": [{"id": "c4:1", "bloque": "cuerpo", "campos": {}, "t": 10, "n": "c4", "s": {"k": "i", "iz": None, "x": "MARCA-EN-CLARO-123"}}]}, t4)
+            time.sleep(3)
+        finally:
+            s4.terminate(); s4.wait(60)
+        prueba("14.1 (antes) con NOM_CIFRAR=false los datos quedan en claro", True, len(en_claro(D4, ["claro1", "Espacio en claro"])) >= 2)
+        s4 = arrancar4()
+        try:
+            prueba("14.1 Al arrancar con cifrado, lo que estaba en claro se cifra", True, esperar4(s4))
+            time.sleep(1)
+            prueba("14.1 …ya no aparece en claro en ningún archivo (ni en la base)", [], en_claro(D4, ["MARCA-EN-CLARO-123", "claro1", "Espacio en claro"]))
+            t4 = (r4("POST", "/api/cuentas/sesion", {"nombre": "claro1", "contrasena": CL})[1] or {}).get("token")
+            prueba("14.1 …y todo sigue abriendo (cuenta, espacio y documento)", True, "MARCA-EN-CLARO-123" in "".join(e["x"] for e in ((r4("GET", f"/api/documentos/{d4}", t=t4)[1] or {}).get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", []))))
+        finally:
+            s4.terminate(); s4.wait(60)
+        llave = D4 + "-llaves"
+        os.rename(llave, llave + ".aparte")
+        s4 = arrancar4()
+        prueba("14.1 Sin la llave, el servidor no arranca (no empieza de cero)", [False, True], [esperar4(s4, 40), s4.wait(30) != 0])
+        prueba("14.1 …y dice por qué", True, "falta su llave" in open(D4 + ".log", encoding="utf-8", errors="replace").read())
+        os.makedirs(llave)
+        open(os.path.join(llave, "reposo.key"), "w").write(base64.b64encode(secrets.token_bytes(32)).decode() + "\n")
+        s4 = arrancar4()
+        prueba("14.1 Con una llave que no es, tampoco arranca", False, esperar4(s4, 40))
+        s4.wait(30)
+        shutil.rmtree(llave); os.rename(llave + ".aparte", llave)
+        s4 = arrancar4()
+        try:
+            prueba("14.1 Con su llave de vuelta, arranca con todo", True, esperar4(s4))
+            t4 = (r4("POST", "/api/cuentas/sesion", {"nombre": "claro1", "contrasena": CL})[1] or {}).get("token")
+            prueba("14.1 …con la cuenta y su documento", 200, r4("GET", f"/api/documentos/{d4}", t=t4)[0])
+        finally:
+            s4.terminate(); s4.wait(60)
+            shutil.rmtree(D4, ignore_errors=True); shutil.rmtree(D4 + "-llaves", ignore_errors=True)
+            try: os.remove(D4 + ".log")
+            except OSError: pass
 
     # 3.6 Entrega con fecha límite
     edoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Tarea 1", "modo": "TEXTO", "ops": []}, tk["alumno1"])[1]["id"]

@@ -9,6 +9,8 @@
 #   nomcolab-pi actualizar    instala el jar que esté en /home/user/nom-colab.jar.nuevo;
 #                             si el nuevo no arranca, regresa al anterior
 #   nomcolab-pi bitacora [servidor|tunel|vigia] [líneas]
+#   nomcolab-pi llave         muestra la llave del cifrado en reposo (guárdala FUERA de la Pi y de
+#                             la laptop de los respaldos: sin ella no se abren los datos ni los respaldos)
 set -u
 VAR=/var/lib/nomcolab
 OPT=/opt/nomcolab
@@ -68,9 +70,14 @@ case "${1:-estado}" in
       esperar 120 && echo "actualizar: la anterior contesta" || echo "actualizar: tampoco contesta la anterior (nomcolab-pi bitacora)"
       exit 1
     fi ;;
+  llave)
+    f=$VAR/datos-llaves/reposo.key
+    [ -r "$f" ] || { echo "llave: todavía no hay (la crea el servidor al arrancar con cifrado)"; exit 1; }
+    echo "Llave del cifrado en reposo (base64). Guárdala en un lugar seguro, separada de los respaldos:"
+    cat "$f" ;;
   bitacora)
     s=${2:-servidor}; case "$s" in servidor|tunel|vigia) ;; *) echo "bitacora: servidor, tunel o vigia"; exit 1 ;; esac
     n=${3:-60}; case "$n" in *[!0-9]*|'') n=60 ;; esac
     tail -n "$n" /var/log/nomcolab-$s/current ;;
-  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

@@ -126,7 +126,7 @@ public class ServicioSincronia {
     public void cadaRato() {
         for (Espacio e : espacios.todos()) {
             if (e.sincronia == null || e.sincronia.token == null) continue;
-            try { sincronizarEspacio(e); } catch (RuntimeException ex) { log.aviso("Sincronización de {}: {}", e.nombre, ex.getMessage()); }
+            try { sincronizarEspacio(e); } catch (RuntimeException ex) { log.aviso("Sincronización del espacio {}: {}", e.id, ex.getMessage()); }
         }
     }
 

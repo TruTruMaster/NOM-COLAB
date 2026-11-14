@@ -16,6 +16,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class NomColabApplication {
     public static void main(String[] args) {
+        // D.1 Cifrado en reposo: la llave, la base H2 cifrada y que la llave abra estos datos.
+        try {
+            ArranqueCifrado.preparar();
+        } catch (Exception e) {
+            System.err.println("NOM-COLAB no arranca: " + e.getMessage());
+            System.exit(1);
+        }
         SpringApplication.run(NomColabApplication.class, args);
     }
 }
