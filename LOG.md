@@ -946,7 +946,9 @@ en el orden de su parte H.
   (Word 91.9 %, Excel 59.2 %, PowerPoint 78.5 % en 47 archivos). Se corrigieron tres pruebas que
   fallaban por la prueba y no por la app (QR cortado en pantalla de celular, servidor de pruebas sin
   red local, 13.2 con la llave de la Pi en el APK).
-- **Compilado, no publicado:** jar 0.13.1 en `2-PAGINA-Servidor/`, APK 0.13.1 (versionCode 21,
-  misma llave) en `3-APP-Android/`. La Raspberry y la release de GitHub siguen en 0.13.0.
-- **Falta (del dueño):** copiar fuera de la Pi `/var/lib/nomcolab/datos-llaves`; prender la
-  depuración inalámbrica del A55.
+- **Publicado:** jar 0.13.1 en `2-PAGINA-Servidor/` y en la Raspberry (humo 30 de 30), APK 0.13.1
+  (versionCode 21, misma llave) en `3-APP-Android/` y como release v0.13.1 de GitHub, `main`
+  empujado (Azure desplegó bien; sigue apagada a propósito).
+- **Decisión del dueño:** las llaves de la Pi no se copian fuera de ella (riesgo aceptado).
+- **Falta:** regresar el A55 (sigue con el APK de depuración 0.12.2 apuntando al servidor de pruebas;
+  no se abrió la app porque el dueño estaba usando el teléfono).

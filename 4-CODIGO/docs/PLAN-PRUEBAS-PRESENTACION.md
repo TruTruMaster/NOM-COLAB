@@ -29,7 +29,7 @@ defecto nuevo se anota como DEF-42, DEF-43… en la tabla del final, con su prue
 | H-2 | Tope de 30 cuentas nuevas por hora desde una misma red. | En la escuela todos salen con la misma IP. | **Hecho (0.13.1): tope por dispositivo**, 5 por hora (`NOM_REGISTROS_HORA_EQUIPO`). La MAC no se puede leer (ningún navegador la da, Android 6+ devuelve una falsa y la cambia por red, y no viaja por Internet); se usa el `ANDROID_ID` resumido con SHA-256 en la app (sigue igual tras borrar datos o reinstalar, comprobado en el emulador) y un número al azar guardado en el navegador. Con dispositivo, el tope por red sube a 200 (solo frena programas); sin dispositivo (apps viejas, programas) sigue 30 por red. Solo en memoria; aviso de privacidad actualizado. Pruebas: `seguridad.py` 16.2. |
 | H-3 (DEF-42) | El chat no contaba en el almacenamiento. | Una cuenta podía llenar el disco de la Pi. | **Corregido (0.13.1):** el chat (mensajes y archivos) cuenta en la cuota del dueño del espacio; con la cuota llena no se suben archivos (el texto sí). Pruebas: `seguridad.py` 16.3. |
 | H-4 | Azure no tenía límite por cuenta (faltaba `NOM_CUOTA_MB`). | Disco del plan gratuito (1 GB). | **Corregido:** 50 MB en Azure y en `azure/desplegar.sh`. |
-| H-5 | La llave del cifrado y la de los pases **solo están en la Pi** (`/var/lib/nomcolab/datos-llaves`). La copia diaria en la laptop no la incluye. | Si se daña la memoria de la Pi, no se abre ningún dato ni respaldo; si cambia la de los pases, hay que publicar otro APK. | Copiarla a la laptop y a una USB (necesita la contraseña de la Pi). |
+| H-5 | La llave del cifrado y la de los pases **solo están en la Pi** (`/var/lib/nomcolab/datos-llaves`). La copia diaria en la laptop no la incluye. | Si se daña la memoria de la Pi, no se abre ningún dato ni respaldo; si cambia la de los pases, hay que publicar otro APK. | **Decisión del dueño: no se copia** (riesgo aceptado). |
 | H-6 | El APK solo confía en la llave de pases de la Raspberry. | En Azure el pase se emite, pero el teléfono no lo acepta. Es lo esperado. | Decirlo así si preguntan: «la nube de la app es nuestro servidor propio». |
 | H-7 | Una hoja de Excel importada muestra hasta **5000 filas y 60 columnas** (`LIM_F`, `LIM_C` en `ooxml.js`); lo demás se conserva en el archivo. | Alguien abre una hoja grande y cree que se perdieron datos. | Ya avisa; probarlo (F-2) y saberlo decir. |
 
@@ -142,7 +142,6 @@ libres: alcanza para unas 270 cuentas llenas al tope (hoy todo ocupa 584 KB).
 | E-3 | Documento de más de 25 MB | Responde 413; lo escrito se queda en el equipo |
 | E-4 | Chat (DEF-42, corregido en 0.13.1) | El chat suma al almacenamiento («Cuánto espacio ocupa» lo muestra por espacio); al pasar el límite no deja subir archivos, el texto sí |
 | E-5 | Papelera | A los 30 días se borra sola; «borrar para siempre» libera el espacio |
-| E-6 | Respaldo de la Pi y su llave (H-5) | Restaurar un respaldo en la laptop **con la llave copiada** y abrir un documento |
 
 ---
 
@@ -276,8 +275,8 @@ ayuda. Se anota lo que confundió.
 | Día | Bloques |
 |---|---|
 | Vie 13 (noche) | Línea base del bloque A (corriendo); G hecho; D-1 a D-3 hechos |
-| Sáb 14 | H-5 (llaves); regresar el A55; B-1, B-2; decidir H-1 y H-2 |
-| Dom 15 | Corregir H-3 y lo que salga de B-2 (y H-1 si se decide); bloque A otra vez; publicar 0.13.1 |
+| Sáb 14 | Regresar el A55; B-1, B-2, B-16 |
+| Dom 15 | Corregir lo que salga de B; bloque A otra vez; publicar (todo junto) |
 | Lun 16 | B-3 a B-15 con el escritorio, el A55 y la Pi; D-4, D-5 |
 | Mar 17 | F-1 a F-8 y K-1 a K-6 (con Office real en la escuela); H (SUS) con 5 personas; C-1 a C-3 en la escuela |
 | Mié 18 | C-4 a C-6; corregir; bloque A; guion de la demo |

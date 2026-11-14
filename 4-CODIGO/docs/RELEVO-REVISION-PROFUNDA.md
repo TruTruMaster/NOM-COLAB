@@ -38,18 +38,26 @@ Leer antes, en este orden:
   perdidas, p95 10 ms · Pi: 5 personas, p50 238 ms · Azure: humo 31 de 31, 5 personas p50 586 ms ·
   APK 0.13.1 en el emulador: el identificador del teléfono no cambia al borrar los datos de la app.
   Resumen completo en el LOG (entrada 57) y en `~/.cache/nom-pruebas/registros/2026-11-13_2133/`.
-- **Hecho pero NO publicado** (el dueño no lo pidió todavía): el jar 0.13.1 está en
-  `2-PAGINA-Servidor/` y el APK 0.13.1 en `3-APP-Android/`, pero la Raspberry sigue con 0.13.0, la
-  release de GitHub es v0.13.0 y el commit no se ha empujado (un push a `main` despliega a Azure).
-  **Primer paso de la siguiente sesión: preguntar al dueño si se publica** y, si sí, seguir la
-  sección 4.
+- **Publicado el 13-nov** (regla del dueño: al terminar una versión se publica TODO sin preguntar):
+  commit `80873d8` empujado a `main` (Azure desplegó bien; la Web App sigue apagada a propósito),
+  Raspberry en 0.13.1 (`humo.py` 30 de 30), release v0.13.1 de GitHub con el APK (el botón «Descarga
+  la app» ya la entrega).
 - **Corregido en las pruebas, no en la app:** en `prueba_funciones.py --movil`, el QR quedaba a
   medias fuera de la pantalla y la foto salía cortada (ahora se desliza a la vista). En
   `regresion.sh`, los 2 casos del QR fallan si el servidor de pruebas arranca con
   `NOM_DESCUBRIMIENTO=false` (sin red local no hay QR); el script lo avisa. En `seguridad.py`, el
   caso 13.2 esperaba 403 y desde que el APK trae la llave de la Pi la respuesta correcta es 401.
-- **Pendiente del dueño (no lo puede hacer nadie más):** copiar `/var/lib/nomcolab/datos-llaves` de
-  la Pi (pide la contraseña de `doas`) y encender la depuración inalámbrica del A55.
+- **Decisión del dueño: las llaves de la Pi (`/var/lib/nomcolab/datos-llaves`) NO se copian fuera
+  de ella.** Riesgo aceptado: no volver a pedirlo.
+- **A55 pendiente de regresar:** sigue con el APK de depuración 0.12.2 y la app apunta al servidor de
+  pruebas de la laptop (`http://100.77.150.52:8099`) con la sesión de prueba `ptyyeety`. La
+  depuración inalámbrica ya está activa. No abrir la app mientras el dueño usa el teléfono (revisar
+  `adb shell dumpsys window | grep mCurrentFocus`). Pasos: abrir la app (todavía de depuración, su
+  WebView da CDP), `NOM.api.limpiarSesion()`, poner en `localStorage` los valores de
+  `~/.cache/nom-pruebas/respaldo-a55/app-ajustes-antes.json` (`nom.servidor` era
+  `http://192.168.0.199:8080`) y **esperar unos segundos antes de cerrarla** (si se cierra al instante
+  no se guarda); comprobar abriendo de nuevo; luego instalar `3-APP-Android/NOM-COLAB.apk` (0.13.1,
+  misma llave, conserva los datos) y `adb shell svc power stayon false`.
 
 ## 1b. Qué tan confiables son las pruebas automáticas (léelo antes de creerles)
 
@@ -132,7 +140,7 @@ automática».
   Hacer `git fetch` antes de creer el "ahead N".
 - Nunca subir `py.py` ni `tokensito` ni `CREDENCIALES-AZURE.txt`.
 
-## 4. Cómo publicar una versión (siempre todo junto)
+## 4. Cómo publicar una versión (siempre todo junto, sin preguntar: decisión del dueño)
 
 1. Subir la versión en `nucleo/.../core/Version.java` (`APP`, e `INTERFAZ` solo si cambia el
    protocolo), `js/nucleo.js` (`NOM.VERSION`, `NOM.INTERFAZ`), `static/sw.js` (`VERSION`),

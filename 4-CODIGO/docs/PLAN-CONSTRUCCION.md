@@ -466,7 +466,7 @@ comandos y criterios, en `docs/RELEVO-REVISION-PROFUNDA.md`.
 - [x] H-1: 50 personas por espacio y por documento (antes 5; requisito RNF Espacios 1 actualizado). 0.13.1.
 - [x] H-2: tope de cuentas nuevas por **dispositivo** (5 por hora; la MAC no se puede leer: `ANDROID_ID` resumido en la app, número al azar en el navegador). 0.13.1.
 - [x] H-3 / DEF-42: el chat cuenta en el almacenamiento del dueño del espacio. 0.13.1.
-- [ ] H-5: copia de `/var/lib/nomcolab/datos-llaves` fuera de la Pi.
+- [x] H-5: decisión del dueño: las llaves de la Pi no se copian fuera de ella (riesgo aceptado).
 - [ ] Bloque B: lo nuevo de 0.13.0 en el A55, el escritorio y la Pi (B-1 a B-15).
 - [ ] Bloque C: red de la escuela y varios dispositivos.
 - [ ] Bloque D: carga en la Pi con tope mayor y en el teléfono como servidor.
