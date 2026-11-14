@@ -301,3 +301,15 @@ entrega del 27 de noviembre) y regenerar el PDF.
 | H-1, H-2 | 13-nov | laptop | Hecho en 0.13.1 | — | 50 por espacio; tope por dispositivo; `seguridad.py` 375 de 375, límites VL-13/VL-14 con 50 y 51 |
 | J (medida) | 13-nov | laptop | Medido | — | `.nom` 73-85 % del original; `xz -9e` 39-82 %: hay margen en Excel |
 | App 0.13.1 | 13-nov | emulador Android 15 | Correcto | — | identificador del teléfono igual tras borrar los datos de la app |
+| B-1 | 14-nov | A55 (app publicable) | Correcto | DEF-43 | registra en la Pi; la versión no se ve en Ajustes |
+| B-2 | 14-nov | A55 | Correcto | — | SUMAR.SI 13.5 con el teclado Samsung; fecha límite guardada (22-nov 12:39) |
+| B-16 | 14-nov | A55 + Pi | Correcto | — | 5 por hora; la sexta y la de después de borrar datos: «demasiadas cuentas desde este dispositivo» |
+| Tiempo real | 14-nov | A55, escritorio, laptop (Chromium y Firefox), Pi | Correcto | DEF-44 | p50 137-148 ms, máx. 177 ms; lector sin edición; escritura simultánea idéntica en los 4 |
+| B-5 | 14-nov | escritorio + laptop + Pi | Correcto | — | 130 s sin red, sin rama, llega en 1.5 s |
+| B-6 | 14-nov | escritorio + laptop + Pi | **Falla** | DEF-46 | 200 s sin red con cambio ajeno: se fusionó sin rama |
+| B-8 | 14-nov | escritorio | Correcto | — | creado sin red, se subió solo |
+| B-9 | 14-nov | escritorio (kill -9 real) | Correcto | — | abre sin la Pi con sesión y documento; lo escrito llega al volver |
+| B-3 | 14-nov | A55 servidor + laptop | Correcto | DEF-47 | alias «Armadillo 85» |
+| B-4 | 14-nov | A55 servidor + laptop | Correcto | — | entra como pruebaa55x2 con pase |
+| F (A55) | 14-nov | A55 | Con defecto | DEF-45, MEJ-1 | Excel perfecto; Word pierde propiedades del párrafo editado; PowerPoint pierde animaciones de la diapositiva editada |
+| K / F-1 | 14-nov | laptop | Correcto | — | validador de Microsoft: 511 de 511 sin errores nuevos; LibreOffice abre todo |

@@ -952,3 +952,36 @@ en el orden de su parte H.
 - **Decisión del dueño:** las llaves de la Pi no se copian fuera de ella (riesgo aceptado).
 - **A55:** se desinstaló la app y se instaló limpia la 0.13.1 publicable (indicación del dueño);
   la pantalla vuelve a apagarse sola.
+
+## 58. Pruebas con equipos reales, validador de Microsoft e investigación de Office (14 de noviembre de 2026, madrugada)
+
+Petición: investigar todo lo que tienen Word, Excel y PowerPoint y aún no tiene NOM-COLAB (con la
+documentación de Microsoft), probar a mano y de verdad lo nuevo con todas las formas de conexión, y
+dejar un relevo detallado. Relevo completo: `4-CODIGO/docs/RELEVO-PARIDAD-Y-PRUEBAS-REALES.md`.
+
+- **Con equipos reales** (A55 con la app publicable y toques reales, Chromium real del escritorio,
+  laptop con Chromium y Firefox, la Raspberry): B-1, B-2 (las dos fallas pendientes del A55 ya no
+  pasan: `SUMAR.SI` 13.5 tecleando con el teclado Samsung; la fecha límite se guarda con el selector
+  de Android), B-3 (alias «Armadillo 85» sin Internet), B-4 (entra con su cuenta y pase), B-5, B-8,
+  B-9 (`kill -9` real y sin acceso a la Pi: abre con sesión y documento) y B-16 (tope de 5 cuentas
+  por dispositivo, también tras borrar los datos de la app): correctos. Tiempo real con 4 equipos por
+  la Pi: p50 137-148 ms, máximo 177 ms, los cuatro idénticos tras escribir a la vez.
+- **Defectos nuevos (sin corregir; para la 0.13.2):** DEF-46 (alta: con más de 2 minutos sin red y
+  otra persona cambiando el documento no se crea rama, se fusiona solo; causa: cada reintento sin red
+  borra y vuelve a crear la marca con la hora actual), DEF-45 (alta: editar una diapositiva importada
+  borra sus animaciones y convierte el título en cuadro suelto), DEF-44 (error de JavaScript en «lo
+  que cambió desde tu última visita» con rangos hasta el final), DEF-47 (encender el teléfono como
+  servidor con otro servidor elegido pide contraseña), DEF-43 (botón cortado en Ajustes del A55),
+  MEJ-1 (al editar un párrafo de Word se pierden propiedades que la app no guarda) y H-8 para decidir
+  (la app se conecta sola a un servidor que encuentra en el Wi-Fi).
+- **Office desde el A55:** Word, Excel y PowerPoint importados con el selector de Android, editados y
+  descargados: Excel cambia solo la celda (perfecto); Word solo el párrafo (con MEJ-1); PowerPoint
+  con DEF-45. Los tres abren en LibreOffice.
+- **Validador oficial de Microsoft** (Open XML SDK 3.5.1) en las pruebas:
+  `pruebas/office/validar_openxml.py` (solo cuenta errores que no traía el original). 511 de 511
+  archivos exportados sin errores nuevos, incluidos los hechos en la app.
+- **Pruebas reales reutilizables:** `pruebas/reales/` (A55 por adb con el teclado de verdad,
+  escritorio por CDP, varios equipos a la vez, teléfono como servidor, ramas).
+- **Investigación de Office:** catálogos por pestaña y comando con su elemento de ECMA-376, estado en
+  el código y plan de implementación; cobertura de cada elemento de los esquemas contra el corpus.
+  Copia parcial en `4-CODIGO/docs/paridad/`; se termina en el escritorio.

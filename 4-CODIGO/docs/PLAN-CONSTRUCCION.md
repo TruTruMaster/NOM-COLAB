@@ -468,6 +468,13 @@ comandos y criterios, en `docs/RELEVO-REVISION-PROFUNDA.md`.
 - [x] H-3 / DEF-42: el chat cuenta en el almacenamiento del dueño del espacio. 0.13.1.
 - [x] H-5: decisión del dueño: las llaves de la Pi no se copian fuera de ella (riesgo aceptado).
 - [ ] Bloque B: lo nuevo de 0.13.0 en el A55, el escritorio y la Pi (B-1 a B-15).
+- [x] 14-nov, equipos reales (`docs/RELEVO-PARIDAD-Y-PRUEBAS-REALES.md`): B-1, B-2, B-3, B-4, B-5, B-8, B-9, B-16
+      y tiempo real con 4 equipos, correctos; validador de Microsoft en las pruebas (511 de 511 sin errores nuevos).
+- [ ] 0.13.2: DEF-46 (ramas: la marca se reinicia con cada reintento sin red), DEF-45 (PowerPoint: editar una
+      diapositiva importada borra animaciones y marcadores), DEF-44 (error en `aplicarResaltado` con `FIN`),
+      DEF-47 (encender el teléfono con otro servidor elegido), DEF-43 (botón cortado en Ajustes del A55);
+      decidir H-8 (la app elige sola un servidor del Wi-Fi). Cada uno con su prueba; luego B-6 y B-7 reales.
+- [ ] Recoger la investigación terminada del escritorio en `docs/paridad/` y hacer `docs/PARIDAD-OFFICE.md`.
 - [ ] Bloque C: red de la escuela y varios dispositivos.
 - [ ] Bloque D: carga en la Pi con tope mayor y en el teléfono como servidor.
 - [ ] Bloque E: almacenamiento.
