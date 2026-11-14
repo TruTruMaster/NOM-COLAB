@@ -440,7 +440,7 @@ Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.1 y F.
 - [x] `/ayuda/`: Sin Internet, Empezar, Cuentas, preguntas frecuentes (32), Problemas; luego
       editores, Office, novedades, referencia de fórmulas, Acerca de; botones «?» de la app.
 - [x] `prueba_ayuda.py` (18).
-- [ ] Mapa de navegación, casos de uso, plan de pruebas y LOG con las fases 13 a 15.
+- [x] Mapa de navegación, casos de uso, plan de pruebas (36 páginas) y LOG (entrada 56) con las fases 13 a 15.
 
 ## Fase 15. Cifrado de extremo a extremo y chat (plan del 13 de noviembre de 2026)
 

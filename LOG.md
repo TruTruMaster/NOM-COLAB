@@ -855,3 +855,55 @@ no? Se comprobó a mano en el Chromium real del escritorio contra la Raspberry
   de la app; quitar en Cloudflare el script de estadísticas que mete en la página (la política de
   contenido lo bloquea, pero ensucia la consola).
 
+
+## 56. Sin Internet sin cuentas, ramas, cifrado y chat: fases 13, 14 y 15 (0.13.0, 13 de noviembre de 2026)
+
+Se construyó completo el plan cerrado ese mismo día (`4-CODIGO/docs/PLAN-CUENTAS-PC-Y-AYUDA.md`),
+en el orden de su parte H.
+
+- **Licencia:** GPL-3.0 (archivo `LICENSE` y sección en los LEEME).
+- **Fase 13, sin Internet:** el teléfono que comparte ya no tiene cuentas con contraseña. Quien no
+  tiene Internet entra con un **alias al azar** (sin escribir nada; su equipo guarda la llave para
+  volver a ser el mismo). Quien sí tiene Internet entra con su cuenta de la nube: la Raspberry le da
+  un **pase firmado** (ECDSA P-256, 10 minutos, de un solo uso) y el teléfono lo acepta porque el APK
+  trae la llave pública de la Raspberry (`static/pases/nubes.json`). Se pueden crear documentos en un
+  espacio sin Internet (se suben solos al volver) e instalar la página en la computadora.
+- **Ramas:** lo editado sin conexión se sube tal cual si nadie más cambió el documento; si alguien lo
+  cambió (y se estuvo más de 2 minutos sin conexión), lo propio queda en una **rama** y el original
+  no se toca. En el original aparece «Ramas (n)»: comparar, fusionar (con versión para regresar),
+  dejar aparte o descartar.
+- **Cifrado en reposo (D.1):** el servidor guarda cifrado (AES-256-GCM) todo lo que escribe:
+  documentos, versiones, bitácoras, espacios, la base de cuentas (H2 con `CIPHER=AES`) y por lo tanto
+  los respaldos. La llave vive aparte (`<datos>-llaves/reposo.key`); sin ella el servidor no arranca
+  (no empieza de cero). Al arrancar, lo que estaba en claro se cifra solo: en la Raspberry, 89
+  archivos y la base de cuentas, el 13 de noviembre.
+- **Fase 14, ayuda y legal:** sitio estático `/ayuda/` y `/legal/` (65 páginas, sin sesión, lo
+  principal también sin Internet), aviso de privacidad integral y simplificado, términos, uso
+  aceptable, denuncias; aceptar los términos al registrarse; «Descargar los datos de mi cuenta».
+  Cloudflare ya no mete su script de estadísticas y la bitácora de la Pi la rota s6 (10 × 1 MB),
+  sin IPs de quien entra.
+- **Fase 15, extremo a extremo y chat:** al crear un espacio se puede marcar **Cifrado de extremo a
+  extremo**: el nombre, los documentos y el chat se cifran en el equipo de cada miembro (cada cuenta
+  tiene un par de llaves; la privada va envuelta con la contraseña y con el código de recuperación).
+  El servidor guarda la estructura (para que la edición a la vez, los permisos y las ramas sigan
+  funcionando) pero no lo que dice. La llave llega a cada miembro envuelta para él, o en el `#` del
+  QR, que nunca pasa por el servidor; el enlace para ver y el proyector llevan la llave del documento
+  en la dirección. Cada espacio tiene su **chat** con imágenes y archivos de hasta 2 MB.
+- **Corregido al probar:** el servidor no guardaba la marca de las letras cifradas y, al abrir de
+  nuevo un documento cifrado, salían letras raras; un nombre en claro se podía poner con «Renombrar»
+  en un espacio cifrado; un archivo de casi 2 MB no cabía en el chat cifrado (crece al cifrarse); el
+  enlace para ver mostraba el nombre cifrado del espacio; el alias dueño del teléfono veía la opción
+  de espacio cifrado, que no puede usar.
+- **Pruebas con 0.13.0:** seguridad 363 de 363 · extremo a extremo en el navegador 27 de 27 (el
+  servidor nunca ve el texto, el nombre ni el chat) · sin Internet 22 de 22 · ayuda 18 de 18 ·
+  funciones 170 de 170 · red 24 de 24 · cuentas y equipo 61 de 61 · valores límite 18 de 18 ·
+  unitarias 9 de 9 · el teléfono como servidor en el emulador (APK publicable) 18 de 18 · en la
+  Raspberry ya publicada: cuenta, documento, pase, chat y espacio cifrado.
+- **Publicado:** jar 0.13.0 en `2-PAGINA-Servidor/` y en la Raspberry; APK 0.13.0 (versionCode 20,
+  misma llave) en `3-APP-Android/` y como release de GitHub.
+- **Importante para el equipo:** guardar fuera de la Pi la carpeta `/var/lib/nomcolab/datos-llaves`
+  (la llave del cifrado y la de firmar pases): sin ella no se abren los datos ni los respaldos, y si
+  cambia la de los pases hay que publicar otro APK. Se lee con `doas cat
+  /var/lib/nomcolab/datos-llaves/reposo.key` (pide la contraseña de la Pi).
+- **Falta:** el ciclo real en el escritorio con la Raspberry (estaba apagado), el A55, el correo del
+  proyecto y lo de Office de la fase 10.

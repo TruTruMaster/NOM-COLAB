@@ -204,7 +204,8 @@
         <div class="entrada"><input id="ne" name="nombre" maxlength="60" placeholder="Ej. Historia 3B o Equipo de ventas" autocomplete="off" autofocus></div>
         <div class="ayuda">Como una carpeta compartida para tu equipo, tu clase o un proyecto.</div></div>
       <label class="lista-item">${ico("lock-keyhole")}<span class="crece"><b>Cifrado de extremo a extremo</b><small>Ni el servidor puede leer sus documentos, su chat ni su nombre. No se puede quitar después; la búsqueda dentro del contenido no está disponible. <a href="${NOM.urlAyuda("cuentas/extremo-a-extremo")}" data-ayuda="cuentas/extremo-a-extremo">Más</a></small></span>
-        <span class="interruptor"><input type="checkbox" name="e2e" ${NOM.e2e && NOM.e2e.hayWebCrypto() ? "" : "disabled"}><span></span></span></label>
+        <span class="interruptor"><input type="checkbox" name="e2e" ${NOM.e2e && NOM.e2e.hayWebCrypto() && !(api.usuario() || {}).alias ? "" : "disabled"}><span></span></span></label>
+      ${(api.usuario() || {}).alias ? `<p class="suave chico">${ico("info", "ico-s")} Con un alias no hay espacios cifrados: en el teléfono que comparte, el servidor es ese mismo teléfono. Se crean con tu cuenta, con Internet.</p>` : ""}
     </form>`);
     const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Crear espacio</button></div>`);
     const h = hoja({ titulo: "Nuevo espacio", icono: "plus", cuerpo, pie });

@@ -254,6 +254,7 @@ td.id { white-space: nowrap; }
     <tr><td><b>M3</b> Documentos y colaboración</td><td>Unitarias de caja blanca del CRDT; requerimientos y sistema en el navegador real.</td><td>Que varias personas editando a la vez terminen con el mismo documento, sin perder letras, y que las versiones se puedan restaurar.</td><td>Copias idénticas en cualquier orden de llegada y latencia menor a 100 ms en la red local.</td></tr>
     <tr><td><b>M4</b> Almacenamiento, Android y sin conexión</td><td>Requerimientos, sistema (página, celular y app) y portabilidad; valores límite.</td><td>Que lo escrito sin red llegue al volver, que la app funcione igual que la página, que se respeten los límites de espacio y que el sistema corra en distintas plataformas.</td><td>Ningún cambio perdido al cortar y devolver la red; la misma funcionalidad en todas las plataformas.</td></tr>
     <tr><td><b>M5</b> Importar y exportar</td><td>Requerimientos y sistema con un corpus de 47 archivos reales de Office.</td><td>Que un archivo de Word, Excel o PowerPoint se abra, se vea y se descargue igual, también después de editarlo.</td><td>Fidelidad del 100 % al volver a guardar sin cambios.</td></tr>
+    <tr><td><b>M6</b> Sin Internet, cifrado y ayuda</td><td>Requerimientos y seguridad contra la API, el navegador real y el teléfono como servidor (emulador).</td><td>Que sin Internet se entre con un alias y con Internet con la cuenta de la nube, que lo editado sin conexión no pise el trabajo de otros (ramas), que el servidor guarde todo cifrado y que en un espacio cifrado de extremo a extremo el servidor no pueda leer nada.</td><td>Ningún texto en claro en el disco del servidor ni, en un espacio cifrado, en lo que recibe; ningún cambio perdido al volver la conexión.</td></tr>
     <tr><td>Todos</td><td>Usabilidad (criterios e indicadores) y aceptación con usuarios.</td><td>Que la aplicación sea fácil de entender, de aprender y de operar, en computadora y celular.</td><td>Calificación de “Bueno” o mejor en todos los criterios.</td></tr>
     </tbody>
   </table>
@@ -355,7 +356,7 @@ td.id { white-space: nowrap; }
     <tr><td>Datos de prueba</td><td>Historias de cambios generadas al azar (5 personas, 20 historias, 10 órdenes de llegada); vectores de prueba FIPS 180-2, FIPS-197, RFC 4231 y RFC 7914</td></tr>
     <tr><td>Procedimiento de prueba</td><td>Ejecutar <code>mvn test</code> y <code>node src/test/js/cripto.test.js</code>; comparar cada resultado con el esperado.</td></tr>
     <tr><td>Resultado esperado</td><td>Estados finales idénticos en todas las réplicas; cifrado igual a los vectores oficiales; un byte alterado se detecta.</td></tr>
-    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 35 de 35 casos aprobados</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 36 de 36 casos aprobados (repetida el 13 de noviembre con la versión 0.13.0)</td></tr>
   </table>
   <table>
     <thead><tr><th style="width:42%">Caso unitario</th><th>Qué comprueba</th><th style="width:13%" class="c">Resultado</th></tr></thead>
@@ -388,7 +389,7 @@ td.id { white-space: nowrap; }
     <tr><td>Hardware requerido</td><td>Una computadora con 4 GB de RAM o más</td></tr>
     <tr><td>Software requerido</td><td>OpenJDK 17, Python 3</td></tr>
     <tr><td>Datos de prueba</td><td>Cuentas ficticias: <i>duena</i>, <i>lectora</i>, <i>editora</i>, <i>ajena</i>, <i>maestra</i>, <i>alumno1</i>, <i>alumno2</i>, <i>miembro1</i> a <i>miembro5</i></td></tr>
-    <tr><td>Procedimiento de prueba</td><td>Ejecutar <code>pruebas/seguridad.py</code> (226 casos) y <code>prueba_limites.py</code> (18 casos); cada caso compara el código de respuesta obtenido con el esperado.</td></tr>
+    <tr><td>Procedimiento de prueba</td><td>Ejecutar <code>pruebas/seguridad.py</code> (363 casos con la versión 0.13.0) y <code>prueba_limites.py</code> (18 casos); cada caso compara el código de respuesta obtenido con el esperado.</td></tr>
     <tr><td>Resultado esperado</td><td>Todas las respuestas iguales a las esperadas.</td></tr>
     <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 244 de 244 (el 12 de noviembre fueron 242 de 244 por DEF-18; se corrigió y se repitió el 13)</td></tr>
   </table>
@@ -589,6 +590,28 @@ td.id { white-space: nowrap; }
   <p>Además de la fidelidad sin cambios, se midió qué tanto entiende NOM-COLAB de cada archivo sin apoyarse en la copia original que guarda dentro: <b>Word 91.9 %</b>, <b>PowerPoint 78.5 %</b> y <b>Excel 59.2 %</b>. No es un criterio de aceptación, pero indica que la siguiente mejora debe ser el importador de Excel (formato condicional, gráficas y comentarios).</p>
 </section>
 
+<section class="sigue">
+  <h4 id="s6-4-6">6.4.6 Módulo M6: Sin Internet, cifrado y ayuda</h4>
+  <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de requerimientos</span></div><div class="r">Fecha: 13/11/2026</div><div class="d">Módulo: M6 Sin Internet, cifrado y ayuda · Submódulo: alias, pases, ramas, cifrado, chat y sitio de ayuda</div><div class="r">Duración: 14 min</div><div class="d">Evaluador: Rodríguez Esparza Diego Alejandro</div><div class="r">Revisión: 1</div></div>
+  <table class="ficha">
+    <tr><td>Procedimiento de prueba</td><td>Comparar el funcionamiento con el esperado desde la API (<code>seguridad.py</code>, secciones 13 a 15), desde el navegador real (<code>prueba_sin_internet</code>, <code>prueba_e2e</code>, <code>prueba_ayuda</code>) y con el teléfono como servidor en el emulador de Android con el APK publicable.</td></tr>
+    <tr><td>Resultado esperado</td><td>Cumplimiento de todos los requerimientos funcionales del módulo.</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 7 de 7 requerimientos</td></tr>
+  </table>
+  <table class="tabla-req">
+    <thead><tr><th rowspan="2">Requerimientos</th><th colspan="2" class="c">Cumplió con el requerimiento</th><th rowspan="2">Comentarios</th></tr><tr><th class="c">SÍ</th><th class="c">NO</th></tr></thead>
+    <tbody>
+    <tr><td>Sin Internet se entra al teléfono que comparte con un alias al azar, sin escribir nada; el teléfono no guarda contraseñas.</td><td class="x">X</td><td class="x"></td><td>Correcto en el navegador y en el emulador; un alias no crea espacios ni cuentas.</td></tr>
+    <tr><td>Con Internet se entra al teléfono con la cuenta de la nube mediante un pase firmado de 10 minutos.</td><td class="x">X</td><td class="x"></td><td>Pase de la Raspberry aceptado por el APK; un pase usado, vencido o alterado se rechaza.</td></tr>
+    <tr><td>Lo editado sin conexión se sube si nadie más cambió el documento; si alguien lo cambió, queda en una rama que se compara y se fusiona.</td><td class="x">X</td><td class="x"></td><td>22 de 22 en el navegador real, con la red cortada de verdad.</td></tr>
+    <tr><td>El servidor guarda todo cifrado (documentos, versiones, bitácoras, cuentas y respaldos).</td><td class="x">X</td><td class="x"></td><td>Ningún texto en claro en la carpeta de datos; sin su llave el servidor no arranca. En la Raspberry se cifraron 89 archivos y la base de cuentas.</td></tr>
+    <tr><td>En un espacio cifrado de extremo a extremo el servidor no puede leer el nombre, los documentos ni el chat, y los miembros sí.</td><td class="x">X</td><td class="x"></td><td>27 de 27: otro miembro, el QR con la llave en el <code>#</code>, el enlace para ver y el proyector.</td></tr>
+    <tr><td>Cada espacio tiene un chat con imágenes y archivos de hasta 2 MB, solo para sus miembros.</td><td class="x">X</td><td class="x"></td><td>Permisos de leer, escribir y borrar correctos; el archivo se descarga aparte.</td></tr>
+    <tr><td>Hay ayuda y avisos legales sin sesión y sin Internet, y se aceptan los términos al registrarse.</td><td class="x">X</td><td class="x"></td><td>18 de 18; ningún enlace roto en las 65 páginas.</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <!-- ============================== 6.5 SISTEMA ============================== -->
 <section class="sigue">
   <h3 id="s6-5">6.5 Plan de pruebas de sistema</h3>
@@ -622,12 +645,12 @@ td.id { white-space: nowrap; }
   <div class="ficha-cab"><div class="logo"><img src="../imagenes/logo-wack.png" alt=""></div><div class="emp">WACK<span>Prueba de seguridad</span></div><div class="r">Revisión: 1</div><div class="d">Aplicación del módulo: M1 Gestión de cuentas y M2 Espacios (servidor y página)</div><div class="r">Estado: Concluida</div><div class="d">Nombre: Prueba de seguridad de NOM-COLAB 0.12.1 · Responsable: Rodríguez Esparza Diego Alejandro</div><div class="r">Fecha: 12/11/2026</div></div>
   <table class="ficha">
     <tr><td class="sec" colspan="2">Detalles de la prueba</td></tr>
-    <tr><td>Duración de la prueba</td><td>4 minutos (226 casos automatizados)</td></tr>
+    <tr><td>Duración de la prueba</td><td>6 minutos (363 casos automatizados)</td></tr>
     <tr><td>Tipo de prueba</td><td>Pruebas de sistema (seguridad)</td></tr>
     <tr><td>Requerimientos de la prueba</td><td>Disponer del servidor 0.12.1 y de la página web</td></tr>
     <tr><td>Procedimiento de prueba</td><td>Se intenta entrar sin sesión, con tokens inventados, con inyección SQL y con HTML malicioso; se intenta hacer con cada rol lo que no le corresponde; se piden direcciones internas a la función Investigar; se revisan las cabeceras de seguridad.</td></tr>
     <tr><td>Resultado esperado</td><td>Los elementos del sistema cumplen con los parámetros de seguridad.</td></tr>
-    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 226 de 226 casos</td></tr>
+    <tr><td>Resultado obtenido</td><td>Prueba exitosa &nbsp; SÍ ( X ) &nbsp; NO ( &nbsp; ) &nbsp;— 363 de 363 casos</td></tr>
   </table>
   <table class="escala">
     <thead><tr><th style="width:19%">Criterios e indicadores</th><th>Descripción</th><th class="c">EX</th><th class="c">BU</th><th class="c">EL</th><th class="c">IN</th><th style="width:30%">Comentario</th></tr></thead>
@@ -677,9 +700,9 @@ td.id { white-space: nowrap; }
     <thead><tr><th style="width:28%">Plataforma</th><th>Qué se probó</th><th style="width:15%" class="c">Resultado</th></tr></thead>
     <tbody>
     <tr><td>Laptop Debian 13 (x86-64)</td><td>Todas las suites de este plan</td><td class="c ok">Aprobado</td></tr>
-    <tr><td>Raspberry Pi 5 (ARM)</td><td>Servidor propio en internet; prueba con una cuenta de prueba por el túnel</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Raspberry Pi 5 (ARM)</td><td>Servidor propio en internet con la versión 0.13.0: cifrado en reposo de los datos que ya tenía, cuenta, documento, pase firmado, chat y espacio cifrado por el túnel</td><td class="c ok">Aprobado</td></tr>
     <tr><td>Azure App Service y Azure SQL</td><td>Inicio de sesión, roles de la base y misma cuenta en computadora y celular (9 de 9)</td><td class="c ok">Aprobado</td></tr>
-    <tr><td>Emulador Android 15</td><td>APK publicable; teléfono como servidor (206 de 206)</td><td class="c ok">Aprobado</td></tr>
+    <tr><td>Emulador Android 15</td><td>APK publicable; teléfono como servidor (206 de 206 con 0.12.1; con 0.13.0, alias, pase de la Raspberry, chat y espacio cifrado: 18 de 18)</td><td class="c ok">Aprobado</td></tr>
     <tr><td>Samsung Galaxy A55, Android 16</td><td>App 0.12.2 (la 0.12.3 solo agrega DEF-35 y DEF-36) y Chrome con toques reales (ruedita, teclado del teléfono, conectores), el teléfono como servidor (212 de 212) y sincronización con la nube propia (13 nov); falta confirmar dos casos de la app (una celda tecleada muy rápido y la fecha de entrega)</td><td class="c prog">Parcial</td></tr>
     <tr><td>Chromium, Firefox y WebView</td><td>Mismas pantallas sin errores de JavaScript, de 320 a 430 px y en horizontal</td><td class="c ok">Aprobado</td></tr>
     </tbody>
@@ -729,6 +752,11 @@ td.id { white-space: nowrap; }
     <tr><td class="id">DEF-34</td><td>13 nov</td><td>La bienvenida, al desvanecerse, se tragaba el primer clic.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
     <tr><td class="id">DEF-35</td><td>13 nov</td><td>Si el navegador se cerraba de golpe (se va la luz, se traba), al volver sin Internet pedía iniciar sesión: Chromium no alcanzaba a guardar la sesión de <code>localStorage</code>. Ahora una copia queda junto a la llave de la bóveda (IndexedDB) y se recupera; cerrar sesión la borra.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
     <tr><td class="id">DEF-36</td><td>13 nov</td><td>Al cerrar una pestaña, el servidor volvía a revisar la sesión del canal en vivo con el boleto ya usado y dejaba un error en su bitácora.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-37</td><td>13 nov</td><td>Al volver a abrir un documento de un espacio cifrado salían letras raras: el servidor no guardaba la marca que dice qué letras van cifradas.</td><td class="c"><span class="pill p-alta">Alta</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-38</td><td>13 nov</td><td>En un espacio cifrado se podía poner un nombre en claro a un documento con «Renombrar» desde la API.</td><td class="c"><span class="pill p-media">Media</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-39</td><td>13 nov</td><td>Un archivo de casi 2 MB no cabía en el chat de un espacio cifrado (al cifrarse crece un tercio).</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-40</td><td>13 nov</td><td>El enlace para ver un documento cifrado mostraba el nombre cifrado del espacio.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
+    <tr><td class="id">DEF-41</td><td>13 nov</td><td>El dueño del teléfono que comparte (un alias) veía la opción de espacio cifrado, que no puede usar.</td><td class="c"><span class="pill p-baja">Baja</span></td><td class="c ok">Cerrado</td></tr>
     </tbody>
   </table>
 </section>
@@ -739,8 +767,8 @@ td.id { white-space: nowrap; }
   <table>
     <thead><tr><th style="width:29%">Suite</th><th style="width:10%" class="c">Casos</th><th style="width:12%" class="c">Aprobados</th><th>Avance</th><th style="width:12%" class="c">Resultado</th></tr></thead>
     <tbody>
-    <tr><td>Unitarias (JUnit y cifrado)</td><td class="c">35</td><td class="c">35</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
-    <tr><td>Integración y seguridad (API)</td><td class="c">226</td><td class="c">226</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Unitarias (JUnit y cifrado)</td><td class="c">36</td><td class="c">36</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Integración y seguridad (API)</td><td class="c">363</td><td class="c">363</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Seguridad con el teléfono A55 como servidor</td><td class="c">212</td><td class="c">212</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Valores límite</td><td class="c">18</td><td class="c">18</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Office sin cambios (90 archivos reales de Microsoft)</td><td class="c">90</td><td class="c">90</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
@@ -750,7 +778,11 @@ td.id { white-space: nowrap; }
     <tr><td>Red: página, celular y app</td><td class="c">24</td><td class="c">24</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Cuentas y datos del equipo</td><td class="c">61</td><td class="c">61</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
     <tr><td>Funciones de la interfaz (computadora, celular y Firefox)</td><td class="c">501</td><td class="c">501</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
-    <tr style="font-weight:700"><td>Total</td><td class="c">1542</td><td class="c">1542</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c">100.0 %</td></tr>
+    <tr><td>Sin Internet y ramas (navegador real)</td><td class="c">22</td><td class="c">22</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Extremo a extremo y chat (navegador real)</td><td class="c">27</td><td class="c">27</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>Ayuda y legal</td><td class="c">18</td><td class="c">18</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr><td>El teléfono como servidor (emulador, APK publicable)</td><td class="c">18</td><td class="c">18</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c ok">100 %</td></tr>
+    <tr style="font-weight:700"><td>Total</td><td class="c">1765</td><td class="c">1765</td><td><div class="barra"><span style="width:100.0%"></span></div></td><td class="c">100.0 %</td></tr>
     </tbody>
   </table>
   <h4>Requerimientos por módulo</h4>
@@ -762,7 +794,8 @@ td.id { white-space: nowrap; }
     <tr><td>M3 Documentos, edición y colaboración</td><td class="c">7</td><td class="c">7</td><td class="c">0</td></tr>
     <tr><td>M4 Almacenamiento, Android y sin conexión</td><td class="c">7</td><td class="c">7</td><td class="c">0</td></tr>
     <tr><td>M5 Importar y exportar</td><td class="c">5</td><td class="c">5</td><td class="c">0</td></tr>
-    <tr style="font-weight:700"><td>Total</td><td class="c">37</td><td class="c">37 (100 %)</td><td class="c">0</td></tr>
+    <tr><td>M6 Sin Internet, cifrado y ayuda</td><td class="c">7</td><td class="c">7</td><td class="c">0</td></tr>
+    <tr style="font-weight:700"><td>Total</td><td class="c">44</td><td class="c">44 (100 %)</td><td class="c">0</td></tr>
     </tbody>
   </table>
   <h4>Matriz de trazabilidad</h4>
@@ -777,6 +810,7 @@ td.id { white-space: nowrap; }
     <tr><td>CU-24</td><td>Requerimientos M4; VL-15 a VL-18 (DEF-18 corregido)</td><td class="c ok">Completa</td></tr>
     <tr><td>CU-25, CU-26</td><td>Requerimientos M4; prueba de red; portabilidad</td><td class="c ok">Completa</td></tr>
     <tr><td>CU-28, CU-29</td><td>Requerimientos M5; fidelidad, ediciones y pantalla</td><td class="c ok">Completa</td></tr>
+    <tr><td>Funciones de las fases 13 a 15 (amplían CU-02, CU-13, CU-16 a CU-19, CU-21, CU-26)</td><td>Requerimientos M6; seguridad (secciones 13 a 15); sin Internet; extremo a extremo; ayuda; el teléfono en el emulador</td><td class="c ok">Completa</td></tr>
     </tbody>
   </table>
   <h4>Pendientes</h4>
@@ -785,6 +819,7 @@ td.id { white-space: nowrap; }
     <li>Ver en pantalla los dibujos de Word (lienzos y grupos de formas); hoy se muestran como recuadros con su texto y se descargan completos.</li>
     <li>Confirmar en la app del A55 dos casos que no se pudieron repetir el 13 de noviembre (la depuración inalámbrica del teléfono se apagó): una celda tecleada muy rápido y guardar la fecha de entrega.</li>
     <li>Prueba de aceptación con usuarios y cuestionario SUS.</li>
+    <li>Repetir en el escritorio y en el A55 reales, con la Raspberry, el ciclo completo de la versión 0.13.0: entrar sin Internet con alias, editar sin conexión y fusionar la rama al volver.</li>
   </ul>
 </section>
 
@@ -806,10 +841,10 @@ td.id { white-space: nowrap; }
 <!-- ============================== 8. CONCLUSIONES ============================== -->
 <section class="capitulo">
   <h2 id="s8">8. Conclusiones</h2>
-  <p>Como empresa de pruebas, WACK aplicó a NOM-COLAB un plan para cada tipo de prueba: unitarias, de integración, de requerimientos y de sistema (usabilidad, seguridad y portabilidad). Se ejecutaron 1542 casos, de los cuales se aprobaron 1542 (100.0 %), y de los 37 requerimientos revisados se cumplieron los 37. Cada caso de uso quedó cubierto por al menos una prueba.</p>
-  <p>Las pruebas mostraron que la seguridad es el punto más fuerte del sistema: los 226 casos de seguridad y permisos se aprobaron, las contraseñas se guardan cifradas y ningún rol puede hacer más de lo que le corresponde, aunque alguien intente saltarse la página. También quedó demostrado lo que distingue al proyecto: varias personas pueden escribir a la vez sin pisarse, lo escrito sin conexión llega al volver la red y los archivos de Office se descargan igual que como entraron.</p>
-  <p>El plan además cumplió su objetivo de encontrar defectos antes que el usuario. Durante el desarrollo se registraron 36 defectos; catorce eran críticos o altos, y varios de ellos habrían hecho perder trabajo a quien usa la aplicación. El último, DEF-18, lo descubrieron las pruebas de valores límite de este plan: el tope de 25 MB por documento se puede rebasar en un solo envío. Se corrigió el 13 de noviembre, junto con dieciséis defectos más (DEF-19 a DEF-34) que salieron al probar cada función en equipos reales: el Samsung A55 (la app y Chrome), una computadora de escritorio y la nube propia en la Raspberry Pi. Los dos últimos (DEF-35 y DEF-36) aparecieron ese mismo día al comprobar a mano que la página abre sin Internet después de cerrar el navegador de golpe.</p>
-  <p>Con estos resultados, la decisión de WACK es <b>liberar la versión 0.12.3</b>, que corrige todos los defectos registrados, y completar en la semana del 17 de noviembre lo que falta: cinco dispositivos en el mismo espacio en la red de la escuela y la validación con usuarios que nunca han usado la aplicación. Todas las suites se repitieron sobre la versión final, porque una prueba solo tiene valor si se vuelve a ejecutar después de cada cambio.</p>
+  <p>Como empresa de pruebas, WACK aplicó a NOM-COLAB un plan para cada tipo de prueba: unitarias, de integración, de requerimientos y de sistema (usabilidad, seguridad y portabilidad). Se ejecutaron 1765 casos, de los cuales se aprobaron 1765 (100.0 %), y de los 44 requerimientos revisados se cumplieron los 44. Cada caso de uso quedó cubierto por al menos una prueba.</p>
+  <p>Las pruebas mostraron que la seguridad es el punto más fuerte del sistema: los 363 casos de seguridad y permisos se aprobaron, las contraseñas se guardan cifradas, ningún rol puede hacer más de lo que le corresponde aunque alguien intente saltarse la página, el servidor guarda todo cifrado en su disco y, en un espacio cifrado de extremo a extremo, ni el propio servidor puede leer lo que escriben sus miembros. También quedó demostrado lo que distingue al proyecto: varias personas pueden escribir a la vez sin pisarse, lo escrito sin conexión llega al volver la red y los archivos de Office se descargan igual que como entraron.</p>
+  <p>El plan además cumplió su objetivo de encontrar defectos antes que el usuario. Durante el desarrollo se registraron 41 defectos; quince eran críticos o altos, y varios de ellos habrían hecho perder trabajo a quien usa la aplicación. El último, DEF-18, lo descubrieron las pruebas de valores límite de este plan: el tope de 25 MB por documento se puede rebasar en un solo envío. Se corrigió el 13 de noviembre, junto con dieciséis defectos más (DEF-19 a DEF-34) que salieron al probar cada función en equipos reales: el Samsung A55 (la app y Chrome), una computadora de escritorio y la nube propia en la Raspberry Pi. Los dos últimos (DEF-35 y DEF-36) aparecieron ese mismo día al comprobar a mano que la página abre sin Internet después de cerrar el navegador de golpe. Los cinco últimos (DEF-37 a DEF-41) los encontraron las pruebas nuevas del cifrado de extremo a extremo, antes de publicar la versión 0.13.0; el más serio hacía ilegible un documento cifrado al volver a abrirlo.</p>
+  <p>Con estos resultados, la decisión de WACK es <b>liberar la versión 0.13.0</b>, que corrige todos los defectos registrados, y completar en la semana del 17 de noviembre lo que falta: cinco dispositivos en el mismo espacio en la red de la escuela y la validación con usuarios que nunca han usado la aplicación. Las suites de la API, de la página en computadora, de red, de cuentas, de valores límite y las nuevas se repitieron sobre la versión final 0.13.0; las de Office y las de celular y Firefox son de la 0.12.3 (13 de noviembre), porque esa parte no cambió. Una prueba solo tiene valor si se vuelve a ejecutar después de cada cambio.</p>
   <h3>Aprobaciones</h3>
   <div class="firma">
     <div>Martínez Ortega Uriel Alejandro<span>Director general</span></div>
