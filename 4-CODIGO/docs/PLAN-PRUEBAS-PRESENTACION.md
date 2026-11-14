@@ -316,3 +316,6 @@ entrega del 27 de noviembre) y regenerar el PDF.
 | B-11 | 14-nov | A55 servidor + laptop sin Internet | Correcto | — | PDF y foto desde el selector de Android; > 2 MB rechazado con mensaje claro; respuesta de la laptop llega |
 | B-15 | 14-nov | laptop + Pi | Parcial | — | la API da los datos sin contraseña; el botón de Ajustes no descargó en el navegador automático: repetir a mano |
 | B-10 | 14-nov | laptop + A55 + Pi | Parcial | DEF-48, DEF-49 | la Pi solo guarda cifrado (nombre y texto); el A55 entra con el código con guion, sin llave; falta el QR con cámara |
+| B-12 | 14-nov | laptop + Pi | Parcial | — | enlace para ver: correcto (solo lectura, sin cuenta); proyector sin probar |
+| Funciones (real) | 14-nov | escritorio, Chromium 157 real | 160 de 163 | — | fallan 2 del QR (servidor sin anunciarse) y «Descargar todo» por CDP remoto: de la prueba |
+| Funciones (real) | 14-nov | Chrome 157 del A55 | 162 de 163 | — | falla «Descargar todo» por CDP remoto; el .zip sí llegó al teléfono y sus 6 documentos pasan el validador de Microsoft |

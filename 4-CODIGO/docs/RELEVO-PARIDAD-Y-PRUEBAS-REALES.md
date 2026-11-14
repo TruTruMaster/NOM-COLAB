@@ -87,7 +87,9 @@ Firefox de Playwright), **Raspberry** (`https://nomcolab.dpdns.org`, 0.13.1).
 | B-11 | **Correcto** | Chat del espacio del teléfono: desde el A55 (selector de Android, vista de lista) un PDF y una foto; la laptop **sin Internet** (alias) los ve, el PDF llega idéntico byte por byte y la foto abre en su visor a 800×600; su respuesta llega al A55. Un archivo de 11.7 MB: «El archivo pasa de 2 MB. Súbelo como documento del espacio.» Ojo: en el selector de Android, en vista de cuadrícula, tocar el nombre abre la **vista previa de la Galería** en vez de elegir el archivo (es de Android; una persona lo nota, pero confunde). |
 | B-15 | Parcial | `GET /api/cuentas/datos` con la cuenta x5: 200, 771 bytes, sin contraseña. Desde el botón «Descargar» de Ajustes (Chromium automático de la laptop) **no salió la descarga ni un aviso**; repetir a mano en un navegador real (puede ser de la prueba). Borrar la cuenta: no se hizo (x5 sigue). |
 | B-10 | Parcial, con DEF-48 y DEF-49 | Espacio cifrado creado en la laptop (x2) con un documento; en la Pi el nombre del espacio es `e2e:AX2P…` y el documento no tiene ni el texto ni el nombre en claro (**correcto**). El A55 (x1) entra con el código escrito **con guion** (`V5MP-4CWE`): «Este código no trae la llave: entra con el QR o la dirección completa…», y dentro: «este equipo todavía no tiene su llave» (correcto según el diseño). **Sin guion** (`V5MP4CWE`) la app lo toma como dirección de un servidor: DEF-48. La dirección completa (con `#k=` la llave) no se puede meter en la app: DEF-49. Falta: escanear el QR con la cámara (necesita a una persona). |
-| B-12 a B-14, B-17 | No hechos | Lista en la sección 7. |
+| B-12 | Correcto (enlace) | «Enlace para ver sin cuenta» del acta (dueño x1): en un navegador sin sesión se ve «Acta A55 · Texto · de Pruebas A55 · solo lectura», con «Imprimir o guardar PDF», sin edición y sin errores. **Proyector:** no se terminó (la prueba automática no encontró el código en la pantalla de quien presenta: `pruebas/reales/b12_proyector.py`; revisar a mano). |
+| Funciones en navegadores reales | 160 de 163 en el escritorio; **162 de 163 en Chrome del A55** | `prueba_funciones.py --cdp` contra el Chromium 157 real del escritorio (servidor de la laptop por túnel inverso, `NOM_DESCUBRIMIENTO=false`): fallan solo los 2 casos del QR (el servidor de prueba no se anuncia en la red: esperado) y «Descargar todo» (por CDP remoto la descarga llega vacía a la laptop: es de la prueba, no de la app; en local pasa). En el Chrome real del A55 (`--cdp` por adb, servidor de la laptop por la red de la casa) falla solo «Descargar todo» por lo mismo; el `.zip` **sí llegó** a `Download/` del teléfono (6 documentos hechos en la app: texto, hoja, presentación, diagrama, hoja protegida) y los 6 pasan el validador de Microsoft sin errores y abren en LibreOffice. Registro: `~/.cache/nom-pruebas/registros/2026-11-14-reales/`. |
+| B-13, B-14, B-17 | No hechos | Lista en la sección 7. |
 
 ### 3.2 Office en el A55 (bloque F, con la app publicable)
 
@@ -171,8 +173,16 @@ Registro: `~/.cache/nom-pruebas/registros/2026-11-14-openxml/`.
   color y fuente fijos): en PowerPoint deja de ser el título (esquema, accesibilidad, cambiar de
   diseño), (3) cambia `name`/`id` («Title 1» → «Título 4»), `lang` en-US → es-MX, se pierden
   `endParaRPr` y `smtClean`. El archivo es válido (0 errores) pero **pierde información**.
-- **Arreglo propuesto:** hacer con PowerPoint lo que ya hace Excel (`xlsxConOrigen`): para una
-  diapositiva cambiada, partir del XML original y **reemplazar solo la figura cambiada**; si solo
+- **Causa en el código:** `ooxml.js`, `pptxArmar` → `conOrigen`: cada figura importada queda en un
+  modo (`ooxml.js:2647-2660`): «igual», «geo» (solo se movió), «texto» (cambió lo escrito) o «nuevo»
+  (se vuelve a escribir desde el modelo). Un cambio de **formato** (negrita) cae en «nuevo», y en
+  `ooxml.js:2709-2710` basta una figura «nueva» para **quitar todo `p:timing`** («las animaciones
+  apuntan a figuras por número»). Al reescribirla, además, sale con `id` nuevo y sin `p:ph`.
+- **Arreglo propuesto:** (1) un modo «formato» que parche solo `a:rPr`/`a:pPr` dentro del `p:txBody`
+  original; (2) al reescribir una figura, **conservar su `p:cNvPr id` y su `p:nvSpPr`** (con `p:ph`) y
+  dejar `p:spPr` vacío si no se movió; (3) con los `id` conservados, **no quitar `p:timing`**: solo
+  borrar los `p:par` cuyo `p:spTgt spid` apunte a una figura que ya no existe (y su `p:bldP`). Es lo
+  mismo que ya hace Excel (`xlsxConOrigen`): partir del XML original y **reemplazar solo lo cambiado**; si solo
   cambió texto o formato, parchar su `p:txBody` (y `a:rPr` de las corridas tocadas) y dejar
   `p:nvSpPr` (con `p:ph`), `p:spPr` vacío si no se movió, `p:timing`, `p:transition` y `p:extLst` tal
   cual. Si se borró una figura con animación, quitar sus `p:par` de `p:timing` (si no, PowerPoint
@@ -245,7 +255,7 @@ servidor de la laptop, no en la Pi.)
 
 ### MEJ-1 (Office, parte de la paridad) · Al editar un párrafo de Word se borran las propiedades que la app no guarda
 
-El párrafo editado se regenera desde el modelo: lo que el modelo no tiene (`w:rFonts w:cs`,
+El párrafo editado se regenera desde el modelo (`ooxml.js`: `cuerpoConOrigen`, línea 280, copia textual los párrafos sin cambios y reescribe los cambiados con el escritor de corridas de las líneas 194-206): lo que el modelo no tiene (`w:rFonts w:cs`,
 `w:eastAsia`, `rsid`, `w:lang`, subrayados de estilo distinto a sencillo, etc.) se pierde. Arreglo de
 fondo (igual que DEF-45): **parchar** el XML original del párrafo (conservar `w:pPr`/`w:rPr`
 originales y cambiar solo los atributos que la persona tocó). La lista de lo que el modelo no guarda
@@ -320,6 +330,11 @@ arrancar ahí con permiso del dueño; (4) la computadora de la escuela (bloques 
 | `diag_rama.py DOC` | Muestra la marca de rama en la bóveda mientras se está sin red (DEF-46). |
 | `telefono.py ENLACE`, `telefono2.py ENLACE` | B-3 (alias sin Internet) y B-4 (con cuenta) contra el A55 como servidor. |
 | `exportar_k.py ESPACIO` | Descarga cada documento del espacio como Office (bloque K). |
+| `b10.py` | Crea en la laptop un espacio cifrado con un documento (B-10); el código se mete en el A55 a mano o con `a55.py`. |
+| `b12.py DOC`, `b12_proyector.py DOC` | Enlace para ver sin cuenta y proyector (B-12). |
+| `b15.py` | Descargar mis datos y borrar cuenta (B-15). |
+| `chat_laptop.py ENLACE captura.png` | Del lado de la laptop sin Internet: abre la foto del chat y responde (B-11). |
+| Suites en navegadores reales | `prueba_funciones.py SALIDA --cdp http://localhost:9333 --base http://localhost:8099` (escritorio: servidor de la laptop con `NOM_DESCUBRIMIENTO=false` y `ssh -f -N -R 8099:localhost:8099 100.84.188.120`); Chrome del A55: `adb forward tcp:9222 localabstract:chrome_devtools_remote` (con Chrome abierto) y `--cdp http://localhost:9222 --base http://192.168.0.96:8099`. |
 
 Matar solo el Chromium de pruebas del escritorio (`/tmp/matar-nom.sh` allá):
 
@@ -334,7 +349,7 @@ done
 - **B-7** (comparar, fusionar, regresar, descartar) con una rama de verdad (después de DEF-46).
 - **B-10** terminar: QR con la **cámara real** (una persona apunta el A55 a la pantalla); después
   de DEF-48/DEF-49, el enlace completo.
-- **B-12** enlace para ver y proyector; **B-13** ayuda sin red en la app; **B-14** instalar la página
+- **B-12** el proyector; **B-13** ayuda sin red en la app; **B-14** instalar la página
   en el escritorio y abrirla sin red; **B-15** terminar: botón «Descargar» de Ajustes a mano y borrar la cuenta `pruebaa55x5`.
 - **B-17** 4 equipos reales + `carga.py --personas 40` en el mismo espacio; **D-4** (Pi con 50),
   **D-5** (A55 como servidor: `carga.py` con alias).

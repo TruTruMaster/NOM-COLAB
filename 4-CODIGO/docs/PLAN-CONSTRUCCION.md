@@ -533,6 +533,14 @@ sesión anterior: `./desplegar.sh roles` para las columnas nuevas de usuarios.
 
 ## Orden recomendado para la siguiente sesión
 
+**Desde el 14 de noviembre de 2026 (madrugada):** leer primero `docs/RELEVO-PARIDAD-Y-PRUEBAS-REALES.md`.
+Orden: (1) versión 0.13.2 con DEF-46 (ramas), DEF-45 (PowerPoint), DEF-44, DEF-48, DEF-49, DEF-47 y
+DEF-43, cada uno con su prueba, `regresion.sh` + `pruebas/office/validar_openxml.py`, y publicar todo
+junto; (2) repetir B-6 y B-7 en el escritorio real; (3) recoger la investigación de Office del
+escritorio (`docs/paridad/`) y hacer `docs/PARIDAD-OFFICE.md`; (4) «que no se pierda nada al
+editar» (parchar Word y PowerPoint en vez de regenerar); (5) lo que falta del plan de pruebas
+(sección 7 del relevo). Lo de abajo es lo de antes.
+
 **Desde la noche del 13 de noviembre de 2026:** seguir el calendario de
 `docs/PLAN-PRUEBAS-PRESENTACION.md` (fase 16). Lo de abajo es lo de antes.
 
