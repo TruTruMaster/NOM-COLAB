@@ -950,5 +950,5 @@ en el orden de su parte H.
   (versionCode 21, misma llave) en `3-APP-Android/` y como release v0.13.1 de GitHub, `main`
   empujado (Azure desplegó bien; sigue apagada a propósito).
 - **Decisión del dueño:** las llaves de la Pi no se copian fuera de ella (riesgo aceptado).
-- **Falta:** regresar el A55 (sigue con el APK de depuración 0.12.2 apuntando al servidor de pruebas;
-  no se abrió la app porque el dueño estaba usando el teléfono).
+- **A55:** se desinstaló la app y se instaló limpia la 0.13.1 publicable (indicación del dueño);
+  la pantalla vuelve a apagarse sola.

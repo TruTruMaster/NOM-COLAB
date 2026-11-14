@@ -49,15 +49,11 @@ Leer antes, en este orden:
   caso 13.2 esperaba 403 y desde que el APK trae la llave de la Pi la respuesta correcta es 401.
 - **Decisión del dueño: las llaves de la Pi (`/var/lib/nomcolab/datos-llaves`) NO se copian fuera
   de ella.** Riesgo aceptado: no volver a pedirlo.
-- **A55 pendiente de regresar:** sigue con el APK de depuración 0.12.2 y la app apunta al servidor de
-  pruebas de la laptop (`http://100.77.150.52:8099`) con la sesión de prueba `ptyyeety`. La
-  depuración inalámbrica ya está activa. No abrir la app mientras el dueño usa el teléfono (revisar
-  `adb shell dumpsys window | grep mCurrentFocus`). Pasos: abrir la app (todavía de depuración, su
-  WebView da CDP), `NOM.api.limpiarSesion()`, poner en `localStorage` los valores de
-  `~/.cache/nom-pruebas/respaldo-a55/app-ajustes-antes.json` (`nom.servidor` era
-  `http://192.168.0.199:8080`) y **esperar unos segundos antes de cerrarla** (si se cierra al instante
-  no se guarda); comprobar abriendo de nuevo; luego instalar `3-APP-Android/NOM-COLAB.apk` (0.13.1,
-  misma llave, conserva los datos) y `adb shell svc power stayon false`.
+- **A55:** por indicación del dueño se desinstaló la app y se instaló limpia la 0.13.1 publicable
+  (13-nov). Ya no hay APK de depuración ni ajustes de prueba; los datos que tenía como servidor se
+  borraron con la desinstalación (copia previa en `~/.cache/nom-pruebas/respaldo-a55/servidor-antes.tar`).
+  Para manejar su WebView por CDP en las pruebas hay que instalar un APK de depuración y, al terminar,
+  volver a instalar el publicable.
 
 ## 1b. Qué tan confiables son las pruebas automáticas (léelo antes de creerles)
 
