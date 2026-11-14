@@ -107,6 +107,24 @@ class SecuenciaTest {
     }
 
     @Test
+    void lasLetrasCifradasGuardanSuMarcaYNoSeJuntanConLasDeEnClaro() {
+        Secuencia s = new Secuencia();
+        Map<String, Object> c = ins(null, "\uDBC0\uDC01\u4E00");
+        c.put("cx", 1);
+        assertTrue(s.aplicar(c, 1, "ana"));
+        Map<String, Object> c2 = ins("2@ana", "\u4E01");
+        c2.put("cx", 1);
+        assertTrue(s.aplicar(c2, 3, "ana"));
+        assertEquals(1, s.ins.size());
+        assertEquals(1, s.ins.get(0).get("cx"));
+        // Una letra en claro seguida no se junta con el tramo cifrado (se descifraría mal).
+        assertTrue(s.aplicar(ins("3@ana", "x"), 4, "ana"));
+        assertEquals(2, s.ins.size());
+        assertFalse(s.ins.get(1).containsKey("cx"));
+        assertEquals(4, s.visibles());
+    }
+
+    @Test
     void restaurarDejaVisibilidadYFormatoComoEnLaVersion() {
         MotorCRDT m = new MotorCRDT();
         EstadoDocumento e = new EstadoDocumento();

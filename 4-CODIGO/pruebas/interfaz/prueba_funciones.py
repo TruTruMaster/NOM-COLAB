@@ -689,6 +689,8 @@ def prueba_cuentas(P, c, e, salida):
     nombre = "alta" + "".join(random.choice(string.ascii_lowercase) for _ in range(6))
     Q.boton("Crear cuenta", "body"); Q.t(400)
     Q.p.fill("#ru", nombre); Q.p.fill("#rc", N.CL)
+    check("sin aceptar los Términos no se crea la cuenta", Q.ev("() => { document.querySelector('#rc').closest('form').requestSubmit(); return new Promise(r => setTimeout(() => r(!localStorage.getItem('nom.token') && /acepta los Términos/.test(document.body.innerText)), 1500)); }"), "")
+    Q.p.check("#rc >> xpath=ancestor::form//input[@name='acepto']")
     Q.ev("() => document.querySelector('#rc').closest('form').requestSubmit()"); Q.t(3500)
     check("crear cuenta por la pantalla muestra «Tu código de recuperación»", (Q.hoja_abierta() or "").startswith("Tu código"), Q.hoja_abierta())
     cod = Q.ev("() => (document.querySelector('.velo .hoja') || {}).innerText || ''")

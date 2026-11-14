@@ -25,6 +25,11 @@ public class Espacio {
     public Sincronia sincronia;
     /** 8.5 Avisos de cada persona (menciones en comentarios): usuarioId -> los ultimos 40. */
     public Map<String, List<Map<String, Object>>> avisos;
+    /** Fase 15: espacio cifrado de extremo a extremo (se decide al crearlo). Su nombre y el contenido de
+        sus documentos y su chat llegan cifrados; el servidor guarda la estructura en claro. */
+    public boolean e2e;
+    /** usuarioId -> la llave del espacio envuelta para esa cuenta (solo su equipo la abre). */
+    public Map<String, String> llaves;
 
     public static class Conexion {
         public boolean activa;

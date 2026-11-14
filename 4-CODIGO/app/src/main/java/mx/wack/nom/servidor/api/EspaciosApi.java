@@ -32,11 +32,12 @@ import mx.wack.nom.core.servicio.ServicioSincronia;
 @RequestMapping("/api/espacios")
 public class EspaciosApi {
 
-    public record Nombre(String nombre) { }
+    public record Nombre(String nombre, Boolean e2e, String llave) { }
+    public record DarLlave(String usuario, String llave) { }
     public record Conexion(boolean activa) { }
     public record CambioAcceso(String usuario, String permiso) { }
     public record Depuracion(int conservar) { }
-    public record NuevoDocumento(String nombre, String modo, List<Operacion> ops) { }
+    public record NuevoDocumento(String nombre, String modo, List<Operacion> ops, String llave) { }
     public record NuevoEnlace(String permiso, Integer horas, Boolean invitados) { }
     public record Sincronizar(String servidor, String usuario, String contrasena) { }
     public record CambioCarpeta(String de, String a) { }
@@ -45,6 +46,8 @@ public class EspaciosApi {
     private final ServicioDocumentos documentos;
     private final Difusor difusor;
     private final ServicioSincronia sincronia;
+    @org.springframework.beans.factory.annotation.Autowired
+    private mx.wack.nom.core.servicio.ServicioChat chat;
 
     public EspaciosApi(ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor, ServicioSincronia sincronia) {
         this.espacios = espacios;
@@ -61,8 +64,40 @@ public class EspaciosApi {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> crear(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @RequestBody Nombre n) {
-        Espacio e = espacios.crear(u, n.nombre());
+        Espacio e = Boolean.TRUE.equals(n.e2e()) ? espacios.crearCifrado(u, n.nombre(), n.llave()) : espacios.crear(u, n.nombre());
         return espacios.resumen(e, u);
+    }
+
+    // ---- fase 15: llaves del espacio cifrado y chat
+
+    @GetMapping("/{id}/llaves")
+    public Map<String, Object> llaves(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id) {
+        return espacios.llaves(u, id);
+    }
+
+    @PutMapping("/{id}/llaves")
+    public Map<String, Object> darLlave(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody DarLlave d) {
+        return espacios.darLlave(u, id, d.usuario(), d.llave());
+    }
+
+    @GetMapping("/{id}/chat")
+    public Map<String, Object> chat(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") long desde) {
+        return chat.mensajes(u, id, desde);
+    }
+
+    @PostMapping("/{id}/chat")
+    public Map<String, Object> escribir(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @RequestBody Map<String, Object> c) {
+        return chat.enviar(u, id, c);
+    }
+
+    @GetMapping("/{id}/chat/{msg}/adjunto")
+    public Map<String, Object> adjunto(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @PathVariable String msg) {
+        return chat.adjunto(u, id, msg);
+    }
+
+    @DeleteMapping("/{id}/chat/{msg}")
+    public Map<String, Object> borrarMensaje(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id, @PathVariable String msg) {
+        return chat.borrar(u, id, msg);
     }
 
     @GetMapping("/{id}")
@@ -217,6 +252,6 @@ public class EspaciosApi {
     @ResponseStatus(HttpStatus.CREATED)
     public Documento crearDocumento(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @PathVariable String id,
                                     @RequestBody NuevoDocumento n) {
-        return documentos.crear(u, id, n.nombre(), n.modo(), n.ops());
+        return documentos.crear(u, id, n.nombre(), n.modo(), n.ops(), n.llave());
     }
 }

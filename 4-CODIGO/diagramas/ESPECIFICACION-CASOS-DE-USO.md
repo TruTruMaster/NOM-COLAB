@@ -676,7 +676,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 
 ---
 
-## Anexo · Funciones agregadas en las fases 1 a 11 (noviembre de 2026)
+## Anexo · Funciones agregadas en las fases 1 a 15 (noviembre de 2026)
 
 Las fases del plan de construcción (`../docs/PLAN-CONSTRUCCION.md`) agregaron funciones que no
 cambian la lista de casos de uso: cada una amplía uno de los casos de arriba.
@@ -694,3 +694,10 @@ cambian la lista de casos de uso: cada una amplía uno de los casos de arriba.
 | Límite de almacenamiento por cuenta a la vista y 25 MB por documento | CU-24 | Cuenta y ajustes · Cuánto ocupa |
 | El teléfono como servidor, respaldo diario en el teléfono | CU-14, CU-25 | Este teléfono |
 | Formato `.nom` comprimido y el archivo de Office original dentro del documento | CU-28, CU-29 | Importar · Exportar |
+| Sin Internet: entrar al teléfono que comparte con un alias al azar; con Internet, con la cuenta de la nube y un pase firmado de 10 minutos | CU-02, CU-16, CU-25 | Unirse · Este teléfono |
+| Crear documentos en un espacio sin Internet (se suben solos al volver) e instalar la página en la computadora | CU-18, CU-26 | Pantalla del espacio · Este dispositivo |
+| Ramas: si otra persona cambió el documento mientras no había conexión, lo propio queda en una rama; comparar, fusionar (con versión para regresar), dejar aparte o descartar | CU-21, CU-23, CU-26 | Editor (aviso de rama) · «Ramas (n)» |
+| Cifrado en reposo del servidor (AES-256-GCM: documentos, versiones, bitácoras, espacios, base de cuentas y respaldos) | CU-24 | — (lo hace el servidor) |
+| Sitio de ayuda y legal sin sesión y sin Internet (`/ayuda/`, `/legal/`), aceptar los Términos al registrarse, «Descargar los datos de mi cuenta» | CU-01, CU-22, CU-27 | Pie «Ayuda · Privacidad · Términos» · botones «?» · Cuenta y ajustes |
+| Espacio cifrado de extremo a extremo: el nombre, los documentos y el chat se cifran en el equipo; la llave del espacio va envuelta para cada miembro o en el `#` del QR | CU-13, CU-16, CU-17, CU-19 | Nuevo espacio → Cifrado de extremo a extremo |
+| Chat del espacio con imágenes y archivos (hasta 2 MB); reportar descargando lo descifrado | CU-17, CU-21 | Pantalla del espacio → Chat |

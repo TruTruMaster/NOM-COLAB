@@ -77,11 +77,17 @@
     const t = setTimeout(() => ctl.abort(), opc.ms || 9000);
     const cab = { Accept: "application/json" };
     if (cuerpo !== undefined) cab["Content-Type"] = "application/json";
+    // Fase 15: en un espacio cifrado de extremo a extremo, el contenido se cifra aquí antes de salir.
+    const original = cuerpo;
+    if (cuerpo !== undefined && !opc.crudo && NOM.e2e) {
+      try { cuerpo = await NOM.e2e.alEnviar(metodo, ruta, cuerpo); }
+      catch (e) { clearTimeout(t); throw new ErrorApi(e.estado === 0 ? 0 : 400, { error: e.message }); }
+    }
     const tok = api.token();
     if (tok) cab.Authorization = "Bearer " + tok;
     let r;
     try {
-      r = await fetch(base + ruta, { method: metodo, headers: cab, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo), signal: ctl.signal });
+      r = await fetch(base + ruta, { method: metodo, headers: cab, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo, (k, v) => (k.startsWith("_") ? undefined : v)), signal: ctl.signal });
     } catch (e) {
       marcarRed(false);
       throw new ErrorApi(0, null);
@@ -97,6 +103,12 @@
       if (r.status === 401 && !opc.sin401) api.alExpirar && api.alExpirar(err);
       throw err;
     }
+    // Fase 15: lo cifrado de extremo a extremo se descifra al llegar.
+    if (datos && !opc.crudo && NOM.e2e) {
+      try { datos = await NOM.e2e.alRecibir(metodo, ruta, datos, cuerpo); }
+      catch (e) { throw new ErrorApi(e.sinLlave ? 423 : 400, { error: e.message }); }
+    }
+    void original;
     return datos;
   };
   ["get", "post", "put", "delete"].forEach((m) => {

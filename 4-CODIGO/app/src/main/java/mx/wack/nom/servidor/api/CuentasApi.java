@@ -33,6 +33,7 @@ public class CuentasApi {
 
     public record Registro(String nombre, String contrasena, String empresa, String acepto) { }
     public record Aceptacion(String version) { }
+    public record Llaves(String publica, String privadaContrasena, String privadaRecuperacion) { }
     public record Credenciales(String nombre, String contrasena) { }
     public record Recuperacion(String nombre, String codigo, String nueva) { }
     public record CambioContrasena(String actual, String nueva) { }
@@ -106,6 +107,21 @@ public class CuentasApi {
     @PostMapping("/boleto")
     public Map<String, Object> boleto(@RequestAttribute("nom.token") String token) {
         return Map.of("boleto", cuentas.boleto(token));
+    }
+
+    /** Fase 15: el par de llaves de la cuenta (la privada viene envuelta desde el equipo). */
+    @GetMapping("/llaves")
+    public Map<String, Object> llaves(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u) { return cuentas.llaves(u); }
+
+    @PutMapping("/llaves")
+    public Map<String, Object> guardarLlaves(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @RequestBody Llaves l) {
+        return cuentas.guardarLlaves(u, l.publica(), l.privadaContrasena(), l.privadaRecuperacion());
+    }
+
+    /** Fase 15: la llave publica de otra cuenta (para darle la llave de un espacio cifrado). */
+    @GetMapping("/publica")
+    public Map<String, Object> publica(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @org.springframework.web.bind.annotation.RequestParam String usuario) {
+        return cuentas.publica(usuario);
     }
 
     /** F.5 Aceptar la version vigente de los Terminos y del Aviso de privacidad. */

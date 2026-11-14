@@ -43,11 +43,13 @@ final class ApiTelefono {
     private final ServicioSincronia sincronia;
     private final ServicioFuentes fuentes;
     private final ServicioPases pases;
+    private final mx.wack.nom.core.servicio.ServicioChat chat;
 
     ApiTelefono(ServicioCuentas cuentas, ServicioEspacios espacios, ServicioDocumentos documentos, Difusor difusor,
                 Descubrimiento descubrimiento, Nodo nodo, ServicioSincronia sincronia, ServicioFuentes fuentes, ServicioPases pases) {
         this.fuentes = fuentes;
         this.pases = pases;
+        this.chat = new mx.wack.nom.core.servicio.ServicioChat(espacios.repositorio(), espacios, difusor, new mx.wack.nom.core.servicio.Cifrado());
         this.cuentas = cuentas;
         this.espacios = espacios;
         this.documentos = documentos;
@@ -268,6 +270,11 @@ final class ApiTelefono {
         if (r.equals("/api/cuentas/boleto") && m.equals("POST")) return ok(Map.of("boleto", cuentas.boleto(token)));
         if (r.equals("/api/cuentas/pase") && m.equals("POST")) throw ErrorNom.prohibido("El teléfono no da pases: se piden a la nube");
         if (r.equals("/api/cuentas/almacenamiento") && m.equals("GET")) return ok(documentos.almacenamientoDe(u));
+        if (r.equals("/api/cuentas/llaves")) {
+            if (m.equals("GET")) return ok(cuentas.llaves(u));
+            if (m.equals("PUT")) { Map<String, Object> c = cuerpo(p); return ok(cuentas.guardarLlaves(u, texto(c, "publica"), texto(c, "privadaContrasena"), texto(c, "privadaRecuperacion"))); }
+        }
+        if (r.equals("/api/cuentas/publica") && m.equals("GET")) return ok(cuentas.publica(p.consulta.get("usuario")));
         if (r.equals("/api/cuentas/datos") && m.equals("GET")) return ok(documentos.datosDeCuenta(u));
         if (r.equals("/api/cuentas/preferencias") && m.equals("PUT")) {
             Object c = p.json();
@@ -279,7 +286,10 @@ final class ApiTelefono {
         // ---- espacios
         if (r.equals("/api/espacios")) {
             if (m.equals("GET")) return ok(espacios.listar(u));
-            if (m.equals("POST")) return creado(espacios.resumen(espacios.crear(u, texto(cuerpo(p), "nombre")), u));
+            if (m.equals("POST")) {
+                Map<String, Object> c = cuerpo(p);
+                return creado(espacios.resumen(Boolean.TRUE.equals(c.get("e2e")) ? espacios.crearCifrado(u, texto(c, "nombre"), texto(c, "llave")) : espacios.crear(u, texto(c, "nombre")), u));
+            }
         }
         if ((x = coincide("/api/espacios/" + ID, r)) != null) {
             String id = x.group(1);
@@ -360,6 +370,17 @@ final class ApiTelefono {
             if (m.equals("GET")) return ok(fuentes.deBiblioteca(u, x.group(1), x.group(2)));
             if (m.equals("DELETE")) return ok(fuentes.quitarDeBiblioteca(u, x.group(1), x.group(2)));
         }
+        // ---- fase 15: llaves del espacio cifrado y chat
+        if ((x = coincide("/api/espacios/" + ID + "/llaves", r)) != null) {
+            if (m.equals("GET")) return ok(espacios.llaves(u, x.group(1)));
+            if (m.equals("PUT")) { Map<String, Object> c = cuerpo(p); return ok(espacios.darLlave(u, x.group(1), texto(c, "usuario"), texto(c, "llave"))); }
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/chat", r)) != null) {
+            if (m.equals("GET")) return ok(chat.mensajes(u, x.group(1), largo(p.consulta.containsKey("desde") ? Long.valueOf(p.consulta.get("desde")) : 0L)));
+            if (m.equals("POST")) return ok(chat.enviar(u, x.group(1), cuerpo(p)));
+        }
+        if ((x = coincide("/api/espacios/" + ID + "/chat/" + ID + "/adjunto", r)) != null && m.equals("GET")) return ok(chat.adjunto(u, x.group(1), x.group(2)));
+        if ((x = coincide("/api/espacios/" + ID + "/chat/" + ID, r)) != null && m.equals("DELETE")) return ok(chat.borrar(u, x.group(1), x.group(2)));
         // ---- 8.5 papelera, buscar, carpetas y avisos
         if ((x = coincide("/api/espacios/" + ID + "/papelera", r)) != null) {
             if (m.equals("GET")) return ok(documentos.papelera(u, x.group(1)));
@@ -376,7 +397,7 @@ final class ApiTelefono {
             if (m.equals("GET")) return ok(documentos.listar(u, x.group(1)));
             if (m.equals("POST")) {
                 Map<String, Object> c = cuerpo(p);
-                Documento d = documentos.crear(u, x.group(1), texto(c, "nombre"), texto(c, "modo"), Json.operaciones(c.get("ops")));
+                Documento d = documentos.crear(u, x.group(1), texto(c, "nombre"), texto(c, "modo"), Json.operaciones(c.get("ops")), texto(c, "llave"));
                 return creado(d);
             }
         }

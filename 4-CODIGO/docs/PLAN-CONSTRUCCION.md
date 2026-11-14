@@ -407,42 +407,51 @@ cuenta**, solo con un alias generado al azar; lo editado sin Internet se sube ta
 documento, y si alguien lo cambió se abre una **rama** y el original no se toca. Es por persona:
 quien tiene Internet conserva su cuenta aunque esté en el espacio del teléfono.
 
-- [ ] A.1: quien no tiene Internet entra al teléfono que comparte con un alias al azar (sin escribir
+- [x] A.1: quien no tiene Internet entra al teléfono que comparte con un alias al azar (sin escribir
       apodo); quitar registro e inicio de sesión con contraseña en `ApiTelefono`.
-- [ ] A.2: quien sí tiene Internet conserva su cuenta: inicia sesión directo con la nube, recibe un
+- [x] A.2: quien sí tiene Internet conserva su cuenta: inicia sesión directo con la nube, recibe un
       pase firmado de 10 minutos y lo presenta al teléfono (llave pública de la Raspberry dentro del APK;
       CORS de la nube solo para eso y desde redes privadas).
-- [ ] C: crear documentos dentro de un espacio sin Internet (se suben solos al volver); botón
+- [x] C: crear documentos dentro de un espacio sin Internet (se suben solos al volver); botón
       «Instalar en esta computadora».
-- [ ] B.3: base al quedarse sin conexión y `GET /api/documentos/{id}/cambios-desde`.
-- [ ] B.4: crear la rama (`ramaDe`, `base`, cambios propios) en lugar de enviar la cola; «Ramas (n)» en el original.
-- [ ] B.5: comparar con el original, fusionar (con versión para regresar), dejar aparte, descartar.
-- [ ] B.6: casos especiales (borrado, renombrado, protegido o con fecha vencida, el teléfono al subir).
-- [ ] B.2: rama solo tras más de 2 minutos sin conexión o con el documento abierto ya sin Internet (decidido; ajustar si al probar molesta).
-- [ ] Pruebas de la parte H y ciclo real en `flast-desktop` con la Raspberry.
+- [x] B.3: base al quedarse sin conexión y `GET /api/documentos/{id}/cambios-desde`.
+- [x] B.4: crear la rama (`ramaDe`, `base`, cambios propios) en lugar de enviar la cola; «Ramas (n)» en el original.
+- [x] B.5: comparar con el original, fusionar (con versión para regresar), dejar aparte, descartar.
+- [x] B.6: casos especiales (borrado, renombrado, protegido o con fecha vencida, el teléfono al subir).
+- [x] B.2: rama solo tras más de 2 minutos sin conexión o con el documento abierto ya sin Internet (decidido; ajustar si al probar molesta).
+- [x] Pruebas de la parte H: `pruebas/interfaz/prueba_sin_internet.py` (22) y la sección 13 de
+      `pruebas/seguridad.py`.
+- [ ] Ciclo real en `flast-desktop` con la Raspberry (el escritorio no estaba prendido el 13 de noviembre).
 
 ## Fase 14. Sitio de ayuda y legal, y cifrado en reposo (plan del 13 de noviembre de 2026)
 
 Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.1 y F.
 
-- [ ] Archivo `LICENSE` con la GPL-3.0 (decidida) y sección en el README; correo del proyecto (G.2, lo crea el equipo).
-- [ ] D.1: cifrado en reposo en el servidor (documentos, versiones, comentarios y respaldos).
-- [ ] Generador `4-CODIGO/ayuda/generar.py`, plantilla, buscador, rutas en Spring y en el teléfono, service worker.
-- [ ] `/legal/`: aviso integral y simplificado (LFPDPPP de 2025), términos, uso aceptable,
+- [x] Archivo `LICENSE` con la GPL-3.0 (decidida) y sección en el README.
+- [ ] Correo del proyecto (G.2, lo crea el equipo); mientras, el contacto es por GitHub (`CONTACTO` en `ayuda/generar.py`: al tenerlo, se pone ahí y se vuelve a generar).
+- [x] D.1: cifrado en reposo en el servidor (documentos, versiones, comentarios y respaldos).
+- [x] Generador `4-CODIGO/ayuda/generar.py`, plantilla, buscador, rutas en Spring y en el teléfono, service worker.
+- [x] `/legal/`: aviso integral y simplificado (LFPDPPP de 2025), términos, uso aceptable,
       almacenamiento, permisos de Android, licencias, seguridad (y `security.txt`), accesibilidad, denuncias.
-- [ ] Cambios de la app (F.5): aceptar en el registro, pie «Ayuda · Privacidad · Términos», quitar
-      el script de Cloudflare, «Descargar los datos de mi cuenta», rotación de la bitácora.
-- [ ] `/ayuda/`: Sin Internet, Empezar, Cuentas, preguntas frecuentes (32), Problemas; luego
+- [x] Cambios de la app (F.5): aceptar en el registro, pie «Ayuda · Privacidad · Términos», quitar
+      el script de Cloudflare, «Descargar los datos de mi cuenta», rotación de la bitácora. (El 13 de
+      noviembre Cloudflare ya no inyecta su script; la bitácora de la Pi la rota s6, 10 × 1 MB, y no
+      guarda IPs de quien entra.)
+- [x] `/ayuda/`: Sin Internet, Empezar, Cuentas, preguntas frecuentes (32), Problemas; luego
       editores, Office, novedades, referencia de fórmulas, Acerca de; botones «?» de la app.
-- [ ] `prueba_ayuda.py`, mapa de navegación, casos de uso, plan de pruebas, LOG.
+- [x] `prueba_ayuda.py` (18).
+- [ ] Mapa de navegación, casos de uso, plan de pruebas y LOG con las fases 13 a 15.
 
 ## Fase 15. Cifrado de extremo a extremo y chat (plan del 13 de noviembre de 2026)
 
 Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.2 y E. No hay edades: los espacios son cerrados, solo por invitación.
 
-- [ ] Llave por espacio, par de llaves por cuenta (envuelto con la contraseña y con el código de recuperación).
-- [ ] Contenido cifrado, estructura en claro; proyección pública y recibos ajustados.
-- [ ] Chat por espacio con imágenes y documentos, cifrado; reportar compartiendo lo descifrado.
+- [x] Llave por espacio, par de llaves por cuenta (envuelto con la contraseña y con el código de recuperación).
+- [x] Contenido cifrado, estructura en claro; proyección pública y recibos ajustados.
+- [x] Chat por espacio con imágenes y documentos, cifrado; reportar compartiendo lo descifrado.
+- [x] Pruebas: `pruebas/interfaz/prueba_e2e.py` (navegador: el servidor nunca ve el texto, el nombre
+      ni el chat; otro miembro, el QR con la llave en el #, el enlace para ver y el proyector) y la
+      sección 15 de `pruebas/seguridad.py`. Versión 0.13.0 (interfaz 14).
 - [ ] Azure unida a la misma cuenta, solo si llega a ser requisito (G.1).
 
 ## Cómo quedó (8 de noviembre de 2026)

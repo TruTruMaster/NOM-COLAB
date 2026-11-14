@@ -835,6 +835,66 @@ try:
     prueba("14.2 …sin la huella de la contraseña ni del código", False, "hashContrasena" in txt or "hashRecuperacion" in txt or '"sal"' in txt)
     prueba("14.2 Los datos de la cuenta piden sesión", 401, r("GET", "/api/cuentas/datos")[0])
 
+    # 15 Espacios cifrados de extremo a extremo y chat del espacio
+    K = lambda: "e2e:" + base64.urlsafe_b64encode(secrets.token_bytes(40)).decode().rstrip("=")
+    PUB = '{"kty":"EC","crv":"P-256","x":"prueba","y":"prueba"}'
+    prueba("15.1 Guardar el par de llaves de la cuenta (la privada va envuelta)", 200, r("PUT", "/api/cuentas/llaves", {"publica": PUB, "privadaContrasena": K()}, tk["maestra"])[0])
+    prueba("15.1 …una llave pública sin su privada no se guarda", 400, r("PUT", "/api/cuentas/llaves", {"publica": PUB}, tk["alumno1"])[0])
+    prueba("15.1 Las llaves de la cuenta piden sesión", 401, r("GET", "/api/cuentas/llaves")[0])
+    r("PUT", "/api/cuentas/llaves", {"publica": PUB, "privadaContrasena": K()}, tk["alumno1"])
+    pub = r("GET", "/api/cuentas/publica?usuario=alumno1", t=tk["maestra"])[1] or {}
+    prueba("15.1 Otra cuenta ve solo la llave pública", [PUB, False], [pub.get("publica"), "privadaContrasena" in json.dumps(pub)])
+    prueba("15.2 Un espacio cifrado pide el nombre ya cifrado", 400, r("POST", "/api/espacios", {"nombre": "En claro", "e2e": True, "llave": K()}, tk["maestra"])[0])
+    prueba("15.2 …y la llave del espacio envuelta para quien lo crea", 400, r("POST", "/api/espacios", {"nombre": K(), "e2e": True}, tk["maestra"])[0])
+    nomcif = K()
+    ce = r("POST", "/api/espacios", {"nombre": nomcif, "e2e": True, "llave": K()}, tk["maestra"])
+    cid = (ce[1] or {}).get("id")
+    prueba("15.2 Se crea el espacio cifrado (el servidor guarda el nombre cifrado)", [201, True, nomcif], [ce[0], (ce[1] or {}).get("e2e"), (ce[1] or {}).get("nombre")])
+    r("PUT", f"/api/espacios/{cid}/accesos", {"usuario": "alumno1", "permiso": "EDICION"}, tk["maestra"])
+    ll = r("GET", f"/api/espacios/{cid}/llaves", t=tk["maestra"])[1] or {}
+    prueba("15.3 El propietario ve a quién le falta la llave (con su llave pública)", [True, ["alumno1"], PUB], [ll.get("mia") is not None, [x["nombre"] for x in ll.get("faltan", [])], (ll.get("faltan") or [{}])[0].get("publica")])
+    prueba("15.3 Quien no es miembro no ve las llaves", 403, r("GET", f"/api/espacios/{cid}/llaves", t=tk["alumno2"])[0])
+    prueba("15.3 No se le da la llave a quien no es miembro", 400, r("PUT", f"/api/espacios/{cid}/llaves", {"usuario": uid["alumno2"], "llave": K()}, tk["maestra"])[0])
+    para1 = K()
+    prueba("15.3 El propietario le da la llave al miembro", 200, r("PUT", f"/api/espacios/{cid}/llaves", {"usuario": uid["alumno1"], "llave": para1}, tk["maestra"])[0])
+    prueba("15.3 …y el miembro la recibe", para1, (r("GET", f"/api/espacios/{cid}/llaves", t=tk["alumno1"])[1] or {}).get("mia"))
+    r("PUT", f"/api/espacios/{cid}/llaves", {"usuario": uid["alumno1"], "llave": K()}, tk["maestra"])
+    prueba("15.3 La llave de alguien que ya la tiene solo la cambia esa persona", para1, (r("GET", f"/api/espacios/{cid}/llaves", t=tk["alumno1"])[1] or {}).get("mia"))
+    prueba("15.3 En un espacio normal no hay llaves que dar", 400, r("PUT", f"/api/espacios/{salon}/llaves", {"llave": K()}, tk["maestra"])[0])
+    prueba("15.4 En un espacio cifrado el documento pide nombre cifrado", 400, r("POST", f"/api/espacios/{cid}/documentos", {"nombre": "Notas", "modo": "TEXTO", "ops": [], "llave": K()}, tk["maestra"])[0])
+    prueba("15.4 …y su llave (envuelta con la del espacio)", 400, r("POST", f"/api/espacios/{cid}/documentos", {"nombre": K(), "modo": "TEXTO", "ops": []}, tk["maestra"])[0])
+    cd = r("POST", f"/api/espacios/{cid}/documentos", {"nombre": K(), "modo": "TEXTO", "ops": [], "llave": K()}, tk["maestra"])
+    cdoc = (cd[1] or {}).get("id")
+    prueba("15.4 Con los dos, se crea", 201, cd[0])
+    r("POST", f"/api/documentos/{cdoc}/ops", {"cliente": "m1", "dispositivo": "prueba", "ops": [{"id": "m1:1", "bloque": "cuerpo", "campos": {}, "t": 1, "n": "m1", "s": {"k": "i", "iz": None, "x": "\U00102345\U00054321", "cx": 1}}]}, tk["maestra"])
+    ins = ((r("GET", f"/api/documentos/{cdoc}", t=tk["alumno1"])[1] or {}).get("estado", {}).get("seq", {}).get("cuerpo", {}).get("ins", []))
+    prueba("15.4 Las letras cifradas se guardan con su marca (cx)", [1, 1], [len(ins), (ins or [{}])[0].get("cx")])
+    prueba("15.4 La búsqueda no ve el contenido cifrado", 200, r("GET", f"/api/espacios/{cid}/buscar?q=x", t=tk["maestra"])[0])
+    prueba("15.4 Un documento cifrado no se copia a otro espacio", 400, r("POST", f"/api/documentos/{cdoc}/copia", {"espacioId": salon, "nombre": K()}, tk["maestra"])[0])
+    prueba("15.4 …ni se mueve", 400, r("PUT", f"/api/documentos/{cdoc}/espacio", {"espacioId": salon}, tk["maestra"])[0])
+    ndoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Normal", "modo": "TEXTO", "ops": []}, tk["maestra"])[1]["id"]
+    prueba("15.4 …ni uno normal entra a un espacio cifrado", 400, r("PUT", f"/api/documentos/{ndoc}/espacio", {"espacioId": cid}, tk["maestra"])[0])
+    prueba("15.4 La copia dentro del espacio pide nombre cifrado", 400, r("POST", f"/api/documentos/{cdoc}/copia", {"espacioId": cid, "nombre": "Copia"}, tk["maestra"])[0])
+    prueba("15.4 …con él, se copia", 200, r("POST", f"/api/documentos/{cdoc}/copia", {"espacioId": cid, "nombre": K()}, tk["maestra"])[0])
+    prueba("15.4 Renombrar en claro no vale", 400, r("PUT", f"/api/documentos/{cdoc}/nombre", {"nombre": "Claro"}, tk["maestra"])[0])
+    # Chat
+    prueba("15.5 En un espacio cifrado el chat pide el mensaje cifrado", 400, r("POST", f"/api/espacios/{cid}/chat", {"texto": "hola en claro"}, tk["alumno1"])[0])
+    mc = r("POST", f"/api/espacios/{cid}/chat", {"texto": K()}, tk["alumno1"])
+    prueba("15.5 …cifrado, sí", 200, mc[0])
+    prueba("15.5 Quien no es miembro no lee el chat", 403, r("GET", f"/api/espacios/{cid}/chat", t=tk["alumno2"])[0])
+    prueba("15.5 …ni escribe", 403, r("POST", f"/api/espacios/{cid}/chat", {"texto": K()}, tk["alumno2"])[0])
+    prueba("15.5 Un archivo en claro no entra al chat cifrado", 400, r("POST", f"/api/espacios/{cid}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": K(), "mime": "text/plain", "datos": "aG9sYQ"}}, tk["alumno1"])[0])
+    prueba("15.5 …cifrado y de casi 2 MB, sí (crece al cifrarse)", 200, r("POST", f"/api/espacios/{cid}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": K(), "mime": "application/octet-stream", "datos": "e2e:" + "A" * int(1.95 * 1024 * 1024 * 16 / 9)}}, tk["alumno1"])[0])
+    m1 = r("POST", f"/api/espacios/{salon}/chat", {"texto": "Mañana entregamos"}, tk["alumno1"])[1] or {}
+    lst = r("GET", f"/api/espacios/{salon}/chat", t=tk["alumno2"])[1] or {}
+    prueba("15.5 En un espacio normal los miembros leen el chat", True, any(x.get("texto") == "Mañana entregamos" for x in lst.get("mensajes", [])))
+    prueba("15.5 Otro miembro no borra un mensaje ajeno", 403, r("DELETE", f"/api/espacios/{salon}/chat/{m1.get('id')}", t=tk["alumno2"])[0])
+    prueba("15.5 El propietario del espacio sí", 200, r("DELETE", f"/api/espacios/{salon}/chat/{m1.get('id')}", t=tk["maestra"])[0])
+    adj = r("POST", f"/api/espacios/{salon}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": "a.txt", "mime": "text/plain", "datos": base64.b64encode(b"contenido del anexo").decode()}}, tk["alumno1"])[1] or {}
+    prueba("15.5 Un adjunto se guarda aparte y se descarga", base64.b64encode(b"contenido del anexo").decode(), (r("GET", f"/api/espacios/{salon}/chat/{adj.get('id')}/adjunto", t=tk["alumno2"])[1] or {}).get("datos"))
+    prueba("15.5 …la lista no trae los datos del adjunto", False, "contenido" in json.dumps(r("GET", f"/api/espacios/{salon}/chat", t=tk["alumno2"])[1] or {}))
+    prueba("15.5 Un adjunto de más de 2 MB no se acepta", 413, r("POST", f"/api/espacios/{salon}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": "g.bin", "mime": "application/octet-stream", "datos": "A" * (3 * 1024 * 1024)}}, tk["alumno1"])[0])
+
     # 3.6 Entrega con fecha límite
     edoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Tarea 1", "modo": "TEXTO", "ops": []}, tk["alumno1"])[1]["id"]
     prueba("3.6 Un editor no fija la fecha de entrega", 403, r("PUT", f"/api/documentos/{edoc}/entrega", {"limite": int(time.time() * 1000) + 3600_000}, tk["alumno1"])[0])

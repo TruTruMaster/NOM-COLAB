@@ -127,6 +127,32 @@ final class Repositorios {
         @Override public synchronized void guardarBiblioteca(String espacioId, List<Map<String, Object>> fuentes) {
             almacen.escribir("biblioteca/" + espacioId + ".json", fuentes);
         }
+
+        private static String id(String x) {
+            if (x == null || !x.matches("[A-Za-z0-9_-]{1,60}")) throw new IllegalArgumentException("Identificador no válido");
+            return x;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override public synchronized List<Map<String, Object>> chat(String espacioId) {
+            Object l = almacen.leer("chat/" + id(espacioId) + "/mensajes.json", null);
+            List<Map<String, Object>> r = new ArrayList<>();
+            if (l instanceof List) for (Object o : (List<Object>) l) if (o instanceof Map) r.add((Map<String, Object>) o);
+            return r;
+        }
+
+        @Override public synchronized void guardarChat(String espacioId, List<Map<String, Object>> mensajes) {
+            almacen.escribir("chat/" + id(espacioId) + "/mensajes.json", mensajes);
+        }
+
+        @Override public void guardarAnexoEspacio(String espacioId, String nombre, Object valor) {
+            String r = "chat/" + id(espacioId) + "/" + id(nombre) + ".json";
+            if (valor == null) almacen.borrar(r); else almacen.escribir(r, valor);
+        }
+
+        @Override public Object anexoEspacio(String espacioId, String nombre) {
+            return almacen.leer("chat/" + id(espacioId) + "/" + id(nombre) + ".json", null);
+        }
     }
 
     // ================================================================== documentos, estados y versiones

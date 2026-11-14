@@ -15,7 +15,15 @@
       <footer class="ver-pie suave">Hecho con NOM-COLAB · Solo lectura</footer></div>`;
     const cuerpo = $("[data-cuerpo]", raiz);
     let r;
-    try { r = await NOM.api.get("/api/ver/" + encodeURIComponent(token), undefined, { sin401: true, ms: 15000 }); }
+    // Fase 15: un documento cifrado trae su llave después de «~» (nunca llega al servidor).
+    let llave = "";
+    if (String(token).includes("~")) [token, llave] = String(token).split("~");
+    try {
+      r = await NOM.api.get("/api/ver/" + encodeURIComponent(token), undefined, { sin401: true, ms: 15000 });
+      if (llave && NOM.e2e) { r.estado = await NOM.e2e.estadoConLlave(llave, r.estado); r.documento.nombre = await NOM.e2e.valorConLlave(llave, r.documento.nombre); }
+      // El nombre del espacio va cifrado con la llave del espacio, que este enlace no trae.
+      if (/^e2e:/.test(String(r.espacio || ""))) r.espacio = "";
+    }
     catch (e) {
       $("[data-nombre]", raiz).textContent = "Enlace para ver";
       cuerpo.innerHTML = `<div class="vacio"><div class="burbuja">${ico(e.red ? "wifi-off" : "link-2-off")}</div><h3>${esc(e.red ? "No se pudo abrir el enlace" : e.message)}</h3>

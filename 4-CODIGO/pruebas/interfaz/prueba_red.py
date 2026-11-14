@@ -181,7 +181,7 @@ u3 = "app" + str(int(time.time()))[-7:]
 def registrar_en_app():
     P.evaluate("() => { NOM.api.limpiarSesion(); }"); P.goto(INDEX); P.wait_for_selector("#u", timeout=15000)
     P.click("[data-ir2='registro'], [data-ir='registro']"); P.wait_for_selector("#ru", timeout=8000)
-    P.fill("#ru", u3); P.fill("#rc", CL); P.click("form button[type=submit]")
+    P.fill("#ru", u3); P.fill("#rc", CL); P.check("form:has(#ru) input[name=acepto]"); P.click("form:has(#ru) button[type=submit]")
     P.wait_for_selector("[data-ok]", timeout=20000); P.click("[data-ok]")   # el código de recuperación: "Ya lo guardé"
     P.wait_for_function("() => !!NOM.api.token()", timeout=20000); return ""
 intenta("registrar una cuenta nueva DESDE la app (por su pantalla)", registrar_en_app)

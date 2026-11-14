@@ -25,7 +25,11 @@
     }
     if (!codigo) return pedirCodigo("Proyectar una presentación", "Escribe el código que aparece en la pantalla de quien presenta (Presentar → En otra pantalla).");
     let datos;
-    try { datos = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true, ms: 12000 }); }
+    // Fase 15: una presentación cifrada trae la llave del documento en el # del QR (#k=…).
+    let llave = null;
+    try { llave = sessionStorage.getItem("nom.e2e.inv." + codigo); } catch (e) { llave = null; }
+    const descifrar = async (est) => (llave && NOM.e2e ? NOM.e2e.estadoConLlave(llave, est) : est);
+    try { datos = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true, ms: 12000 }); datos.estado = await descifrar(datos.estado); }
     catch (e) {
       return pedirCodigo(e.red ? "No hay conexión" : "No se encontró la presentación",
         e.red ? "Revisa que esta computadora esté en la misma red que el equipo que comparte." : "El código no existe o la presentación ya terminó. Pide el código otra vez.");
@@ -83,7 +87,7 @@
       diapositiva: (x) => { if ((x.pagina || pagina) !== pagina) marcas = null; pagina = x.pagina || pagina; paso = x.paso || 0; if (x.marcas) marcas = x.marcas; pintar(); },
       marcas: (x) => { marcas = x; pintarMarcas(); },
       ops: (x) => { doc.fusionarRemotas(x.ops || []); pintar(); },
-      version: async () => { try { const r = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true }); doc.reemplazarEstado(r.estado); pintar(); } catch (e) { /* siguiente evento */ } },
+      version: async () => { try { const r = await api().get(`/api/proyeccion/${encodeURIComponent(codigo)}`, undefined, { sin401: true }); doc.reemplazarEstado(await descifrar(r.estado)); pintar(); } catch (e) { /* siguiente evento */ } },
       fin: () => { cont.innerHTML = `<div class="proy-espera"><svg class="logo"><use href="#logo"/></svg><h2>La presentación terminó</h2><p>Gracias.</p></div>`; },
       rechazo: () => { cont.innerHTML = `<div class="proy-espera"><svg class="logo"><use href="#logo"/></svg><h2>La presentación terminó</h2></div>`; },
     });

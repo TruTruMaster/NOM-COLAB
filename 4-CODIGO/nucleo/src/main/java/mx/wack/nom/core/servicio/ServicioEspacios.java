@@ -43,6 +43,9 @@ public class ServicioEspacios {
 
     public void modoTelefono(boolean si) { this.telefono = si; }
 
+    /** El repositorio (para los servicios que guardan cosas del espacio, como el chat). */
+    public RepositorioEspacios repositorio() { return repo; }
+
     public boolean esTelefono() { return telefono; }
 
     public Espacio requerir(String id) {
@@ -92,6 +95,8 @@ public class ServicioEspacios {
         m.put("actividad", ds.isEmpty() ? e.creado : Math.max(e.creado, ds.get(0).modificado));
         m.put("carpetas", ds.stream().filter(x -> x.eliminado <= 0 && x.carpeta != null).map(x -> x.carpeta).distinct().sorted().toList());
         m.put("formatoBase", e.formatoBase);
+        // Fase 15: espacio cifrado y la llave envuelta para quien pregunta.
+        if (e.e2e) { m.put("e2e", true); m.put("miLlave", e.llaves == null ? null : e.llaves.get(u.id)); }
         if (e.permisoDe(u.id) == Permiso.PROPIETARIO) {
             long ahora = System.currentTimeMillis();
             m.put("enlacesVigentes", e.enlaces == null ? 0 : e.enlaces.stream().filter(x -> x.vigente(ahora)).count());
@@ -154,9 +159,70 @@ public class ServicioEspacios {
     /** Quita a una cuenta de un espacio ajeno: su acceso, su solicitud y sus avisos. */
     public synchronized void quitarCuenta(Espacio e, String usuarioId) {
         boolean cambio = e.accesos.remove(usuarioId) != null;
+        if (e.llaves != null) cambio |= e.llaves.remove(usuarioId) != null;
         cambio |= e.solicitudes.removeIf(s -> usuarioId.equals(s.usuarioId));
         if (e.avisos != null) cambio |= e.avisos.remove(usuarioId) != null;
         if (cambio) repo.guardar(e);
+    }
+
+    /** Fase 15: un nombre cifrado de extremo a extremo (lo descifran los miembros en su equipo). */
+    public static boolean cifrado(String nombre) { return nombre != null && nombre.startsWith("e2e:"); }
+
+    /**
+     * Fase 15: crear un espacio cifrado de extremo a extremo. El nombre llega cifrado y la llave del
+     * espacio, envuelta para quien lo crea; el servidor no puede leer ninguna de las dos.
+     */
+    public synchronized Espacio crearCifrado(Usuario u, String nombreCifrado, String llavePropia) {
+        if (!cifrado(nombreCifrado) || nombreCifrado.length() > 600) throw ErrorNom.invalido("El nombre cifrado no es válido", "nombre");
+        if (llavePropia == null || llavePropia.isBlank() || llavePropia.length() > 4000) throw ErrorNom.invalido("Falta la llave del espacio", "llave");
+        Espacio e = crear(u, "Espacio cifrado " + cuentas.codigo(4));
+        e.nombre = nombreCifrado;
+        e.e2e = true;
+        e.llaves = new LinkedHashMap<>();
+        e.llaves.put(u.id, llavePropia);
+        repo.guardar(e);
+        return e;
+    }
+
+    /** La llave del espacio envuelta para quien pregunta, y quienes todavia no la tienen (con su llave publica). */
+    public Map<String, Object> llaves(Usuario u, String id) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.LECTURA);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("e2e", e.e2e);
+        m.put("mia", e.llaves == null ? null : e.llaves.get(u.id));
+        List<Map<String, Object>> faltan = new ArrayList<>();
+        if (e.e2e) for (String uid : e.accesos.keySet()) {
+            if (e.llaves != null && e.llaves.containsKey(uid)) continue;
+            cuentas.porId(uid).ifPresent(x -> {
+                Map<String, Object> f = new LinkedHashMap<>();
+                f.put("id", x.id);
+                f.put("nombre", x.nombre);
+                f.put("publica", x.llavePublica);
+                faltan.add(f);
+            });
+        }
+        m.put("faltan", faltan);
+        return m;
+    }
+
+    /**
+     * Guarda la llave del espacio envuelta para un miembro. Cada quien puede poner la suya (la trae
+     * del codigo de invitacion) y cualquier miembro que la tiene puede darsela a quien le falte; la de
+     * alguien que ya la tiene solo la cambia esa persona.
+     */
+    public synchronized Map<String, Object> darLlave(Usuario u, String id, String usuarioId, String llave) {
+        Espacio e = requerir(id);
+        exigir(e, u, Permiso.LECTURA);
+        if (!e.e2e) throw ErrorNom.invalido("Este espacio no está cifrado de extremo a extremo", null);
+        String para = usuarioId == null || usuarioId.isBlank() ? u.id : usuarioId;
+        if (e.permisoDe(para) == null) throw ErrorNom.invalido("Esa cuenta no es miembro del espacio", "usuario");
+        if (llave == null || llave.isBlank() || llave.length() > 4000) throw ErrorNom.invalido("Falta la llave", "llave");
+        if (e.llaves == null) e.llaves = new LinkedHashMap<>();
+        if (!para.equals(u.id) && e.llaves.containsKey(para)) return llaves(u, id);
+        e.llaves.put(para, llave);
+        repo.guardar(e);
+        return llaves(u, id);
     }
 
     /** CU-13 Crear espacio de trabajo. */
@@ -186,7 +252,8 @@ public class ServicioEspacios {
         Espacio e = requerir(id);
         exigir(e, u, Permiso.PROPIETARIO);
         nombre = nombre == null ? "" : nombre.trim();
-        if (nombre.isEmpty() || nombre.length() > 60) throw ErrorNom.invalido("Escribe un nombre de 1 a 60 caracteres", "nombre");
+        if (e.e2e && !cifrado(nombre)) throw ErrorNom.invalido("El nombre de un espacio cifrado se cifra en tu equipo (actualiza la app)", "nombre");
+        if (nombre.isEmpty() || nombre.length() > (e.e2e ? 600 : 60)) throw ErrorNom.invalido("Escribe un nombre de 1 a 60 caracteres", "nombre");
         e.nombre = nombre;
         repo.guardar(e);
         difusor.avisarTodoEspacio(e.id, "espacio", Map.of("nombre", nombre));
@@ -419,6 +486,7 @@ public class ServicioEspacios {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("codigo", x.codigo);
         m.put("espacioId", e.id);
+        if (e.e2e) m.put("e2e", true);
         m.put("espacio", e.nombre);
         m.put("color", e.color);
         m.put("propietario", cuentas.porId(e.propietarioId).map(y -> y.nombre).orElse("?"));

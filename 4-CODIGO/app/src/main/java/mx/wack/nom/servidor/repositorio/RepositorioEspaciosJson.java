@@ -40,6 +40,7 @@ public class RepositorioEspaciosJson implements RepositorioEspacios {
     @Override public synchronized void borrar(String id) {
         if (espacios.remove(id) != null) almacen.escribir(ARCHIVO, espacios);
         almacen.escribir("biblioteca/" + id + ".json", new java.util.ArrayList<>());
+        almacen.borrar("chat/" + id);
     }
 
     @Override public synchronized List<Map<String, Object>> biblioteca(String espacioId) {
@@ -48,5 +49,27 @@ public class RepositorioEspaciosJson implements RepositorioEspacios {
 
     @Override public synchronized void guardarBiblioteca(String espacioId, List<Map<String, Object>> fuentes) {
         almacen.escribir("biblioteca/" + espacioId + ".json", fuentes);
+    }
+
+    private static String id(String x) {
+        if (x == null || !x.matches("[A-Za-z0-9_-]{1,60}")) throw new IllegalArgumentException("Identificador no válido");
+        return x;
+    }
+
+    @Override public synchronized List<Map<String, Object>> chat(String espacioId) {
+        return almacen.leer("chat/" + id(espacioId) + "/mensajes.json", new TypeReference<java.util.ArrayList<Map<String, Object>>>() { }, new java.util.ArrayList<>());
+    }
+
+    @Override public synchronized void guardarChat(String espacioId, List<Map<String, Object>> mensajes) {
+        almacen.escribir("chat/" + id(espacioId) + "/mensajes.json", mensajes);
+    }
+
+    @Override public void guardarAnexoEspacio(String espacioId, String nombre, Object valor) {
+        String r = "chat/" + id(espacioId) + "/" + id(nombre) + ".json";
+        if (valor == null) almacen.borrar(r); else almacen.escribir(r, valor);
+    }
+
+    @Override public Object anexoEspacio(String espacioId, String nombre) {
+        return almacen.leer("chat/" + id(espacioId) + "/" + id(nombre) + ".json", Object.class, null);
     }
 }

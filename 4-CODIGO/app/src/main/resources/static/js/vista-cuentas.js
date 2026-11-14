@@ -51,6 +51,8 @@
       b.disabled = true;
       try {
         const r = await api.post("/api/cuentas/recuperar", { nombre: cuerpo.nombre.value.trim(), codigo: cuerpo.codigo.value, nueva: cuerpo.nueva.value }, { sin401: true, ms: ESPERA_BD });
+        // Fase 15: al entrar, la llave privada se abre con el código de antes y se envuelve con lo nuevo.
+        try { sessionStorage.setItem("nom.e2e.recupera", JSON.stringify({ nombre: cuerpo.nombre.value.trim(), viejo: cuerpo.codigo.value, nuevo: r.recuperacion })); } catch (x) { /* sin almacenamiento */ }
         h.cerrar(true);
         NOM.aviso("Listo: ya puedes entrar con tu contraseña nueva", { tipo: "ok", ms: 5000 });
         await mostrarCodigo(r.recuperacion, cuerpo.nombre.value.trim());
@@ -102,6 +104,7 @@
       try {
         const r = await api.put("/api/cuentas/contrasena", { actual, nueva }, { sin401: true, ms: ESPERA_BD });
         api.fijarSesion(r.token, r.usuario);
+        if (NOM.e2e) NOM.e2e.reenvolver(nueva).catch((x) => console.warn(x));
         try { await NOM.boveda.cambiarContrasena(nueva); }
         catch (x) { console.error(x); NOM.aviso("La contraseña cambió, pero no se pudo actualizar lo guardado en este equipo: la próxima vez que entres te pediremos la anterior para abrirlo.", { tipo: "aviso", ms: 9000 }); }
         h.cerrar(true);
@@ -276,6 +279,9 @@
       el.addEventListener("pointerdown", () => { el.classList.remove("salta"); void el.offsetWidth; el.classList.add("salta"); });
     });
   }
+
+  /** El código de recuperación recién creado (para envolver también con él la llave privada). */
+  let codigoNuevo = null;
 
   function pintar(raiz, opc) {
     opc = opc || {};
@@ -496,6 +502,16 @@
       try { await NOM.boveda.abrir(r.usuario.id, contrasena); }
       catch (e) { console.error(e); NOM.aviso("Este navegador no permite guardar documentos cifrados; se trabajará solo en línea.", { tipo: "aviso", ms: 6000 }); }
       NOM.aplicarPreferencias(r.preferencias);
+      // Fase 15: el par de llaves de la cuenta (se crea la primera vez) y la privada a la bóveda.
+      if (NOM.e2e) {
+        let rec = null;
+        try { rec = JSON.parse(sessionStorage.getItem("nom.e2e.recupera") || "null"); } catch (x) { rec = null; }
+        if (rec && String(rec.nombre).toLowerCase() === String(nombre).toLowerCase()) {
+          try { sessionStorage.removeItem("nom.e2e.recupera"); } catch (x) { /* nada */ }
+          NOM.e2e.recuperarConCodigo(rec.viejo, contrasena, rec.nuevo).then((ok) => { if (!ok) NOM.e2e.prepararCuenta(contrasena); }).catch((x) => console.warn(x));
+        } else NOM.e2e.prepararCuenta(contrasena, codigoNuevo).catch((x) => console.warn(x));
+        codigoNuevo = null;
+      }
       if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
       NOM.app.alIniciarSesion(r);
       if (!nuevo) setTimeout(() => revisarLegal(r), 900);
@@ -575,7 +591,7 @@
         enviando(f, async () => {
           const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa, acepto: NOM.LEGAL }, { ms: ESPERA_BD });
           // El código de recuperación solo se ve ahora: primero se guarda, después se entra.
-          if (reg && reg.recuperacion) await mostrarCodigo(reg.recuperacion, nombre);
+          if (reg && reg.recuperacion) { codigoNuevo = reg.recuperacion; await mostrarCodigo(reg.recuperacion, nombre); }
           tarjeta.innerHTML = "";
           tarjeta.append(html(`<div class="col" style="align-items:center;text-align:center;padding:24px 0">
             <div class="exito-check">${ico("check")}</div>

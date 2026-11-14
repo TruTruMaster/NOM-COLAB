@@ -2574,8 +2574,9 @@
       NOM.api.post(`/api/documentos/${ed.id}/proyeccion`).then(async (r) => {
         codigo = r.codigo;
         let bases = [];
+        const llaveProy = ed.e2e && NOM.e2e ? await NOM.e2e.llaveDocTexto(ed.id) : "";
         try { const esp = await NOM.api.get(`/api/espacios/${ed.espacio.id}`); bases = NOM.union.bases(esp.conexionDetalle); } catch (e) { bases = NOM.union.bases(null); }
-        const url = bases[0] ? `${bases[0]}/proyectar?c=${codigo}` : "";
+        const url = bases[0] ? `${bases[0]}/proyectar?c=${codigo}${llaveProy ? "#k=" + llaveProy : ""}` : "";
         caja.innerHTML = `<div class="pv-qr">${url ? NOM.qr.svg(url, { titulo: "QR para proyectar" }) : ""}</div>
           <div><b>Pantalla del público</b><small>En la computadora del proyector abre <b>${esc(url ? url.replace(/^https?:\/\//, "").replace(/\/proyectar.*$/, "") : "NOM-COLAB")}/proyectar</b> y escribe <b class="qr-codigo chico">${esc(codigo)}</b>, o escanea el QR. Aquí la mueves.</small>
           ${url && !NOM.api.empaquetada ? `<button class="btn chico" data-abrir>${ico("monitor", "ico-s")} Abrir en otra ventana</button>` : ""}</div>`;

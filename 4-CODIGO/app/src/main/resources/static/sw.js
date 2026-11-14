@@ -2,7 +2,7 @@
    Red primero (el servidor siempre tiene la versión más nueva) y, si no responde en 3 s o no hay
    red, la copia guardada. La API (/api/...) nunca se guarda: los documentos sin red viven en la
    bóveda cifrada de cada cuenta. Al cambiar VERSION se descarta la caché anterior. */
-const VERSION = "nom-colab-2026-11-13c";
+const VERSION = "nom-colab-0.13.0";
 const BASE = [
   "./", "index.html", "manifest.webmanifest",
   "css/nom.css", "css/editor.css", "css/fuentes.css",
@@ -15,10 +15,10 @@ const BASE = [
   "fonts/liberation-mono-regular.woff2", "fonts/liberation-mono-negrita.woff2", "fonts/liberation-mono-cursiva.woff2", "fonts/liberation-mono-negrita-cursiva.woff2",
   "fonts/comic-neue-regular.woff2", "fonts/comic-neue-negrita.woff2", "fonts/comic-neue-cursiva.woff2", "fonts/comic-neue-negrita-cursiva.woff2",
   "img/icono.svg", "img/icono-192.png", "img/icono-512.png", "img/icono-maskable-512.png",
-  "js/nucleo.js", "js/rueda.js", "js/cripto.js", "js/boveda.js", "js/api.js", "js/secuencia.js", "js/crdt.js", "js/local.js",
+  "js/nucleo.js", "js/rueda.js", "js/cripto.js", "js/boveda.js", "js/e2e.js", "js/api.js", "js/secuencia.js", "js/crdt.js", "js/local.js",
   "js/formulas.js", "js/graficas.js", "js/ecuaciones.js", "js/plantillas.js", "js/compresion.js", "js/origen.js", "js/formatos.js", "js/ooxml.js", "js/vista-cuentas.js", "js/vista-espacios.js",
   "js/vista-dispositivo.js", "js/editor.js", "js/modo-texto.js", "js/modo-hoja.js", "js/diapositivas.js", "js/iconos.js", "js/lienzo.js", "js/diagramas.js", "js/vista-ver.js", "js/citas.js", "js/datos.js", "js/experiencia.js",
-  "js/anfitrion.js", "js/app.js", "js/vendor/qrcode.js", "js/qr.js", "js/acceso.js", "js/union.js", "js/cola.js", "js/ramas.js", "js/recibo.js",
+  "js/anfitrion.js", "js/app.js", "js/vendor/qrcode.js", "js/qr.js", "js/acceso.js", "js/union.js", "js/cola.js", "js/ramas.js", "js/chat.js", "js/recibo.js",
   "js/comentarios.js",
   /* ayuda:inicio (lo escribe ayuda/generar.py) */ "ayuda/ayuda.css", "ayuda/ayuda.js", "ayuda/indice.json", "ayuda/index.html", "ayuda/buscar/index.html", "ayuda/preguntas-frecuentes/index.html", "ayuda/sin-internet/al-volver/index.html", "ayuda/sin-internet/alias/index.html", "ayuda/sin-internet/como-funciona/index.html", "ayuda/sin-internet/con-mi-cuenta/index.html", "ayuda/sin-internet/crear-sin-internet/index.html", "ayuda/sin-internet/index.html", "ayuda/sin-internet/que-se-puede/index.html", "ayuda/sin-internet/telefono-servidor/index.html", "legal/accesibilidad/index.html", "legal/almacenamiento/index.html", "legal/denuncias/index.html", "legal/index.html", "legal/licencias/index.html", "legal/permisos-android/index.html", "legal/privacidad-corto/index.html", "legal/privacidad/index.html", "legal/seguridad/index.html", "legal/terminos/index.html", "legal/uso-aceptable/index.html", /* ayuda:fin */ "js/proyector.js", "js/vendor/jsQR.js",
 ];

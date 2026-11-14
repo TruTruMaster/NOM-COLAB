@@ -255,7 +255,8 @@
     };
 
     // ------------------------------------------------------------ canal en tiempo real
-    let caido = sinRed, canal = null;
+    let caido = sinRed, canal = null, colaE2E = Promise.resolve();
+    ed.e2e = !!datos.e2e;
     if (!enLocal) canal = api.eventos(`/api/documentos/${docId}/eventos`, doc.nodo, {
       hola: async () => {
         if (caido) {
@@ -277,7 +278,8 @@
         enviarPresencia();
       },
       caido: () => { caido = true; doc.marcarSinRed(); pintarEstado("sin-red", doc.pendientes.length); },
-      ops: (x) => ed.recibir(x.ops),
+      // Fase 15: en un espacio cifrado lo que llega se descifra aquí, en el mismo orden en que llegó.
+      ops: (x) => { if (datos.e2e && NOM.e2e) colaE2E = colaE2E.then(() => NOM.e2e.descifrarEnVivo(docId, x.ops)).then((o) => ed.recibir(o)).catch((e) => console.error(e)); else ed.recibir(x.ops); },
       presencia: (x) => { ed.presencia = x.usuarios; ed.pintarPresencia(); },
       version: (x) => aviso(`${x.autor} restauró la versión ${x.desde}. Ya estás viendo el documento restaurado.`, { tipo: "info", ms: 6000 }),
       guardado: (x) => { ultimoGuardado = x.numero; pintarEstado(doc.estadoSync, doc.pendientes.length); },

@@ -59,10 +59,16 @@ documentos). Cómo funciona, respaldos e instalación: `4-CODIGO/docs/SERVIDOR-P
 
 ### Sin computadora: el teléfono es el servidor
 En Android 8 o más reciente, en **"Conecta con tu red" → Usar este teléfono como servidor →
-Encender**. Ese teléfono guarda las cuentas, los espacios y los documentos, y los demás entran:
+Encender**. Ese teléfono guarda los espacios y los documentos (no tiene cuentas con contraseña) y
+los demás entran:
 - con la app, en el mismo Wi-Fi: **Buscar en la red** (aparece el nombre del teléfono);
 - con el navegador (computadora u otro celular): la dirección que muestra la app, por ejemplo
   `http://192.168.0.232:8080` (botón **Compartir** para mandarla por WhatsApp o correo).
+
+Quien llega **sin Internet** entra con un **alias al azar** (no escribe nada); quien **sí tiene
+Internet** entra con su cuenta de la nube y la app le da un pase firmado de 10 minutos para el
+teléfono. Si dos personas cambian el mismo documento mientras una estaba sin conexión, lo de esa
+persona queda en una **rama** y el original no se toca: después se compara y se fusiona.
 
 Sin router: activa el **punto de acceso** de ese teléfono y conecta a los demás a esa red.
 Mientras está encendido aparece una notificación con la dirección y el botón **Detener**; gasta
@@ -88,9 +94,15 @@ letras y un QR (se puede dejar entrar **con apodo, sin cuenta**, por 1 hora, 1 d
 días, y anularlo cuando quieras); o escribe el nombre de usuario de alguien que ya tiene cuenta.
 Quien tenga el código lo escribe en **Tengo un código de invitación** o escanea el QR con la cámara.
 
-Los datos se guardan en `2-PAGINA-Servidor/datos/`: usuarios y sesiones en la base de datos
-H2 (`nom-db.mv.db`); espacios, documentos y versiones en JSON. Para empezar desde cero, borra
-esa carpeta. **No hay administrador:** cada cuenta controla solo sus espacios y documentos. El
+Cada espacio tiene su **chat** (con imágenes y archivos de hasta 2 MB). Al crear un espacio se puede
+marcar **Cifrado de extremo a extremo**: el nombre, los documentos y el chat se cifran en el equipo
+de cada miembro y ni el servidor los puede leer (no se puede quitar después y no hay búsqueda dentro
+del contenido).
+
+Los datos se guardan **cifrados** en `2-PAGINA-Servidor/datos/`: usuarios y sesiones en la base de
+datos H2 (`nom-db.mv.db`); espacios, documentos y versiones en JSON. La llave está aparte, en
+`2-PAGINA-Servidor/datos-llaves/reposo.key`: **sin ella no se abre nada**, así que respáldala en
+otro lugar. Para empezar desde cero, borra las dos carpetas. **No hay administrador:** cada cuenta controla solo sus espacios y documentos. El
 propietario de un espacio decide quién entra, cambia a cada miembro entre *Puede editar* y
 *Solo lectura*, o le quita el acceso.
 

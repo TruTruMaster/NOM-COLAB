@@ -224,11 +224,18 @@ public class ServicioDocumentos {
 
     /** CU-18 Crear documento (opcionalmente desde una plantilla, que llega como operaciones iniciales). */
     public Documento crear(Usuario u, String espacioId, String nombre, String modo, List<Operacion> iniciales) {
+        return crear(u, espacioId, nombre, modo, iniciales, null);
+    }
+
+    /** llave: fase 15, en un espacio cifrado la llave del documento envuelta con la del espacio. */
+    public Documento crear(Usuario u, String espacioId, String nombre, String modo, List<Operacion> iniciales, String llave) {
         Espacio e = espacios.requerir(espacioId);
         espacios.exigir(e, u, Permiso.EDICION);
         revisarCuota(e);
+        if (e.e2e && (llave == null || llave.isBlank() || !ServicioEspacios.cifrado(nombre)))
+            throw ErrorNom.invalido("Este espacio está cifrado de extremo a extremo: crea el documento desde una app actualizada", null);
         nombre = nombre == null || nombre.isBlank() ? "Documento sin título" : nombre.trim();
-        if (nombre.length() > 120) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
+        if (nombre.length() > (e.e2e ? 600 : 120)) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
         ModoEditor m;
         try {
             m = ModoEditor.valueOf((modo == null ? "TEXTO" : modo).toUpperCase(Locale.ROOT));
@@ -245,6 +252,7 @@ public class ServicioDocumentos {
         d.creado = ahora;
         d.modificado = ahora;
         d.ultimoEditorId = u.id;
+        if (e.e2e) d.llave = llave;
 
         EstadoDocumento est = new EstadoDocumento();
         MotorCRDT mot = motor(d.id);
@@ -296,6 +304,7 @@ public class ServicioDocumentos {
         esp.put("formatoBase", e.formatoBase);
         esp.put("propietarioId", e.propietarioId);
         esp.put("miPermiso", e.permisoDe(u.id));
+        if (e.e2e) { esp.put("e2e", true); esp.put("miLlave", e.llaves == null ? null : e.llaves.get(u.id)); }
         r.put("espacio", esp);
         long reloj;
         synchronized (candado(docId)) {
@@ -649,7 +658,7 @@ public class ServicioDocumentos {
         boolean cambio = false;
         Object nombre = est.valor(Operacion.DOC, "nombre");
         if (nombre instanceof String s && !s.isBlank() && !s.equals(d.nombre)) {
-            d.nombre = s.length() > 120 ? s.substring(0, 120) : s;
+            d.nombre = s.length() > 120 && !ServicioEspacios.cifrado(s) ? s.substring(0, 120) : s.length() > 600 ? s.substring(0, 600) : s;
             cambio = true;
         }
         Object modo = d.modo == null ? est.valor(Operacion.DOC, "modo") : null;
@@ -1227,6 +1236,7 @@ public class ServicioDocumentos {
             m.put("modo", d.modo);
             m.put("eliminado", d.eliminado);
             m.put("eliminadoPor", d.eliminadoPor);
+            if (d.llave != null) m.put("llave", d.llave);
             m.put("dias", Math.max(0, DIAS_PAPELERA - (ahora - d.eliminado) / DIA));
             r.add(m);
         }
@@ -1369,7 +1379,7 @@ public class ServicioDocumentos {
     private static String nombreValido(String nombre) {
         nombre = nombre == null ? "" : nombre.trim();
         if (nombre.isEmpty()) throw ErrorNom.invalido("Escribe un nombre", "nombre");
-        if (nombre.length() > 120) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
+        if (nombre.length() > (ServicioEspacios.cifrado(nombre) ? 600 : 120)) throw ErrorNom.invalido("Máximo 120 caracteres", "nombre");
         return nombre;
     }
 
@@ -1378,6 +1388,8 @@ public class ServicioDocumentos {
         Documento d = requerir(docId);
         Permiso p = permiso(u, d, Permiso.EDICION);
         String nuevo = nombreValido(nombre);
+        if (espacios.requerir(d.espacioId).e2e && !ServicioEspacios.cifrado(nuevo))
+            throw ErrorNom.invalido("En un espacio cifrado el nombre se cifra en tu equipo (actualiza la app)", "nombre");
         Operacion op;
         synchronized (candado(docId)) {
             EstadoDocumento est = repo.estado(docId);
@@ -1407,9 +1419,15 @@ public class ServicioDocumentos {
         Espacio e = espacios.requerir(destinoId);
         Permiso p = espacios.exigir(e, u, Permiso.EDICION);
         revisarCuota(e);
+        // Fase 15: un documento cifrado solo se copia dentro de su espacio (la llave es de ese espacio).
+        Espacio eo = espacios.requerir(origen.espacioId);
+        if ((eo.e2e || e.e2e) && !destinoId.equals(origen.espacioId))
+            throw ErrorNom.invalido("Un documento cifrado de extremo a extremo no se copia a otro espacio: descárgalo (.nom) e impórtalo allá", null);
+        if (eo.e2e && (nombre == null || !ServicioEspacios.cifrado(nombre.trim())))
+            throw ErrorNom.invalido("En un espacio cifrado, el nombre de la copia se cifra en tu equipo (actualiza la app)", "nombre");
         String nuevo = nombre == null || nombre.isBlank()
                 ? (comoPlantilla || origen.plantilla ? origen.nombre : "Copia de " + origen.nombre) : nombre.trim();
-        if (nuevo.length() > 120) nuevo = nuevo.substring(0, 120);
+        if (nuevo.length() > 120 && !ServicioEspacios.cifrado(nuevo)) nuevo = nuevo.substring(0, 120);
         EstadoDocumento est;
         synchronized (candado(docId)) { est = repo.estado(docId).copia(); }
         long ahora = System.currentTimeMillis();
@@ -1423,6 +1441,7 @@ public class ServicioDocumentos {
         d.modificado = ahora;
         d.ultimoEditorId = u.id;
         d.plantilla = comoPlantilla;
+        d.llave = origen.llave;
         d.carpeta = destinoId.equals(origen.espacioId) && !comoPlantilla && !origen.plantilla ? origen.carpeta : null;
         String n = nodoServidor();
         long t = est.reloj + 1;
@@ -1445,6 +1464,8 @@ public class ServicioDocumentos {
         Espacio destino = espacios.requerir(espacioDestino == null ? "" : espacioDestino);
         Permiso enDestino = espacios.exigir(destino, u, Permiso.EDICION);
         if (destino.id.equals(d.espacioId)) return vistaPara(d, u, p);
+        if (destino.e2e || espacios.requerir(d.espacioId).e2e)
+            throw ErrorNom.invalido("Un documento cifrado de extremo a extremo no se mueve a otro espacio (ni uno normal a uno cifrado)", null);
         if ((d.protegido || d.entregaLimite > 0) && p != Permiso.PROPIETARIO)
             throw ErrorNom.prohibido("Solo el propietario del espacio mueve un documento protegido o con fecha de entrega");
         revisarCuota(destino);
@@ -1750,15 +1771,18 @@ public class ServicioDocumentos {
         Permiso p = espacios.exigir(e, u, Permiso.EDICION);
         boolean recuperado = original.eliminado > 0;
         String m = motivo != null && MOTIVOS_RAMA.contains(motivo) ? motivo : "cambios";
+        if (e.e2e && (nombre == null || !ServicioEspacios.cifrado(nombre.trim())))
+            throw ErrorNom.invalido("En un espacio cifrado el nombre de la rama se cifra en el equipo", "nombre");
         String n = nombre == null || nombre.isBlank()
                 ? (recuperado ? (original.nombre.length() > 105 ? original.nombre.substring(0, 105) : original.nombre) + " (recuperado)" : nombreRama(original.nombre, u.nombre, desde, m))
                 : nombre.trim();
         if (n.length() > 120) n = n.substring(0, 120);
-        Documento d = crear(u, e.id, n, original.modo == null ? "TEXTO" : original.modo.name(), ops);
+        Documento d = crear(u, e.id, n, original.modo == null ? "TEXTO" : original.modo.name(), ops, original.llave);
         // La copia trae el nombre del original con su reloj: el de la rama va encima.
         renombrar(u, d.id, n);
         d = repo.porId(d.id).orElseThrow();
         d.carpeta = original.carpeta;
+        d.llave = original.llave;
         long ahora = System.currentTimeMillis();
         if (!recuperado) {
             d.ramaDe = original.id;

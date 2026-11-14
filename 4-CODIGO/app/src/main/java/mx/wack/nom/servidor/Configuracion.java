@@ -105,6 +105,12 @@ public class Configuracion {
         return d.resolveSibling(d.getFileName() + "-llaves");
     }
 
+    /** Fase 15: el chat de cada espacio. */
+    @Bean
+    public mx.wack.nom.core.servicio.ServicioChat servicioChat(RepositorioEspacios repo, ServicioEspacios espacios, Difusor difusor, Cifrado cifrado) {
+        return new mx.wack.nom.core.servicio.ServicioChat(repo, espacios, difusor, cifrado);
+    }
+
     @Bean
     public ServicioSincronia servicioSincronia(ServicioEspacios espacios, ServicioDocumentos documentos, CodecJson json, NodoLocal nodo) {
         return new ServicioSincronia(espacios, documentos, json, nodo);

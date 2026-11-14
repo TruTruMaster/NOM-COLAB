@@ -102,6 +102,9 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         if (u.nube != null) m.put("nube", u.nube);
         if (u.retirada) m.put("retirada", true);
         if (u.aceptoVersion != null) { m.put("aceptoVersion", u.aceptoVersion); m.put("aceptoFecha", u.aceptoFecha); }
+        if (u.llavePublica != null) m.put("llavePublica", u.llavePublica);
+        if (u.llavePrivadaContrasena != null) m.put("llavePrivadaContrasena", u.llavePrivadaContrasena);
+        if (u.llavePrivadaRecuperacion != null) m.put("llavePrivadaRecuperacion", u.llavePrivadaRecuperacion);
         return m.isEmpty() ? null : almacen.json().writeValueAsString(m);
     }
 
@@ -114,6 +117,9 @@ public class RepositorioUsuariosJdbc implements RepositorioUsuarios {
         u.retirada = Boolean.TRUE.equals(m.get("retirada"));
         u.aceptoVersion = m.get("aceptoVersion") == null ? null : String.valueOf(m.get("aceptoVersion"));
         u.aceptoFecha = m.get("aceptoFecha") instanceof Number n ? n.longValue() : 0;
+        u.llavePublica = m.get("llavePublica") == null ? null : String.valueOf(m.get("llavePublica"));
+        u.llavePrivadaContrasena = m.get("llavePrivadaContrasena") == null ? null : String.valueOf(m.get("llavePrivadaContrasena"));
+        u.llavePrivadaRecuperacion = m.get("llavePrivadaRecuperacion") == null ? null : String.valueOf(m.get("llavePrivadaRecuperacion"));
     }
 
     @SuppressWarnings("unchecked")

@@ -203,6 +203,8 @@
       <div class="campo"><label for="ne">Nombre del espacio</label>
         <div class="entrada"><input id="ne" name="nombre" maxlength="60" placeholder="Ej. Historia 3B o Equipo de ventas" autocomplete="off" autofocus></div>
         <div class="ayuda">Como una carpeta compartida para tu equipo, tu clase o un proyecto.</div></div>
+      <label class="lista-item">${ico("lock-keyhole")}<span class="crece"><b>Cifrado de extremo a extremo</b><small>Ni el servidor puede leer sus documentos, su chat ni su nombre. No se puede quitar después; la búsqueda dentro del contenido no está disponible. <a href="${NOM.urlAyuda("cuentas/extremo-a-extremo")}" data-ayuda="cuentas/extremo-a-extremo">Más</a></small></span>
+        <span class="interruptor"><input type="checkbox" name="e2e" ${NOM.e2e && NOM.e2e.hayWebCrypto() ? "" : "disabled"}><span></span></span></label>
     </form>`);
     const pie = html(`<div style="display:contents"><button class="btn" data-no type="button">Cancelar</button><button class="btn primario" data-si>Crear espacio</button></div>`);
     const h = hoja({ titulo: "Nuevo espacio", icono: "plus", cuerpo, pie });
@@ -214,7 +216,7 @@
       if (!nombre) { al.className = "alerta error"; al.hidden = false; al.innerHTML = `${ico("triangle-alert")}<span>Ponle un nombre al espacio</span>`; cuerpo.nombre.focus(); return; }
       $("[data-si]", pie).disabled = true;
       try {
-        const esp = await api.post("/api/espacios", { nombre });
+        const esp = await api.post("/api/espacios", cuerpo.e2e && cuerpo.e2e.checked ? { nombre, e2e: true } : { nombre });
         h.cerrar(true);
         listoParaInvitar(esp);
       } catch (err) {
@@ -728,6 +730,7 @@
         <div class="fila" style="flex-wrap:wrap">
           <button class="btn ${dueno ? "primario-suave" : ""}" data-a="compartir" data-micro="Compartir|Invita con un código o QR, y elige quién puede editar o solo ver.">${ico(dueno ? "user-plus" : "users")} ${dueno ? "Invitar" : "Miembros"}</button>
           <span data-avisos></span>
+          <button class="btn" data-a="chat" data-micro="Chat|Mensajes, imágenes y archivos con los miembros del espacio.">${ico("message-circle")} Chat</button>
           <button class="btn" data-a="mas-espacio" aria-label="Más opciones del espacio" data-micro="Más|Papelera, espacio usado, descargar todo y otras opciones.">${ico("more-horizontal")} Más</button>
           ${edita ? `<button class="btn primario solo-escritorio" data-a="nuevo">${ico("plus")} Nuevo documento</button>` : ""}
         </div>
@@ -1056,6 +1059,12 @@
       if (busqueda.length >= 3) buscarContenido();
     };
     $("[data-a=compartir]", cont).onclick = () => accesos(d);
+    $("[data-a=chat]", cont).onclick = () => NOM.chat.abrir(d);
+    // Fase 15: espacio cifrado. Sin la llave no se puede leer; con ella, se reparte a quien le falte.
+    if (d.e2e) {
+      if (d.sinLlave) cont.querySelector(".encabezado").after(html(`<div class="alerta aviso" style="margin-bottom:12px">${ico("lock-keyhole")}<span>Este espacio está <b>cifrado de extremo a extremo</b> y este equipo todavía no tiene su llave: ábrelo con el código QR o la dirección de invitación completa, o pide a alguien del espacio que lo abra (la app le da la llave a quien le falte). ${NOM.botonAyuda("cuentas/extremo-a-extremo", "Espacios cifrados")}</span></div>`));
+      else NOM.e2e.repartir(d.id).catch(() => {});
+    }
     $("[data-a=mas-espacio]", cont).onclick = (e) => NOM.menu(e.currentTarget, [
       ...(edita ? [{ texto: d.enPapelera ? `Papelera (${d.enPapelera})` : "Papelera", icono: "trash-2", fn: () => papelera() }] : []),
       { texto: "Avisos (menciones y ramas)", icono: "at-sign", fn: () => menciones() },
@@ -1100,7 +1109,8 @@
   async function enlaceVerDoc(doc, alCambiar) {
     let r;
     try { r = await api.post(`/api/documentos/${doc.id}/enlace-ver`); } catch (e) { return aviso(e.message, { tipo: "error" }); }
-    const url = location.origin + location.pathname + "#/ver/" + r.enlace;
+    const kd = NOM.e2e ? await NOM.e2e.llaveDocTexto(doc.id) : "";
+    const url = location.origin + location.pathname + "#/ver/" + r.enlace + (kd ? "~" + kd : "");
     const cuerpo = html(`<div class="col"><p style="margin:0">Quien tenga este enlace ve <b>${esc(doc.nombre)}</b> en solo lectura, <b>sin cuenta</b> y sin los comentarios. Sirve para compartirlo con familias o con otro grupo. Lo puedes quitar cuando quieras.</p>
       <div class="entrada">${ico("link-2")}<input readonly value="${esc(url)}" data-url aria-label="Enlace para ver"></div>
       <div class="pv-qr" style="align-self:center">${NOM.qr ? NOM.qr.svg(url, { titulo: "QR para ver el documento" }) : ""}</div></div>`);
@@ -1255,7 +1265,7 @@
     const br = $("[data-recuperacion]", cuerpo);
     if (br) br.onclick = async () => {
       if (recuperacion !== false && !(await confirmar("Código nuevo", "El código anterior dejará de servir.", { si: "Generar" }))) return;
-      try { const r = await api.post("/api/cuentas/recuperacion"); recuperacion = true; NOM.vistaCuentas.mostrarCodigo(r.recuperacion, u.nombre); } catch (e) { aviso(e.message, { tipo: "error" }); }
+      try { const r = await api.post("/api/cuentas/recuperacion"); recuperacion = true; if (NOM.e2e) NOM.e2e.reenvolver(null, r.recuperacion).catch((x) => console.warn(x)); NOM.vistaCuentas.mostrarCodigo(r.recuperacion, u.nombre); } catch (e) { aviso(e.message, { tipo: "error" }); }
     };
     $("#pv", cuerpo).oninput = (e) => ($("[data-vv]", cuerpo).textContent = e.target.value);
     ["[data-calidad]", "[data-mov]"].forEach((s) => ($(s, cuerpo).onchange = () => NOM.aplicarPreferencias(leerForm())));

@@ -37,6 +37,11 @@ public class Usuario {
     /** F.5 Version de los Terminos y del Aviso de privacidad que acepto, y cuando (epoch ms). */
     public String aceptoVersion;
     public long aceptoFecha;
+    /** Fase 15 (extremo a extremo): llave publica ECDH P-256 de la cuenta (JWK en texto) y la privada
+        envuelta en el equipo con la contrasena y con el codigo de recuperacion. El servidor no puede abrirlas. */
+    public String llavePublica;
+    public String llavePrivadaContrasena;
+    public String llavePrivadaRecuperacion;
 
     public boolean estaBloqueado(long ahora) {
         return bloqueadoHasta > ahora;

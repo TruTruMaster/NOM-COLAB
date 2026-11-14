@@ -15,14 +15,17 @@ reparte lo cifrado sin poder leerlo.
 
 - Cada cuenta tiene un **par de llaves**; la privada va protegida con tu contraseña y también con tu
   código de recuperación (si restableces la contraseña, no pierdes tus espacios).
-- Cuando el propietario agrega a alguien por su nombre, la llave del espacio se le envía cifrada
-  para esa persona.
+- Cuando el propietario agrega a alguien por su nombre, la app de un miembro que ya tiene la llave
+  se la envía cifrada para esa persona (la próxima vez que abre el espacio). Mientras, esa persona
+  ve un aviso de que a su equipo le falta la llave.
 - Un **código o QR** de invitación lleva la llave después del `#`, la parte de la dirección que el
   navegador nunca manda al servidor.
 
 ## Lo que cambia
 
-- La búsqueda dentro de los documentos se hace en tu equipo (en los documentos que ya abriste).
+- La búsqueda **dentro del contenido** no está disponible (el servidor no lo puede leer); los
+  nombres sí se ven y se ordenan en tu equipo.
+- Un documento cifrado no se copia ni se mueve a otro espacio: descárgalo (`.nom`) e impórtalo allá.
 - El enlace para ver un documento sin cuenta y la pantalla del proyector llevan la llave del
   documento en la dirección.
 - El servidor todavía ve **quién** está en qué espacio, los tamaños y las horas, y la estructura del

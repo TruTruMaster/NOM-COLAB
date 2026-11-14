@@ -85,6 +85,8 @@ public class Secuencia {
         }
         Object iz = s.get("iz");
         Object a = s.get("a");
+        // Letras cifradas de extremo a extremo (fase 15): la marca se guarda para que quien abra el documento sepa descifrarlas.
+        Object cx = s.get("cx") != null && !Boolean.FALSE.equals(s.get("cx")) && !Integer.valueOf(0).equals(s.get("cx")) ? 1 : null;
         // Junta con el tramo anterior del mismo nodo si es su continuacion directa (escritura normal).
         Map.Entry<Long, Map<String, Object>> previo = deNodo.floorEntry(t - 1);
         if (e == null && previo != null) {
@@ -92,7 +94,7 @@ public class Secuencia {
             String px = (String) p.get("x");
             long pt = ((Number) p.get("t")).longValue();
             if (p.get("e") == null && pt + px.codePointCount(0, px.length()) == t
-                    && ((t - 1) + "@" + n).equals(iz) && Objects.equals(p.get("a"), a)) {
+                    && ((t - 1) + "@" + n).equals(iz) && Objects.equals(p.get("a"), a) && (p.get("cx") == null) == (cx == null)) {
                 p.put("x", px + x);
                 alInsertar(t, n, (String) iz, x, null, a);
                 return true;
@@ -106,6 +108,7 @@ public class Secuencia {
         r.put("x", x);
         if (e != null) r.put("e", e);
         if (a != null) r.put("a", a);
+        if (cx != null) r.put("cx", cx);
         ins.add(r);
         deNodo.put(t, r);
         alInsertar(t, n, iz == null ? null : String.valueOf(iz), x, e, a);

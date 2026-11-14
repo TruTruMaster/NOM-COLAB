@@ -64,6 +64,8 @@ public class Documento {
     public long ramaDesde;
     /** Solo en las copias que se mandan (en lo guardado queda en 0): cuantas ramas abiertas tiene. */
     public int ramasAbiertas;
+    /** Fase 15: en un espacio cifrado, la llave del documento envuelta con la del espacio. */
+    public String llave;
 
     /** Copia de los metadatos (para mandarle a cada persona solo lo que le toca ver). */
     public Documento copia() {
@@ -76,7 +78,7 @@ public class Documento {
         c.plantilla = plantilla; c.enlaceVer = enlaceVer;
         c.ramaDe = ramaDe; c.ramaBase = ramaBase; c.ramaNodos = ramaNodos; c.ramaAutorId = ramaAutorId; c.ramaAutor = ramaAutor;
         c.ramaCreada = ramaCreada; c.ramaEstado = ramaEstado; c.ramaMotivo = ramaMotivo; c.ramaFusionada = ramaFusionada;
-        c.ramaFusionadaPor = ramaFusionadaPor; c.ramaDesde = ramaDesde;
+        c.ramaFusionadaPor = ramaFusionadaPor; c.ramaDesde = ramaDesde; c.llave = llave;
         return c;
     }
 }

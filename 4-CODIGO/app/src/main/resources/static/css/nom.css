@@ -1058,3 +1058,21 @@ kbd { font-family: var(--fuente); font-weight: 800; }
 .pie-legal { text-align: center; font-size: 13px; font-weight: 750; color: var(--tinta-suave); margin: 4px 0 0; }
 .pie-legal a { color: var(--tinta-suave); }
 .boton-ayuda { display: inline-grid; place-items: center; vertical-align: middle; color: var(--tinta-suave); }
+
+/* Fase 15: chat del espacio */
+.chat { display: flex; flex-direction: column; gap: 10px; min-height: min(70vh, 640px); }
+.chat-nota { margin: 0; font-size: 13px; font-weight: 750; color: var(--tinta-suave); display: flex; gap: 6px; align-items: center; }
+.chat-lista { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; max-height: 58vh; }
+.chat-vacio { text-align: center; margin: 30px 0; font-weight: 650; }
+.chat-msg { display: flex; gap: 8px; align-items: flex-end; max-width: 92%; }
+.chat-msg.mio { align-self: flex-end; flex-direction: row-reverse; }
+.burbuja-chat { background: var(--sup-2); border: 1px solid var(--borde); border-radius: 16px 16px 16px 6px; padding: 8px 12px; min-width: 0; }
+.chat-msg.mio .burbuja-chat { background: var(--acento-tenue); border-radius: 16px 16px 6px 16px; }
+.burbuja-chat b { font-size: 13px; }
+.burbuja-chat p { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-hora { display: block; font-size: 11px; color: var(--tinta-suave); }
+.chat-adjunto { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--borde-fuerte); border-radius: 10px; padding: 4px 10px; background: var(--sup); color: var(--tinta); font: inherit; font-size: 13px; cursor: pointer; margin: 4px 0; }
+.chat-img { display: block; max-width: min(320px, 70vw); max-height: 320px; border-radius: 10px; margin-top: 4px; }
+.chat-mas { opacity: .6; }
+.chat-escribir { display: flex; gap: 8px; align-items: flex-end; }
+.chat-escribir textarea { flex: 1; resize: none; min-height: 44px; max-height: 140px; border-radius: 14px; border: 1px solid var(--borde-fuerte); background: var(--sup-2); color: var(--tinta); padding: 10px 12px; font: inherit; }

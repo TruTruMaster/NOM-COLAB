@@ -20,6 +20,10 @@
     const t = String(texto || "").trim();
     try {
       const u = new URL(t);
+      // Fase 15: un espacio cifrado lleva su llave después del # (#k=…), que nunca llega al servidor.
+      const k = (/[#&]k=([A-Za-z0-9_-]{40,})/.exec(u.hash) || [])[1];
+      const cod = u.searchParams.get("c");
+      if (k && cod && NOM.e2e) NOM.e2e.recordarInvitacion(limpiarCodigo(cod), k);
       if (/^https?:$/.test(u.protocol)) {
         const m = /\/(unirse|proyectar)\/?$/.exec(u.pathname);
         const c = u.searchParams.get("c") || (/#\/(unirse|proyectar)\/([^/?]+)/.exec(u.hash) || [])[2];
@@ -70,6 +74,9 @@
   function desdeDireccion() {
     const m = /\/(unirse|proyectar)\/?$/.exec(location.pathname);
     const c = new URLSearchParams(location.search).get("c");
+    // Fase 15: la llave del espacio (o del documento, en el proyector) que trae el # se guarda antes de cambiar la dirección.
+    const k = (/[#&]k=([A-Za-z0-9_-]{40,})/.exec(location.hash) || [])[1];
+    if (k && c && NOM.e2e) NOM.e2e.recordarInvitacion(limpiarCodigo(c), k);
     if (!m || (!c && m[1] !== "proyectar")) return false;
     const base = location.pathname.replace(/(unirse|proyectar)\/?$/, "");
     // Sin código, /proyectar abre la pantalla para escribirlo.
@@ -96,6 +103,12 @@
       if (api().empaquetada && !api().servidor()) throw Object.assign(new Error("Primero elige dónde trabaja tu equipo (o escanea su QR)."), { estado: 0 });
       info = await api().get(`/api/enlaces/${encodeURIComponent(codigo)}`, undefined, { sin401: true });
       try { srv = await NOM.acceso.infoServidor(); } catch (e) { srv = null; }
+      if (info.e2e) {
+        let k = null;
+        try { k = sessionStorage.getItem("nom.e2e.inv." + codigo); } catch (e) { k = null; }
+        info.espacio = k && NOM.e2e ? (await NOM.e2e.valorConLlave(k, info.espacio)) || "Espacio cifrado" : "Espacio cifrado";
+        info.sinLlave = !k;
+      }
     } catch (e) {
       t.innerHTML = `<div class="col" style="align-items:center;text-align:center">
         <div class="burbuja">${ico(e.red ? "wifi-off" : "triangle-alert")}</div>
@@ -120,6 +133,7 @@
         <div class="crece"><span class="etiqueta">Te invitan a</span><h2 style="margin-top:2px">${esc(info.espacio)}</h2>
           <span class="suave chico" style="font-weight:700">de ${esc(info.propietario)} · ${esc(PERMISO[info.permiso] || info.permiso)} · el código sirve hasta el ${esc(new Date(info.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span></div>
       </div>
+      ${info.e2e ? `<div class="alerta ${info.sinLlave ? "aviso" : "info"} chico">${ico("lock-keyhole")}<span>Espacio <b>cifrado de extremo a extremo</b>.${info.sinLlave ? " Este código no trae la llave: entra con el QR o la dirección completa, o pide a alguien del espacio que lo abra después." : " La llave viene en el código QR y no pasa por el servidor."}</span></div>` : ""}
       ${telefono ? `<div class="alerta info chico">${ico("smartphone")}<span>Este espacio está en un <b>teléfono que comparte</b>, sin Internet. Aquí no se crean cuentas: entra con un alias, o con tu cuenta si este equipo tiene Internet.</span>${NOM.botonAyuda("sin-internet/alias", "Alias al azar")}</div>` : ""}
       <div class="alerta error" data-err hidden></div>
       ${conSesion && !aliasAjeno ? `<button class="btn primario ancho" data-entrar>${ico("log-in")} Entrar como ${esc(u.nombre || "")}</button>
@@ -132,7 +146,8 @@
     </div>`;
     const err = $("[data-err]", t);
     const mostrarError = (e) => { err.hidden = false; err.innerHTML = `${ico("triangle-alert")}<span>${esc(e.message)}</span>`; };
-    const alEntrar = (r, nuevo, espacioId) => {
+    const alEntrar = async (r, nuevo, espacioId) => {
+      if (NOM.e2e) await NOM.e2e.alEntrar(codigo, espacioId);
       if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
       NOM.app.alIniciarSesion(r);
       setTimeout(() => (location.hash = "#/espacio/" + espacioId), 0);
@@ -142,6 +157,7 @@
       entrar.disabled = true;
       try {
         const esp = await api().post(`/api/enlaces/${encodeURIComponent(codigo)}/entrar`);
+        if (NOM.e2e) await NOM.e2e.alEntrar(codigo, esp.id);
         aviso(`Ya estás en ${esp.nombre}`, { tipo: "ok" });
         location.hash = "#/espacio/" + esp.id;
       } catch (e) { entrar.disabled = false; mostrarError(e); }
@@ -197,13 +213,14 @@
     }
     return [...new Set(l)];
   }
-  const urlDe = (base, codigo) => `${base}/unirse?c=${codigo}`;
+  const urlDe = (base, codigo, frag) => `${base}/unirse?c=${codigo}${frag || ""}`;
 
-  function tarjetaQr(cont, enlace, conexion, esp) {
+  async function tarjetaQr(cont, enlace, conexion, esp) {
     const bs = bases(conexion);
     let base = bs[0] || "";
+    const frag = esp.e2e && NOM.e2e ? await NOM.e2e.fragmento(esp.id) : "";
     const pintar = () => {
-      const url = base ? urlDe(base, enlace.codigo) : "";
+      const url = base ? urlDe(base, enlace.codigo, frag) : "";
       cont.innerHTML = `<div class="qr-tarjeta">
         <div class="qr-caja">${url ? NOM.qr.svg(url, { titulo: "Código QR para unirse a " + (esp.nombre || "") }) : `<div class="qr-sin">${ico("wifi-off")}</div>`}</div>
         <div class="col" style="gap:8px;min-width:0">

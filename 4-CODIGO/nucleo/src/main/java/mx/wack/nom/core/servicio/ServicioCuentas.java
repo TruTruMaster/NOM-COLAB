@@ -151,6 +151,47 @@ public class ServicioCuentas {
         return u;
     }
 
+    // ------------------------------------------------------------ fase 15: llaves de la cuenta
+    private static String llaveValida(String t, int max, String campo) {
+        if (t == null || t.isBlank()) return null;
+        if (t.length() > max) throw ErrorNom.invalido("Llave demasiado grande", campo);
+        return t;
+    }
+
+    /** Guarda el par de llaves de la cuenta (lo genera y lo envuelve su equipo; aqui solo se guarda). */
+    public synchronized Map<String, Object> guardarLlaves(Usuario u, String publica, String privadaContrasena, String privadaRecuperacion) {
+        if (u.sinContrasena()) throw ErrorNom.prohibido("Los alias guardan las llaves en su equipo");
+        String p = llaveValida(publica, 2000, "publica"), pc = llaveValida(privadaContrasena, 4000, "privadaContrasena");
+        if (p != null) {
+            if (pc == null) throw ErrorNom.invalido("Falta la llave privada envuelta", "privadaContrasena");
+            u.llavePublica = p;
+        }
+        if (pc != null) u.llavePrivadaContrasena = pc;
+        String pr = llaveValida(privadaRecuperacion, 4000, "privadaRecuperacion");
+        if (pr != null) u.llavePrivadaRecuperacion = pr;
+        repo.guardar(u);
+        return llaves(u);
+    }
+
+    public Map<String, Object> llaves(Usuario u) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("publica", u.llavePublica);
+        m.put("privadaContrasena", u.llavePrivadaContrasena);
+        m.put("privadaRecuperacion", u.llavePrivadaRecuperacion);
+        return m;
+    }
+
+    /** La llave publica de otra cuenta (para envolverle la llave de un espacio). */
+    public Map<String, Object> publica(String idONombre) {
+        Usuario o = idONombre == null ? null : repo.porId(idONombre).or(() -> repo.porNombre(idONombre)).orElse(null);
+        if (o == null) throw ErrorNom.noEncontrado("La cuenta");
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", o.id);
+        m.put("nombre", o.nombre);
+        m.put("publica", o.llavePublica);
+        return m;
+    }
+
     /** F.5 La cuenta acepta la version vigente de los Terminos y del Aviso (cuando cambian). */
     public synchronized Map<String, Object> aceptar(Usuario u, String version) {
         if (version == null || !version.equals(mx.wack.nom.core.Version.LEGAL)) throw ErrorNom.invalido("Esa no es la versión vigente de los Términos", "version");

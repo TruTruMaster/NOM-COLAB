@@ -33,29 +33,31 @@ C = {
 }
 
 # id: (texto (\n = renglón), x del centro, fila, estilo)
-# Revisado el 13 de noviembre de 2026 contra la app 0.12 (rutas de app.js y menús de cada pantalla).
+# Revisado el 13 de noviembre de 2026 contra la app 0.13 (rutas de app.js y menús de cada pantalla).
 N = {
     "bienvenida": ("Bienvenida", 1180, 0, "inicio"),
     "login": ("Iniciar sesión", 860, 1, "cuentas"),
     "registro": ("Crear cuenta\nusuario, contraseña · código de recuperación", 1330, 1, "cuentas"),
-    "codigo": ("Tengo un código\n→ unirse con apodo o con cuenta", 1830, 1, "espacios"),
+    "codigo": ("Tengo un código\n→ con apodo, alias al azar o cuenta", 1830, 1, "espacios"),
     "sincuenta": ("Usar sin cuenta", 2300, 1, "sistema"),
+    "ayuda": ("Ayuda y legal\n/ayuda/ · /legal/ · sin sesión", 400, 1, "sistema"),
     "inicio": ("Inicio\nrecientes y tus espacios", 860, 2, "inicio"),
     "recuperar": ("¿Olvidaste tu contraseña?\ncon el código de recuperación", 1290, 2, "cuentas"),
     "locales": ("Mis documentos locales\nsolo en este equipo", 2300, 2, "sistema"),
     "continua": ("Continúa donde lo dejaste\n→ abre el editor", 170, 3, "inicio"),
     "espacio": ("Espacio de trabajo", 700, 3, "espacios"),
     "unirse": ("Unirse a un espacio\ncódigo, QR, apodo o Wi-Fi", 1110, 3, "espacios"),
-    "dispositivo": ("Este dispositivo\ncopias · teléfono como servidor", 1430, 3, "sistema"),
+    "dispositivo": ("Este dispositivo\ncopias · servidor · instalar", 1430, 3, "sistema"),
     "cuenta": ("Menú de la cuenta\najustes · contraseña · salir · borrar", 1780, 3, "inicio"),
-    "buscar": ("Buscar o ir a (Ctrl+K)\nen la barra de arriba, siempre", 2010, 4, "inicio"),
+    "buscar": ("Buscar o ir a (Ctrl+K)\nen la barra de arriba, siempre", 1970, 4, "inicio"),
     "editorlocal": ("Editor local\nmismos 4 tipos", 2300, 3, "sistema"),
     "subir": ("Subir a un espacio\nal crear cuenta o entrar", 2300, 5, "sistema"),
-    "docs": ("Documentos del espacio\ncarpetas · destacados · buscar", 300, 4, "espacios"),
-    "accesos": ("Invitar y miembros\ncódigo/QR · lectura · edición", 620, 4, "espacios"),
-    "conexion": ("Visible en el mismo Wi-Fi\nsolo en red local", 920, 4, "espacios"),
-    "almacen": ("Cuánto ocupa\nconsumo · depurar versiones", 1210, 4, "espacios"),
-    "papelera": ("Papelera y menciones\n30 días · restaurar", 1500, 4, "espacios"),
+    "docs": ("Documentos del espacio\ncarpetas · destacados · buscar", 160, 4, "espacios"),
+    "accesos": ("Invitar y miembros\ncódigo/QR · lectura · edición", 461, 4, "espacios"),
+    "conexion": ("Visible en el mismo Wi-Fi\nsolo en red local", 771, 4, "espacios"),
+    "almacen": ("Cuánto ocupa\nconsumo · depurar versiones", 1073, 4, "espacios"),
+    "papelera": ("Papelera y menciones\n30 días · restaurar", 1349, 4, "espacios"),
+    "chat": ("Chat del espacio\nimágenes · archivos · cifrado", 1632, 4, "espacios"),
     "nuevo": ("Nuevo documento\nnombre + TIPO + plantilla", 190, 5, "espacios"),
     "abrir": ("Abrir documento\nse abre en su tipo", 470, 5, "espacios"),
     "etexto": ("Editor de Texto\nInvestigar · citas APA", 150, 6, "texto"),
@@ -63,7 +65,7 @@ N = {
     "epres": ("Editor de Presentación\npresentar · notas", 740, 6, "pres"),
     "ediag": ("Editor de Diagrama\nUML · diagramas listos", 1040, 6, "diag"),
     "comentarios": ("Comentarios\nsugerencias · @menciones", 160, 7, "editor"),
-    "historial": ("Historial y recibo\nversiones · quién cambió", 450, 7, "editor"),
+    "historial": ("Historial, ramas y recibo\nversiones · comparar · fusionar", 450, 7, "editor"),
     "descargar": ("Exportar\n.docx .xlsx .pptx .nom PDF", 750, 7, "editor"),
     "volver": ("Volver al espacio\nya está guardado", 1040, 7, "editor"),
     "enlace": ("Enlace para ver\nsin cuenta · con QR", 1380, 7, "editor"),
@@ -71,14 +73,14 @@ N = {
 
 # (padre, [hijos], etiqueta opcional junto al padre)
 ARBOL = [
-    ("bienvenida", ["login", "registro", "codigo", "sincuenta"], None),
+    ("bienvenida", ["ayuda", "login", "registro", "codigo", "sincuenta"], None),
     ("login", ["inicio", "recuperar"], "sesión válida · cuenta en la BD"),
     ("sincuenta", ["locales"], None),
     ("locales", ["editorlocal"], None),
     ("editorlocal", ["subir"], None),
     ("inicio", ["continua", "espacio", "unirse", "dispositivo", "cuenta"], None),
     ("cuenta", ["buscar"], None),
-    ("espacio", ["docs", "accesos", "conexion", "almacen", "papelera"], None),
+    ("espacio", ["docs", "accesos", "conexion", "almacen", "papelera", "chat"], None),
     ("docs", ["nuevo", "abrir"], None),
 ]
 
