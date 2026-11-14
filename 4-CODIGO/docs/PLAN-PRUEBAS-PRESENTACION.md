@@ -313,3 +313,6 @@ entrega del 27 de noviembre) y regenerar el PDF.
 | B-4 | 14-nov | A55 servidor + laptop | Correcto | — | entra como pruebaa55x2 con pase |
 | F (A55) | 14-nov | A55 | Con defecto | DEF-45, MEJ-1 | Excel perfecto; Word pierde propiedades del párrafo editado; PowerPoint pierde animaciones de la diapositiva editada |
 | K / F-1 | 14-nov | laptop | Correcto | — | validador de Microsoft: 511 de 511 sin errores nuevos; LibreOffice abre todo |
+| B-11 | 14-nov | A55 servidor + laptop sin Internet | Correcto | — | PDF y foto desde el selector de Android; > 2 MB rechazado con mensaje claro; respuesta de la laptop llega |
+| B-15 | 14-nov | laptop + Pi | Parcial | — | la API da los datos sin contraseña; el botón de Ajustes no descargó en el navegador automático: repetir a mano |
+| B-10 | 14-nov | laptop + A55 + Pi | Parcial | DEF-48, DEF-49 | la Pi solo guarda cifrado (nombre y texto); el A55 entra con el código con guion, sin llave; falta el QR con cámara |

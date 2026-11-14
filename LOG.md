@@ -971,7 +971,8 @@ dejar un relevo detallado. Relevo completo: `4-CODIGO/docs/RELEVO-PARIDAD-Y-PRUE
   borra y vuelve a crear la marca con la hora actual), DEF-45 (alta: editar una diapositiva importada
   borra sus animaciones y convierte el título en cuadro suelto), DEF-44 (error de JavaScript en «lo
   que cambió desde tu última visita» con rangos hasta el final), DEF-47 (encender el teléfono como
-  servidor con otro servidor elegido pide contraseña), DEF-43 (botón cortado en Ajustes del A55),
+  servidor con otro servidor elegido pide contraseña), DEF-48 (código sin guion tomado como dirección), DEF-49 (la llave de
+  un espacio cifrado no llega a la app sin cámara), DEF-43 (botón cortado en Ajustes del A55),
   MEJ-1 (al editar un párrafo de Word se pierden propiedades que la app no guarda) y H-8 para decidir
   (la app se conecta sola a un servidor que encuentra en el Wi-Fi).
 - **Office desde el A55:** Word, Excel y PowerPoint importados con el selector de Android, editados y

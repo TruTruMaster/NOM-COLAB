@@ -472,7 +472,8 @@ comandos y criterios, en `docs/RELEVO-REVISION-PROFUNDA.md`.
       y tiempo real con 4 equipos, correctos; validador de Microsoft en las pruebas (511 de 511 sin errores nuevos).
 - [ ] 0.13.2: DEF-46 (ramas: la marca se reinicia con cada reintento sin red), DEF-45 (PowerPoint: editar una
       diapositiva importada borra animaciones y marcadores), DEF-44 (error en `aplicarResaltado` con `FIN`),
-      DEF-47 (encender el teléfono con otro servidor elegido), DEF-43 (botón cortado en Ajustes del A55);
+      DEF-47 (encender el teléfono con otro servidor elegido), DEF-48 (código sin guion = dirección), DEF-49
+      (la llave de un espacio cifrado no llega a la app sin cámara), DEF-43 (botón cortado en Ajustes del A55);
       decidir H-8 (la app elige sola un servidor del Wi-Fi). Cada uno con su prueba; luego B-6 y B-7 reales.
 - [ ] Recoger la investigación terminada del escritorio en `docs/paridad/` y hacer `docs/PARIDAD-OFFICE.md`.
 - [ ] Bloque C: red de la escuela y varios dispositivos.

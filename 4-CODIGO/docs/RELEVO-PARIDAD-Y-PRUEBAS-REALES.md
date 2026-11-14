@@ -16,7 +16,7 @@ vigente) y `PLAN-PRUEBAS-PRESENTACION.md` (bloques A-K; este relevo llena parte 
 
 1. **Pruebas reales** (sección 3): B-1, B-2, B-3, B-4, B-5, B-6, B-8, B-9, B-16, tiempo real con
    cuatro equipos, Office desde el A55 (bloque F) y documentos hechos en la app (bloque K).
-2. **Defectos nuevos con causa y arreglo propuesto** (sección 4): DEF-43 a DEF-47 y el hallazgo H-8.
+2. **Defectos nuevos con causa y arreglo propuesto** (sección 4): DEF-43 a DEF-49, MEJ-1 y el hallazgo H-8.
    **Ninguno se corrigió todavía**: se dejan para una sola versión 0.13.2 (corregir, `regresion.sh`,
    publicar todo junto, como pide el dueño).
 3. **Herramienta nueva: el validador oficial de Microsoft** (`pruebas/office/validar_openxml.py` +
@@ -37,7 +37,7 @@ vigente) y `PLAN-PRUEBAS-PRESENTACION.md` (bloques A-K; este relevo llena parte 
 
 | Equipo | Cómo quedó | Qué hacer |
 |---|---|---|
-| A55 | App 0.13.1 publicable. **Comparte como servidor** (Salon A55, alias de dueño «Grillo 52», `192.168.0.86:8080`); se le dio permiso de notificaciones. En `Download/` quedaron archivos de prueba: carpeta `NOM-pruebas/` (10 de Office), `lo-tdf104420_lostParagraph.docx`, `ms-financial-sample.xlsx`, `ms-animacion.pptx` (exportados) y `Codigo de recuperacion NOM-COLAB - pruebaa55x1.txt`. **No** hay que tocar los demás archivos de `Download/` (son personales). | Al terminar las pruebas: Detener el servidor (notificación), «Cambiar dónde trabaja tu equipo» → «Usar NOM-COLAB en Internet», borrar esos archivos (`adb shell rm`). |
+| A55 | App 0.13.1 publicable, **otra vez en «NOM-COLAB en Internet»** con la sesión de `pruebaa55x1` (el servidor del teléfono se detuvo; en el teléfono quedó su espacio «Salon A55» con el chat de prueba, del alias de dueño «Grillo 52»); se le dio permiso de notificaciones. En `Download/` quedaron archivos de prueba: carpeta `NOM-pruebas/` (10 de Office), `lo-tdf104420_lostParagraph.docx`, `ms-financial-sample.xlsx`, `ms-animacion.pptx` (exportados) y `Codigo de recuperacion NOM-COLAB - pruebaa55x1.txt`. **No** hay que tocar los demás archivos de `Download/` (son personales). | Al terminar las pruebas: borrar esos archivos (`adb shell rm`) y, si se quiere, el espacio «Salon A55» del teléfono. Para volver de «este teléfono comparte» a la nube: Ajustes → «Cambiar dónde trabaja tu equipo» → abajo «Cambiar» → «Usar NOM-COLAB en Internet» (la notificación «Detener» apaga el servidor, pero al abrir la app vuelve a encenderlo si sigue elegido). |
 | Raspberry | Cuentas de prueba `pruebaa55x1` a `pruebaa55x5` y `pruebaflast1` (contraseñas en `~/.cache/nom-pruebas/cuentas-prueba.json`, fuera de git). Espacio «Pruebas A55» (de x1; flast1 y x2 editan, x3 solo ve) con 8 documentos de prueba. Token de x1 en `~/.cache/nom-pruebas/token-x1` (vence el 17-nov). | Reutilizarlas para lo que falta (B-7, B-10, B-11…). Al final, borrarlas (Ajustes → Borrar mi cuenta, o `DELETE /api/cuentas/yo`). |
 | Escritorio (`flast-desktop`) | Chromium de pruebas abierto en su pantalla (unidad de usuario `nomchromium4`, perfil `~/.var/app/org.chromium.Chromium/data/nom-real`, CDP en el 9333; desde la laptop: `ssh -f -N -L 9333:localhost:9333 100.84.188.120`), con sesión de `pruebaflast1`. La investigación sigue en `~/investigacion-office/` (ver 5.2). | Cerrar ese Chromium al terminar (`/tmp/matar-nom.sh` en el escritorio; ver 6). |
 | Laptop | Servidor de pruebas del 8099 **apagado** (se apagó porque la app del A55 lo encontraba sola en el Wi-Fi: ver H-8). .NET 8 en `~/.dotnet`; validador compilado en `~/.cache/nom-pruebas/openxml-bin`. Registros en `~/.cache/nom-pruebas/registros/2026-11-14-openxml/` y capturas en `~/.cache/nom-pruebas/capturas-reales/`. | Nada. |
@@ -84,7 +84,10 @@ Firefox de Playwright), **Raspberry** (`https://nomcolab.dpdns.org`, 0.13.1).
 | B-3 | **Correcto** | A55 como servidor; la laptop **sin acceso a la nube** abre `http://192.168.0.86:8080/unirse?c=…`: «Este espacio está en un teléfono que comparte, sin Internet… Entrar con un alias» → entra como «Armadillo 85» (`alias: true`). |
 | B-4 | **Correcto** | La laptop **con Internet**: el mismo enlace ofrece además «Entrar con mi cuenta»; pide usuario y contraseña de la nube (el origen del teléfono no comparte la sesión del navegador) y entra como `pruebaa55x2` (mismo id que en la nube, `nube: https://nomcolab.dpdns.org`). |
 | Encender en el A55 | Falla de flujo: DEF-47 | Ver sección 4. Tras cerrar y abrir la app, entra directo como dueño («Grillo 52»), como dice la ayuda. |
-| B-10 a B-15, B-17 | No hechos | Lista en la sección 7. |
+| B-11 | **Correcto** | Chat del espacio del teléfono: desde el A55 (selector de Android, vista de lista) un PDF y una foto; la laptop **sin Internet** (alias) los ve, el PDF llega idéntico byte por byte y la foto abre en su visor a 800×600; su respuesta llega al A55. Un archivo de 11.7 MB: «El archivo pasa de 2 MB. Súbelo como documento del espacio.» Ojo: en el selector de Android, en vista de cuadrícula, tocar el nombre abre la **vista previa de la Galería** en vez de elegir el archivo (es de Android; una persona lo nota, pero confunde). |
+| B-15 | Parcial | `GET /api/cuentas/datos` con la cuenta x5: 200, 771 bytes, sin contraseña. Desde el botón «Descargar» de Ajustes (Chromium automático de la laptop) **no salió la descarga ni un aviso**; repetir a mano en un navegador real (puede ser de la prueba). Borrar la cuenta: no se hizo (x5 sigue). |
+| B-10 | Parcial, con DEF-48 y DEF-49 | Espacio cifrado creado en la laptop (x2) con un documento; en la Pi el nombre del espacio es `e2e:AX2P…` y el documento no tiene ni el texto ni el nombre en claro (**correcto**). El A55 (x1) entra con el código escrito **con guion** (`V5MP-4CWE`): «Este código no trae la llave: entra con el QR o la dirección completa…», y dentro: «este equipo todavía no tiene su llave» (correcto según el diseño). **Sin guion** (`V5MP4CWE`) la app lo toma como dirección de un servidor: DEF-48. La dirección completa (con `#k=` la llave) no se puede meter en la app: DEF-49. Falta: escanear el QR con la cámara (necesita a una persona). |
+| B-12 a B-14, B-17 | No hechos | Lista en la sección 7. |
 
 ### 3.2 Office en el A55 (bloque F, con la app publicable)
 
@@ -202,6 +205,28 @@ Registro: `~/.cache/nom-pruebas/registros/2026-11-14-openxml/`.
 - **Arreglo:** al encender, fijar el servidor de la app en el propio teléfono y entrar como dueño
   (lo mismo que hace al arrancar). Probar con otro servidor anunciándose en el Wi-Fi.
 
+### DEF-48 (media) · En la app, un código escrito sin guion se toma como dirección de un servidor
+
+- **Pasos (A55, app publicable, con sesión en la Pi):** Unirse → Escribir código → `V5MP4CWE` (el
+  código de un espacio de la Pi, sin el guion) → Entrar.
+- **Pasa:** «Abrir otro equipo — Este espacio vive en V5MP4CWE. Se abrirá NOM-COLAB de ese equipo
+  (http://V5MP4CWE:8080)». Con guion (`V5MP-4CWE`) sí entra. En el escritorio, el mismo flujo sin
+  guion (`RTZQ9TP8`) sí funcionó. La ayuda dice «escriben 8 letras»: la gente no escribe el guion.
+- **Arreglo:** si lo escrito son 8 letras/números (con o sin guion, en mayúsculas o minúsculas), es
+  un código; solo con punto, dos puntos o diagonal es una dirección. Prueba en `prueba_funciones.py`
+  (y en `--movil`): código sin guion, con guion, en minúsculas y con espacios.
+
+### DEF-49 (media) · La llave de un espacio cifrado no se puede llevar a la app sin la cámara
+
+- La app no abre enlaces (`AndroidManifest.xml` solo tiene `MAIN/LAUNCHER`): una invitación
+  `https://nomcolab.dpdns.org/unirse?c=…#k=…` que llega por mensaje se abre en Chrome, no en la app.
+- El campo «Escribir código» corta a 12 caracteres: la dirección completa (que trae la llave) no se
+  puede pegar. El aviso del espacio dice «ábrelo con el código QR o la dirección completa».
+- **Arreglo:** (1) que «Escribir código» acepte una dirección completa pegada (sacar `c` y `k`);
+  (2) *App Links*: `intent-filter` con `autoVerify` para `https://nomcolab.dpdns.org/unirse` y
+  `/.well-known/assetlinks.json` en la Pi con la huella SHA-256 del APK (`2ef146f6…b6c9`); en
+  `MainActivity`, pasar la URL al WebView. Probar con `adb shell am start -a android.intent.action.VIEW -d '<enlace>'`.
+
 ### DEF-43 (baja) · «Valores de fábrica» sale cortado en el A55
 
 En «Ajustes y preferencias», abajo a la izquierda: «/alores de fábric» (el texto es más ancho que su
@@ -307,11 +332,10 @@ done
 ## 7. Lo que falta del plan (después de la 0.13.2)
 
 - **B-7** (comparar, fusionar, regresar, descartar) con una rama de verdad (después de DEF-46).
-- **B-10** espacio de extremo a extremo con QR por **cámara real** (necesita a una persona apuntando
-  el A55 a la pantalla; el resto se puede con el código escrito) y revisar en la Pi que no hay texto.
-- **B-11** chat: foto de la galería y PDF desde el A55 (selector de Android), archivo > 2 MB.
+- **B-10** terminar: QR con la **cámara real** (una persona apunta el A55 a la pantalla); después
+  de DEF-48/DEF-49, el enlace completo.
 - **B-12** enlace para ver y proyector; **B-13** ayuda sin red en la app; **B-14** instalar la página
-  en el escritorio y abrirla sin red; **B-15** descargar mis datos y borrar cuenta (con `pruebaa55x5`).
+  en el escritorio y abrirla sin red; **B-15** terminar: botón «Descargar» de Ajustes a mano y borrar la cuenta `pruebaa55x5`.
 - **B-17** 4 equipos reales + `carga.py --personas 40` en el mismo espacio; **D-4** (Pi con 50),
   **D-5** (A55 como servidor: `carga.py` con alias).
 - **C** (red de la escuela), **H** (SUS con 5 personas), **I** (ensayo).
