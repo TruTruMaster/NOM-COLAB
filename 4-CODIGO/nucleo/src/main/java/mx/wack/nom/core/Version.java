@@ -12,7 +12,7 @@ package mx.wack.nom.core;
  */
 public final class Version {
     /** La misma que versionName del APK. */
-    public static final String APP = "0.13.0";
+    public static final String APP = "0.13.1";
     /** Nivel de la interfaz y del formato de documentos. 14 = espacios cifrados de extremo a extremo (letras con marca cx). */
     public static final int INTERFAZ = 14;
     /** Fase 14 (F.5): version vigente de los Terminos y del Aviso de privacidad. Al cambiarla, la app

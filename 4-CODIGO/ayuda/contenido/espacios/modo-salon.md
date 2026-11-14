@@ -4,7 +4,7 @@ descripcion: Una clase entera en un espacio: QR en grande, alias y entrega con f
 orden: 40
 aplica: Navegador, App Android, Teléfono que comparte
 actualizado: 2026-11-13
-version: 0.13.0
+version: 0.13.1
 ---
 Para una clase:
 
@@ -16,4 +16,4 @@ Para una clase:
 4. Al terminar, **anula** el código.
 
 Sin Internet, usa [un teléfono que comparte](ayuda:sin-internet/telefono-servidor). Pueden estar
-[hasta 5 personas a la vez](ayuda:espacios/cinco-personas) en cada espacio.
+[hasta 50 personas a la vez](ayuda:espacios/cuantas-personas) en cada espacio.

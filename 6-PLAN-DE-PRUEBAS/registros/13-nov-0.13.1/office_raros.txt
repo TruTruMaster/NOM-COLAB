@@ -1,0 +1,1 @@
+ok   /home/user/.cache/nom-pruebas/corpus/docx/raro-combinaciones.docx 39717 bytes

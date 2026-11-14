@@ -97,15 +97,15 @@
  },
  {
   "id": "VL-13",
-  "desc": "5 personas conectadas a la vez al espacio",
-  "esperado": "[200, 200, 200, 200, 200]",
-  "obtenido": "[200, 200, 200, 200, 200]",
+  "desc": "50 personas conectadas a la vez al espacio",
+  "esperado": "50 × 200",
+  "obtenido": "50 × 200",
   "ok": true,
   "msg": ""
  },
  {
   "id": "VL-14",
-  "desc": "La 6.ª persona intenta conectarse",
+  "desc": "La 51.ª persona intenta conectarse",
   "esperado": 409,
   "obtenido": 409,
   "ok": true,

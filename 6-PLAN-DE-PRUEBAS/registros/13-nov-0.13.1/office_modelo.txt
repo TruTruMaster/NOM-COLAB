@@ -1,0 +1,58 @@
+ 100.0%  ms-comentarios.docx                    211 KB ->   185 KB  .nom   186 KB  imp    27 ms  exp    29 ms  NOM≠ 
+  82.4%  ms-complex0.docx                       214 KB ->    10 KB  .nom   160 KB  imp   120 ms  exp    28 ms  NOM≠ 
+  79.5%  ms-complex01.docx                      827 KB ->     7 KB  .nom   790 KB  imp    59 ms  exp    11 ms  NOM≠ 
+  92.0%  ms-complex2005.docx                    617 KB ->   450 KB  .nom   515 KB  imp   350 ms  exp    98 ms  NOM≠ 
+  82.4%  ms-complex2010.docx                    230 KB ->    10 KB  .nom   175 KB  imp   119 ms  exp    22 ms  NOM≠ 
+  73.3%  ms-document.docx                       798 KB ->     7 KB  .nom   781 KB  imp    69 ms  exp    12 ms  NOM≠ 
+  86.1%  ms-ecuaciones.docx                     191 KB ->     7 KB  .nom    44 KB  imp    44 ms  exp     4 ms  NOM≠ 
+  94.6%  ms-hoja-informativa.docx               140 KB ->     6 KB  .nom   105 KB  imp    18 ms  exp     5 ms  NOM≠ 
+  96.8%  ms-imagenes.docx                       202 KB ->   168 KB  .nom   168 KB  imp    15 ms  exp    16 ms  NOM≠ 
+  85.7%  ms-informe-gobernanza.docx             199 KB ->    96 KB  .nom   107 KB  imp   793 ms  exp   243 ms  NOM≠ 
+  91.8%  ms-marcadores.docx                     126 KB ->    68 KB  .nom    88 KB  imp   199 ms  exp    60 ms  NOM≠ 
+  96.8%  ms-notes.docx                          158 KB ->     4 KB  .nom   137 KB  imp    14 ms  exp     3 ms  NOM≠ 
+  97.2%  ms-smartart.docx                       161 KB ->     4 KB  .nom   138 KB  imp    16 ms  exp     3 ms  NOM≠ 
+  97.4%  ms-tabla.docx                          116 KB ->   118 KB  .nom   104 KB  imp    13 ms  exp    10 ms  NOM≠ 
+ 100.0%  poi-campos.docx                         12 KB ->     3 KB  .nom     5 KB  imp     5 ms  exp     2 ms  NOM≠ 
+ 100.0%  poi-encabezados.docx                    12 KB ->     5 KB  .nom     5 KB  imp     5 ms  exp     2 ms  NOM≠ 
+  96.8%  poi-listas.docx                         13 KB ->     4 KB  .nom     7 KB  imp     9 ms  exp     2 ms  NOM≠ 
+ 100.0%  poi-notas-al-pie.docx                   12 KB ->     4 KB  .nom     5 KB  imp     4 ms  exp     2 ms  NOM≠ 
+  92.5%  raro-combinaciones.docx                 38 KB ->     6 KB  .nom    27 KB  imp    49 ms  exp     3 ms  NOM≠ 
+  17.8%  ms-album.pptx                          140 KB ->    89 KB  .nom   106 KB  imp    16 ms  exp    12 ms  nom=igual 
+  85.7%  ms-animacion.pptx                       97 KB ->    67 KB  .nom    72 KB  imp    12 ms  exp     8 ms  nom=igual 
+  98.3%  ms-brownbag.pptx                       670 KB ->   546 KB  .nom   554 KB  imp   149 ms  exp    56 ms  nom=igual 
+  18.0%  ms-grafica-area.pptx                    79 KB ->     8 KB  .nom    28 KB  imp    16 ms  exp     6 ms  nom=igual 
+  97.5%  ms-o12-tipico.pptx                     922 KB ->   856 KB  .nom   869 KB  imp    99 ms  exp    92 ms  nom=igual 
+  66.7%  ms-of16.pptx                           114 KB ->    75 KB  .nom    90 KB  imp     9 ms  exp     8 ms  nom=igual 
+  81.6%  ms-organigrama.pptx                     79 KB ->     7 KB  .nom    39 KB  imp    10 ms  exp     6 ms  nom=igual 
+  66.1%  ms-presentation.pptx                  1001 KB ->    23 KB  .nom   968 KB  imp    21 ms  exp     4 ms  nom=igual 
+  94.6%  ms-rendimiento-tipico.pptx            1481 KB ->  1271 KB  .nom  1407 KB  imp   189 ms  exp    81 ms  nom=igual 
+  88.9%  ms-tabla-grande.pptx                    74 KB ->     7 KB  .nom    43 KB  imp     9 ms  exp     7 ms  nom=igual 
+  95.2%  ms-tipico.pptx                         637 KB ->   919 KB  .nom   570 KB  imp   155 ms  exp    80 ms  nom=igual 
+  95.5%  poi-formas.pptx                         67 KB ->    22 KB  .nom    36 KB  imp    22 ms  exp     8 ms  nom=igual 
+ 100.0%  poi-tablas.pptx                        145 KB ->    29 KB  .nom   118 KB  imp     9 ms  exp     5 ms  nom=igual 
+  93.5%  poi-temas.pptx                         314 KB ->    29 KB  .nom   138 KB  imp    70 ms  exp    10 ms  nom=igual 
+  52.8%  ms-complex01.xlsx                      113 KB ->     3 KB  .nom    94 KB  imp     6 ms  exp     4 ms  nom=igual 
+  67.1%  ms-datos-a1.xlsx                       223 KB ->   143 KB  .nom   169 KB  imp   580 ms  exp   752 ms  NOM≠ 
+  77.8%  ms-dinamica-b1.xlsx                    318 KB ->   139 KB  .nom   181 KB  imp   428 ms  exp   791 ms  nom=igual 
+  66.7%  ms-excel14.xlsx                         86 KB ->     3 KB  .nom    80 KB  imp     4 ms  exp     1 ms  nom=igual 
+   0.0%  ms-filtros.xlsx                         68 KB ->     4 KB  .nom    18 KB  imp    14 ms  exp     6 ms  nom=igual 
+  86.5%  ms-financial-sample.xlsx                81 KB ->    54 KB  .nom    59 KB  imp   172 ms  exp   168 ms  nom=igual 
+   0.0%  ms-galeria.xlsx                         93 KB ->     9 KB  .nom    15 KB  imp     7 ms  exp     4 ms  nom=igual 
+  62.5%  ms-hojas.xlsx                          122 KB ->    99 KB  .nom    95 KB  imp   270 ms  exp   288 ms  nom=igual 
+  84.5%  ms-rendimiento.xlsx                    303 KB ->   237 KB  .nom   223 KB  imp   776 ms  exp   744 ms  NOM≠ 
+  90.0%  poi-estilos.xlsx                         9 KB ->     3 KB  .nom     3 KB  imp     4 ms  exp     2 ms  nom=igual 
+  75.0%  poi-formato-condicional.xlsx             9 KB ->     3 KB  .nom     3 KB  imp     3 ms  exp     1 ms  nom=igual 
+  22.5%  poi-formulas.xlsx                       63 KB ->    38 KB  .nom    47 KB  imp    97 ms  exp   100 ms  nom=igual 
+  60.0%  poi-graficas.xlsx                       11 KB ->     3 KB  .nom     5 KB  imp     3 ms  exp     1 ms  nom=igual 
+  84.0%  poi-validacion.xlsx                     10 KB ->     3 KB  .nom     5 KB  imp     5 ms  exp     2 ms  nom=igual 
+
+(Medida con --modelo: solo lo que NOM-COLAB leyó del archivo, sin el original guardado.)
+
+docx: 91.9% de fidelidad en 19 archivos (0 con error); original 4288 KB, exportado 1172 KB, .nom 3556 KB
+   lo más flojo: encabezados 38% (9); pies de página 50% (7); imágenes 65% (19); secciones 68% (19); párrafo:esp_line 72% (19); comentarios 79% (19); vínculos 82% (19); párrafo:alin 84% (19)
+xlsx: 59.2% de fidelidad en 14 archivos (0 con error); original 1517 KB, exportado 748 KB, .nom 1005 KB
+   lo más flojo: comentarios 0% (2); formato condicional 0% (2); gráficas 0% (1); imágenes 0% (2); nombres definidos 0% (1); partes del archivo idénticas 0% (1); relleno 0% (2); vínculos 0% (2)
+pptx: 78.5% de fidelidad en 14 archivos (0 con error); original 5827 KB, exportado 3956 KB, .nom 5044 KB
+   lo más flojo: partes del archivo idénticas 0% (2); número de partes 36% (2); negrita y cursiva 56% (11); tamaño de la diapositiva 83% (12); posición y tamaño 86% (11); texto 93% (12); figuras 96% (11); imágenes 99% (6)
+
+TOTAL: 78.2% en 47 archivos. Errores de JavaScript en la página: []

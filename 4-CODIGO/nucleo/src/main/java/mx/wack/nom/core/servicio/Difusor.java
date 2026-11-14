@@ -59,6 +59,9 @@ public class Difusor {
         }
     }
 
+    /** RNF Espacios 1: personas conectadas a la vez por espacio (antes 5; 50 desde el 13-nov-2026). */
+    public static final int MAX_PERSONAS = 50;
+
     private final List<Suscriptor> subs = new CopyOnWriteArrayList<>();
     private final int maxUsuarios;
     /** Quien deja de ver un documento (docId, usuarioId): ahi termina su visita (3.4). */

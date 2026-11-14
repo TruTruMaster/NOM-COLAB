@@ -1,0 +1,22 @@
+chips: ['Todo', 'Destacados', 'Nueva carpeta'] orden: True
+destacado: True primero: True
+carpeta: ['Todo', 'Destacados', 'Ciencias 1', 'Nueva carpeta']
+en la carpeta: ['Célula']
+nombre: Exposición final
+tarjetas: 5 plantillas: 1
+búsqueda: ['Célula | mitocondria', 'Célula | mitocondria']
+tras papelera: False
+en la papelera: ['Exposición final']
+restaurado: True
+plantillas en nuevo: ['[esp] ', 'En blanco', 'Mapa conceptual', 'Línea del tiempo', 'Mapa mental', 'Diagrama de clases (UML)', 'Entidad-relación', 'Diagrama de flujo']
+creado desde plantilla: ['Célula', ['La mitocondria produce energía']]
+enlace: /ver/n8jLBibt7… qr: True
+vista pública: ['Célula', 'Diagrama · de Salón 2A · solo lectura', True]
+aviso en vivo: alumno28911 te mencionó en “Célula”Ver | alumno28911 te mencionó en “Célula”Ver
+botón menciones:  Avisos 1
+lista de menciones: ['ALalumno28911 te mencionó en Célula“Revisa la tabla @duena28911 porfa” · hace un momento']
+hilo abierto: True mención resaltada: @duena28911
+menciones sin leer después: 0
+sugerencias: ['DU', 'duena28911']
+texto con mención: Hola @duena28911 
+errores: [] [] []

@@ -270,7 +270,7 @@ Internet: lo sirve la Raspberry, Azure, el jar y el teléfono como servidor, y v
                                 Android (orígenes desconocidos, actualizar) · Requisitos
   espacios/                     Espacios y documentos · Permisos · Invitar (enlace, QR, código) ·
                                 Modo salón · Partes con dueño · Comentarios y sugerencias · Versiones ·
-                                Ramas (qué son, comparar, fusionar) · Entrega con fecha límite · Hasta 5 personas
+                                Ramas (qué son, comparar, fusionar) · Entrega con fecha límite · Hasta 50 personas
   editores/                     Texto · Hoja (y referencia de fórmulas, generada de formulas.js) ·
                                 Presentación · Diagrama · La ruedita · Atajos de teclado
   sin-internet/                 Cómo funciona · Qué se puede en cada caso (tabla) · Alias al azar ·

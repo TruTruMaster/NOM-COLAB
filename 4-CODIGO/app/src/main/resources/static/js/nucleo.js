@@ -6,7 +6,7 @@
   const NOM = (window.NOM = window.NOM || {});
   // Versión de esta interfaz. Tienen que ir a la par de nucleo/.../core/Version.java y del APK:
   // INTERFAZ sube cuando cambia el formato de los documentos o lo que la interfaz sabe leer.
-  NOM.VERSION = "0.13.0";
+  NOM.VERSION = "0.13.1";
   NOM.INTERFAZ = 14;
   /** Versión vigente de los Términos y del Aviso de privacidad (Version.LEGAL en el servidor). */
   NOM.LEGAL = "2026-11-13";

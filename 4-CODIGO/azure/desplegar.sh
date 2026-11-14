@@ -46,7 +46,7 @@ crear() {
     SPRING_DATASOURCE_URL="jdbc:sqlserver://$SQLSERVER.database.windows.net:1433;database=$DB;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=60" \
     SPRING_DATASOURCE_USERNAME="$SQLADMIN" SPRING_DATASOURCE_PASSWORD="$SQLPASS" \
     NOM_DB_PLATAFORMA=sqlserver NOM_DB_ESPERA_MS=120000 NOM_DESCUBRIMIENTO=false \
-    NOM_DATOS=/home/datos-nom NOM_PUERTO=80 WEBSITES_PORT=80 \
+    NOM_DATOS=/home/datos-nom NOM_PUERTO=80 WEBSITES_PORT=80 NOM_CUOTA_MB=50 \
     WEBSITES_CONTAINER_START_TIME_LIMIT=600
 }
 

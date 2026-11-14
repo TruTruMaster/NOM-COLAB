@@ -4,7 +4,7 @@ descripcion: Convierte un teléfono Android en el servidor del salón: sin compu
 orden: 50
 aplica: App Android, Teléfono que comparte
 actualizado: 2026-11-13
-version: 0.13.0
+version: 0.13.1
 ---
 Con Android 8 o más reciente, la app puede ser el servidor del equipo.
 
@@ -29,7 +29,7 @@ más de batería.
    [alias](ayuda:sin-internet/alias), o con [su cuenta](ayuda:sin-internet/con-mi-cuenta) si su equipo tiene
    Internet. Desde la computadora: abren la dirección del teléfono en el navegador.
 
-Pueden estar hasta 5 personas a la vez en cada espacio.
+Pueden estar hasta 50 personas a la vez en cada espacio (lo que aguante el teléfono: con muchas, conviene una computadora como servidor).
 
 ## Respaldos
 

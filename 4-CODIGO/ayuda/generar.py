@@ -29,7 +29,7 @@ FORMULAS = os.path.join(STATIC, "js", "formulas.js")
 SW = os.path.join(STATIC, "sw.js")
 PUBLICO = "https://nomcolab.dpdns.org"
 REPO = "https://github.com/TruTruMaster/NOM-COLAB"
-VERSION = "0.13.0"
+VERSION = "0.13.1"
 
 # Datos del responsable y contacto (un solo lugar). G.2: el equipo todavía no crea el correo del
 # proyecto; mientras, el contacto es por GitHub (reportes y avisos privados de seguridad).

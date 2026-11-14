@@ -1,0 +1,17 @@
+panel: True
+resultados: ['Fotosíntesis', 'Fotosíntesis oxigénica', 'Fotosíntesis anoxigénica']
+lectura: ['Fotosíntesis', 44, 'Fotosíntesis. (2026, 3 de noviembre). En Wikipedia, la enciclopedia libre. https://es.wikipedia.org/wiki/Fotos%C3%ADntes']
+botón ficha: True
+fichas: [['textual', 'Introducción', 'La fotosíntesis o función clorofílica es', True], ['parafrasis', 'Desarrollo', 'Las plantas usan la luz del sol para fab', True]]
+previa APA: Kucsko, G., Maurer, P. C., Yao, N. Y., Kubo, M., Noh, H. J., Lo, P. K., Park, H. y Lukin, M. D. (2013). Nanometre-scale thermometry in a living cell. Nature, 500(7460), 54–58. https://doi.org/10.1038/nature12373
+en texto: (Kucsko et al., 2013)
+fuentes: ['Fotosíntesis. (2026, 3 de noviembre). En Wikipedia, la enciclopedia libre. https://es.wikipedia.org/wiki/Fotos%C3%ADntesis', 'Kucsko, G., Maurer, P. C., Yao, N. Y., Kubo, M., Noh, H. J., Lo, P. K., Park, H. y Lukin, M. D. (2013). Nanometre-scale thermometry in a living cell. Nature, 500(7460), 54–58. https://doi.org/10.1038/nature12373']
+botones citar: ['Citar (“Fotosíntesis”, 2026)', 'Citar (Kucsko et al., 2013)']
+texto tras citar: ['Las plantas producen su alimento. (Kucsko et al., 2013, p. 55)']
+texto tras ficha: ['Las plantas producen su alimento. (Kucsko et al., 2013, p. 55)“La fotosíntesis o función clorofílica es un proceso bioquímico que consiste en la conversión de materia inorgánica a materia orgánica gracias a la energía que aporta la luz solar.” (“Fotosíntesis”, 2026)']
+referencias: [['h1', '', 'Referencias'], ['', 1.27, 'Fotosíntesis. (2026, 3 de noviembre). En *Wikipedia, la enciclopedia libre*. https://es.wikipedia.org/wiki/Fotos%C3%ADntesis'], ['', 1.27, 'Kucsko, G., Maurer, P. C., Yao, N. Y., Kubo, M., Noh, H. J., Lo, P. K., Park, H. y Lukin, M. D. (2013). Nanometre-scale thermometry in a living cell. *Nature*, *500*(7460), 54–58. https://doi.org/10.1038/nature12373']]
+tras repetir (párrafos con sangría francesa): 2
+fichas en el diálogo: ['Introducción', 'Desarrollo']
+reporte: [['', 'Las plantas producen su alimento. (Kucsko et al., 2013, p. 5'], ['h1', 'Referencias'], ['', 'Fotosíntesis. (2026, 3 de noviembre). En Wikipedia, la encic'], ['', 'Kucsko, G., Maurer, P. C., Yao, N. Y., Kubo, M., Noh, H. J.,'], ['titulo', 'La fotosíntesis'], ['', 'Materia: Biología'], ['', 'Docente: Mtra. Ruiz'], ['', 'Integrantes: pigoyqxp'], ['', '13 de noviembre de 2026'], ['', '[salto]'], ['', '[indice]'], ['', '[salto]'], ['h1', 'Introducción'], ['', 'Preguntas guía: ¿De qué trata el tema? ¿Por qué lo elegiste?'], ['', '“La fotosíntesis o función clorofílica es un proceso bioquím'], ['h1', 'Antecedentes'], ['', 'Preguntas guía: ¿Qué se sabía antes? ¿Quién lo ha estudiado?'], ['h1', 'Desarrollo'], ['', 'Preguntas guía: ¿Qué encontraste? Explícalo por partes, con '], ['', 'Las plantas usan la luz del sol para fabricar su propio alim'], ['h1', 'Conclusiones'], ['', 'Preguntas guía: ¿Qué aprendiste? ¿Respondiste tu pregunta? ¿'], ['h1', 'Referencias'], ['', 'Fotosíntesis. (2026, 3 de noviembre). En Wikipedia, la encic'], ['', 'Kucsko, G., Maurer, P. C., Yao, N. Y., Kubo, M., Noh, H. J.,'], ['', '']]
+recibo: 200 {'letrasTecleadas': 35, 'letrasPegadas': 0, 'letrasCitadas': 563, 'letrasBorradas': 335, 'porcentajeTecleado': 6, 'porcentajeCitado': 94}
+errores: []

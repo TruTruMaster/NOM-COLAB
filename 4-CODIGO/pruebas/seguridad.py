@@ -23,7 +23,7 @@ Imprime cada prueba y termina con error si alguna falla.
 Los roles de la base de Azure SQL se prueban aparte con azure/desplegar.sh roles.
 """
 import base64, glob, gzip, json, os, re, secrets, shutil, subprocess, time, urllib.request, urllib.parse
-import sys, tempfile
+import sys, tempfile, http.client
 AQUI = os.path.dirname(os.path.abspath(__file__))
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(AQUI, "..", "app", "target", "nom-colab.jar")
 D = tempfile.mkdtemp(prefix="nomcolab-pruebas-")
@@ -411,6 +411,16 @@ try:
         prueba("12.1 …otra red sí puede crear la suya", 201, r("POST", "/api/cuentas/registro", {"nombre": "vecina", "contrasena": CL}, de="198.51.100.8")[0])
         prueba("12.1 …y el propio equipo no tiene tope", 201, r("POST", "/api/cuentas/registro", {"nombre": "delequipo", "contrasena": CL})[0])
 
+        # 16.2 (0.13.1) Tope por DISPOSITIVO: la escuela sale con una sola IP y ya no se bloquea
+        eq = lambda i: "equipo-de-prueba-" + str(i).rjust(4, "0")
+        escuela = "192.0.2.50"
+        regs = [r("POST", "/api/cuentas/registro", {"nombre": f"salon{d}_{i}", "contrasena": CL, "equipo": eq(d)}, de=escuela)[0] for d in range(8) for i in range(5)]
+        prueba("16.2 Una escuela con una sola IP crea 40 cuentas en una hora (8 equipos × 5)", [201] * 40, regs)
+        prueba("16.2 …un mismo dispositivo no crea una sexta en la hora", 429, r("POST", "/api/cuentas/registro", {"nombre": "salon0_6", "contrasena": CL, "equipo": eq(0)}, de=escuela)[0])
+        prueba("16.2 …aunque cambie de red", 429, r("POST", "/api/cuentas/registro", {"nombre": "salon0_7", "contrasena": CL, "equipo": eq(0)}, de="198.51.100.99")[0])
+        prueba("16.2 La red que ya llegó a 30 sin dispositivo, con un dispositivo sí puede", 201, r("POST", "/api/cuentas/registro", {"nombre": "granja_eq", "contrasena": CL, "equipo": eq(90)}, de=granja)[0])
+        prueba("16.2 Un identificador inválido cuenta como sin dispositivo (tope por red)", 429, r("POST", "/api/cuentas/registro", {"nombre": "granja_x", "contrasena": CL, "equipo": "corto"}, de=granja)[0])
+
     # Borrar la cuenta
     r("POST", "/api/cuentas/registro", {"nombre": "borrable", "contrasena": CL})
     sb = r("POST", "/api/cuentas/sesion", {"nombre": "borrable", "contrasena": CL})[1]
@@ -482,7 +492,9 @@ try:
     pa = r("POST", "/api/cuentas/pase", {}, tk["alumno1"])
     ahora_ms = int(time.time() * 1000)
     prueba("13.2 Una cuenta pide un pase que dura 10 minutos", True, pa[0] == 200 and "." in (pa[1] or {}).get("pase", "") and 590_000 <= ((pa[1] or {}).get("caduca", 0) - ahora_ms) <= 601_000)
-    prueba("13.2 Un servidor que no confía en ninguna nube no acepta pases", 403, r("POST", "/api/cuentas/pase/entrar", {"pase": (pa[1] or {}).get("pase", "x.y")})[0])
+    # Desde 0.13.0 el servidor trae la lista de nubes del APK (la Raspberry): un pase firmado por otra nube
+    # (aquí, este mismo servidor, que no está en la lista) se rechaza por firma (401); sin lista sería 403.
+    prueba("13.2 Un pase de una nube que no está en la lista no se acepta", True, r("POST", "/api/cuentas/pase/entrar", {"pase": (pa[1] or {}).get("pase", "x.y")})[0] in (401, 403))
     if not EXTERNO and pa[0] == 200 and ll[0] == 200:
         # Otro NOM-COLAB (como el teléfono que comparte) que confía en la llave de este.
         D2 = tempfile.mkdtemp(prefix="nomcolab-pruebas-b-")
@@ -893,6 +905,8 @@ try:
     adj = r("POST", f"/api/espacios/{salon}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": "a.txt", "mime": "text/plain", "datos": base64.b64encode(b"contenido del anexo").decode()}}, tk["alumno1"])[1] or {}
     prueba("15.5 Un adjunto se guarda aparte y se descarga", base64.b64encode(b"contenido del anexo").decode(), (r("GET", f"/api/espacios/{salon}/chat/{adj.get('id')}/adjunto", t=tk["alumno2"])[1] or {}).get("datos"))
     prueba("15.5 …la lista no trae los datos del adjunto", False, "contenido" in json.dumps(r("GET", f"/api/espacios/{salon}/chat", t=tk["alumno2"])[1] or {}))
+    alm_chat = [x for x in ((r("GET", "/api/cuentas/almacenamiento", t=tk["maestra"])[1] or {}).get("espacios") or []) if x.get("id") == salon]
+    prueba("16.3 (DEF-42) El chat cuenta en el almacenamiento del propietario", True, bool(alm_chat) and (alm_chat[0].get("chat") or 0) >= len(b"contenido del anexo"))
     prueba("15.5 Un adjunto de más de 2 MB no se acepta", 413, r("POST", f"/api/espacios/{salon}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": "g.bin", "mime": "application/octet-stream", "datos": "A" * (3 * 1024 * 1024)}}, tk["alumno1"])[0])
 
     # 3.6 Entrega con fecha límite
@@ -908,6 +922,45 @@ try:
         prueba("3.6 El propietario sí puede", 200, r("POST", f"/api/documentos/{edoc}/ops", lote("m1", {"bloque": "_doc", "campos": {"nota": "revisado"}}), tk["maestra"])[0])
         if not EXTERNO or time.time() - t_boleto > 31:
             prueba("12.1 Un boleto sin usar vence a los 30 segundos", 401, canal(f"/api/espacios/{salon}/eventos?boleto={boleto_viejo}&cliente=prueba-b")[0])
+    if not EXTERNO:
+        # 16.1 y 16.3 en un servidor aparte con 1 MB por cuenta: 50 personas a la vez y el chat dentro de la cuota
+        D5 = tempfile.mkdtemp(prefix="nomcolab-pruebas-e-")
+        P5 = 8096; B5 = f"http://localhost:{P5}"
+        srv5 = subprocess.Popen([JAVA, "-jar", JAR], env=dict(os.environ, NOM_PUERTO=str(P5), NOM_DATOS=D5, NOM_DESCUBRIMIENTO="false", NOM_CUOTA_MB="1"), stdout=open(os.path.join(D5, "servidor.log"), "a"), stderr=subprocess.STDOUT)
+        r5 = lambda *a, **k: rq(B5, *a, **k)[:2]
+        try:
+            for _ in range(90):
+                try: urllib.request.urlopen(B5 + "/api/red/info", timeout=2); break
+                except Exception: time.sleep(1)
+            t5 = {}
+            for n in ["duena5"] + [f"p5_{i}" for i in range(51)]:
+                r5("POST", "/api/cuentas/registro", {"nombre": n, "contrasena": CL})
+                t5[n] = (r5("POST", "/api/cuentas/sesion", {"nombre": n, "contrasena": CL})[1] or {}).get("token")
+            e5 = (r5("POST", "/api/espacios", {"nombre": "Grupo completo"}, t5["duena5"])[1] or {}).get("id")
+            for i in range(51): r5("PUT", f"/api/espacios/{e5}/accesos", {"usuario": f"p5_{i}", "permiso": "EDICION"}, t5["duena5"])
+            d5 = (r5("POST", f"/api/espacios/{e5}/documentos", {"nombre": "Acta", "modo": "TEXTO", "ops": []}, t5["duena5"])[1] or {}).get("id")
+            conexiones = []
+            def abrir5(n):
+                b = (r5("POST", "/api/cuentas/boleto", {}, t5[n])[1] or {}).get("boleto", "")
+                c = http.client.HTTPConnection("localhost", P5, timeout=15)
+                c.request("GET", f"/api/documentos/{d5}/eventos?boleto={b}&cliente=c-{n}", headers={"Accept": "text/event-stream"})
+                x = c.getresponse(); conexiones.append(c)
+                return x.status
+            est5 = [abrir5(f"p5_{i}") for i in range(50)]
+            prueba("16.1 50 personas conectadas a la vez en el mismo documento", [200] * 50, est5)
+            prueba("16.1 …la persona 51 ve «espacio lleno»", 409, abrir5("p5_50"))
+            for c in conexiones:
+                try: c.close()
+                except Exception: pass
+            grande = base64.b64encode(os.urandom(1_400_000)).decode()   # 1.4 MB: cabe en el chat (2 MB), no en la cuota (1 MB)
+            adj5 = lambda: r5("POST", f"/api/espacios/{e5}/chat", {"texto": "", "adjunto": {"tipo": "archivo", "nombre": "a.bin", "mime": "application/octet-stream", "datos": grande}}, t5["p5_0"])[0]
+            prueba("16.3 (DEF-42) Con lugar en la cuenta del propietario, el archivo se sube", 200, adj5())
+            prueba("16.3 …ya lleno (el chat cuenta), el siguiente archivo no se sube", 413, adj5())
+            prueba("16.3 …un mensaje de texto sí se puede mandar", 200, r5("POST", f"/api/espacios/{e5}/chat", {"texto": "ya no cabe"}, t5["p5_0"])[0])
+            prueba("16.3 …y el almacenamiento de la dueña lo muestra", True, ((r5("GET", "/api/cuentas/almacenamiento", t=t5["duena5"])[1] or {}).get("uso") or 0) >= 1_400_000)
+        finally:
+            srv5.kill(); srv5.wait(30)
+            shutil.rmtree(D5, ignore_errors=True); shutil.rmtree(D5 + "-llaves", ignore_errors=True)
 finally:
     if srv: srv.kill(); srv.wait(30)
     shutil.rmtree(D, ignore_errors=True)

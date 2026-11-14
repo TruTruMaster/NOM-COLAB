@@ -1,0 +1,377 @@
+(esperando 64 s a que pase la fecha límite de entrega…)
+OK  Pedir datos sin token                                              esperado 401 obtenido 401
+OK  Token inventado                                                    esperado 401 obtenido 401
+OK  La ruta de administración ya no existe                             esperado 404 obtenido 404
+OK  Inyección SQL en el inicio de sesión (' OR 1=1 --)                 esperado 401 obtenido 401
+OK  Registro con HTML en el nombre                                     esperado 400 obtenido 400
+OK  Contraseña de menos de 8 caracteres                                esperado 400 obtenido 400
+OK  Cuenta ajena abre un espacio que no es suyo                        esperado 403 obtenido 403
+OK  Cuenta ajena abre un documento de ese espacio                      esperado 403 obtenido 403
+OK  Solo lectura abre el documento                                     esperado 200 obtenido 200
+OK  Solo lectura intenta editar                                        esperado 403 obtenido 403
+OK  Puede editar escribe en el documento                               esperado 200 obtenido 200
+OK  Puede editar intenta dar acceso a otra cuenta                      esperado 403 obtenido 403
+OK  El propietario cambia a solo lectura a la editora                  esperado 200 obtenido 200
+OK  …y en su siguiente cambio ya no puede escribir                     esperado 403 obtenido 403
+OK  El propietario le quita el acceso a la lectora                     esperado 200 obtenido 200
+OK  …y ya no puede abrir el espacio                                    esperado 403 obtenido 403
+OK  Nadie puede quitarle el espacio a su propietario                   esperado 400 obtenido 400
+OK  6 intentos fallidos bloquean la cuenta                             esperado 423 obtenido 423
+OK  …y ni con la contraseña correcta entra (15 min)                    esperado 423 obtenido 423
+OK  Cerrar sesión invalida el token                                    esperado 401 obtenido 401
+OK  1.2 El propietario protege un documento                            esperado 200 obtenido 200
+OK  1.2 Un editor no puede borrarlo                                    esperado 409 obtenido 409
+OK  1.2 Un editor no puede quitarle la protección                      esperado 403 obtenido 403
+OK  1.2 Quitarla sin escribir BORRAR                                   esperado 400 obtenido 400
+OK  1.2 El propietario la quita escribiendo BORRAR                     esperado 200 obtenido 200
+OK  1.2 …y ya se puede borrar                                          esperado 200 obtenido 200
+OK  3.5 Un editor no puede asignarse un párrafo                        esperado 1 obtenido 1
+OK  3.5 El propietario asigna el párrafo 1 a alumno1                   esperado 0 obtenido 0
+OK  3.5 Otro editor no puede borrar en ese párrafo                     esperado 1 obtenido 1
+OK  3.5 …ni escribir en él                                             esperado 1 obtenido 1
+OK  3.5 …pero sí en el párrafo de nadie                                esperado 0 obtenido 0
+OK  3.5 Su dueño sí escribe en su párrafo                              esperado 0 obtenido 0
+OK  3.5 El servidor guardó lo del dueño y no lo rechazado              esperado sí obtenido sí
+OK  3.5 Con partes asignadas, un editor no restaura versiones          esperado 403 obtenido 403
+OK  3.5 Otro editor no mueve la figura de alumno1                      esperado 1 obtenido 1
+OK  3.5 alumno1 sí mueve su figura                                     esperado 0 obtenido 0
+OK  3.5 Otro editor no agrega figuras en la diapositiva de alumno1     esperado 1 obtenido 1
+OK  3.5 …ni quita esa diapositiva                                      esperado 1 obtenido 1
+OK  5.4 Nadie más que el propietario mueve la plantilla del maestro    esperado 1 obtenido 1
+OK  5.4 …ni le quita el candado                                        esperado 1 obtenido 1
+OK  5.4 El propietario sí la cambia                                    esperado 0 obtenido 0
+OK  3.5 El servidor conserva la posición que puso el dueño             esperado 300 obtenido 300
+OK  2.3 Un editor no crea enlaces para unirse                          esperado 403 obtenido 403
+OK  2.1 El propietario crea un enlace (QR)                             esperado 201 obtenido 201
+OK  2.1 Lo que dice el enlace se ve sin sesión                         esperado 200 obtenido 200
+OK  2.1 Una cuenta entra con el enlace                                 esperado 200 obtenido 200
+OK  2.1 …y ya abre el espacio                                          esperado 200 obtenido 200
+OK  2.1 Entrar con el enlace pide sesión                               esperado 401 obtenido 401
+OK  2.2 Alguien entra con apodo, sin registrarse                       esperado 200 obtenido 200
+OK  2.2 El invitado ve el espacio del enlace                           esperado 200 obtenido 200
+OK  2.2 El invitado no puede crear espacios                            esperado 403 obtenido 403
+OK  2.2 El apodo escrito ya no se usa: el nombre es un alias al azar   esperado [200, False] obtenido [200, False]
+OK  2.3 El propietario revoca el enlace                                esperado 200 obtenido 200
+OK  2.3 …y ya no sirve                                                 esperado 403 obtenido 403
+OK  2.3 …ni para entrar con apodo                                      esperado 403 obtenido 403
+OK  2.3 Un código inventado                                            esperado 404 obtenido 404
+OK  3.2 alumno1 pide su recibo                                         esperado 200 obtenido 200
+OK  3.2 alumno2 no puede ver el recibo de alumno1                      esperado 403 obtenido 403
+OK  3.2 El propietario ve el recibo de alumno1                         esperado 200 obtenido 200
+OK  3.2 Un recibo auténtico se verifica (sin sesión)                   esperado True obtenido True
+OK  3.2 Un recibo modificado no pasa                                   esperado False obtenido False
+OK  5.5 Quien presenta obtiene un código                               esperado 200 obtenido 200
+OK  5.5 El proyector abre la presentación con el código (sin sesión)   esperado 200 obtenido 200
+OK  5.5 Un código de proyección inventado                              esperado 404 obtenido 404
+OK  8.3 Quien presenta marca con láser y pluma                         esperado 200 obtenido 200
+OK  8.3 …el proyector recibe el puntero                                esperado 0.5 obtenido 0.5
+OK  8.3 …los trazos se recortan (máx. 60 de 800 números)               esperado [60, 800] obtenido [60, 800]
+OK  8.3 …un color inválido se cambia por el de la pluma                esperado #F2385A obtenido #F2385A
+OK  8.3 Quien no está presentando no puede marcar                      esperado 404 obtenido 404
+OK  8.3 Sin sesión no se marca                                         esperado 401 obtenido 401
+OK  Recuperar con un código equivocado                                 esperado 401 obtenido 401
+OK  Recuperar con el código correcto                                   esperado 200 obtenido 200
+OK  …la contraseña vieja ya no entra                                   esperado 401 obtenido 401
+OK  …la nueva sí                                                       esperado 200 obtenido 200
+OK  …y las sesiones de antes se cerraron                               esperado 401 obtenido 401
+OK  …y el código usado ya no sirve                                     esperado 401 obtenido 401
+OK  8.5 Un lector no manda documentos a la papelera                    esperado 403 obtenido 403
+OK  8.5 Un editor manda el documento a la papelera                     esperado 200 obtenido 200
+OK  8.5 …ya no sale en la lista                                        esperado False obtenido False
+OK  8.5 …ni se puede abrir                                             esperado 404 obtenido 404
+OK  8.5 …ni editar                                                     esperado 404 obtenido 404
+OK  8.5 Un lector no ve la papelera                                    esperado 403 obtenido 403
+OK  8.5 Un editor ve el documento en la papelera                       esperado True obtenido True
+OK  8.5 Un lector no lo restaura                                       esperado 403 obtenido 403
+OK  8.5 Un editor lo restaura                                          esperado 200 obtenido 200
+OK  8.5 …y vuelve a la lista                                           esperado True obtenido True
+OK  8.5 Un editor no lo borra para siempre                             esperado 403 obtenido 403
+OK  8.5 Un lector no hace copias en el espacio                         esperado 403 obtenido 403
+OK  8.5 Un editor hace una copia                                       esperado 200 obtenido 200
+OK  8.5 …con el mismo contenido                                        esperado La clorofila absorbe la luz obtenido La clorofila absorbe la luz
+OK  8.5 …y su propio nombre                                            esperado Fotosíntesis (mi versión) obtenido Fotosíntesis (mi versión)
+OK  8.5 Lo que no está en la papelera no se borra para siempre         esperado 409 obtenido 409
+OK  8.5 No se copia a un espacio donde no puedes editar                esperado 403 obtenido 403
+OK  8.5 No se mueve a un espacio ajeno                                 esperado 403 obtenido 403
+OK  8.5 Quien edita en los dos espacios lo mueve                       esperado 200 obtenido 200
+OK  8.5 …ya no está en el salón                                        esperado False obtenido False
+OK  8.5 …y la maestra ya no lo abre (es de otro espacio)               esperado 403 obtenido 403
+OK  8.5 Un lector no cambia el nombre                                  esperado 403 obtenido 403
+OK  8.5 Un editor cambia el nombre desde la lista                      esperado Fotosíntesis y respiración obtenido Fotosíntesis y respiración
+OK  8.5 …y el nombre nuevo llega al contenido                          esperado Fotosíntesis y respiración obtenido Fotosíntesis y respiración
+OK  8.5 Un nombre vacío no se acepta                                   esperado 400 obtenido 400
+OK  8.5 Un lector no cambia la carpeta                                 esperado 403 obtenido 403
+OK  8.5 Un editor lo pone en una carpeta                               esperado Ciencias obtenido Ciencias
+OK  8.5 …la carpeta sale en el espacio                                 esperado ['Ciencias'] obtenido ['Ciencias']
+OK  8.5 Renombrar la carpeta cambia sus documentos                     esperado 1 obtenido 1
+OK  8.5 Un lector no renombra carpetas                                 esperado 403 obtenido 403
+OK  8.5 Un lector sí puede destacar (es su propia marca)               esperado 200 obtenido 200
+OK  8.5 …y lo ve destacado en su lista                                 esperado ['X1qtTFaodKB2'] obtenido ['X1qtTFaodKB2']
+OK  8.5 …pero los demás no ven de quién es la marca                    esperado None obtenido None
+OK  8.5 Buscar encuentra el texto de adentro                           esperado True obtenido True
+OK  8.5 …también sin acentos                                           esperado True obtenido True
+OK  8.5 Quien no es del espacio no busca en él                         esperado 403 obtenido 403
+OK  8.5 Un editor guarda el documento como plantilla del espacio       esperado True obtenido True
+OK  8.5 Un documento nuevo desde la plantilla ya no es plantilla       esperado [False, 'Desde plantilla'] obtenido [False, 'Desde plantilla']
+OK  8.5 La persona mencionada en un comentario tiene un aviso          esperado 1 obtenido 1
+OK  8.5 …dice quién la mencionó y dónde                                esperado ['alumno1', 'KGxYL7pstdNT'] obtenido ['alumno1', 'KGxYL7pstdNT']
+OK  8.5 …y al verlo queda leído                                        esperado 0 obtenido 0
+OK  8.5 A quien no mencionan no le llega nada                          esperado 0 obtenido 0
+OK  8.5 Un editor no crea el enlace para ver                           esperado 403 obtenido 403
+OK  8.5 El propietario crea el enlace para ver                         esperado True obtenido True
+OK  8.5 Con el enlace se ve el documento sin cuenta                    esperado 200 obtenido 200
+OK  8.5 …sin los comentarios                                           esperado False obtenido False
+OK  8.5 Los miembros no ven el enlace en la lista                      esperado None obtenido None
+OK  8.5 Un enlace inventado no sirve                                   esperado 404 obtenido 404
+OK  8.5 Al quitar el enlace deja de servir                             esperado 404 obtenido 404
+OK  8.5 Un documento en la papelera no se ve con su enlace             esperado 404 obtenido 404
+OK  8.5 Un editor no vacía la papelera                                 esperado 403 obtenido 403
+OK  8.5 El propietario vacía la papelera                               esperado 200 obtenido 200
+OK  8.5 …y ya no se puede restaurar                                    esperado 404 obtenido 404
+OK  9 Sin sesión no se leen direcciones                                esperado 401 obtenido 401
+OK  9 No lee el propio servidor (localhost)                            esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1                                                 esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 escrito como número (2130706433)                esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 en hexadecimal (0x7f000001)                     esperado 403 obtenido 403
+OK  9 No lee 127.0.0.1 abreviado (127.1): inválida o interna           esperado True obtenido True
+OK  9 No lee 127.0.0.1 con ceros a la izquierda (0177.0.0.1)           esperado 403 obtenido 403
+OK  9 No lee 0.0.0.0                                                   esperado 403 obtenido 403
+OK  9 No lee la red del salón (192.168.x)                              esperado 403 obtenido 403
+OK  9 No lee redes privadas (10.x)                                     esperado 403 obtenido 403
+OK  9 No lee 172.16.x                                                  esperado 403 obtenido 403
+OK  9 No lee los datos internos de la nube (169.254.169.254)           esperado 403 obtenido 403
+OK  9 No lee la red compartida del proveedor (100.64.x)                esperado 403 obtenido 403
+OK  9 No lee ::1 (IPv6 del propio equipo)                              esperado 403 obtenido 403
+OK  9 No lee ::ffff:127.0.0.1                                          esperado 403 obtenido 403
+OK  9 No lee fd00:: (IPv6 privada)                                     esperado 403 obtenido 403
+OK  9 No lee nombres .local                                            esperado 403 obtenido 403
+OK  9 Solo los puertos 80 y 443                                        esperado 400 obtenido 400
+OK  9 Ni con un puerto raro en un sitio público                        esperado 400 obtenido 400
+OK  9 Solo http y https (file:)                                        esperado 400 obtenido 400
+OK  9 Solo http y https (ftp:)                                         esperado 400 obtenido 400
+OK  9 Sin usuario ni contraseña en la dirección                        esperado 400 obtenido 400
+OK  9 Un DOI inválido                                                  esperado 400 obtenido 400
+OK  9 Un ISBN inválido                                                 esperado 400 obtenido 400
+OK  9 Un conjunto de datos que no existe                               esperado 400 obtenido 400
+OK  9 Quien no es del espacio no ve su biblioteca                      esperado 403 obtenido 403
+OK  9 Un lector no agrega a la biblioteca                              esperado 403 obtenido 403
+OK  9 Una fuente sin título ni dirección no se guarda                  esperado 400 obtenido 400
+OK  9 Un editor guarda una fuente con su texto                         esperado 200 obtenido 200
+OK  9 …los campos desconocidos no se guardan                           esperado None obtenido None
+OK  9 Un lector ve la biblioteca                                       esperado 1 obtenido 1
+OK  9 …y busca en sus textos (sin Internet)                            esperado 1 obtenido 1
+OK  9 …y lee el texto guardado                                         esperado True obtenido True
+OK  9 Guardar la misma fuente no la repite                             esperado 1 obtenido 1
+OK  9 Un lector no la quita                                            esperado 403 obtenido 403
+OK  9 Un editor la quita                                               esperado 200 obtenido 200
+OK  12.1 La página dice que no se adivinen tipos de archivo            esperado nosniff obtenido nosniff
+OK  12.1 …que no se meta dentro de otra página                         esperado SAMEORIGIN obtenido SAMEORIGIN
+OK  12.1 …y que no se diga de dónde viene                              esperado no-referrer obtenido no-referrer
+OK  12.1 …y solo corre programas de este servidor                      esperado True obtenido True
+OK  12.1 La API también lleva las cabeceras                            esperado ['nosniff', 'no-referrer'] obtenido ['nosniff', 'no-referrer']
+OK  12.1 Cambiar la contraseña pide sesión                             esperado 401 obtenido 401
+OK  12.1 …y la contraseña actual correcta                              esperado 400 obtenido 400
+OK  12.1 …y una nueva de 8 o más                                       esperado 400 obtenido 400
+OK  12.1 Un invitado no tiene contraseña que cambiar                   esperado 403 obtenido 403
+OK  12.1 Con la actual correcta, cambia                                esperado 200 obtenido 200
+OK  12.1 …y da una sesión nueva para ese equipo                        esperado 200 obtenido 200
+OK  12.1 …las demás sesiones se cierran                                esperado [401, 401] obtenido [401, 401]
+OK  12.1 …la contraseña vieja ya no entra                              esperado 401 obtenido 401
+OK  12.1 …la nueva sí                                                  esperado 200 obtenido 200
+OK  12.1 Pedir un boleto pide sesión                                   esperado 401 obtenido 401
+OK  12.1 Con sesión se obtiene un boleto                               esperado True obtenido True
+OK  12.1 El canal en vivo abre con el boleto                           esperado [200, 'text/event-stream'] obtenido [200, 'text/event-stream']
+OK  12.1 …y el mismo boleto no sirve dos veces                         esperado 401 obtenido 401
+OK  12.1 Un boleto inventado no abre nada                              esperado 401 obtenido 401
+OK  12.1 El boleto de otra persona no da su permiso (espacio ajeno)    esperado 403 obtenido 403
+OK  12.1 Sin boleto ni token el canal no abre                          esperado 401 obtenido 401
+OK  12.1 Ver el almacenamiento pide sesión                             esperado 401 obtenido 401
+OK  12.1 La cuenta ve cuánto ocupa y su límite                         esperado True obtenido True
+OK  12.1 …solo de los espacios que son suyos                           esperado ['6d4ynkR3BR4J'] obtenido ['6d4ynkR3BR4J']
+OK  12.1 …lo que escribe en espacios ajenos no le cuenta               esperado [0, []] obtenido [0, []]
+OK  12.1 El estado de los documentos se guarda comprimido (y cifrado)  esperado True obtenido True
+OK  12.1 …y las fotos de sus versiones también                         esperado True obtenido True
+OK  12.1 6 intentos fallidos desde una red la bloquean ahí             esperado 423 obtenido 423
+OK  12.1 …ni con la contraseña correcta entra desde esa red            esperado 423 obtenido 423
+OK  12.1 …pero su dueño entra desde otra red                           esperado 200 obtenido 200
+OK  12.1 …y desde el propio equipo                                     esperado 200 obtenido 200
+OK  12.1 Una red crea hasta 30 cuentas por hora                        esperado [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201] obtenido [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201]
+OK  12.1 …la 31 se rechaza                                             esperado 429 obtenido 429
+OK  12.1 …otra red sí puede crear la suya                              esperado 201 obtenido 201
+OK  12.1 …y el propio equipo no tiene tope                             esperado 201 obtenido 201
+OK  16.2 Una escuela con una sola IP crea 40 cuentas en una hora (8 equipos × 5) esperado [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201] obtenido [201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201]
+OK  16.2 …un mismo dispositivo no crea una sexta en la hora            esperado 429 obtenido 429
+OK  16.2 …aunque cambie de red                                         esperado 429 obtenido 429
+OK  16.2 La red que ya llegó a 30 sin dispositivo, con un dispositivo sí puede esperado 201 obtenido 201
+OK  16.2 Un identificador inválido cuenta como sin dispositivo (tope por red) esperado 429 obtenido 429
+OK  12.1 (antes) está en el salón de la maestra                        esperado True obtenido True
+OK  12.1 Borrar la cuenta pide sesión                                  esperado 401 obtenido 401
+OK  12.1 …y la contraseña                                              esperado 400 obtenido 400
+OK  12.1 …la correcta                                                  esperado 400 obtenido 400
+OK  12.1 Un invitado no borra cuentas                                  esperado 403 obtenido 403
+OK  12.1 (tras los intentos) la cuenta sigue ahí                       esperado 200 obtenido 200
+OK  12.1 Con su contraseña, la cuenta se borra                         esperado [200, 1, 1] obtenido [200, 1, 1]
+OK  12.1 …su sesión deja de servir                                     esperado 401 obtenido 401
+OK  12.1 …ya no puede entrar                                           esperado 401 obtenido 401
+OK  12.1 …su espacio ya no existe para quien estaba invitado           esperado 404 obtenido 404
+OK  12.1 …ni sus documentos                                            esperado 404 obtenido 404
+OK  12.1 …sale de los espacios de otros                                esperado [False, 6] obtenido [False, 6]
+OK  12.1 …pero lo que escribió ahí se queda                            esperado 200 obtenido 200
+OK  12.1 …y su nombre queda libre                                      esperado 201 obtenido 201
+OK  12.1 …la cuenta nueva no hereda nada                               esperado [] obtenido []
+OK  13.1 Se entra con un alias al azar, sin escribir nada              esperado 200 obtenido 200
+OK  13.1 …el nombre es un animal y un número                           esperado True obtenido True
+OK  13.1 …y la cuenta es un alias                                      esperado True obtenido True
+OK  13.1 …que ya ve el espacio del código                              esperado 200 obtenido 200
+OK  13.1 Con la misma llave vuelve a ser el mismo alias                esperado ['dRjguYFuvwtk', False] obtenido ['dRjguYFuvwtk', False]
+OK  13.1 Con otra llave nadie se hace pasar por él: alias nuevo        esperado True obtenido True
+OK  13.1 Una llave corta no sirve                                      esperado 400 obtenido 400
+OK  13.1 Se vuelve con el alias guardado aunque no se tenga el código  esperado dRjguYFuvwtk obtenido dRjguYFuvwtk
+OK  13.1 …pero no con otra llave                                       esperado 401 obtenido 401
+OK  13.1 Un alias no entra con contraseña                              esperado 401 obtenido 401
+OK  13.1 Un alias no crea espacios                                     esperado 403 obtenido 403
+OK  13.1 Un alias no tiene código de recuperación                      esperado 403 obtenido 403
+OK  13.1 …ni contraseña que cambiar                                    esperado 403 obtenido 403
+OK  13.1 Nadie se registra con el nombre de un alias (lleva espacio)   esperado 400 obtenido 400
+OK  13.1 Aquí no hay alias de dueño (son del teléfono que comparte)    esperado 403 obtenido 403
+OK  13.2 La llave pública de los pases se ve sin sesión                esperado True obtenido True
+OK  13.2 Pedir un pase pide sesión                                     esperado 401 obtenido 401
+OK  13.2 Un alias no se lleva pases a otro equipo                      esperado 403 obtenido 403
+OK  13.2 Una cuenta pide un pase que dura 10 minutos                   esperado True obtenido True
+OK  13.2 Un pase de una nube que no está en la lista no se acepta      esperado True obtenido True
+OK  13.2 El otro servidor dice que acepta pases                        esperado True obtenido True
+OK  13.2 Acepta el pase de la nube en la que confía                    esperado 200 obtenido 200
+OK  13.2 …y la cuenta queda con el mismo id que en la nube             esperado lkScRH9fcAzH obtenido lkScRH9fcAzH
+OK  13.2 El mismo pase no sirve dos veces                              esperado 401 obtenido 401
+OK  13.2 Un pase con el contenido cambiado no sirve                    esperado 401 obtenido 401
+OK  13.2 Un pase inventado no sirve                                    esperado 400 obtenido 400
+OK  13.2 (control) un pase bien firmado a mano sí entra                esperado 200 obtenido 200
+OK  13.2 Un pase vencido no sirve                                      esperado 401 obtenido 401
+OK  13.2 Un pase que dura más de 10 minutos no sirve                   esperado 401 obtenido 401
+OK  13.2 Un pase de una nube que no conoce no sirve                    esperado 401 obtenido 401
+OK  13.2 Un pase de otra versión no sirve                              esperado 401 obtenido 401
+OK  13.2 Un pase con el id de una cuenta de aquí no se la quita        esperado 409 obtenido 409
+OK  13.2 Un servidor no acepta sus propios pases (no confía en sí mismo) esperado 401 obtenido 401
+OK  13.2 La copia de la cuenta no tiene contraseña aquí                esperado 403 obtenido 403
+OK  13.2 …ni entra aquí con la contraseña de la nube                   esperado 401 obtenido 401
+OK  13.2 Más de 60 pases por hora desde una red se rechazan            esperado 429 obtenido 429
+OK  13.4 Se sabe si alguien más cambió el documento desde la base      esperado [200, True] obtenido [200, True]
+OK  13.4 …y quién                                                      esperado True obtenido True
+OK  13.4 Si nadie más lo cambió desde la base: se sube tal cual        esperado False obtenido False
+OK  13.4 Lo propio no cuenta como cambio de otros                      esperado False obtenido False
+OK  13.4 Quien no es del espacio no pregunta                           esperado 403 obtenido 403
+OK  13.4 Se crea la rama (documento nuevo ligado al original)          esperado [201, 'tDRL-BW25xW6'] obtenido [201, 'tDRL-BW25xW6']
+OK  13.4 El original no se toca                                        esperado [False, True] obtenido [False, True]
+OK  13.4 La rama tiene lo que la persona tenía (sin lo que otros hicieron mientras) esperado [True, False] obtenido [True, False]
+OK  13.4 …con su nombre de rama                                        esperado Informe final — rama de alumno1 (sin conexión, 13 nov 10:42) obtenido Informe final — rama de alumno1 (sin conexión, 13 nov 10:42)
+OK  13.4 El original dice cuántas ramas tiene                          esperado 1 obtenido 1
+OK  13.4 …y la lista de ramas                                          esperado [1, 'abierta'] obtenido [1, 'abierta']
+OK  13.4 En la lista del espacio el original lleva Ramas (1)           esperado 1 obtenido 1
+OK  13.4 Se avisa a quien la creó y al propietario                     esperado True obtenido True
+OK  13.4 Con «Solo ver» no se crean ramas                              esperado 403 obtenido 403
+OK  13.4 Con «Solo ver» no se fusiona                                  esperado 403 obtenido 403
+OK  13.4 Quien edita el original fusiona la rama                       esperado 200 obtenido 200
+OK  13.4 …el original queda con lo de los dos                          esperado [True, True] obtenido [True, True]
+OK  13.4 …sin cambiarle el nombre                                      esperado Informe final obtenido Informe final
+OK  13.4 …y con una versión «Antes de fusionar» para regresar          esperado True obtenido True
+OK  13.4 La rama queda como fusionada                                  esperado fusionada obtenido fusionada
+OK  13.4 Una rama fusionada no se fusiona dos veces                    esperado 409 obtenido 409
+OK  13.4 Un documento que no es rama no se fusiona                     esperado 400 obtenido 400
+OK  13.4 Sin nombre, el servidor le pone «— rama de …»                 esperado True obtenido True
+OK  13.4 Dejar la rama aparte quita el lazo con el original            esperado [200, None] obtenido [200, None]
+OK  13.4 Al fusionar se respetan las partes con dueño                  esperado True obtenido True
+OK  13.4 …la figura de alumno2 no se movió                             esperado 1 obtenido 1
+OK  13.5 (antes) el espacio del teléfono se copia a la nube            esperado [200, 'ok'] obtenido [200, 'ok']
+OK  13.5 Sin red, la copia queda pendiente                             esperado sin-red obtenido sin-red
+OK  13.5 Al volver: los dos cambiaron y estuvo sin conexión → rama del teléfono esperado [200, 'ok', 1] obtenido [200, 'ok', 1]
+OK  13.5 …en la nube aparece la rama, ligada al original               esperado True obtenido True
+OK  13.5 …el original de la nube no se toca                            esperado [True, False] obtenido [True, False]
+OK  13.5 …y la rama tiene lo del teléfono                              esperado [True, False] obtenido [True, False]
+OK  13.5 Lo que escribió cada quien en el teléfono llega a su nombre   esperado True obtenido True
+OK  13.5 Después, el original de la nube también llega al teléfono (aparte) esperado 2 obtenido 2
+OK  13.5 Con conexión todo el tiempo, se junta como siempre (sin rama) esperado [200, 0] obtenido [200, 0]
+OK  13.3 La página de un teléfono (red local) puede iniciar sesión aquí esperado [204, 'http://192.168.0.50:8080'] obtenido [204, 'http://192.168.0.50:8080']
+OK  13.3 …y pedir un pase                                              esperado [204, 'http://10.0.0.7:8080'] obtenido [204, 'http://10.0.0.7:8080']
+OK  13.3 …y cerrar esa sesión                                          esperado [204, 'http://172.20.1.2:8080'] obtenido [204, 'http://172.20.1.2:8080']
+OK  13.3 …pero nada más (sus espacios)                                 esperado [403, None] obtenido [403, None]
+OK  13.3 Una página de Internet no puede iniciar sesión desde su sitio esperado [403, None] obtenido [403, None]
+OK  13.3 Un nombre que empieza como red local no engaña                esperado [403, None] obtenido [403, None]
+OK  13.3 172.32.x no es red local                                      esperado [403, None] obtenido [403, None]
+OK  13.3 La app (desde sus archivos, origen null) sí puede             esperado [204, 'null'] obtenido [204, 'null']
+OK  13.3 Otro sitio no puede leer las respuestas                       esperado None obtenido None
+OK  12.1 Tras reiniciar, un estado sin comprimir (versión anterior) abre esperado 300 obtenido 300
+OK  12.1 …y uno comprimido también                                     esperado True obtenido True
+OK  12.1 …con sus versiones                                            esperado True obtenido True
+OK  12.1 …y al arrancar se cifró (comprimido adentro)                  esperado True obtenido True
+OK  14.1 En la carpeta de datos no aparece texto en claro              esperado [] obtenido []
+OK  14.1 Los archivos de datos van cifrados (NOMC) y la base de cuentas también (H2) esperado [True, True] obtenido [True, True]
+OK  14.1 La llave vive fuera de la carpeta de datos                    esperado [True, False] obtenido [True, False]
+OK  14.1 (antes) con NOM_CIFRAR=false los datos quedan en claro        esperado True obtenido True
+OK  14.1 Al arrancar con cifrado, lo que estaba en claro se cifra      esperado True obtenido True
+OK  14.1 …ya no aparece en claro en ningún archivo (ni en la base)     esperado [] obtenido []
+OK  14.1 …y todo sigue abriendo (cuenta, espacio y documento)          esperado True obtenido True
+OK  14.1 Sin la llave, el servidor no arranca (no empieza de cero)     esperado [False, True] obtenido [False, True]
+OK  14.1 …y dice por qué                                               esperado True obtenido True
+OK  14.1 Con una llave que no es, tampoco arranca                      esperado False obtenido False
+OK  14.1 Con su llave de vuelta, arranca con todo                      esperado True obtenido True
+OK  14.1 …con la cuenta y su documento                                 esperado 200 obtenido 200
+OK  14.2 Sin aceptar los términos no se crea la cuenta                 esperado 400 obtenido 400
+OK  14.2 …ni aceptando una versión vieja                               esperado 400 obtenido 400
+OK  14.2 La cuenta sabe qué versión aceptó y cuál está vigente         esperado ['2026-11-13', '2026-11-13'] obtenido ['2026-11-13', '2026-11-13']
+OK  14.2 Aceptar otra versión no vale                                  esperado 400 obtenido 400
+OK  14.2 Aceptar la vigente sí                                         esperado 200 obtenido 200
+OK  14.2 Descargar los datos de mi cuenta: sus espacios y su actividad esperado [200, True, True] obtenido [200, True, True]
+OK  14.2 …sin la huella de la contraseña ni del código                 esperado False obtenido False
+OK  14.2 Los datos de la cuenta piden sesión                           esperado 401 obtenido 401
+OK  15.1 Guardar el par de llaves de la cuenta (la privada va envuelta) esperado 200 obtenido 200
+OK  15.1 …una llave pública sin su privada no se guarda                esperado 400 obtenido 400
+OK  15.1 Las llaves de la cuenta piden sesión                          esperado 401 obtenido 401
+OK  15.1 Otra cuenta ve solo la llave pública                          esperado ['{"kty":"EC","crv":"P-256","x":"prueba","y":"prueba"}', False] obtenido ['{"kty":"EC","crv":"P-256","x":"prueba","y":"prueba"}', False]
+OK  15.2 Un espacio cifrado pide el nombre ya cifrado                  esperado 400 obtenido 400
+OK  15.2 …y la llave del espacio envuelta para quien lo crea           esperado 400 obtenido 400
+OK  15.2 Se crea el espacio cifrado (el servidor guarda el nombre cifrado) esperado [201, True, 'e2e:s2IKeOsziD-7McSU12x4RCiPNH5ezdUBn4vjiAQ6c8G3QEmrkKQ-3A'] obtenido [201, True, 'e2e:s2IKeOsziD-7McSU12x4RCiPNH5ezdUBn4vjiAQ6c8G3QEmrkKQ-3A']
+OK  15.3 El propietario ve a quién le falta la llave (con su llave pública) esperado [True, ['alumno1'], '{"kty":"EC","crv":"P-256","x":"prueba","y":"prueba"}'] obtenido [True, ['alumno1'], '{"kty":"EC","crv":"P-256","x":"prueba","y":"prueba"}']
+OK  15.3 Quien no es miembro no ve las llaves                          esperado 403 obtenido 403
+OK  15.3 No se le da la llave a quien no es miembro                    esperado 400 obtenido 400
+OK  15.3 El propietario le da la llave al miembro                      esperado 200 obtenido 200
+OK  15.3 …y el miembro la recibe                                       esperado e2e:XGjQo0NTa6HXlMZcT_jzi_V3QRjD2ckRZWAP8WVZdAs7Q7hS6KYEsw obtenido e2e:XGjQo0NTa6HXlMZcT_jzi_V3QRjD2ckRZWAP8WVZdAs7Q7hS6KYEsw
+OK  15.3 La llave de alguien que ya la tiene solo la cambia esa persona esperado e2e:XGjQo0NTa6HXlMZcT_jzi_V3QRjD2ckRZWAP8WVZdAs7Q7hS6KYEsw obtenido e2e:XGjQo0NTa6HXlMZcT_jzi_V3QRjD2ckRZWAP8WVZdAs7Q7hS6KYEsw
+OK  15.3 En un espacio normal no hay llaves que dar                    esperado 400 obtenido 400
+OK  15.4 En un espacio cifrado el documento pide nombre cifrado        esperado 400 obtenido 400
+OK  15.4 …y su llave (envuelta con la del espacio)                     esperado 400 obtenido 400
+OK  15.4 Con los dos, se crea                                          esperado 201 obtenido 201
+OK  15.4 Las letras cifradas se guardan con su marca (cx)              esperado [1, 1] obtenido [1, 1]
+OK  15.4 La búsqueda no ve el contenido cifrado                        esperado 200 obtenido 200
+OK  15.4 Un documento cifrado no se copia a otro espacio               esperado 400 obtenido 400
+OK  15.4 …ni se mueve                                                  esperado 400 obtenido 400
+OK  15.4 …ni uno normal entra a un espacio cifrado                     esperado 400 obtenido 400
+OK  15.4 La copia dentro del espacio pide nombre cifrado               esperado 400 obtenido 400
+OK  15.4 …con él, se copia                                             esperado 200 obtenido 200
+OK  15.4 Renombrar en claro no vale                                    esperado 400 obtenido 400
+OK  15.5 En un espacio cifrado el chat pide el mensaje cifrado         esperado 400 obtenido 400
+OK  15.5 …cifrado, sí                                                  esperado 200 obtenido 200
+OK  15.5 Quien no es miembro no lee el chat                            esperado 403 obtenido 403
+OK  15.5 …ni escribe                                                   esperado 403 obtenido 403
+OK  15.5 Un archivo en claro no entra al chat cifrado                  esperado 400 obtenido 400
+OK  15.5 …cifrado y de casi 2 MB, sí (crece al cifrarse)               esperado 200 obtenido 200
+OK  15.5 En un espacio normal los miembros leen el chat                esperado True obtenido True
+OK  15.5 Otro miembro no borra un mensaje ajeno                        esperado 403 obtenido 403
+OK  15.5 El propietario del espacio sí                                 esperado 200 obtenido 200
+OK  15.5 Un adjunto se guarda aparte y se descarga                     esperado Y29udGVuaWRvIGRlbCBhbmV4bw== obtenido Y29udGVuaWRvIGRlbCBhbmV4bw==
+OK  15.5 …la lista no trae los datos del adjunto                       esperado False obtenido False
+OK  16.3 (DEF-42) El chat cuenta en el almacenamiento del propietario  esperado True obtenido True
+OK  15.5 Un adjunto de más de 2 MB no se acepta                        esperado 413 obtenido 413
+OK  3.6 Un editor no fija la fecha de entrega                          esperado 403 obtenido 403
+OK  3.6 El propietario fija la fecha límite                            esperado 200 obtenido 200
+OK  3.6 Antes de la fecha, el alumno escribe                           esperado 0 obtenido 0
+OK  3.6 Al pasar la fecha, el alumno ya no puede escribir              esperado 403 obtenido 403
+OK  3.6 …y lo abre en solo lectura                                     esperado LECTURA obtenido LECTURA
+OK  3.6 El propietario sí puede                                        esperado 200 obtenido 200
+OK  12.1 Un boleto sin usar vence a los 30 segundos                    esperado 401 obtenido 401
+OK  16.1 50 personas conectadas a la vez en el mismo documento         esperado [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200] obtenido [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]
+OK  16.1 …la persona 51 ve «espacio lleno»                             esperado 409 obtenido 409
+OK  16.3 (DEF-42) Con lugar en la cuenta del propietario, el archivo se sube esperado 200 obtenido 200
+OK  16.3 …ya lleno (el chat cuenta), el siguiente archivo no se sube   esperado 413 obtenido 413
+OK  16.3 …un mensaje de texto sí se puede mandar                       esperado 200 obtenido 200
+OK  16.3 …y el almacenamiento de la dueña lo muestra                   esperado True obtenido True
+375 de 375

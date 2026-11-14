@@ -43,8 +43,8 @@ try:
         if i == 5: caso("VL-10", "5.º intento fallido (aún no bloquea)", 401, c)
     caso("VL-11", "6.º intento fallido (bloquea 15 min)", 423, r("POST", "/api/cuentas/sesion", {"nombre": "bloqueo", "contrasena": "mala-6"}))
     caso("VL-12", "Contraseña correcta durante el bloqueo", 423, r("POST", "/api/cuentas/sesion", {"nombre": "bloqueo", "contrasena": CL}))
-    # 5 usuarios conectados a la vez en un espacio; el 6.º no entra
-    nombres = ["duena"] + [f"miembro{i}" for i in range(1, 6)]
+    # 50 personas conectadas a la vez en un espacio (RNF Espacios 1 desde 0.13.1; antes 5); la 51.ª no entra
+    nombres = ["duena"] + [f"miembro{i}" for i in range(1, 51)]
     for n in nombres: reg(n)
     tk = {n: r("POST", "/api/cuentas/sesion", {"nombre": n, "contrasena": CL})[1]["token"] for n in nombres}
     esp = r("POST", "/api/espacios", {"nombre": "Salon"}, tk["duena"])[1]["id"]
@@ -57,9 +57,9 @@ try:
         x = c.getresponse(); abiertos.append(c)
         cuerpo = None if x.status == 200 else x.read()
         return x.status, (json.loads(cuerpo) if cuerpo else None)
-    est = [abrir(n) for n in nombres[:5]]
-    caso("VL-13", "5 personas conectadas a la vez al espacio", "[200, 200, 200, 200, 200]", str([e[0] for e in est]))
-    caso("VL-14", "La 6.ª persona intenta conectarse", 409, abrir(nombres[5]))
+    est = [abrir(n) for n in nombres[:50]]
+    caso("VL-13", "50 personas conectadas a la vez al espacio", "50 × 200", f"{sum(e[0] == 200 for e in est)} × 200")
+    caso("VL-14", "La 51.ª persona intenta conectarse", 409, abrir(nombres[50]))
     for c in abiertos:
         try: c.close()
         except Exception: pass

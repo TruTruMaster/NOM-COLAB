@@ -1,0 +1,17 @@
+archivo: 42157
+tam : 4:3
+notas : Presentarse
+fondo3 : {'tipo': 'color', 'color': '#FFF1B8'}
+aviso : None
+   ['p1', 'texto', 'h1', '<div>Informe de ciencias</div>', 72, 224, 816, 154, 0]
+   ['p1', 'texto', 'p', '<div>Equipo 3 — Biología</div>', 144, 408, 672, 184, 0]
+   ['p2', 'texto', 'h2', '<div>Puntos clave</div>', 48, 29, 864, 120, 0]
+   ['p2', 'texto', 'p', '<ul><li><b><span style="color:#C2185B">La célula</span></b></li><li>El núcleo</li><li>La m', 48, 168, 864, 475, 0]
+   ['p2', 'forma', 'elipse', '<div>Ojo</div>', 624, 432, 192, 144, 0]
+   ['p2', 'forma', 'rect', '', 48, 528, 96, 96, 0]
+   ['p2', 'forma', 'rombo', '', 192, 528, 96, 96, 0]
+   ['p3', 'imagen', '', '', 48, 48, 384, 255, 19822]
+   ['p3', 'tabla', '', '', 480, 48, 384, 144, 0]
+   ['p3', 'grafica', 'lineas', '', 48, 336, 576, 336, 0]
+crear: 201
+errores: []

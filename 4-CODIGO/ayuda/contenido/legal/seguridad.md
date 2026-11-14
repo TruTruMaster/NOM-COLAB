@@ -9,7 +9,7 @@ version: 2026-11-13
 ## Cómo protegemos tus datos
 
 - Contraseñas guardadas solo como huella (PBKDF2-HMAC-SHA256 con sal); bloqueo por intentos fallidos
-  desde cada red y tope de cuentas nuevas por hora.
+  desde cada red y tope de cuentas nuevas por hora (por dispositivo y, para frenar programas, por red).
 - Sesión en una cabecera (sin cookies); el canal en vivo se abre con un boleto de un solo uso.
 - La página solo ejecuta programas del propio servidor (política de contenido) y no se deja meter
   dentro de otra página.

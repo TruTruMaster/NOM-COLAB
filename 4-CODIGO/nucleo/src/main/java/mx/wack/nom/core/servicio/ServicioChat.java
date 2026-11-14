@@ -32,6 +32,14 @@ public class ServicioChat {
     private final Difusor difusor;
     private final Cifrado cifrado;
 
+    /** DEF-42: con cuota (en la nube), los adjuntos cuentan en el espacio del propietario y se revisa el limite. */
+    private volatile ServicioDocumentos cuota;
+
+    public void usarCuota(ServicioDocumentos documentos) {
+        this.cuota = documentos;
+        if (documentos != null) documentos.contarChat(this::bytes);
+    }
+
     public ServicioChat(RepositorioEspacios repo, ServicioEspacios espacios, Difusor difusor, Cifrado cifrado) {
         this.repo = repo;
         this.espacios = espacios;
@@ -77,6 +85,8 @@ public class ServicioChat {
             if (e.e2e && !ServicioEspacios.cifrado(d)) throw ErrorNom.invalido("En un espacio cifrado los archivos se cifran en tu equipo (actualiza la app)", "adjunto");
             // Cifrado, el archivo crece un tercio más (base64 del base64 cifrado).
             if (d.length() > (e.e2e ? MAX_ADJUNTO / 3 * 4 + 256 : MAX_ADJUNTO)) throw new ErrorNom(ErrorNom.LLENO, "El archivo pasa de 2 MB: compártelo como documento del espacio", null, Map.of("tope", 2 * 1024 * 1024));
+            ServicioDocumentos q = cuota;
+            if (q != null) q.revisarCuotaDe(e);   // DEF-42: sin lugar en la cuenta del propietario no se suben archivos
             String tipo = "imagen".equals(a.get("tipo")) ? "imagen" : "archivo";
             Map<String, Object> info = new LinkedHashMap<>();
             info.put("tipo", tipo);
@@ -94,6 +104,8 @@ public class ServicioChat {
             if (viejo.get("adjunto") != null) repo.guardarAnexoEspacio(espacioId, "chat-" + viejo.get("id"), null);
         }
         repo.guardarChat(espacioId, l);
+        ServicioDocumentos q = cuota;
+        if (q != null) q.olvidarUso(e.propietarioId);
         difusor.avisarTodoEspacio(espacioId, "chat", m);
         return m;
     }

@@ -1,0 +1,117 @@
+[
+ {
+  "personas": 5,
+  "segundos": 15.0,
+  "envios": 246,
+  "envios_por_segundo": 16.4,
+  "letras_escritas": 356,
+  "letras_en_documento": 356,
+  "documento_completo": true,
+  "entregas_esperadas": 984,
+  "entregas_que_faltaron": 0,
+  "envio_ms": {
+   "p50": 3,
+   "p95": 4,
+   "max": 14
+  },
+  "llega_a_los_demas_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 13
+  },
+  "errores": 0,
+  "ejemplos_de_error": []
+ },
+ {
+  "personas": 10,
+  "segundos": 15.0,
+  "envios": 499,
+  "envios_por_segundo": 33.3,
+  "letras_escritas": 759,
+  "letras_en_documento": 759,
+  "documento_completo": true,
+  "entregas_esperadas": 4491,
+  "entregas_que_faltaron": 0,
+  "envio_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 7
+  },
+  "llega_a_los_demas_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 7
+  },
+  "errores": 0,
+  "ejemplos_de_error": []
+ },
+ {
+  "personas": 25,
+  "segundos": 15.0,
+  "envios": 1256,
+  "envios_por_segundo": 83.7,
+  "letras_escritas": 1905,
+  "letras_en_documento": 1905,
+  "documento_completo": true,
+  "entregas_esperadas": 30144,
+  "entregas_que_faltaron": 0,
+  "envio_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 8
+  },
+  "llega_a_los_demas_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 8
+  },
+  "errores": 0,
+  "ejemplos_de_error": []
+ },
+ {
+  "personas": 50,
+  "segundos": 15.0,
+  "envios": 2501,
+  "envios_por_segundo": 166.7,
+  "letras_escritas": 3775,
+  "letras_en_documento": 3775,
+  "documento_completo": true,
+  "entregas_esperadas": 122549,
+  "entregas_que_faltaron": 0,
+  "envio_ms": {
+   "p50": 2,
+   "p95": 4,
+   "max": 15
+  },
+  "llega_a_los_demas_ms": {
+   "p50": 2,
+   "p95": 3,
+   "max": 15
+  },
+  "errores": 0,
+  "ejemplos_de_error": []
+ },
+ {
+  "personas": 100,
+  "segundos": 15.0,
+  "envios": 4934,
+  "envios_por_segundo": 328.9,
+  "letras_escritas": 7444,
+  "letras_en_documento": 7444,
+  "documento_completo": true,
+  "entregas_esperadas": 488466,
+  "entregas_que_faltaron": 0,
+  "envio_ms": {
+   "p50": 4,
+   "p95": 10,
+   "max": 28
+  },
+  "llega_a_los_demas_ms": {
+   "p50": 3,
+   "p95": 8,
+   "max": 34
+  },
+  "errores": 0,
+  "ejemplos_de_error": []
+ }
+]

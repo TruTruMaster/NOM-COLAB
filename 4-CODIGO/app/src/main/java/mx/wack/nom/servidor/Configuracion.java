@@ -37,9 +37,12 @@ public class Configuracion {
                                            @Value("${nom.cuentas.minutos-bloqueo}") int minutosBloqueo,
                                            @Value("${nom.cuentas.horas-sesion}") int horasSesion,
                                            @Value("${nom.cuentas.registros-hora-red:30}") int registrosRed,
-                                           @Value("${nom.cuentas.registros-hora:300}") int registrosTotal) {
+                                           @Value("${nom.cuentas.registros-hora:300}") int registrosTotal,
+                                           @Value("${nom.cuentas.registros-hora-equipo:5}") int registrosEquipo,
+                                           @Value("${nom.cuentas.registros-hora-red-equipo:200}") int registrosRedEquipo) {
         ServicioCuentas s = new ServicioCuentas(repo, cifrado, maxIntentos, minutosBloqueo, horasSesion);
         s.limitarRegistros(registrosRed, registrosTotal);
+        s.limitarRegistrosPorEquipo(registrosEquipo, registrosRedEquipo);
         return s;
     }
 
@@ -107,8 +110,11 @@ public class Configuracion {
 
     /** Fase 15: el chat de cada espacio. */
     @Bean
-    public mx.wack.nom.core.servicio.ServicioChat servicioChat(RepositorioEspacios repo, ServicioEspacios espacios, Difusor difusor, Cifrado cifrado) {
-        return new mx.wack.nom.core.servicio.ServicioChat(repo, espacios, difusor, cifrado);
+    public mx.wack.nom.core.servicio.ServicioChat servicioChat(RepositorioEspacios repo, ServicioEspacios espacios, Difusor difusor, Cifrado cifrado,
+                                                               ServicioDocumentos documentos) {
+        mx.wack.nom.core.servicio.ServicioChat c = new mx.wack.nom.core.servicio.ServicioChat(repo, espacios, difusor, cifrado);
+        c.usarCuota(documentos);   // DEF-42: el chat cuenta en el espacio del propietario
+        return c;
     }
 
     @Bean

@@ -332,7 +332,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 
 **Excepciones**
 - *3a.* El nodo dejó de responder → se informa y se regresa a la lista.
-- *4a.* Se alcanzó el máximo de 5 usuarios simultáneos → se rechaza la conexión indicando el motivo.
+- *4a.* Se alcanzó el máximo de 50 personas conectadas a la vez (RNF Espacios 1, antes 5) → se rechaza la conexión indicando el motivo.
 
 **Requerimientos** RF Espacios 1 · RNF Espacios 1
 
@@ -579,7 +579,7 @@ y los diagramas de actividades `actividades/A1` a `A7`.
 
 **Excepciones**
 - *3b.* El dispositivo está en otra red o la Wi-Fi está apagada → se ofrece el modo sin conexión (CU-26).
-- *5a.* Se alcanzó el límite de 5 usuarios simultáneos → se rechaza la conexión indicando el motivo.
+- *5a.* Se alcanzó el límite de 50 personas conectadas a la vez → se rechaza la conexión indicando el motivo.
 
 **Requerimientos** RF Espacios 1, 4 · Requerimientos de software (Android 7 / API 24 en adelante)
 

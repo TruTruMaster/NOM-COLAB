@@ -1,0 +1,37 @@
+tarjetas: 13 previas con figuras: 13
+flujo (figuras, flechas): [6, 6] elegidas: 6
+  clases [4, 3, 4]
+  er [8, 7, 8]
+  mental [4, 3, 4]
+  espina [7, 0, 7]
+  venn [10, 0, 10]
+  tiempo [5, 2, 5]
+  organigrama [4, 3, 4]
+  conceptual [2, 1, 2]
+  foda [6, 0, 6]
+  casos [7, 5, 7]
+  ciclo [4, 4, 4]
+  pasos [3, 2, 3]
+total (figuras, flechas): [70, 36]
+compartimentos de clase: 4 secciones: 8
+flechas pintadas: 36 puntas: 16 etiquetas: 9
+caja de la flecha: True
+barra de flecha: True
+flecha: ['codo', 'hueco', 'hereda de', '1', 'N']
+dibujo: [4, 3, 'var(--sup-2)']
+ruedita flecha: ['Texto', 'Color', 'Eliminar', 'Grosor', 'Estilo', 'Puntas', 'Forma', 'Invertir']
+cuadrícula: True True
+posición con cuadrícula: [168, 192, 0, 0]
+secciones de figuras: ['Figuras', 'UML', 'Entidad-relación', 'Redes'] 17 12
+clase creada: ['clase', 2, 4]
+editando como texto: [True, True, 'Alumno\n- nombre: tex']
+clase editada: ['Libro\n- titulo: texto\n- autor: texto\n+ prestar()\n+ devolver()', None, '+ prestar()+ devolver()']
+previa de texto: 7
+insertado del texto: 7
+aSvg expuesto: True
+pptx: 6124 xml malos: []
+formas en la diapositiva: 20
+libreoffice: 0
+en la diapositiva: [6, 6, 520]
+al presentar, flechas: 6
+errores: []

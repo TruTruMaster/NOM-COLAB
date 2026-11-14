@@ -1,0 +1,9 @@
+Creando 5 cuentas en http://localhost:8099…
+
+=== 5 personas escribiendo a la vez durante 10 s
+  envíos: 168 (16.8/s) · letras 247 → en el documento 247
+  servidor acepta: {'p50': 3, 'p95': 5, 'max': 15} ms · llega a los demás: {'p50': 3, 'p95': 4, 'max': 15} ms
+  entregas que faltaron: 0 · errores: 0 []
+  CORRECTO
+
+Resultado: todas las rondas correctas

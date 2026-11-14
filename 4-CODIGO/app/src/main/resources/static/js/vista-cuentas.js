@@ -298,7 +298,7 @@
           <div class="valores">
             <div class="valor clay"><span class="modo-insignia modo-TEXTO">${ico("layers")}</span><div><b>Cuatro tipos, una app</b><span>Texto, hojas, presentaciones y diagramas</span></div></div>
             <div class="valor clay"><span class="modo-insignia modo-HOJA">${ico("wifi")}</span><div><b>Funciona sin Internet</b><span>En el mismo Wi-Fi, o con un teléfono que comparte</span></div></div>
-            <div class="valor clay"><span class="modo-insignia modo-DIAGRAMA">${ico("users")}</span><div><b>Al mismo tiempo</b><span>Hasta 5 personas en el mismo espacio</span></div></div>
+            <div class="valor clay"><span class="modo-insignia modo-DIAGRAMA">${ico("users")}</span><div><b>Al mismo tiempo</b><span>Hasta 50 personas en el mismo espacio</span></div></div>
           </div>
           <div class="flotantes" aria-hidden="true" data-flotantes>
             <div class="flot flot-texto modo-TEXTO" style="--p:1.5"><div class="flot-flota"><div class="flot-cuerpo">
@@ -589,7 +589,7 @@
         if (contrasena.length < 8) return mostrarError(f, { campo: "contrasena", message: "La contraseña necesita al menos 8 letras, números o signos" });
         if (!f.acepto.checked) return mostrarError(f, { message: "Para crear la cuenta, lee y acepta los Términos y el Aviso de privacidad" });
         enviando(f, async () => {
-          const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa, acepto: NOM.LEGAL }, { ms: ESPERA_BD });
+          const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa, acepto: NOM.LEGAL, equipo: api.equipo() }, { ms: ESPERA_BD });
           // El código de recuperación solo se ve ahora: primero se guarda, después se entra.
           if (reg && reg.recuperacion) { codigoNuevo = reg.recuperacion; await mostrarCodigo(reg.recuperacion, nombre); }
           tarjeta.innerHTML = "";

@@ -183,7 +183,7 @@ td.id { white-space: nowrap; }
 <!-- ============================== 3. DESCRIPCIÓN ============================== -->
 <section class="capitulo">
   <h2 id="s3">3. Breve descripción del proyecto</h2>
-  <p><b>NOM-COLAB</b> es una suite de documentos colaborativos con cuatro tipos de documento: texto, hoja de cálculo, presentación y diagrama. Hasta cinco personas pueden editar el mismo espacio de trabajo al mismo tiempo y los cambios se ven en tiempo real en la computadora, en el navegador del celular y en la app Android. Su rasgo principal es que <b>funciona donde no hay internet</b>: una computadora del salón, o incluso un teléfono, puede ser el servidor de la red local, y si la conexión se pierde, los cambios se guardan en el dispositivo y se envían solos al volver la red.</p>
+  <p><b>NOM-COLAB</b> es una suite de documentos colaborativos con cuatro tipos de documento: texto, hoja de cálculo, presentación y diagrama. Hasta cincuenta personas pueden editar el mismo espacio de trabajo (y el mismo documento) al mismo tiempo y los cambios se ven en tiempo real en la computadora, en el navegador del celular y en la app Android. Su rasgo principal es que <b>funciona donde no hay internet</b>: una computadora del salón, o incluso un teléfono, puede ser el servidor de la red local, y si la conexión se pierde, los cambios se guardan en el dispositivo y se envían solos al volver la red.</p>
   <p>Cada espacio de trabajo tiene tres roles: <b>Propietario</b>, <b>Puede editar</b> y <b>Solo lectura</b>. El sistema guarda versiones, lleva una bitácora de cambios, importa y exporta archivos de Word, Excel y PowerPoint, y protege las cuentas con contraseñas cifradas y bloqueo por intentos fallidos. Está publicado en la nube (Azure App Service con Azure SQL), en un servidor propio (Raspberry Pi) y como aplicación instalable para Android.</p>
   <div class="fig">
     <svg viewBox="0 0 640 200" width="100%" font-family="Carlito, Arial" font-size="12">
@@ -250,7 +250,7 @@ td.id { white-space: nowrap; }
     <thead><tr><th style="width:17%">Módulo</th><th style="width:22%">Pruebas que se aplican y cómo</th><th>Qué se pretende comprobar</th><th style="width:25%">Qué se espera alcanzar</th></tr></thead>
     <tbody>
     <tr><td><b>M1</b> Gestión de cuentas</td><td>Requerimientos y seguridad (caja negra contra la API y la página); valores límite; unitarias del cifrado.</td><td>Que el registro valide los datos, que solo entre quien sabe la contraseña, que las contraseñas se guarden cifradas, que el sexto intento fallido bloquee y que borrar o cambiar la cuenta no deje restos.</td><td>Cero accesos indebidos y todas las entradas inválidas rechazadas con un mensaje claro.</td></tr>
-    <tr><td><b>M2</b> Espacios y permisos</td><td>Requerimientos, integración y seguridad (tabla de decisión de roles); valores límite.</td><td>Que cada rol haga exactamente lo que le corresponde, que el servidor lo haga cumplir aunque alguien salte la interfaz, y que el espacio no admita más de cinco personas.</td><td>El 100 % de las combinaciones de rol y acción con el resultado esperado.</td></tr>
+    <tr><td><b>M2</b> Espacios y permisos</td><td>Requerimientos, integración y seguridad (tabla de decisión de roles); valores límite.</td><td>Que cada rol haga exactamente lo que le corresponde, que el servidor lo haga cumplir aunque alguien salte la interfaz, y que el espacio no admita más de cincuenta personas (antes cinco).</td><td>El 100 % de las combinaciones de rol y acción con el resultado esperado.</td></tr>
     <tr><td><b>M3</b> Documentos y colaboración</td><td>Unitarias de caja blanca del CRDT; requerimientos y sistema en el navegador real.</td><td>Que varias personas editando a la vez terminen con el mismo documento, sin perder letras, y que las versiones se puedan restaurar.</td><td>Copias idénticas en cualquier orden de llegada y latencia menor a 100 ms en la red local.</td></tr>
     <tr><td><b>M4</b> Almacenamiento, Android y sin conexión</td><td>Requerimientos, sistema (página, celular y app) y portabilidad; valores límite.</td><td>Que lo escrito sin red llegue al volver, que la app funcione igual que la página, que se respeten los límites de espacio y que el sistema corra en distintas plataformas.</td><td>Ningún cambio perdido al cortar y devolver la red; la misma funcionalidad en todas las plataformas.</td></tr>
     <tr><td><b>M5</b> Importar y exportar</td><td>Requerimientos y sistema con un corpus de 47 archivos reales de Office.</td><td>Que un archivo de Word, Excel o PowerPoint se abra, se vea y se descargue igual, también después de editarlo.</td><td>Fidelidad del 100 % al volver a guardar sin cambios.</td></tr>
@@ -273,7 +273,7 @@ td.id { white-space: nowrap; }
   <table>
     <thead><tr><th style="width:36%">Característica</th><th>Motivo</th></tr></thead>
     <tbody>
-    <tr><td>Carga con más de 5 personas por espacio</td><td>El límite de 5 es una regla de diseño; solo se prueba que la sexta persona sea rechazada.</td></tr>
+    <tr><td>Carga con más de 50 personas por espacio</td><td>El límite de 50 (antes 5, cambiado en 0.13.1) es una regla de diseño; se prueba que la persona 51 sea rechazada. La capacidad se midió aparte con 100 personas (prueba de carga).</td></tr>
     <tr><td>Pruebas de estrés en Azure</td><td>El plan gratuito y el crédito de estudiante son limitados; las pruebas pesadas se hacen en el servidor local, que tiene el mismo código.</td></tr>
     <tr><td>iPhone y navegadores antiguos</td><td>No hay app para iOS; Internet Explorer ya no tiene soporte.</td></tr>
     <tr><td>Columnas de Word vistas en pantalla</td><td>La función no está construida (se avisa al importar y se conservan al descargar).</td></tr>
@@ -410,8 +410,8 @@ td.id { white-space: nowrap; }
     <tr><td class="id">VL-10</td><td>Quinto intento fallido de inicio de sesión</td><td>Válida (límite)</td><td class="c">401</td><td class="c">401</td><td class="c ok">Aprobado</td></tr>
     <tr><td class="id">VL-11</td><td>Sexto intento fallido</td><td>Bloqueo (límite)</td><td class="c">423</td><td class="c">423</td><td class="c ok">Aprobado</td></tr>
     <tr><td class="id">VL-12</td><td>Contraseña correcta durante el bloqueo</td><td>Bloqueo</td><td class="c">423</td><td class="c">423</td><td class="c ok">Aprobado</td></tr>
-    <tr><td class="id">VL-13</td><td>Cinco personas conectadas a la vez</td><td>Válida (límite)</td><td class="c">200 ×5</td><td class="c">200 ×5</td><td class="c ok">Aprobado</td></tr>
-    <tr><td class="id">VL-14</td><td>Sexta persona intenta conectarse</td><td>Inválida (límite)</td><td class="c">409</td><td class="c">409</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-13</td><td>Cincuenta personas conectadas a la vez</td><td>Válida (límite)</td><td class="c">200 ×50</td><td class="c">200 ×50</td><td class="c ok">Aprobado</td></tr>
+    <tr><td class="id">VL-14</td><td>La persona 51 intenta conectarse</td><td>Inválida (límite)</td><td class="c">409</td><td class="c">409</td><td class="c ok">Aprobado</td></tr>
     <tr><td class="id">VL-15</td><td>Agregar 1 MB de texto a un documento</td><td>Válida</td><td class="c">200</td><td class="c">200</td><td class="c ok">Aprobado</td></tr>
     <tr><td class="id">VL-16</td><td>Agregar 26 MB de una vez (tope: 25 MB)</td><td>Inválida (límite)</td><td class="c">400</td><td class="c">200</td><td class="c no">Rechazado</td></tr>
     <tr><td class="id">VL-17</td><td>Después, agregar 10 bytes más</td><td>Inválida</td><td class="c">400</td><td class="c">400</td><td class="c ok">Aprobado</td></tr>
@@ -510,7 +510,7 @@ td.id { white-space: nowrap; }
     <tr><td>Solo el propietario administra los accesos y nadie le quita el espacio.</td><td class="x">X</td><td class="x"></td><td>Correcto (403 y 400).</td></tr>
     <tr><td>Una cuenta sin acceso no puede ver el espacio ni sus documentos.</td><td class="x">X</td><td class="x"></td><td>Correcto (403).</td></tr>
     <tr><td>Se puede entrar con un enlace o código QR que caduca y se puede revocar (CU-16).</td><td class="x">X</td><td class="x"></td><td>Correcto. Un enlace revocado o inventado ya no sirve, ni para entrar con apodo.</td></tr>
-    <tr><td>Máximo 5 personas conectadas a la vez en un espacio.</td><td class="x">X</td><td class="x"></td><td>La sexta recibe “El espacio está lleno” (VL-13, VL-14).</td></tr>
+    <tr><td>Máximo 50 personas conectadas a la vez en un espacio (antes 5).</td><td class="x">X</td><td class="x"></td><td>La persona 51 recibe “El espacio está lleno” (VL-13, VL-14).</td></tr>
     <tr><td>El espacio se puede compartir en la red local sin internet (CU-14, CU-15).</td><td class="x">X</td><td class="x"></td><td>La app encontró sola el servidor en el Wi-Fi (prueba del 16 de octubre); falta repetirlo en la red de la escuela.</td></tr>
     </tbody>
   </table>

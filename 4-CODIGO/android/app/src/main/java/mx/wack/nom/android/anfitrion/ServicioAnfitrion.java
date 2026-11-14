@@ -126,7 +126,7 @@ public class ServicioAnfitrion extends Service {
         Repositorios.Documentos docsRepo = new Repositorios.Documentos(almacen);
         Cifrado cifrado = new Cifrado();
         // Mismos valores que application.properties del servidor de la computadora.
-        Difusor difusor = new Difusor(5);
+        Difusor difusor = new Difusor(Difusor.MAX_PERSONAS);
         ServicioCuentas cuentas = new ServicioCuentas(usuarios, cifrado, 5, 15, 72);
         // Fase 13: en el teléfono que comparte no hay cuentas con contraseña. Las de antes se retiran
         // (conservan su nombre como autor); se entra con alias o con la cuenta de la nube (pase).

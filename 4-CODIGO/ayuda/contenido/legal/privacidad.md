@@ -34,6 +34,7 @@ en su equipo.
 | Alias al azar y la huella de la llave de tu equipo | Que vuelvas a ser el mismo alias en un teléfono que comparte | El teléfono que comparte |
 | Ramas (qué tenías al volver la conexión) | No perder lo que editaste sin Internet | Servidor |
 | La dirección IP de tu conexión | Limitar intentos de contraseña y cuentas nuevas | **Solo en memoria**, se olvida sola; no se escribe en disco ni en la bitácora |
+| Un identificador de tu dispositivo al crear una cuenta (en la app, el identificador de Android resumido; en el navegador, un número al azar guardado en él; nunca la dirección MAC) | Limitar las cuentas nuevas por dispositivo, para que una escuela que sale a Internet con una sola IP no quede bloqueada | **Solo en memoria** una hora; no se escribe en disco ni queda ligado a tu cuenta |
 | Copias de tus documentos y cambios por enviar | Abrirlos sin Internet | Tu equipo, cifrados con tu contraseña |
 
 **No pedimos** correo, nombre real, teléfono, fecha de nacimiento ni ubicación. **No tratamos datos

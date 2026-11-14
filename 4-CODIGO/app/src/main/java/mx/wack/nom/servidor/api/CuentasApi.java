@@ -31,7 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/api/cuentas")
 public class CuentasApi {
 
-    public record Registro(String nombre, String contrasena, String empresa, String acepto) { }
+    public record Registro(String nombre, String contrasena, String empresa, String acepto, String equipo) { }
     public record Aceptacion(String version) { }
     public record Llaves(String publica, String privadaContrasena, String privadaRecuperacion) { }
     public record Credenciales(String nombre, String contrasena) { }
@@ -54,7 +54,7 @@ public class CuentasApi {
     @PostMapping("/registro")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> registrar(@RequestBody Registro r, HttpServletRequest req) {
-        Usuario u = cuentas.registrar(r.nombre(), r.contrasena(), r.empresa(), Origen.de(req), r.acepto());
+        Usuario u = cuentas.registrar(r.nombre(), r.contrasena(), r.empresa(), Origen.de(req), r.acepto(), r.equipo());
         // El codigo para recuperar la contrasena se muestra solo esta vez.
         return Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u));
     }

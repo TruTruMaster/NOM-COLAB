@@ -1,0 +1,56 @@
+ 100.0%  ms-comentarios.docx                    211 KB ->   191 KB  .nom   186 KB  imp    25 ms  exp    41 ms  nom=igual 
+ 100.0%  ms-complex0.docx                       214 KB ->   194 KB  .nom   160 KB  imp   110 ms  exp   214 ms  nom=igual 
+ 100.0%  ms-complex01.docx                      827 KB ->   809 KB  .nom   790 KB  imp    74 ms  exp    88 ms  nom=igual 
+ 100.0%  ms-complex2005.docx                    617 KB ->   546 KB  .nom   515 KB  imp   332 ms  exp   325 ms  nom=igual 
+ 100.0%  ms-complex2010.docx                    230 KB ->   207 KB  .nom   175 KB  imp   107 ms  exp   204 ms  nom=igual 
+ 100.0%  ms-document.docx                       798 KB ->   793 KB  .nom   781 KB  imp    87 ms  exp   111 ms  nom=igual 
+ 100.0%  ms-ecuaciones.docx                     191 KB ->   155 KB  .nom    44 KB  imp    39 ms  exp   136 ms  nom=igual 
+ 100.0%  ms-hoja-informativa.docx               140 KB ->   111 KB  .nom   105 KB  imp    16 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-imagenes.docx                       202 KB ->   172 KB  .nom   168 KB  imp    14 ms  exp    16 ms  nom=igual 
+ 100.0%  ms-informe-gobernanza.docx             199 KB ->   145 KB  .nom   107 KB  imp   846 ms  exp   285 ms  nom=igual 
+ 100.0%  ms-marcadores.docx                     126 KB ->    98 KB  .nom    88 KB  imp   193 ms  exp    88 ms  nom=igual 
+ 100.0%  ms-notes.docx                          158 KB ->   141 KB  .nom   137 KB  imp    11 ms  exp    21 ms  nom=igual 
+ 100.0%  ms-smartart.docx                       161 KB ->   152 KB  .nom   138 KB  imp    19 ms  exp    31 ms  nom=igual 
+ 100.0%  ms-tabla.docx                          116 KB ->   107 KB  .nom   104 KB  imp    15 ms  exp    16 ms  nom=igual 
+ 100.0%  poi-campos.docx                         12 KB ->     9 KB  .nom     5 KB  imp     3 ms  exp     4 ms  nom=igual 
+ 100.0%  poi-encabezados.docx                    12 KB ->     9 KB  .nom     5 KB  imp     5 ms  exp     4 ms  nom=igual 
+ 100.0%  poi-listas.docx                         13 KB ->    11 KB  .nom     7 KB  imp    10 ms  exp     7 ms  nom=igual 
+ 100.0%  poi-notas-al-pie.docx                   12 KB ->     9 KB  .nom     5 KB  imp     5 ms  exp     6 ms  nom=igual 
+ 100.0%  raro-combinaciones.docx                 38 KB ->    36 KB  .nom    27 KB  imp    46 ms  exp    38 ms  nom=igual 
+ 100.0%  ms-album.pptx                          140 KB ->   124 KB  .nom   106 KB  imp    15 ms  exp    20 ms  nom=igual 
+ 100.0%  ms-animacion.pptx                       97 KB ->    91 KB  .nom    72 KB  imp    10 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-brownbag.pptx                       670 KB ->   621 KB  .nom   554 KB  imp   127 ms  exp    79 ms  nom=igual 
+ 100.0%  ms-grafica-area.pptx                    79 KB ->    60 KB  .nom    28 KB  imp    10 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-o12-tipico.pptx                     922 KB ->   907 KB  .nom   869 KB  imp    91 ms  exp    91 ms  nom=igual 
+ 100.0%  ms-of16.pptx                           114 KB ->   109 KB  .nom    90 KB  imp     7 ms  exp    15 ms  nom=igual 
+ 100.0%  ms-organigrama.pptx                     79 KB ->    61 KB  .nom    39 KB  imp     9 ms  exp    16 ms  nom=igual 
+ 100.0%  ms-presentation.pptx                  1001 KB ->  1001 KB  .nom   968 KB  imp    19 ms  exp    98 ms  nom=igual 
+ 100.0%  ms-rendimiento-tipico.pptx            1481 KB ->  1458 KB  .nom  1407 KB  imp   197 ms  exp   136 ms  nom=igual 
+ 100.0%  ms-tabla-grande.pptx                    74 KB ->    64 KB  .nom    43 KB  imp     8 ms  exp    14 ms  nom=igual 
+ 100.0%  ms-tipico.pptx                         637 KB ->   618 KB  .nom   570 KB  imp   132 ms  exp    94 ms  nom=igual 
+ 100.0%  poi-formas.pptx                         67 KB ->    59 KB  .nom    36 KB  imp    19 ms  exp    14 ms  nom=igual 
+ 100.0%  poi-tablas.pptx                        145 KB ->   137 KB  .nom   118 KB  imp     8 ms  exp    15 ms  nom=igual 
+ 100.0%  poi-temas.pptx                         314 KB ->   284 KB  .nom   138 KB  imp    62 ms  exp    73 ms  nom=igual 
+ 100.0%  ms-complex01.xlsx                      113 KB ->   102 KB  .nom    94 KB  imp     6 ms  exp    28 ms  nom=igual 
+ 100.0%  ms-datos-a1.xlsx                       223 KB ->   164 KB  .nom   169 KB  imp   572 ms  exp   851 ms  nom=igual 
+ 100.0%  ms-dinamica-b1.xlsx                    318 KB ->   217 KB  .nom   181 KB  imp   434 ms  exp  1078 ms  nom=igual 
+ 100.0%  ms-excel14.xlsx                         86 KB ->    84 KB  .nom    80 KB  imp     3 ms  exp    14 ms  nom=igual 
+ 100.0%  ms-filtros.xlsx                         68 KB ->    55 KB  .nom    18 KB  imp     7 ms  exp    37 ms  nom=igual 
+ 100.0%  ms-financial-sample.xlsx                81 KB ->    64 KB  .nom    59 KB  imp   176 ms  exp   245 ms  nom=igual 
+ 100.0%  ms-galeria.xlsx                         93 KB ->    75 KB  .nom    15 KB  imp     7 ms  exp    64 ms  nom=igual 
+ 100.0%  ms-hojas.xlsx                          122 KB ->    95 KB  .nom    95 KB  imp   277 ms  exp   439 ms  nom=igual 
+ 100.0%  ms-rendimiento.xlsx                    303 KB ->   223 KB  .nom   223 KB  imp   790 ms  exp  1003 ms  nom=igual 
+ 100.0%  poi-estilos.xlsx                         9 KB ->     6 KB  .nom     3 KB  imp     4 ms  exp     6 ms  nom=igual 
+ 100.0%  poi-formato-condicional.xlsx             9 KB ->     7 KB  .nom     3 KB  imp     3 ms  exp     5 ms  nom=igual 
+ 100.0%  poi-formulas.xlsx                       63 KB ->    52 KB  .nom    47 KB  imp    98 ms  exp   137 ms  nom=igual 
+ 100.0%  poi-graficas.xlsx                       11 KB ->     8 KB  .nom     5 KB  imp     3 ms  exp     6 ms  nom=igual 
+ 100.0%  poi-validacion.xlsx                     10 KB ->     7 KB  .nom     5 KB  imp     5 ms  exp     7 ms  nom=igual 
+
+docx: 100.0% de fidelidad en 19 archivos (0 con error); original 4288 KB, exportado 3904 KB, .nom 3556 KB
+   lo más flojo: 
+xlsx: 100.0% de fidelidad en 14 archivos (0 con error); original 1517 KB, exportado 1168 KB, .nom 1005 KB
+   lo más flojo: 
+pptx: 100.0% de fidelidad en 14 archivos (0 con error); original 5827 KB, exportado 5601 KB, .nom 5044 KB
+   lo más flojo: 
+
+TOTAL: 100.0% en 47 archivos. Errores de JavaScript en la página: []

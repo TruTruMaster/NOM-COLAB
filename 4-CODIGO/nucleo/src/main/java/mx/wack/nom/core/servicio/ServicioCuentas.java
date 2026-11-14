@@ -48,10 +48,24 @@ public class ServicioCuentas {
     private final Map<String, Fallos> fallos = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<String, java.util.ArrayDeque<Long>> registros = new java.util.HashMap<>();
     private int registrosHoraLugar = 30, registrosHoraTotal = 300;
+    /**
+     * Tope por DISPOSITIVO (13-nov-2026): la app manda un identificador de su equipo (en Android, el
+     * ANDROID_ID resumido; en el navegador, un numero al azar guardado ahi). Con el, la red de la
+     * escuela (todos con la misma IP) ya no se bloquea: el tope por red sube a uno que solo frena a un
+     * programa. Sin identificador (apps viejas, programas) queda el tope de antes por red.
+     * El identificador solo se guarda en memoria una hora; nunca se escribe al disco.
+     */
+    private int registrosHoraEquipo = 5, registrosHoraRedConEquipo = 200;
     private static final long HORA = 3_600_000L;
 
     /** Cuantas cuentas nuevas se aceptan por hora desde una misma red y en total (0 = sin limite). */
     public void limitarRegistros(int porLugar, int total) { registrosHoraLugar = porLugar; registrosHoraTotal = total; }
+
+    /** Cuantas cuentas nuevas por hora desde un mismo dispositivo y, si traen dispositivo, desde una misma red. */
+    public void limitarRegistrosPorEquipo(int porEquipo, int porRedConEquipo) { registrosHoraEquipo = porEquipo; registrosHoraRedConEquipo = porRedConEquipo; }
+
+    /** Un identificador de dispositivo valido: 16 a 64 letras, numeros, guion o guion bajo. */
+    public static boolean equipoValido(String q) { return q != null && q.matches("[A-Za-z0-9_-]{16,64}"); }
 
     private static String lugar(String origen) { return origen == null || origen.isBlank() ? "?" : origen; }
 
@@ -103,17 +117,19 @@ public class ServicioCuentas {
     }
 
     /** Tope de cuentas nuevas por hora (un programa no debe poder llenar el disco registrando cuentas). */
-    private void anotarRegistro(String origen, long ahora) {
+    private void anotarRegistro(String origen, String equipo, long ahora) {
         if (origen == null || origen.isBlank()) return;   // el propio equipo (pruebas, administracion)
-        for (String k : new String[] { origen, "*" }) {
-            int tope = "*".equals(k) ? registrosHoraTotal : registrosHoraLugar;
+        boolean conEquipo = equipoValido(equipo);
+        String kEquipo = conEquipo ? "equipo:" + equipo : null;
+        String[] claves = conEquipo ? new String[] { kEquipo, origen, "*" } : new String[] { origen, "*" };
+        for (String k : claves) {
+            int tope = "*".equals(k) ? registrosHoraTotal : k.equals(kEquipo) ? registrosHoraEquipo : conEquipo ? registrosHoraRedConEquipo : registrosHoraLugar;
             java.util.ArrayDeque<Long> l = registros.computeIfAbsent(k, x -> new java.util.ArrayDeque<>());
             while (!l.isEmpty() && ahora - l.peekFirst() > HORA) l.pollFirst();
             if (tope > 0 && l.size() >= tope)
-                throw new ErrorNom(ErrorNom.DEMASIADOS, "Se crearon demasiadas cuentas " + ("*".equals(k) ? "" : "desde esta red ") + "en la última hora. Intenta más tarde.");
+                throw new ErrorNom(ErrorNom.DEMASIADOS, "Se crearon demasiadas cuentas " + ("*".equals(k) ? "" : k.equals(kEquipo) ? "desde este dispositivo " : "desde esta red ") + "en la última hora. Intenta más tarde.");
         }
-        registros.get(origen).addLast(ahora);
-        registros.get("*").addLast(ahora);
+        for (String k : claves) registros.get(k).addLast(ahora);
         if (registros.size() > 5_000) registros.values().removeIf(java.util.ArrayDeque::isEmpty);
     }
 
@@ -142,9 +158,14 @@ public class ServicioCuentas {
 
     /** F.5 Crear la cuenta aceptando los Terminos y el Aviso de privacidad vigentes (se guarda que version y cuando). */
     public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen, String acepto) {
+        return registrar(nombre, contrasena, empresa, origen, acepto, null);
+    }
+
+    /** Igual, con el identificador del dispositivo que crea la cuenta (tope por dispositivo). */
+    public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen, String acepto, String equipo) {
         if (acepto == null || !acepto.equals(mx.wack.nom.core.Version.LEGAL))
             throw ErrorNom.invalido("Para crear la cuenta, lee y acepta los Términos y el Aviso de privacidad (si usas una app anterior, actualízala)", "acepto");
-        Usuario u = registrar(nombre, contrasena, empresa, origen);
+        Usuario u = registrarCon(nombre, contrasena, empresa, origen, equipo);
         u.aceptoVersion = acepto;
         u.aceptoFecha = System.currentTimeMillis();
         repo.guardar(u);
@@ -203,6 +224,10 @@ public class ServicioCuentas {
 
     /** origen: la direccion de red de quien lo pide (null = este mismo equipo). */
     public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen) {
+        return registrarCon(nombre, contrasena, empresa, origen, null);
+    }
+
+    private Usuario registrarCon(String nombre, String contrasena, String empresa, String origen, String equipo) {
         nombre = nombre == null ? "" : nombre.trim();
         if (nombre.isEmpty()) throw ErrorNom.invalido("Escribe un nombre de usuario", "nombre");
         if (contrasena == null || contrasena.isEmpty()) throw ErrorNom.invalido("Escribe una contraseña", "contrasena");
@@ -212,7 +237,7 @@ public class ServicioCuentas {
             throw ErrorNom.invalido("La contraseña necesita al menos 8 caracteres", "contrasena");
         if (repo.porNombre(nombre).isPresent())
             throw new ErrorNom(ErrorNom.CONFLICTO, "El nombre ya está en uso", "nombre");
-        anotarRegistro(origen, System.currentTimeMillis());
+        anotarRegistro(origen, equipo, System.currentTimeMillis());
 
         Usuario u = new Usuario();
         u.id = cifrado.id();

@@ -157,7 +157,7 @@ nadie, por eso el mismo núcleo corre en web, escritorio y Android.
 | 4 tipos de documento (texto, hoja, presentación, diagrama), fijo al crear | `Documento.modo` + `ModoEditor` · CU-18, CU-20 |
 | Micro-textos al pasar el cursor | `editor.herramientas` · CU-22 |
 | Sincronización concurrente sin conflictos | `MotorCRDT` · CU-21 · diagrama 5 |
-| Máx. 5 usuarios simultáneos | límite en `NodoLocal` · CU-16, CU-25 |
+| Máx. 50 personas simultáneas (antes 5) | límite en `Difusor` (`nom.espacio.max-usuarios`, `Difusor.MAX_PERSONAS`) · CU-16, CU-25 |
 | Latencia < 1500 ms | diagrama 5 (aplicar local → difundir) |
 | Versiones y control de acceso | `Version`, `Acceso`, `Permiso` · CU-17, CU-23, CU-24 |
 | Cliente Android | `ClienteAndroid` · CU-25, CU-26 |

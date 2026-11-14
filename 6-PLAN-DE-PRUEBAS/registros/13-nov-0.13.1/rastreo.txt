@@ -1,0 +1,563 @@
+
+== TEXTO: 29 botones en la barra
+  ok  TEXTO        Deshacer > Página 1 de 1 · 25 palabras                                                     
+  ok  TEXTO        Estilo de párrafo                                                                          
+  ok  TEXTO        Fuente                                                                                     
+  ok  TEXTO        Reducir tamaño                                                                             
+  ok  TEXTO        Aumentar tamaño                                                                            
+  ok  TEXTO        Negrita                                                                                    
+  ok  TEXTO        Cursiva                                                                                    
+  ok  TEXTO        Subrayado                                                                                  
+  ok  TEXTO        Tachado                                                                                    
+  ok  TEXTO        Color del texto > Automático                                                               
+  ok  TEXTO        Color del texto > #000000                                                                  
+  ok  TEXTO        Color del texto > #434343                                                                  
+  ok  TEXTO        Color del texto > #666666                                                                  
+  ok  TEXTO        Color del texto > #999999                                                                  
+  ok  TEXTO        Color del texto > #B7B7B7                                                                  
+  ok  TEXTO        Color del texto > #D9D9D9                                                                  
+  ok  TEXTO        Color del texto > #EFEFEF                                                                  
+  ok  TEXTO        Color del texto > #FFFFFF                                                                  
+  ok  TEXTO        Color del texto > #C00000                                                                  
+  ok  TEXTO        Color del texto > #FF0000                                                                  
+  ok  TEXTO        Color del texto > #FFC000                                                                  
+  ok  TEXTO        Color del texto > #FFFF00                                                                  
+  ok  TEXTO        Color del texto > #92D050                                                                  
+  ok  TEXTO        Color del texto > #00B050                                                                  
+  ok  TEXTO        Color del texto > #00B0F0                                                                  
+  ok  TEXTO        Color del texto > #0070C0                                                                  
+  ok  TEXTO        Color del texto > #002060                                                                  
+  ok  TEXTO        Color del texto > #7030A0                                                                  
+  ok  TEXTO        Color del texto > #E06666                                                                  
+  ok  TEXTO        Color del texto > #F6B26B                                                                  
+  ok  TEXTO        Color del texto > #FFD966                                                                  
+  ok  TEXTO        Color del texto > #93C47D                                                                  
+  ok  TEXTO        Color del texto > #6FA8DC                                                                  
+  ok  TEXTO        Color del texto > #8E7CC3                                                                  
+  ok  TEXTO        Color del texto > INPUT                                                                    
+  ok  TEXTO        Resaltar > Sin resaltado                                                                   
+  ok  TEXTO        Resaltar > #FFFF00                                                                         
+  ok  TEXTO        Resaltar > #00FF00                                                                         
+  ok  TEXTO        Resaltar > #00FFFF                                                                         
+  ok  TEXTO        Resaltar > #FF00FF                                                                         
+  ok  TEXTO        Resaltar > #FFC000                                                                         
+  ok  TEXTO        Resaltar > #C9DAF8                                                                         
+  ok  TEXTO        Resaltar > #F4CCCC                                                                         
+  ok  TEXTO        Resaltar > #D9EAD3                                                                         
+  ok  TEXTO        Resaltar > #E06666                                                                         
+  ok  TEXTO        Resaltar > #F6B26B                                                                         
+  ok  TEXTO        Resaltar > #FFD966                                                                         
+  ok  TEXTO        Resaltar > #93C47D                                                                         
+  ok  TEXTO        Resaltar > #6FA8DC                                                                         
+  ok  TEXTO        Resaltar > #8E7CC3                                                                         
+  ok  TEXTO        Resaltar > INPUT                                                                           
+  ok  TEXTO        Enlace                                                                                     ventana «Insertar enlace»
+  ok  TEXTO        Alinear > IzquierdaCtrl+Mayús+L                                                            
+  ok  TEXTO        Alinear > CentrarCtrl+Mayús+E                                                              
+  ok  TEXTO        Alinear > DerechaCtrl+Mayús+R                                                              
+  ok  TEXTO        Alinear > JustificarCtrl+Mayús+J                                                           
+  ok  TEXTO        Interlineado y espacio entre párrafos > Sencillo                                           
+  ok  TEXTO        Interlineado y espacio entre párrafos > 1.15 (Word)                                        
+  ok  TEXTO        Interlineado y espacio entre párrafos > 1.5                                                
+  ok  TEXTO        Interlineado y espacio entre párrafos > Doble                                              
+  ok  TEXTO        Interlineado y espacio entre párrafos > 2.5                                                
+  ok  TEXTO        Interlineado y espacio entre párrafos > Triple                                             
+  ok  TEXTO        Interlineado y espacio entre párrafos > Agregar espacio antes del párrafo                  
+  ok  TEXTO        Interlineado y espacio entre párrafos > Quitar espacio después del párrafo                 
+  ok  TEXTO        Viñetas                                                                                    
+  ok  TEXTO        Numeración                                                                                 
+  ok  TEXTO        Lista de tareas                                                                            
+  ok  TEXTO        Disminuir sangría                                                                          
+  ok  TEXTO        Aumentar sangría                                                                           
+  ok  TEXTO        Insertar > Imagen…                                                                         
+  ok  TEXTO        Insertar > Tabla…                                                                          
+  ok  TEXTO        Insertar > EnlaceCtrl+K                                                                    ventana «Editar enlace»
+  ok  TEXTO        Insertar > Salto de páginaCtrl+Enter                                                       
+  ok  TEXTO        Insertar > Línea horizontal                                                                
+  ok  TEXTO        Insertar > Índice (tabla de contenido)                                                     
+  ok  TEXTO        Insertar > Ecuación…                                                                       ventana «Ecuación»
+  ok  TEXTO        Insertar > Nota al pie…                                                                    ventana «Nota al pie»
+  ok  TEXTO        Insertar > Columnas (dos lado a lado)                                                      
+  ok  TEXTO        Insertar > Fecha de hoy                                                                    
+  ok  TEXTO        Insertar > Símbolo…                                                                        
+  ok  TEXTO        Insertar > Cita de una fuente…                                                             
+  ok  TEXTO        Insertar > Referencias en APA                                                              
+  ok  TEXTO        Insertar > Armar reporte con mis fichas…                                                   ventana «Armar reporte»
+  ok  TEXTO        Insertar > Contenido de un archivo de Word…                                                
+  ok  TEXTO        Copiar formato                                                                             
+  ok  TEXTO        Borrar formato                                                                             
+  ok  TEXTO        Buscar y reemplazar > Anterior                                                             
+  ok  TEXTO        Buscar y reemplazar > Siguiente                                                            
+  ok  TEXTO        Buscar y reemplazar > Reemplazar                                                           
+  ok  TEXTO        Modo sugerencia                                                                            
+  ok  TEXTO        Comentar                                                                                   ventana «Nuevo comentario»
+  ?   TEXTO        Investigar > Cerrar Investigar: no apareció al volver a abrir
+  ok  TEXTO        Investigar > Buscar                                                                        
+  ?   TEXTO        Investigar > Fichas: no apareció al volver a abrir
+  ok  TEXTO        Investigar > Fuentes                                                                       
+  ?   TEXTO        Investigar > Wikipedia: no apareció al volver a abrir
+  ok  TEXTO        Investigar > Libros                                                                        
+  ?   TEXTO        Investigar > Artículos: no apareció al volver a abrir
+  ok  TEXTO        Investigar > Biblioteca del espacio                                                        
+  ok  TEXTO        Más > TachadoCtrl+Mayús+X                                                                  
+  ok  TEXTO        Más > SuperíndiceCtrl+Mayús++                                                              
+  ok  TEXTO        Más > SubíndiceCtrl+=                                                                      
+  ok  TEXTO        Más > MAYÚSCULAS / minúsculasMayús+F3                                                      
+  ok  TEXTO        Más > Borrar formatoCtrl+\                                                                 
+  ok  TEXTO        Más > Párrafo (sangrías, espacio)…                                                         ventana «Párrafo»
+  ok  TEXTO        Más > Opciones de la lista…                                                                
+  ok  TEXTO        Más > Buscar y reemplazarCtrl+H                                                            
+  ok  TEXTO        Más > Contar palabras                                                                      ventana «Contar palabras»
+  ok  TEXTO        Más > Mostrar esquema                                                                      
+  ok  TEXTO        Más > Configurar página…                                                                   ventana «Configurar página»
+  ok  TEXTO        Más > Formato del documento…                                                               ventana «Formato del documento»
+  ok  TEXTO        Más > Apagar el modo sugerencia                                                            
+  ok  TEXTO        Más > Asignar párrafos a una persona…                                                      ventana «Asignar el párrafo a…»
+  ok  TEXTO        Más > Encabezado y pie de página…                                                          ventana «Encabezado y pie de página»
+  ok  TEXTO        Más > Ver sin páginas                                                                      
+  ok  TEXTO        Más > Atajos de teclado                                                                    ventana «Atajos de teclado»
+  ok  TEXTO        Exportar                                                                                   ventana «Exportar»
+  ok  TEXTO        Ayuda de este editor                                                                       
+
+== TEXTO: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Cortar', 'Copiar', 'Estilo', 'Más']
+  ok  TEXTO        ruedita > Negrita                                                                          
+  ok  TEXTO        ruedita > Cursiva                                                                          
+  ok  TEXTO        ruedita > Subrayado                                                                        
+  ok  TEXTO        ruedita > Color > Automático                                                               
+  ok  TEXTO        ruedita > Color > #666666                                                                  
+  ok  TEXTO        ruedita > Color > #FF0000                                                                  
+  ok  TEXTO        ruedita > Color > #FFC000                                                                  
+  ok  TEXTO        ruedita > Color > #00B050                                                                  
+  ok  TEXTO        ruedita > Color > #0070C0                                                                  
+  ok  TEXTO        ruedita > Color > #7030A0                                                                  
+  ok  TEXTO        ruedita > Color > Resaltar > #FFFF00                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #00FF00                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #00FFFF                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #FF00FF                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #FFC000                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #C9DAF8                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > #F4CCCC                                                       
+  ok  TEXTO        ruedita > Color > Resaltar > Sin resaltado                                                 
+  ok  TEXTO        ruedita > Cortar                                                                           
+  ok  TEXTO        ruedita > Copiar                                                                           
+  ok  TEXTO        ruedita > Estilo > Normal                                                                  
+  ok  TEXTO        ruedita > Estilo > Título 1                                                                
+  ok  TEXTO        ruedita > Estilo > Título 2                                                                
+  ok  TEXTO        ruedita > Estilo > Título 3                                                                
+  ok  TEXTO        ruedita > Estilo > Viñetas                                                                 
+  ok  TEXTO        ruedita > Estilo > Numeración                                                              
+  ok  TEXTO        ruedita > Estilo > Tareas                                                                  
+  ok  TEXTO        ruedita > Estilo > Cita                                                                    
+  ok  TEXTO        ruedita > Más > Enlace                                                                     ventana «Insertar enlace»
+  ok  TEXTO        ruedita > Más > Elegir todo                                                                
+  ok  TEXTO        ruedita > Más > Pegar                                                                      
+  ok  TEXTO        ruedita > Más > Copiar formato                                                             
+  ok  TEXTO        ruedita > Más > Borrar formato                                                             
+  ok  TEXTO        ruedita > Más > Tachado                                                                    
+  ok  TEXTO        ruedita > Más > Comentar                                                                   ventana «Nuevo comentario»
+  ok  TEXTO        ruedita > Más > Asignar párrafo a…                                                         ventana «Asignar el párrafo a…»
+
+== HOJA: 22 botones en la barra
+  ok  HOJA         Negrita                                                                                    
+  ok  HOJA         Cursiva                                                                                    
+  ok  HOJA         Subrayado                                                                                  
+  ok  HOJA         Formato de número > General · 1234.5                                                       
+  ok  HOJA         Formato de número > Número entero · 1235                                                   
+  ok  HOJA         Formato de número > Número con 2 decimales · 1,234.50                                      
+  ok  HOJA         Formato de número > Moneda · $1,234.50                                                     
+  ok  HOJA         Formato de número > Porcentaje · 50%                                                       
+  ok  HOJA         Formato de número > Porcentaje con decimales · 50.25%                                      
+  ok  HOJA         Formato de número > Fecha corta · 07/11/2026                                               
+  ok  HOJA         Formato de número > Fecha larga · 7 de noviembre de 2026                                   
+  ok  HOJA         Formato de número > Día y fecha · sábado 7 de noviembre                                    
+  ok  HOJA         Formato de número > Hora · 14:30                                                           
+  ok  HOJA         Formato de número > Texto · 001234                                                         
+  ok  HOJA         Formato de número > Más decimales                                                          
+  ok  HOJA         Formato de número > Menos decimales                                                        
+  ok  HOJA         Formato de número > Formato de celdas…Ctrl+1                                               ventana «Formato de celdas · A1:B3»
+  ok  HOJA         Porcentaje                                                                                 
+  ok  HOJA         Menos decimales                                                                            
+  ok  HOJA         Más decimales                                                                              
+  ok  HOJA         Alinear y ajustar texto > Automático (números a la derecha)                                
+  ok  HOJA         Alinear y ajustar texto > Izquierda                                                        
+  ok  HOJA         Alinear y ajustar texto > Centro                                                           
+  ok  HOJA         Alinear y ajustar texto > Derecha                                                          
+  ok  HOJA         Alinear y ajustar texto > Ajustar el texto (varias líneas)                                 
+  ok  HOJA         Bordes > Todos los bordes                                                                  
+  ok  HOJA         Bordes > Contorno                                                                          
+  ok  HOJA         Bordes > Borde de abajo                                                                    
+  ok  HOJA         Bordes > Borde de arriba                                                                   
+  ok  HOJA         Bordes > Sin bordes                                                                        
+  ok  HOJA         Combinar celdas                                                                            
+  ok  HOJA         Autosuma                                                                                   
+  ok  HOJA         Funciones > SUMA · Suma los números.                                                       
+  ok  HOJA         Funciones > PROMEDIO · El promedio (media) de los números.                                 
+  ok  HOJA         Funciones > MIN · El número más chico.                                                     
+  ok  HOJA         Funciones > MAX · El número más grande.                                                    
+  ok  HOJA         Funciones > CONTAR · Cuántas celdas tienen números.                                        
+  ok  HOJA         Funciones > SI · Elige un valor según una condición.                                       
+  ok  HOJA         Funciones > REDONDEAR · Redondea a los decimales que digas.                                
+  ok  HOJA         Funciones > BUSCARV · Busca en la primera columna y devuelve o                             
+  ok  HOJA         Funciones > CONTAR.SI · Cuántas celdas cumplen el criterio (">                             
+  ok  HOJA         Funciones > SUMAR.SI · Suma lo que cumple el criterio.                                     
+  ok  HOJA         Funciones > PROMEDIO.SI · Promedio de lo que cumple el criteri                             
+  ok  HOJA         Funciones > CONTAR.SI.CONJUNTO · Cuenta lo que cumple todos lo                             
+  ok  HOJA         Funciones > SUMAR.SI.CONJUNTO · Suma lo que cumple todos los c                             
+  ok  HOJA         Funciones > SI.CONJUNTO · El valor de la primera prueba que se                             
+  ok  HOJA         Funciones > SIERROR · Otro valor si hay error.                                             
+  ok  HOJA         Funciones > MEDIANA · El valor de en medio.                                                
+  ok  HOJA         Funciones > MODA · El valor que más se repite.                                             
+  ok  HOJA         Funciones > DESVEST · Desviación estándar (muestra).                                       
+  ok  HOJA         Funciones > JERARQUIA · El lugar de un número en la lista (1 =                             
+  ok  HOJA         Funciones > K.ESIMO.MAYOR · El k-ésimo más grande.                                         
+  ok  HOJA         Funciones > CONCATENAR · Une textos.                                                       
+  ok  HOJA         Funciones > IZQUIERDA · Los primeros caracteres.                                           
+  ok  HOJA         Funciones > DERECHA · Los últimos caracteres.                                              
+  ok  HOJA         Funciones > EXTRAE · Caracteres desde una posición.                                        
+  ok  HOJA         Funciones > MAYUSC · En MAYÚSCULAS.                                                        
+  ok  HOJA         Funciones > ESPACIOS · Quita los espacios de más.                                          
+  ok  HOJA         Funciones > SUSTITUIR · Cambia un texto por otro.                                          
+  ok  HOJA         Funciones > TEXTO · Un número con formato ("0.00", "dd/mm/aaaa                             
+  ok  HOJA         Funciones > HOY · La fecha de hoy.                                                         
+  ok  HOJA         Funciones > AHORA · La fecha y la hora de ahora.                                           
+  ok  HOJA         Funciones > FECHA · Arma una fecha.                                                        
+  ok  HOJA         Funciones > DIAS · Días entre dos fechas.                                                  
+  ok  HOJA         Funciones > AÑO · El año.                                                                  
+  ok  HOJA         Funciones > MES · El mes (1 a 12).                                                         
+  ok  HOJA         Funciones > DIA · El día del mes.                                                          
+  ok  HOJA         Funciones > SIFECHA · Años, meses o días entre dos fechas (sir                             
+  ok  HOJA         Funciones > BUSCARX · Busca y devuelve lo que está a la par.                               
+  ok  HOJA         Funciones > INDICE · El valor en esa fila y columna.                                       
+  ok  HOJA         Funciones > COINCIDIR · En qué posición está (0 = exacta).                                 
+  ok  HOJA         Funciones > BUSCARH · Busca en la primera fila y devuelve otra                             
+  ok  HOJA         Ordenar y filtrar > Ordenar A → Z                                                          
+  ok  HOJA         Ordenar y filtrar > Ordenar Z → A                                                          
+  ok  HOJA         Ordenar y filtrar > Filtrar…                                                               ventana «Filtrar la columna B»
+  ok  HOJA         Ordenar y filtrar > Insertar o eliminar: Columna a la izquierda                            
+  ok  HOJA         Ordenar y filtrar > Insertar o eliminar: Columna a la derecha                              
+  ok  HOJA         Ordenar y filtrar > Insertar o eliminar: Eliminar columna                                  
+  ok  HOJA         Ordenar y filtrar > Ancho: Ancho de columna…                                               ventana «Ancho de columna»
+  ok  HOJA         Ordenar y filtrar > Ancho: Ajustar al contenido                                            
+  ok  HOJA         Ordenar y filtrar > Ordenar para todos: A → Z (cambia las celdas)                          
+  ok  HOJA         Ordenar y filtrar > Ordenar para todos: Z → A (cambia las celdas)                          
+  ?   HOJA         Ordenar y filtrar > Fijar hasta A: no apareció al volver a abrir
+  ok  HOJA         Ordenar y filtrar > Gráfica de la columna                                                  
+  ok  HOJA         Ordenar y filtrar > Lista desplegable…                                                     ventana «Validación de datos»
+  ok  HOJA         Ordenar y filtrar > Formato condicional…                                                   ventana «Formato condicional»
+  ok  HOJA         Fijar filas y columnas > La fila 1                                                         
+  ok  HOJA         Fijar filas y columnas > Hasta la fila 0                                                   
+  ok  HOJA         Fijar filas y columnas > La columna A                                                      
+  ok  HOJA         Fijar filas y columnas > Hasta la columna B                                                
+  ok  HOJA         Fijar filas y columnas > No fijar nada                                                     
+  ok  HOJA         Gráfica > Barras                                                                           
+  ok  HOJA         Gráfica > Barras horizontales                                                              
+  ok  HOJA         Gráfica > Líneas                                                                           
+  ok  HOJA         Gráfica > Área                                                                             
+  ok  HOJA         Gráfica > Dispersión (x, y)                                                                
+  ok  HOJA         Gráfica > Pastel                                                                           
+  ok  HOJA         Buscar y reemplazar > Anterior                                                             
+  ok  HOJA         Buscar y reemplazar > Siguiente                                                            
+  ok  HOJA         Buscar y reemplazar > Reemplazar                                                           
+  ok  HOJA         Insertar o eliminar filas y columnas > 30 filas arriba                                     
+  ok  HOJA         Insertar o eliminar filas y columnas > 30 filas abajo                                      
+  ok  HOJA         Insertar o eliminar filas y columnas > Columna a la izquierda                              
+  ok  HOJA         Insertar o eliminar filas y columnas > Columna a la derecha                                
+  ok  HOJA         Insertar o eliminar filas y columnas > Eliminar 30 filas                                   
+  ok  HOJA         Insertar o eliminar filas y columnas > Eliminar columna                                    
+  ok  HOJA         Más > Formato de celdas…Ctrl+1                                                             ventana «Formato de celdas · B1:B30»
+  ok  HOJA         Más > Formato condicional…                                                                 ventana «Formato condicional»
+  ok  HOJA         Más > Lista desplegable o validación…                                                      ventana «Validación de datos»
+  ok  HOJA         Más > Borrar formato                                                                       
+  ok  HOJA         Más > Rellenar hacia abajoCtrl+D                                                           
+  ok  HOJA         Más > Rellenar hacia la derechaCtrl+R                                                      
+  ok  HOJA         Más > Pegar solo valores                                                                   
+  ok  HOJA         Más > Ancho de columna…                                                                    ventana «Ancho de columna»
+  ok  HOJA         Más > Alto de fila…                                                                        ventana «Alto de fila»
+  ok  HOJA         Más > Agregar 10 filas al final                                                            
+  ok  HOJA         Más > Agregar 2 columnas                                                                   
+  ok  HOJA         Más > Cambiar el nombre de la hoja                                                         ventana «Nombre de la hoja»
+  ok  HOJA         Exportar                                                                                   ventana «Exportar»
+  ok  HOJA         Ayuda de este editor                                                                       
+
+== HOJA: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Borrar', 'Copiar', 'Formato', 'Más']
+  ok  HOJA         ruedita > Negrita                                                                          
+  ok  HOJA         ruedita > Cursiva                                                                          
+  ok  HOJA         ruedita > Subrayado                                                                        
+  ok  HOJA         ruedita > Color > Automático                                                               
+  ok  HOJA         ruedita > Color > #C2372B                                                                  
+  ok  HOJA         ruedita > Color > #E8590C                                                                  
+  ok  HOJA         ruedita > Color > #2FA868                                                                  
+  ok  HOJA         ruedita > Color > #1D7A4C                                                                  
+  ok  HOJA         ruedita > Color > #3D72F2                                                                  
+  ok  HOJA         ruedita > Color > #8B5CF6                                                                  
+  ok  HOJA         ruedita > Color > Relleno > #FFF2CC                                                        
+  ok  HOJA         ruedita > Color > Relleno > #FCE5CD                                                        
+  ok  HOJA         ruedita > Color > Relleno > #F4CCCC                                                        
+  ok  HOJA         ruedita > Color > Relleno > #D9EAD3                                                        
+  ok  HOJA         ruedita > Color > Relleno > #CFE2F3                                                        
+  ok  HOJA         ruedita > Color > Relleno > #D9D2E9                                                        
+  ok  HOJA         ruedita > Color > Relleno > #EFEFEF                                                        
+  ok  HOJA         ruedita > Color > Relleno > Sin relleno                                                    
+  ok  HOJA         ruedita > Borrar                                                                           
+  ok  HOJA         ruedita > Copiar                                                                           
+  ok  HOJA         ruedita > Formato > Autosuma                                                               
+  ok  HOJA         ruedita > Formato > Funciones > SUMA                                                       
+  MAL HOJA         ruedita > Formato > Número: la ruedita no abrió
+  MAL HOJA         ruedita > Formato > Alinear: la ruedita no abrió
+  MAL HOJA         ruedita > Formato > Bordes: la ruedita no abrió
+  MAL HOJA         ruedita > Más: la ruedita no abrió
+
+== PRESENTACION: 15 botones en la barra
+  ok  PRESENTACION Deshacer                                                                                   
+  ok  PRESENTACION Cuadro de texto > Negrita|Ctrl+B                                                           
+  ok  PRESENTACION Cuadro de texto > Cursiva|Ctrl+I                                                           
+  ok  PRESENTACION Cuadro de texto > Subrayado|Ctrl+U                                                         
+  ok  PRESENTACION Cuadro de texto > Tachado                                                                  
+  ok  PRESENTACION Cuadro de texto > Color de esta parte                                                      
+  ok  PRESENTACION Cuadro de texto > Letra más chica                                                          
+  ok  PRESENTACION Cuadro de texto > Letra más grande                                                         
+  ok  PRESENTACION Cuadro de texto > Viñetas                                                                  
+  ok  PRESENTACION Cuadro de texto > Numeración                                                               
+  ok  PRESENTACION Cuadro de texto > Izquierda                                                                
+  ok  PRESENTACION Cuadro de texto > Centro                                                                   
+  ok  PRESENTACION Cuadro de texto > Derecha                                                                  
+  ok  PRESENTACION Cuadro de texto > Quitar formato                                                           
+  ok  PRESENTACION Figuras > Rectángulo                                                                       
+  ok  PRESENTACION Figuras > Elipse                                                                           
+  ok  PRESENTACION Figuras > Rombo                                                                            
+  ok  PRESENTACION Figuras > Triángulo                                                                        
+  ok  PRESENTACION Figuras > Triángulo rectángulo                                                             
+  ok  PRESENTACION Figuras > Pentágono                                                                        
+  ok  PRESENTACION Figuras > Hexágono                                                                         
+  ok  PRESENTACION Figuras > Octágono                                                                         
+  ok  PRESENTACION Figuras > Estrella                                                                         
+  ok  PRESENTACION Figuras > Corazón                                                                          
+  ok  PRESENTACION Figuras > Nube                                                                             
+  ok  PRESENTACION Figuras > Globo de diálogo                                                                 
+  ok  PRESENTACION Figuras > Flecha                                                                           
+  ok  PRESENTACION Figuras > Flecha doble                                                                     
+  ok  PRESENTACION Figuras > Chevrón                                                                          
+  ok  PRESENTACION Figuras > Cruz                                                                             
+  ok  PRESENTACION Figuras > Paralelogramo (entrada/salida)                                                   
+  ok  PRESENTACION Figuras > Trapecio                                                                         
+  ok  PRESENTACION Figuras > Cilindro (base de datos)                                                         
+  ok  PRESENTACION Figuras > Documento                                                                        
+  ok  PRESENTACION Figuras > Nota adhesiva                                                                    
+  ok  PRESENTACION Figuras > Línea                                                                            
+  ok  PRESENTACION Figuras > Línea con flecha                                                                 
+  ok  PRESENTACION Figuras > Clase                                                                            
+  ok  PRESENTACION Figuras > Actor                                                                            
+  ok  PRESENTACION Figuras > Caso de uso                                                                      
+  ok  PRESENTACION Figuras > Paquete                                                                          
+  ok  PRESENTACION Figuras > Componente                                                                       
+  ok  PRESENTACION Figuras > Nodo                                                                             
+  ok  PRESENTACION Figuras > Inicio                                                                           
+  ok  PRESENTACION Figuras > Fin                                                                              
+  ok  PRESENTACION Figuras > Bifurcación                                                                      
+  ok  PRESENTACION Figuras > Entidad                                                                          
+  ok  PRESENTACION Figuras > Entidad débil                                                                    
+  ok  PRESENTACION Figuras > Relación                                                                         
+  ok  PRESENTACION Figuras > Relación débil                                                                   
+  ok  PRESENTACION Figuras > Atributo                                                                         
+  ok  PRESENTACION Figuras > Atributo clave                                                                   
+  ok  PRESENTACION Figuras > Multivaluado                                                                     
+  ok  PRESENTACION Figuras > Derivado                                                                         
+  ok  PRESENTACION Figuras > Servidor                                                                         
+  ok  PRESENTACION Figuras > Computadora                                                                      
+  ok  PRESENTACION Figuras > Laptop                                                                           
+  ok  PRESENTACION Figuras > Celular                                                                          
+  ok  PRESENTACION Figuras > Router                                                                           
+  ok  PRESENTACION Figuras > Wifi                                                                             
+  ok  PRESENTACION Figuras > Base de datos                                                                    
+  ok  PRESENTACION Figuras > Impresora                                                                        
+  ok  PRESENTACION Figuras > Internet                                                                         
+  ok  PRESENTACION Figuras > Firewall                                                                         
+  ok  PRESENTACION Figuras > Disco                                                                            
+  ok  PRESENTACION Imagen                                                                                     
+  ok  PRESENTACION Insertar > Cuadro de texto                                                                 
+  ok  PRESENTACION Insertar > Imagen…                                                                         
+  ok  PRESENTACION Insertar > Tabla…                                                                          ventana «Nueva tabla»
+  ok  PRESENTACION Insertar > Gráfica…                                                                        ventana «Nueva gráfica»
+  ok  PRESENTACION Insertar > Íconos y elementos…                                                             ventana «Íconos y elementos»
+  ok  PRESENTACION Insertar > Figuras de UML y entidad-relación…                                              
+  ok  PRESENTACION Insertar > Diagrama listo (ciclo, línea del tiempo…)…                                      ventana «Diagramas listos»
+  ok  PRESENTACION Insertar > Ecuación…                                                                       ventana «Ecuación»
+  ok  PRESENTACION Diseño                                                                                     ventana «Diseño»
+  ok  PRESENTACION Animación > Desvanecer                                                                     
+  ok  PRESENTACION Animación > Desde abajo                                                                    
+  ok  PRESENTACION Animación > Desde arriba                                                                   
+  ok  PRESENTACION Animación > Desde la izquierda                                                             
+  ok  PRESENTACION Animación > Desde la derecha                                                               
+  ok  PRESENTACION Animación > Rebotar                                                                        
+  ok  PRESENTACION Animación > Girar                                                                          
+  ok  PRESENTACION Animación > Pulso                                                                          
+  ok  PRESENTACION Animación > Sacudir                                                                        
+  ok  PRESENTACION Animación > Dar una vuelta                                                                 
+  ok  PRESENTACION Animación > Crecer                                                                         
+  ok  PRESENTACION Animación > Parpadear                                                                      
+  ok  PRESENTACION Animación > Hacia abajo                                                                    
+  ok  PRESENTACION Animación > Quitar las animaciones de esto                                                 
+  ok  PRESENTACION Animación > Todas las animaciones de la diapositiva…                                       ventana «Animaciones de la diapositiva»
+  ?   PRESENTACION Capas > Mover de capa: no apareció al volver a abrir
+  ok  PRESENTACION Capas > ecuacion                                                                           
+  ?   PRESENTACION Capas > Ocultar: no apareció al volver a abrir
+  ok  PRESENTACION Capas > Bloquear                                                                           
+  ?   PRESENTACION Capas > grafica: no apareció al volver a abrir
+  ok  PRESENTACION Capas > Tabla                                                                              
+  ?   PRESENTACION Capas > Texto: no apareció al volver a abrir
+  ok  PRESENTACION Capas > icono                                                                              
+  ?   PRESENTACION Capas > Elipse: edad: no apareció al volver a abrir
+  ok  PRESENTACION Capas > Figura: teléfonos                                                                  
+  ok  PRESENTACION Comentar                                                                                   ventana «Nuevo comentario»
+  ok  PRESENTACION Nueva diapositiva > En blanco                                                              
+  ok  PRESENTACION Nueva diapositiva > Portada                                                                
+  ok  PRESENTACION Nueva diapositiva > Título y contenido                                                     
+  ok  PRESENTACION Nueva diapositiva > Dos columnas                                                           
+  ok  PRESENTACION Nueva diapositiva > Imagen y texto                                                         
+  ok  PRESENTACION Nueva diapositiva > Imagen grande                                                          
+  ok  PRESENTACION Nueva diapositiva > Separador de sección                                                   
+  ok  PRESENTACION Nueva diapositiva > Solo título                                                            
+  ok  PRESENTACION Nueva diapositiva > Cita                                                                   
+  ok  PRESENTACION Nueva diapositiva > Comparar (tabla)                                                       
+  ?   PRESENTACION Notas del orador > Cerrar notas: no apareció al volver a abrir
+  ok  PRESENTACION Transición > Sin transición                                                                
+  ok  PRESENTACION Transición > Desvanecer                                                                    
+  ok  PRESENTACION Transición > Deslizar                                                                      
+  ok  PRESENTACION Transición > Empujar hacia arriba                                                          
+  ok  PRESENTACION Transición > Usar la misma en todas                                                        
+  ok  PRESENTACION Guardar como imagen > Esta diapositiva                                                     
+  ok  PRESENTACION Guardar como imagen > Todas (en un .zip)                                                   
+  ok  PRESENTACION Exportar                                                                                   ventana «Exportar»
+  ok  PRESENTACION Ayuda de este editor                                                                       
+
+== PRESENTACION: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Eliminar', 'Duplicar', 'Orden', 'Más']
+  ok  PRESENTACION ruedita > Negrita                                                                          
+  ok  PRESENTACION ruedita > Cursiva                                                                          
+  ok  PRESENTACION ruedita > Subrayado                                                                        
+  ok  PRESENTACION ruedita > Color > #FFFFFF                                                                  
+  ok  PRESENTACION ruedita > Color > #F2385A                                                                  
+  ok  PRESENTACION ruedita > Color > #F08C2A                                                                  
+  ok  PRESENTACION ruedita > Color > #2FA868                                                                  
+  ok  PRESENTACION ruedita > Color > #3D72F2                                                                  
+  ok  PRESENTACION ruedita > Color > #8B5CF6                                                                  
+  ok  PRESENTACION ruedita > Color > Copiar color de otra figura                                              
+  ok  PRESENTACION ruedita > Eliminar                                                                         
+  ok  PRESENTACION ruedita > Duplicar                                                                         
+  ok  PRESENTACION ruedita > Orden > Traer al frente                                                          
+  ok  PRESENTACION ruedita > Orden > Traer adelante                                                           
+  ok  PRESENTACION ruedita > Orden > Enviar atrás                                                             
+  ok  PRESENTACION ruedita > Orden > Enviar al fondo                                                          
+  ok  PRESENTACION ruedita > Orden > Girar 90°                                                                
+  ok  PRESENTACION ruedita > Orden > Voltear horizontal                                                       
+  ok  PRESENTACION ruedita > Orden > Voltear vertical                                                         
+  ok  PRESENTACION ruedita > Orden > Alinear > Izquierda                                                      
+  ok  PRESENTACION ruedita > Orden > Alinear > Centro horizontal                                              
+  ok  PRESENTACION ruedita > Orden > Alinear > Derecha                                                        
+  ok  PRESENTACION ruedita > Orden > Alinear > Arriba                                                         
+  MAL PRESENTACION ruedita > Más: la ruedita no abrió
+
+== DIAGRAMA: 17 botones en la barra
+  ok  DIAGRAMA     Deshacer                                                                                   
+  ok  DIAGRAMA     Seleccionar y mover                                                                        
+  ok  DIAGRAMA     Rectángulo                                                                                 
+  ok  DIAGRAMA     Elipse                                                                                     
+  ok  DIAGRAMA     Rombo                                                                                      
+  ok  DIAGRAMA     Nota adhesiva                                                                              
+  ok  DIAGRAMA     Más figuras > Rectángulo                                                                   
+  ok  DIAGRAMA     Más figuras > Elipse                                                                       
+  ok  DIAGRAMA     Más figuras > Rombo                                                                        
+  ok  DIAGRAMA     Más figuras > Triángulo                                                                    
+  ok  DIAGRAMA     Más figuras > Triángulo rectángulo                                                         
+  ok  DIAGRAMA     Más figuras > Pentágono                                                                    
+  ok  DIAGRAMA     Más figuras > Hexágono                                                                     
+  ok  DIAGRAMA     Más figuras > Octágono                                                                     
+  ok  DIAGRAMA     Más figuras > Estrella                                                                     
+  ok  DIAGRAMA     Más figuras > Corazón                                                                      
+  ok  DIAGRAMA     Más figuras > Nube                                                                         
+  ok  DIAGRAMA     Más figuras > Globo de diálogo                                                             
+  ok  DIAGRAMA     Más figuras > Flecha                                                                       
+  ok  DIAGRAMA     Más figuras > Flecha doble                                                                 
+  ok  DIAGRAMA     Más figuras > Chevrón                                                                      
+  ok  DIAGRAMA     Más figuras > Cruz                                                                         
+  ok  DIAGRAMA     Más figuras > Paralelogramo (entrada/salida)                                               
+  ok  DIAGRAMA     Más figuras > Trapecio                                                                     
+  ok  DIAGRAMA     Más figuras > Cilindro (base de datos)                                                     
+  ok  DIAGRAMA     Más figuras > Documento                                                                    
+  ok  DIAGRAMA     Más figuras > Nota adhesiva                                                                
+  ok  DIAGRAMA     Más figuras > Línea                                                                        
+  ok  DIAGRAMA     Más figuras > Línea con flecha                                                             
+  ok  DIAGRAMA     Más figuras > Clase                                                                        
+  ok  DIAGRAMA     Más figuras > Actor                                                                        
+  ok  DIAGRAMA     Más figuras > Caso de uso                                                                  
+  ok  DIAGRAMA     Más figuras > Paquete                                                                      
+  ok  DIAGRAMA     Más figuras > Componente                                                                   
+  ok  DIAGRAMA     Más figuras > Nodo                                                                         
+  ok  DIAGRAMA     Más figuras > Inicio                                                                       
+  ok  DIAGRAMA     Más figuras > Fin                                                                          
+  ok  DIAGRAMA     Más figuras > Bifurcación                                                                  
+  ok  DIAGRAMA     Más figuras > Entidad                                                                      
+  ok  DIAGRAMA     Más figuras > Entidad débil                                                                
+  ok  DIAGRAMA     Más figuras > Relación                                                                     
+  ok  DIAGRAMA     Más figuras > Relación débil                                                               
+  ok  DIAGRAMA     Más figuras > Atributo                                                                     
+  ok  DIAGRAMA     Más figuras > Atributo clave                                                               
+  ok  DIAGRAMA     Más figuras > Multivaluado                                                                 
+  ok  DIAGRAMA     Más figuras > Derivado                                                                     
+  ok  DIAGRAMA     Más figuras > Servidor                                                                     
+  ok  DIAGRAMA     Más figuras > Computadora                                                                  
+  ok  DIAGRAMA     Más figuras > Laptop                                                                       
+  ok  DIAGRAMA     Más figuras > Celular                                                                      
+  ok  DIAGRAMA     Más figuras > Router                                                                       
+  ok  DIAGRAMA     Más figuras > Wifi                                                                         
+  ok  DIAGRAMA     Más figuras > Base de datos                                                                
+  ok  DIAGRAMA     Más figuras > Impresora                                                                    
+  ok  DIAGRAMA     Más figuras > Internet                                                                     
+  ok  DIAGRAMA     Más figuras > Firewall                                                                     
+  ok  DIAGRAMA     Más figuras > Disco                                                                        
+  ok  DIAGRAMA     Texto libre                                                                                
+  ok  DIAGRAMA     Conector                                                                                   
+  ok  DIAGRAMA     Imagen                                                                                     
+  ok  DIAGRAMA     Íconos                                                                                     ventana «Íconos y elementos»
+  ok  DIAGRAMA     Diagramas listos                                                                           ventana «Diagramas listos»
+  ?   DIAGRAMA     Capas > Mover de capa: no apareció al volver a abrir
+  ok  DIAGRAMA     Capas > icono                                                                              
+  ?   DIAGRAMA     Capas > Ocultar: no apareció al volver a abrir
+  ok  DIAGRAMA     Capas > Bloquear                                                                           
+  ?   DIAGRAMA     Capas > Elipse: edad: no apareció al volver a abrir
+  ok  DIAGRAMA     Capas > Figura: teléfonos                                                                  
+  ?   DIAGRAMA     Capas > Elipse: matrícula: no apareció al volver a abrir
+  ok  DIAGRAMA     Capas > Elipse: nombre                                                                     
+  ?   DIAGRAMA     Capas > Figura: obtiene: no apareció al volver a abrir
+  ok  DIAGRAMA     Capas > Rombo: tiene                                                                       
+  ok  DIAGRAMA     Ajustar a la cuadrícula                                                                    
+  ok  DIAGRAMA     Comentar                                                                                   ventana «Nuevo comentario»
+  ok  DIAGRAMA     Exportar                                                                                   ventana «Exportar»
+  ok  DIAGRAMA     Ayuda de este editor                                                                       
+
+== DIAGRAMA: ruedita con 8 acciones: ['Negrita', 'Cursiva', 'Subrayado', 'Color', 'Eliminar', 'Duplicar', 'Orden', 'Más']
+  ok  DIAGRAMA     ruedita > Eliminar                                                                         
+  MAL DIAGRAMA     ruedita > Orden: la ruedita no abrió
+  MAL DIAGRAMA     ruedita > Más: la ruedita no abrió
+
+Rastreo (escritorio): 501 acciones bien, 20 mal, 16 sin volver a aparecer, 4 apagadas por la selección
+Descargas: [('Rastreo presentacion - diapositiva 11.png', 56888), ('Rastreo presentacion (imágenes).zip', 387217)]
+  MAL ('HOJA', 'ruedita > Formato > Funciones > PROMEDIO', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > BUSCARV', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > CONTAR.SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > SUMAR.SI', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > HOY', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Funciones > MAX', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Número', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Alinear', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Bordes', 'MAL', 'la ruedita no abrió')
+  MAL ('HOJA', 'ruedita > Formato > Combinar', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Ajustar texto', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Formato > Formato de celdas…', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('HOJA', 'ruedita > Más', 'MAL', 'la ruedita no abrió')
+  MAL ('PRESENTACION', 'ruedita > Orden > Alinear > Centro vertical', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('PRESENTACION', 'ruedita > Orden > Alinear > Abajo', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('PRESENTACION', 'ruedita > Más', 'MAL', 'la ruedita no abrió')
+  MAL ('DIAGRAMA', 'ruedita > Duplicar', 'MAL', 'la ruedita no volvió a abrir')
+  MAL ('DIAGRAMA', 'ruedita > Orden', 'MAL', 'la ruedita no abrió')
+  MAL ('DIAGRAMA', 'ruedita > Más', 'MAL', 'la ruedita no abrió')

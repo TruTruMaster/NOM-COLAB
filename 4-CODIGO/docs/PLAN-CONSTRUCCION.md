@@ -454,6 +454,31 @@ Detalle en `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`, partes D.2 y E. No hay edades: los
       sección 15 de `pruebas/seguridad.py`. Versión 0.13.0 (interfaz 14).
 - [ ] Azure unida a la misma cuenta, solo si llega a ser requisito (G.1).
 
+## Fase 16. Pruebas antes de la presentación (13 al 20 de noviembre de 2026)
+
+Detalle, pasos y resultados esperados en `docs/PLAN-PRUEBAS-PRESENTACION.md`; qué sigue, con
+comandos y criterios, en `docs/RELEVO-REVISION-PROFUNDA.md`.
+
+- [x] Red de regresión en un solo comando (`pruebas/regresion.sh`), prueba de carga (`pruebas/carga.py`)
+      y prueba de humo para servidores publicados (`pruebas/humo.py`).
+- [x] Carga en la laptop: 100 personas a la vez sin perder nada (el tope de 5 no es técnico).
+- [x] Azure con 0.13.0: humo 31 de 31, carga con 5 personas; límite de 50 MB por cuenta agregado.
+- [x] H-1: 50 personas por espacio y por documento (antes 5; requisito RNF Espacios 1 actualizado). 0.13.1.
+- [x] H-2: tope de cuentas nuevas por **dispositivo** (5 por hora; la MAC no se puede leer: `ANDROID_ID` resumido en la app, número al azar en el navegador). 0.13.1.
+- [x] H-3 / DEF-42: el chat cuenta en el almacenamiento del dueño del espacio. 0.13.1.
+- [ ] H-5: copia de `/var/lib/nomcolab/datos-llaves` fuera de la Pi.
+- [ ] Bloque B: lo nuevo de 0.13.0 en el A55, el escritorio y la Pi (B-1 a B-15).
+- [ ] Bloque C: red de la escuela y varios dispositivos.
+- [ ] Bloque D: carga en la Pi con tope mayor y en el teléfono como servidor.
+- [ ] Bloque E: almacenamiento.
+- [ ] Bloque F: Office con archivos complejos y Office real.
+- [ ] Bloque H: aceptación con 5 personas (SUS).
+- [ ] Bloque I: guion y ensayo de la demo.
+- [ ] Bloque J: archivos más ligeros (medido: `.nom` 73-85 % del original; `xz -9e` 39-82 %) y que se vea en la app.
+- [ ] Bloque K: documentos hechos en la app a Word, Excel y PowerPoint, abiertos en Office real.
+- [ ] T2 de `docs/RELEVO-REVISION-PROFUNDA.md`: inventario de funciones, cada una con su prueba.
+- [ ] T3 de `docs/RELEVO-REVISION-PROFUNDA.md`: paridad con Office (matriz por pestaña y lista de faltantes).
+
 ## Cómo quedó (8 de noviembre de 2026)
 
 Las fases 8 y 9 están construidas en Spring, en el servidor del teléfono (`ApiTelefono`) y en la
@@ -499,6 +524,9 @@ sesión anterior: `./desplegar.sh roles` para las columnas nuevas de usuarios.
 - La copia de trabajo `~/NOM-COLAB` no se actualizó en esta sesión (es más vieja que `~/NOM`).
 
 ## Orden recomendado para la siguiente sesión
+
+**Desde la noche del 13 de noviembre de 2026:** seguir el calendario de
+`docs/PLAN-PRUEBAS-PRESENTACION.md` (fase 16). Lo de abajo es lo de antes.
 
 **Desde el 13 de noviembre de 2026:** el orden de la parte H de `docs/PLAN-CUENTAS-PC-Y-AYUDA.md`
 (licencia y correo; fase 13; fase 14; fase 15). El plan está completo: se construye desde la siguiente sesión. Antes, regresar el

@@ -236,6 +236,24 @@ public class MainActivity extends Activity {
     /** Lo que la interfaz web puede pedirle al teléfono (window.NomAndroid). */
     private class Puente {
 
+        /**
+         * Identificador de este teléfono para el tope de cuentas nuevas por hora del servidor. La MAC
+         * no se puede leer (Android 6+ devuelve una falsa y la cambia al azar en cada red); se usa el
+         * ANDROID_ID, que es propio de este teléfono y de la llave del APK y sobrevive a reinstalar.
+         * Nunca sale crudo: va resumido con SHA-256.
+         */
+        @JavascriptInterface
+        public String equipo() {
+            try {
+                String a = android.provider.Settings.Secure.getString(getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+                if (a == null || a.isEmpty()) return "";
+                byte[] h = java.security.MessageDigest.getInstance("SHA-256").digest(("nom-colab-equipo:" + a).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                return Base64.encodeToString(h, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP).substring(0, 32);
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
         /** Letra más grande en la app (Ajustes → Tamaño de la letra). 100 = normal, hasta 140. */
         @JavascriptInterface
         public void tamanoLetra(int porciento) {

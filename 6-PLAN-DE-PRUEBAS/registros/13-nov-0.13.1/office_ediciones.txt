@@ -1,0 +1,156 @@
+== xlsx: cambiar celdas y agregar una fórmula
+   ok   ms-financial-sample.xlsx: 1 hojas, resto 100.0%; 81 KB -> 64 KB, .nom 59 KB
+   ok   ms-financial-sample.xlsx (vía .nom): 1 hojas, resto 100.0%; 81 KB -> 64 KB
+   ok   ms-complex01.xlsx: 2 hojas, resto 100.0%; 113 KB -> 102 KB, .nom 94 KB
+   ok   ms-complex01.xlsx (vía .nom): 2 hojas, resto 100.0%; 113 KB -> 102 KB
+   ok   ms-excel14.xlsx: 3 hojas, resto 100.0%; 86 KB -> 84 KB, .nom 80 KB
+   ok   ms-excel14.xlsx (vía .nom): 3 hojas, resto 100.0%; 86 KB -> 84 KB
+   ok   poi-formato-condicional.xlsx: 3 hojas, resto 98.5%; 9 KB -> 7 KB, .nom 4 KB
+   ok   poi-formato-condicional.xlsx (vía .nom): 3 hojas, resto 98.5%; 9 KB -> 7 KB
+   ok   ms-dinamica-b1.xlsx: 3 hojas, resto 100.0%; 318 KB -> 217 KB, .nom 181 KB
+   ok   ms-dinamica-b1.xlsx (vía .nom): 3 hojas, resto 100.0%; 318 KB -> 217 KB
+   ok   poi-graficas.xlsx: 3 hojas, resto 99.6%; 11 KB -> 9 KB, .nom 5 KB
+   ok   poi-graficas.xlsx (vía .nom): 3 hojas, resto 99.6%; 11 KB -> 9 KB
+== xlsx: renombrar una hoja y agregar otra
+   ok   ms-financial-sample.xlsx: Renombrada por mí, Hoja nueva; 81 KB -> 64 KB, .nom 59 KB
+   ok   ms-financial-sample.xlsx (vía .nom): Renombrada por mí, Hoja nueva; 81 KB -> 64 KB
+   ok   ms-hojas.xlsx: Renombrada por mí, wd_log, ppt_log, Hoja nueva; 122 KB -> 96 KB, .nom 95 KB
+   ok   ms-hojas.xlsx (vía .nom): Renombrada por mí, wd_log, ppt_log, Hoja nueva; 122 KB -> 96 KB
+   ok   ms-complex01.xlsx: Renombrada por mí, Sheet2, Hoja nueva; 113 KB -> 102 KB, .nom 94 KB
+   ok   ms-complex01.xlsx (vía .nom): Renombrada por mí, Sheet2, Hoja nueva; 113 KB -> 102 KB
+   ok   poi-estilos.xlsx: Renombrada por mí, Sheet2, Sheet3, Hoja nueva; 9 KB -> 7 KB, .nom 3 KB
+   ok   poi-estilos.xlsx (vía .nom): Renombrada por mí, Sheet2, Sheet3, Hoja nueva; 9 KB -> 7 KB
+== xlsx: borrar una hoja
+   ok   ms-hojas.xlsx: 3 -> 2 hojas; 122 KB -> 94 KB, .nom 95 KB
+   ok   ms-hojas.xlsx (vía .nom): 3 -> 2 hojas; 122 KB -> 94 KB
+   ok   ms-complex01.xlsx: 2 -> 1 hojas; 113 KB -> 101 KB, .nom 94 KB
+   ok   ms-complex01.xlsx (vía .nom): 2 -> 1 hojas; 113 KB -> 101 KB
+== xlsx: solo formato: relleno, ancho de columna y filas fijas
+   ok   ms-financial-sample.xlsx: A1 con relleno, misma fuente (Calibri 11.0) y formato 'General'; 81 KB -> 64 KB, .nom 59 KB
+   ok   ms-financial-sample.xlsx (vía .nom): A1 con relleno, misma fuente (Calibri 11.0) y formato 'General'; 81 KB -> 64 KB
+   ok   ms-rendimiento.xlsx: A1 con relleno, misma fuente (Arial 10.0) y formato 'General'; 303 KB -> 203 KB, .nom 224 KB
+   ok   ms-rendimiento.xlsx (vía .nom): A1 con relleno, misma fuente (Arial 10.0) y formato 'General'; 303 KB -> 203 KB
+   ok   poi-estilos.xlsx: A1 con relleno, misma fuente (Arial 11.0) y formato 'General'; 9 KB -> 7 KB, .nom 3 KB
+   ok   poi-estilos.xlsx (vía .nom): A1 con relleno, misma fuente (Arial 11.0) y formato 'General'; 9 KB -> 7 KB
+== docx: cambiar el texto de un párrafo
+   ok   ms-complex2010.docx: 1 de 679 párrafos cambió; resto 100.0%; 230 KB -> 207 KB, .nom 177 KB
+   ok   ms-complex2010.docx (vía .nom): 1 de 679 párrafos cambió; resto 100.0%; 230 KB -> 207 KB
+   ok   ms-informe-gobernanza.docx: 1 de 1922 párrafos cambió; resto 100.0%; 199 KB -> 145 KB, .nom 119 KB
+   ok   ms-informe-gobernanza.docx (vía .nom): 1 de 1922 párrafos cambió; resto 100.0%; 199 KB -> 145 KB
+   ok   ms-hoja-informativa.docx: 1 de 18 párrafos cambió; resto 99.8%; 140 KB -> 111 KB, .nom 105 KB
+   ok   ms-hoja-informativa.docx (vía .nom): 1 de 18 párrafos cambió; resto 99.8%; 140 KB -> 111 KB
+   ok   ms-tabla.docx: 1 de 34 párrafos cambió; resto 99.7%; 116 KB -> 107 KB, .nom 104 KB
+   ok   ms-tabla.docx (vía .nom): 1 de 34 párrafos cambió; resto 99.7%; 116 KB -> 107 KB
+   ok   poi-listas.docx: 1 de 22 párrafos cambió; resto 99.5%; 13 KB -> 11 KB, .nom 8 KB
+   ok   poi-listas.docx (vía .nom): 1 de 22 párrafos cambió; resto 99.5%; 13 KB -> 11 KB
+   ok   poi-notas-al-pie.docx: 1 de 1 párrafos cambió; resto 90.1%; 12 KB -> 9 KB, .nom 5 KB
+   ok   poi-notas-al-pie.docx (vía .nom): 1 de 1 párrafos cambió; resto 90.1%; 12 KB -> 9 KB
+   ok   ms-ecuaciones.docx: (sin texto que editar); 191 KB -> 155 KB, .nom 44 KB
+   ok   ms-ecuaciones.docx (vía .nom): (sin texto que editar); 191 KB -> 155 KB
+   ok   ms-imagenes.docx: 1 de 21 párrafos cambió; resto 84.6%; 202 KB -> 172 KB, .nom 168 KB
+   ok   ms-imagenes.docx (vía .nom): 1 de 21 párrafos cambió; resto 84.6%; 202 KB -> 172 KB
+   ok   ms-comentarios.docx: 1 de 7 párrafos cambió; resto 98.9%; 211 KB -> 191 KB, .nom 186 KB
+   ok   ms-comentarios.docx (vía .nom): 1 de 7 párrafos cambió; resto 98.9%; 211 KB -> 191 KB
+   ok   ms-complex2005.docx: 1 de 1528 párrafos cambió; resto 100.0%; 617 KB -> 546 KB, .nom 529 KB
+   ok   ms-complex2005.docx (vía .nom): 1 de 1528 párrafos cambió; resto 100.0%; 617 KB -> 546 KB
+== docx: agregar al final un título, un párrafo y una lista
+   ok   ms-complex2010.docx: 679 -> 684 párrafos; resto 100.0%; 230 KB -> 208 KB, .nom 177 KB
+   ok   ms-complex2010.docx (vía .nom): 679 -> 684 párrafos; resto 100.0%; 230 KB -> 208 KB
+   ok   ms-informe-gobernanza.docx: 1922 -> 1927 párrafos; resto 100.0%; 199 KB -> 146 KB, .nom 119 KB
+   ok   ms-informe-gobernanza.docx (vía .nom): 1922 -> 1927 párrafos; resto 100.0%; 199 KB -> 146 KB
+   ok   ms-hoja-informativa.docx: 18 -> 23 párrafos; resto 100.0%; 140 KB -> 112 KB, .nom 105 KB
+   ok   ms-hoja-informativa.docx (vía .nom): 18 -> 23 párrafos; resto 100.0%; 140 KB -> 112 KB
+   ok   ms-tabla.docx: 34 -> 39 párrafos; resto 99.7%; 116 KB -> 108 KB, .nom 104 KB
+   ok   ms-tabla.docx (vía .nom): 34 -> 39 párrafos; resto 99.7%; 116 KB -> 108 KB
+   ok   poi-listas.docx: 22 -> 27 párrafos; resto 99.1%; 13 KB -> 11 KB, .nom 8 KB
+   ok   poi-listas.docx (vía .nom): 22 -> 27 párrafos; resto 99.1%; 13 KB -> 11 KB
+   ok   poi-notas-al-pie.docx: 1 -> 6 párrafos; resto 98.2%; 12 KB -> 10 KB, .nom 5 KB
+   ok   poi-notas-al-pie.docx (vía .nom): 1 -> 6 párrafos; resto 98.2%; 12 KB -> 10 KB
+   ok   ms-ecuaciones.docx: 120 -> 125 párrafos; resto 99.9%; 191 KB -> 156 KB, .nom 44 KB
+   ok   ms-ecuaciones.docx (vía .nom): 120 -> 125 párrafos; resto 99.9%; 191 KB -> 156 KB
+   ok   ms-imagenes.docx: 21 -> 26 párrafos; resto 97.2%; 202 KB -> 173 KB, .nom 168 KB
+   ok   ms-imagenes.docx (vía .nom): 21 -> 26 párrafos; resto 97.2%; 202 KB -> 173 KB
+   ok   ms-comentarios.docx: 7 -> 12 párrafos; resto 99.8%; 211 KB -> 192 KB, .nom 186 KB
+   ok   ms-comentarios.docx (vía .nom): 7 -> 12 párrafos; resto 99.8%; 211 KB -> 192 KB
+   ok   ms-complex2005.docx: 1528 -> 1533 párrafos; resto 100.0%; 617 KB -> 546 KB, .nom 529 KB
+   ok   ms-complex2005.docx (vía .nom): 1528 -> 1533 párrafos; resto 100.0%; 617 KB -> 546 KB
+== docx: borrar el primer párrafo con texto
+   ok   ms-complex2010.docx: 679 -> 678 párrafos; 230 KB -> 207 KB, .nom 177 KB
+   ok   ms-complex2010.docx (vía .nom): 679 -> 678 párrafos; 230 KB -> 207 KB
+   ok   ms-informe-gobernanza.docx: 1922 -> 1921 párrafos; 199 KB -> 145 KB, .nom 119 KB
+   ok   ms-informe-gobernanza.docx (vía .nom): 1922 -> 1921 párrafos; 199 KB -> 145 KB
+   ok   ms-hoja-informativa.docx: 18 -> 17 párrafos; 140 KB -> 111 KB, .nom 105 KB
+   ok   ms-hoja-informativa.docx (vía .nom): 18 -> 17 párrafos; 140 KB -> 111 KB
+   ok   ms-tabla.docx: 34 -> 33 párrafos; 116 KB -> 107 KB, .nom 104 KB
+   ok   ms-tabla.docx (vía .nom): 34 -> 33 párrafos; 116 KB -> 107 KB
+   ok   poi-listas.docx: 22 -> 21 párrafos; 13 KB -> 11 KB, .nom 8 KB
+   ok   poi-listas.docx (vía .nom): 22 -> 21 párrafos; 13 KB -> 11 KB
+   ok   poi-notas-al-pie.docx: 1 -> 1 párrafos; 12 KB -> 9 KB, .nom 5 KB
+   ok   poi-notas-al-pie.docx (vía .nom): 1 -> 1 párrafos; 12 KB -> 9 KB
+   ok   ms-ecuaciones.docx: (sin texto que borrar); 191 KB -> 155 KB, .nom 44 KB
+   ok   ms-ecuaciones.docx (vía .nom): (sin texto que borrar); 191 KB -> 155 KB
+   ok   ms-imagenes.docx: 21 -> 20 párrafos; 202 KB -> 172 KB, .nom 168 KB
+   ok   ms-imagenes.docx (vía .nom): 21 -> 20 párrafos; 202 KB -> 172 KB
+   ok   ms-comentarios.docx: 7 -> 6 párrafos; 211 KB -> 191 KB, .nom 186 KB
+   ok   ms-comentarios.docx (vía .nom): 7 -> 6 párrafos; 211 KB -> 191 KB
+   ok   ms-complex2005.docx: 1528 -> 1527 párrafos; 617 KB -> 546 KB, .nom 529 KB
+   ok   ms-complex2005.docx (vía .nom): 1528 -> 1527 párrafos; 617 KB -> 546 KB
+== pptx: cambiar el texto de un cuadro
+   ok   ms-tipico.pptx: diapositiva 1 de 15; resto 100.0%; 637 KB -> 618 KB, .nom 570 KB
+   ok   ms-tipico.pptx (vía .nom): diapositiva 1 de 15; resto 100.0%; 637 KB -> 618 KB
+   ok   ms-brownbag.pptx: diapositiva 1 de 18; resto 99.9%; 670 KB -> 621 KB, .nom 554 KB
+   ok   ms-brownbag.pptx (vía .nom): diapositiva 1 de 18; resto 99.9%; 670 KB -> 621 KB
+   ok   ms-of16.pptx: (sin cuadros de texto); 114 KB -> 109 KB, .nom 90 KB
+   ok   ms-of16.pptx (vía .nom): (sin cuadros de texto); 114 KB -> 109 KB
+   ok   ms-animacion.pptx: diapositiva 1 de 2; resto 88.9%; 97 KB -> 91 KB, .nom 72 KB
+   ok   ms-animacion.pptx (vía .nom): diapositiva 1 de 2; resto 88.9%; 97 KB -> 91 KB
+   ok   ms-organigrama.pptx: diapositiva 1 de 1; resto 80.0%; 79 KB -> 61 KB, .nom 39 KB
+   ok   ms-organigrama.pptx (vía .nom): diapositiva 1 de 1; resto 80.0%; 79 KB -> 61 KB
+   ok   ms-tabla-grande.pptx: diapositiva 1 de 1; resto 98.4%; 74 KB -> 64 KB, .nom 43 KB
+   ok   ms-tabla-grande.pptx (vía .nom): diapositiva 1 de 1; resto 98.4%; 74 KB -> 64 KB
+   ok   poi-temas.pptx: diapositiva 1 de 10; resto 99.5%; 314 KB -> 284 KB, .nom 138 KB
+   ok   poi-temas.pptx (vía .nom): diapositiva 1 de 10; resto 99.5%; 314 KB -> 284 KB
+   ok   poi-formas.pptx: diapositiva 1 de 6; resto 99.1%; 67 KB -> 59 KB, .nom 36 KB
+   ok   poi-formas.pptx (vía .nom): diapositiva 1 de 6; resto 99.1%; 67 KB -> 59 KB
+   ok   ms-presentation.pptx: diapositiva 1 de 2; resto 95.8%; 1001 KB -> 1001 KB, .nom 968 KB
+   ok   ms-presentation.pptx (vía .nom): diapositiva 1 de 2; resto 95.8%; 1001 KB -> 1001 KB
+== pptx: mover una figura y poner notas
+   ok   ms-tipico.pptx: figura movida en la 1; notas puestas; resto 99.9%; 637 KB -> 619 KB, .nom 570 KB
+   ok   ms-tipico.pptx (vía .nom): figura movida en la 1; notas puestas; resto 99.9%; 637 KB -> 619 KB
+   ok   ms-brownbag.pptx: figura movida en la 1; notas puestas; resto 99.7%; 670 KB -> 621 KB, .nom 554 KB
+   ok   ms-brownbag.pptx (vía .nom): figura movida en la 1; notas puestas; resto 99.7%; 670 KB -> 621 KB
+   ok   ms-of16.pptx: figura movida en la 1; notas puestas; resto 100.0%; 114 KB -> 182 KB, .nom 90 KB
+   ok   ms-of16.pptx (vía .nom): figura movida en la 1; notas puestas; resto 100.0%; 114 KB -> 182 KB
+   ok   ms-animacion.pptx: figura movida en la 1; notas puestas; resto 92.9%; 97 KB -> 94 KB, .nom 72 KB
+   ok   ms-animacion.pptx (vía .nom): figura movida en la 1; notas puestas; resto 92.9%; 97 KB -> 94 KB
+   ok   ms-organigrama.pptx: figura movida en la 1; notas puestas; resto 87.5%; 79 KB -> 61 KB, .nom 39 KB
+   ok   ms-organigrama.pptx (vía .nom): figura movida en la 1; notas puestas; resto 87.5%; 79 KB -> 61 KB
+   ok   ms-tabla-grande.pptx: figura movida en la 1; notas puestas; resto 88.9%; 74 KB -> 64 KB, .nom 43 KB
+   ok   ms-tabla-grande.pptx (vía .nom): figura movida en la 1; notas puestas; resto 88.9%; 74 KB -> 64 KB
+   ok   poi-temas.pptx: figura movida en la 1; notas puestas; resto 99.3%; 314 KB -> 287 KB, .nom 138 KB
+   ok   poi-temas.pptx (vía .nom): figura movida en la 1; notas puestas; resto 99.3%; 314 KB -> 287 KB
+   ok   poi-formas.pptx: figura movida en la 1; notas puestas; resto 98.6%; 67 KB -> 61 KB, .nom 36 KB
+   ok   poi-formas.pptx (vía .nom): figura movida en la 1; notas puestas; resto 98.6%; 67 KB -> 61 KB
+   ok   ms-presentation.pptx: figura movida en la 1; notas puestas; resto 96.9%; 1001 KB -> 1004 KB, .nom 968 KB
+   ok   ms-presentation.pptx (vía .nom): figura movida en la 1; notas puestas; resto 96.9%; 1001 KB -> 1004 KB
+== pptx: agregar una diapositiva y borrar otra
+   ok   ms-tipico.pptx: 15 -> 15 diapositivas; 637 KB -> 617 KB, .nom 570 KB
+   ok   ms-tipico.pptx (vía .nom): 15 -> 15 diapositivas; 637 KB -> 617 KB
+   ok   ms-brownbag.pptx: 18 -> 18 diapositivas; 670 KB -> 621 KB, .nom 554 KB
+   ok   ms-brownbag.pptx (vía .nom): 18 -> 18 diapositivas; 670 KB -> 621 KB
+   ok   ms-of16.pptx: 1 -> 2 diapositivas; 114 KB -> 110 KB, .nom 90 KB
+   ok   ms-of16.pptx (vía .nom): 1 -> 2 diapositivas; 114 KB -> 110 KB
+   ok   ms-animacion.pptx: 2 -> 2 diapositivas; 97 KB -> 91 KB, .nom 72 KB
+   ok   ms-animacion.pptx (vía .nom): 2 -> 2 diapositivas; 97 KB -> 91 KB
+   ok   ms-organigrama.pptx: 1 -> 2 diapositivas; 79 KB -> 62 KB, .nom 39 KB
+   ok   ms-organigrama.pptx (vía .nom): 1 -> 2 diapositivas; 79 KB -> 62 KB
+   ok   ms-tabla-grande.pptx: 1 -> 2 diapositivas; 74 KB -> 65 KB, .nom 43 KB
+   ok   ms-tabla-grande.pptx (vía .nom): 1 -> 2 diapositivas; 74 KB -> 65 KB
+   ok   poi-temas.pptx: 10 -> 10 diapositivas; 314 KB -> 284 KB, .nom 138 KB
+   ok   poi-temas.pptx (vía .nom): 10 -> 10 diapositivas; 314 KB -> 284 KB
+   ok   poi-formas.pptx: 6 -> 6 diapositivas; 67 KB -> 59 KB, .nom 36 KB
+   ok   poi-formas.pptx (vía .nom): 6 -> 6 diapositivas; 67 KB -> 59 KB
+   ok   ms-presentation.pptx: 2 -> 2 diapositivas; 1001 KB -> 1000 KB, .nom 968 KB
+   ok   ms-presentation.pptx (vía .nom): 2 -> 2 diapositivas; 1001 KB -> 1000 KB
+
+Ediciones: 144 bien, 0 mal. Errores de JavaScript: []

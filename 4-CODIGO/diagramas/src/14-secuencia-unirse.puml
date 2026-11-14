@@ -31,7 +31,7 @@ else con Acceso
   activate CS
   CS -> N : handshake(idUsuario, token)
 
-  alt ya hay 5 usuarios conectados
+  alt ya hay 50 personas conectadas
     N --> CS : rechazo "límite alcanzado"
     CS --> A : aviso (RNF: máx. 5 simultáneos)
   else hay lugar

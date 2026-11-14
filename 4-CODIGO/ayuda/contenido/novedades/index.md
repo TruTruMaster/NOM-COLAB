@@ -4,8 +4,17 @@ descripcion: Qué cambió en cada versión, en palabras sencillas.
 orden: 1
 aplica: Navegador, App Android, Teléfono que comparte
 actualizado: 2026-11-13
-version: 0.13.0
+version: 0.13.1
 ---
+## 0.13.1 — noviembre de 2026
+
+- **Hasta 50 personas a la vez** en cada espacio, también en el mismo documento (antes 5). Ver
+  [Hasta 50 personas](ayuda:espacios/cuantas-personas).
+- El tope de **cuentas nuevas por hora** ahora es **por dispositivo**: una escuela entera que sale a
+  Internet con la misma dirección ya no se queda sin poder registrarse.
+- Los **archivos del chat** cuentan en el almacenamiento del dueño del espacio, y no se pueden
+  subir si ya está lleno.
+
 ## 0.13.0 — noviembre de 2026
 
 - **Sin Internet no hay cuentas**: en el teléfono que comparte se entra con un

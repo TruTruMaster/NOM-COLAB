@@ -1,0 +1,30 @@
+
+== C. Crear dentro de un espacio sin Internet
+  ok   sin red, «Nuevo documento» en un espacio se crea en este equipo
+  ok   …y dice que se sube solo a su espacio al volver la red
+  ok   en el espacio sale «espera a que vuelva la red para subirse»
+  ok   al volver la red se sube solo al espacio
+  ok   …con lo que se escribió sin conexión
+  ok   …y ya no queda la copia «por subir» en el equipo
+
+== B. Rama: los dos cambiaron mientras uno no tenía red
+  ok   (mientras) el servidor tiene lo de quien sí tiene red
+  ok   al volver: «Se creó una rama porque … cambió el documento»
+  ok   el original no se tocó (no tiene lo escrito sin red)
+  ok   la rama está en el espacio, con su nombre «— rama de …»
+  ok   …y tiene lo escrito sin red
+  ok   el editor del original quedó como en el servidor
+  ok   el original dice «Este documento tiene una rama»
+  ok   quien estaba en línea también ve que hay una rama
+  ok   la rama dice de qué documento es
+  ok   «Comparar con el original» muestra lo distinto en cada lado
+  ok   «Fusionar en el original»: el original queda con lo de los dos
+  ok   …con una versión «Antes de fusionar» para regresar
+
+== B.2 Un corte corto se junta solo (sin rama)
+  ok   al volver en segundos, lo de los dos queda en el mismo documento
+  ok   …y no se abrió ninguna rama
+  ok   sin errores de JavaScript (quien sí tenía red)
+  ok   sin errores de JavaScript (quien se quedó sin red)
+
+Sin Internet: 22 bien, 0 mal

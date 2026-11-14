@@ -4,7 +4,7 @@ descripcion: Las 32 dudas más comunes sobre NOM-COLAB.
 orden: 1
 aplica: Navegador, App Android, Teléfono que comparte
 actualizado: 2026-11-13
-version: 0.13.0
+version: 0.13.1
 ---
 ## Primeros pasos
 
@@ -87,7 +87,7 @@ Ver [Descargar todo lo tuyo](ayuda:cuentas/descargar-todo) y [Borrar tu cuenta](
 ## Trabajo en equipo
 
 ### 20. ¿Cuántas personas a la vez? {#p20}
-Hasta 5 conectadas al mismo tiempo en cada espacio. Ver [Hasta 5 personas](ayuda:espacios/cinco-personas).
+Hasta 50 conectadas al mismo tiempo en cada espacio, también en el mismo documento. Ver [Hasta 50 personas](ayuda:espacios/cuantas-personas).
 
 ### 21. ¿Qué puede hacer cada permiso? {#p21}
 Ver [Permisos](ayuda:espacios/permisos).

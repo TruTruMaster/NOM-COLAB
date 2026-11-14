@@ -1,0 +1,29 @@
+Versión: 0.13.1  ·  Fri Nov 13 09:33:26 PM CST 2026
+junit                      BIEN      2s  
+seguridad                  BIEN    186s  OK  15.5 Un adjunto de más de 2 MB no se acepta                        esperado 413 obtenido 413 375 de 375 
+limites                    BIEN     36s  OK    VL-11 6.º intento fallido (bloquea 15 min) esperado 423 obtenido 423  OK    VL-12 Contraseña correcta durante el bloqueo esperado 423 obtenido
+carga                      BIEN     16s    CORRECTO Resultado: todas las rondas correctas 
+cuentas_equipo             BIEN    126s    ok   con la anterior correcta, el documento de este equipo vuelve Cuentas y equipo: 61 de 61 
+sin_internet               BIEN     36s  
+e2e                        BIEN     41s  
+ayuda                      BIEN     15s    ok   la página Buscar da resultados con ?q= 
+red                        BIEN     39s  
+funciones                  BIEN    181s    ok   se crea un código de 8 letras   ok   …con un código de 4 bloques 
+rastreo                    FALLA   975s    ok  TEXTO        Deshacer > Página 1 de 1 · 25 palabras                                                        ok  HOJA         Formato de número
+prueba_pres1               BIEN     15s  
+prueba_pptx                BIEN      8s     texto: 'Resultados' 
+prueba_pptx2               BIEN      7s  
+prueba_diag1               BIEN     21s  
+prueba_85                  BIEN     36s  
+prueba_citas               BIEN     43s  resultados: ['Fotosíntesis', 'Fotosíntesis oxigénica', 'Fotosíntesis anoxigénica'] reporte: [['', 'Las plantas producen su alimento. (Kucsko et a
+prueba_datos               BIEN     32s     ['vinetas', 'Comentarios: lo más frecuente fue «Que haya talleres» (4 de 8, 50 %).'] presentación: [4, ['El agua | pcznqmic · 13 de noviembre 
+prueba_biblioteca          BIEN     20s  reporte CSV: #/doc/ ['Reporte de calificaciones', '5 respuestas · 3 preguntas o columnas · 13 de noviembre de 2026', 'Datos: archivo calificaciones.
+prueba_fuentes_api         BIEN     16s  
+funciones_movil            FALLA   185s    ok   se crea un código de 8 letras   ok   …con un código de 4 bloques 
+rastreo_movil              FALLA   859s    ok  HOJA         Formato de número > Fecha larga · 7 de noviembre de 2026                                    
+diag_movil                 BIEN      7s  
+funciones_firefox          BIEN    189s    ok   se crea un código de 8 letras   ok   …con un código de 4 bloques 
+office_fidelidad           BIEN     57s  
+office_modelo              BIEN     50s  
+office_ediciones           BIEN    223s     ok   ms-presentation.pptx: diapositiva 1 de 2; resto 95.8%; 1001 KB -> 1001 KB, .nom 968 KB    ok   ms-presentation.pptx (vía .nom): diapositiva 1
+office_raros               BIEN      1s  

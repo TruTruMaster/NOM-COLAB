@@ -907,3 +907,46 @@ en el orden de su parte H.
   /var/lib/nomcolab/datos-llaves/reposo.key` (pide la contraseña de la Pi).
 - **Falta:** el ciclo real en el escritorio con la Raspberry (estaba apagado), el A55, el correo del
   proyecto y lo de Office de la fase 10.
+
+## 57. Plan de pruebas de la presentación, 50 personas, tope por dispositivo y DEF-42 (0.13.1, 13 de noviembre de 2026, noche)
+
+- **Revisión de lo que falta para presentar** (≈20 de noviembre): plan completo en
+  `4-CODIGO/docs/PLAN-PRUEBAS-PRESENTACION.md` (bloques A a K: regresión, lo nuevo de 0.13.0 en
+  equipos reales, red de la escuela, capacidad, almacenamiento, Office sin romper archivos, archivos
+  ligeros, nuestros documentos a Office, Azure, personas ajenas, ensayo) y relevo detallado para la
+  revisión profunda en `4-CODIGO/docs/RELEVO-REVISION-PROFUNDA.md` (inventario de funciones con su
+  prueba, paridad con Word, Excel y PowerPoint, archivos más ligeros, entregables).
+- **Pruebas nuevas:** `pruebas/carga.py` (muchas personas escribiendo a la vez en el mismo
+  documento), `pruebas/humo.py` (contra un servidor publicado), `pruebas/regresion.sh` (todas las
+  suites con resumen).
+- **Capacidad medida:** en la laptop, 100 personas a la vez en un documento: 7444 letras, 0
+  perdidas, 0 entregas perdidas, 95 % de los cambios en 10 ms o menos. En la Raspberry, 5 personas:
+  238 ms (casi todo es el viaje por Cloudflare). En Azure (plan gratuito), 5 personas: 586 ms.
+- **50 personas por espacio** y en el mismo documento (antes 5; decisión del equipo). Requisito,
+  casos de uso, diagramas, ayuda, pantalla de inicio, plan de pruebas (VL-13 y VL-14) al día.
+- **Tope de cuentas nuevas por dispositivo** (antes 30 por hora desde una red: una escuela entera
+  sale con la misma IP). La MAC no se puede leer (los navegadores no la dan, Android la oculta y la
+  cambia por red, y no viaja por Internet): la app manda el identificador de Android resumido con
+  SHA-256 (no cambia al borrar los datos de la app, comprobado en el emulador) y el navegador un
+  número al azar guardado en él. 5 por hora por dispositivo; 200 por red con dispositivo; 30 por red
+  sin él. Solo en memoria; aviso de privacidad actualizado.
+- **DEF-42 corregido:** el chat no contaba en el almacenamiento de la cuenta y no revisaba el límite
+  (una cuenta podía llenar el disco de la Pi). Ahora cuenta en la cuota del dueño del espacio y con
+  la cuota llena no se suben archivos.
+- **Azure:** tenía la 0.13.0 desplegada; se prendió y probó (humo 31 de 31: cuentas en Azure SQL con
+  el usuario de rol `nomcolab_app`), se le puso el límite de 50 MB por cuenta que le faltaba y se
+  apagó.
+- **Archivos ligeros, medido:** el `.nom` de un archivo importado pesa 81 % (Word), 85 %
+  (PowerPoint) y 73 % (Excel) del original; el mejor compresor sin pérdida (`xz -9e`) llega a 77 %,
+  82 % y 39 %. En Excel hay margen: queda como bloque J.
+- **Pruebas automáticas con 0.13.1** (se toman solo como base): seguridad 375 de 375 · límites 18 de
+  18 · unitarias 9 de 9 · cuentas y equipo 61 de 61 · sin Internet, extremo a extremo, ayuda y red:
+  bien · funciones 170 de 170 en computadora, celular y Firefox · rastreo: las mismas fallas de la
+  ruedita que el 13-nov, ninguna nueva · Office: sin tocar 100 %; lo que entiende, igual que antes
+  (Word 91.9 %, Excel 59.2 %, PowerPoint 78.5 % en 47 archivos). Se corrigieron tres pruebas que
+  fallaban por la prueba y no por la app (QR cortado en pantalla de celular, servidor de pruebas sin
+  red local, 13.2 con la llave de la Pi en el APK).
+- **Compilado, no publicado:** jar 0.13.1 en `2-PAGINA-Servidor/`, APK 0.13.1 (versionCode 21,
+  misma llave) en `3-APP-Android/`. La Raspberry y la release de GitHub siguen en 0.13.0.
+- **Falta (del dueño):** copiar fuera de la Pi `/var/lib/nomcolab/datos-llaves`; prender la
+  depuración inalámbrica del A55.

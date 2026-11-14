@@ -1,0 +1,33 @@
+  ok   U2 entra al espacio con el enlace de U1  (200)
+== página A (computadora, U1)
+== app (la interfaz del APK, desde archivos) con la cuenta U1 del servidor
+  ok   la app se reconoce como app
+  ok   app: elegir el servidor escribiendo su dirección  (http://localhost:8099)
+  ok   app: entra con la MISMA cuenta que se registró en la página  (mismo identificador de cuenta)
+  ok   app: ve los mismos espacios que la página
+  ok   la app no avisa de versiones si el servidor es de la suya
+  ok   página → app: lo escrito en la página se ve en la app
+  ok   app → página en vivo
+  ok   página → app en vivo (sin recargar)
+== página B (otra computadora, U2) y navegador de un celular C (U2)
+  ok   página B abre y ve lo de la página A y lo de la app
+  ok   página → página y página → app en vivo (otra cuenta)
+  ok   presencia: A ve que U2 está en el documento
+  ok   navegador del celular → página y → app en vivo
+== sin conexión y de regreso
+  ok   la app sin red sigue escribiendo y guarda los cambios en el equipo
+  ok   la app vuelve a abrir, todavía sin red, un documento con cambios sin enviar  (26 cambios siguen guardados)
+  ok   al volver la red se junta lo de los dos lados y no queda nada pendiente
+  ok   lo mismo en la página: reabrir sin red con cambios pendientes y enviarlos al volver
+  ok   cerrar y abrir la app: sigue con su servidor y su sesión
+== cuentas: registrarse en la app y entrar en la página
+  ok   registrar una cuenta nueva DESDE la app (por su pantalla)
+  ok   esa cuenta entra desde la página (está en la base del servidor)  (200)
+  ok   y no se puede registrar dos veces el mismo nombre  (409)
+== versiones distintas entre la app y el servidor
+  ok   la app avisa si el servidor es más viejo (no dice su nivel de interfaz)
+  ok   la app avisa si hay una app más nueva, con botón para descargarla
+  ok   el servidor dice su versión y su nivel de interfaz  ({'nom': 1, 'servidor': '85a39946', 'equipo': 'user', 'puerto': 8099, 'direcciones': ['192.168.0.96'], 'version': '0.13.1)
+
+Red: 24 bien, 0 mal
+errores: []

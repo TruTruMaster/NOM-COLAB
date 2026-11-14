@@ -296,7 +296,7 @@ ColaPendiente o-- Operacion
 
 note right of NodoLocal
   usuariosConectados() aplica el
-  limite de 5 usuarios simultaneos.
+  limite de 50 personas simultaneas (Difusor.MAX_PERSONAS).
 end note
 
 note right of ColaPendiente

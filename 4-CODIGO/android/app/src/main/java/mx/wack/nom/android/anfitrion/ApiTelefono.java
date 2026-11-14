@@ -50,6 +50,7 @@ final class ApiTelefono {
         this.fuentes = fuentes;
         this.pases = pases;
         this.chat = new mx.wack.nom.core.servicio.ServicioChat(espacios.repositorio(), espacios, difusor, new mx.wack.nom.core.servicio.Cifrado());
+        this.chat.usarCuota(documentos);   // DEF-42 (en el teléfono no hay cuota; así queda igual que en la nube)
         this.cuentas = cuentas;
         this.espacios = espacios;
         this.documentos = documentos;

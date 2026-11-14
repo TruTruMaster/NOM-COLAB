@@ -1,0 +1,6 @@
+ancho: [390, 390, 390]
+biblioteca: [('Popocatépetl', 25000)]
+en la biblioteca: ['Popocatépetl'] True
+leído de la biblioteca: ['Popocatépetl', 81, True]
+reporte CSV: #/doc/ ['Reporte de calificaciones', '5 respuestas · 3 preguntas o columnas · 13 de noviembre de 2026', 'Datos: archivo calificaciones.csv', 'Resumen', 'Nombre: 5 respuestas distintas.', 'Grupo: lo más frecuente fue «A» (3 de 5, 60 %).', 'Calificación: promedio 8 (mínimo 6, máximo 10, mediana 8).', 'Nombre']
+errores: []

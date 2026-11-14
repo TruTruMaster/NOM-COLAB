@@ -417,7 +417,11 @@ def otra_pagina(movil=False):
 def leer_qr(P, salida):
     """Toma la imagen del QR que se ve en pantalla y la decodifica (como la cámara de un celular)."""
     import cv2, numpy as np
-    caja = P.ev("() => { const s = document.querySelector('.qr-caja svg, .qr-grande svg'); if (!s) return null; const r = s.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }")
+    # En pantalla de celular el QR puede quedar abajo de la ventana: se desliza a la vista antes de la foto
+    # (como haría la persona); si no, la foto lo corta y no se puede leer.
+    caja = P.ev("() => { const s = document.querySelector('.qr-caja svg, .qr-grande svg'); if (!s) return null; s.scrollIntoView({ block: 'center' }); const r = s.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }")
+    P.t(300)
+    caja = P.ev("() => { const s = document.querySelector('.qr-caja svg, .qr-grande svg'); if (!s) return null; const r = s.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }") or caja
     if not caja: return None
     png = P.p.screenshot(clip={"x": caja[0] - 20, "y": caja[1] - 20, "width": caja[2] + 40, "height": caja[3] + 40})
     open(os.path.join(salida, "qr-leido.png"), "wb").write(png)

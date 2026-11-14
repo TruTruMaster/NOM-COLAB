@@ -1,0 +1,41 @@
+
+== Espacio cifrado de extremo a extremo
+  ok   al entrar, la cuenta tiene su par de llaves
+  ok   se crea el espacio cifrado
+  ok   …el servidor no sabe su nombre
+  ok   …pero la app sí lo muestra
+  ok   el servidor guarda el texto cifrado
+  ok   …y el nombre del documento también
+  ok   en la app de Ana se lee
+  ok   …también al volver a abrirlo
+
+== Beto entra por su nombre y recibe la llave
+  ok   la app de Ana le da la llave a Beto (envuelta para él)
+  ok   Beto lee el documento cifrado
+  ok   lo que escribe Beto le llega a Ana en vivo (cifrado en el camino)
+
+== Chat cifrado
+  ok   el servidor guarda el chat cifrado
+  ok   Beto lee el mensaje
+  ok   …y lo ve en la ventana del chat
+  ok   Beto contesta desde el chat
+  ok   sin errores de JavaScript (Beto)
+
+== Con el QR: la llave va en el # (y alias)
+  ok   el QR de un espacio cifrado lleva la llave después del #
+  ok   quien llega con el QR ve el nombre del espacio
+  ok   …entra con un alias y lee el documento
+
+== Enlace para ver: con la llave del documento
+  ok   con la llave en el enlace se lee
+  ok   …y no aparece el nombre cifrado del espacio
+  ok   sin la llave no
+
+== Proyector: la llave del documento va en el # del QR
+  ok   el servidor guarda la diapositiva cifrada
+  ok   la pantalla del proyector la muestra con la llave del QR
+  ok   …sin la llave no
+  ok   un documento cifrado no se copia a otro espacio
+  ok   sin errores de JavaScript (Ana)
+
+Extremo a extremo: 27 bien, 0 mal

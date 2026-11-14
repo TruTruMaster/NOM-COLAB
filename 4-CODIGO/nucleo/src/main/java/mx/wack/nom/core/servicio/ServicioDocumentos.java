@@ -158,7 +158,18 @@ public class ServicioDocumentos {
 
     public long cuota() { return cuotaBytes; }
 
-    /** Bytes que ocupan los espacios de una cuenta (documentos y versiones). Se recalcula cada minuto. */
+    /** DEF-42: lo que ocupa el chat de un espacio (mensajes y adjuntos) tambien cuenta en la cuota del propietario. */
+    private volatile java.util.function.ToLongFunction<String> bytesChat = id -> 0;
+
+    public void contarChat(java.util.function.ToLongFunction<String> f) { this.bytesChat = f == null ? id -> 0 : f; }
+
+    /** Para el chat: no deja subir mas si el propietario del espacio ya lleno su cuota. */
+    public void revisarCuotaDe(Espacio e) { revisarCuota(e); }
+
+    /** El uso de la cuenta cambio fuera de los documentos (p. ej. un adjunto del chat): se recalcula. */
+    public void olvidarUso(String propietarioId) { if (propietarioId != null) usoCache.remove(propietarioId); }
+
+    /** Bytes que ocupan los espacios de una cuenta (documentos, versiones y chat). Se recalcula cada minuto. */
     public long usoDe(String propietarioId) {
         long ahora = System.currentTimeMillis();
         long[] c = usoCache.get(propietarioId);
@@ -170,6 +181,7 @@ public class ServicioDocumentos {
                 total += repo.bytesEstado(d.id);
                 for (Version v : repo.historial(d.id)) total += v.bytes;
             }
+            total += bytesChat.applyAsLong(e.id);
         }
         usoCache.put(propietarioId, new long[] { total, ahora });
         return total;
@@ -194,10 +206,13 @@ public class ServicioDocumentos {
                 for (Version v : repo.historial(d.id)) b += v.bytes;
                 n++;
             }
+            long chat = bytesChat.applyAsLong(e.id);
+            b += chat;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", e.id);
             m.put("nombre", e.nombre);
             m.put("bytes", b);
+            m.put("chat", chat);
             m.put("documentos", n);
             lista.add(m);
             total += b;

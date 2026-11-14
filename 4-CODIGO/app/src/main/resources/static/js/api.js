@@ -53,6 +53,20 @@
     dispositivo: empaquetada ? "App Android"
       : /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || "") || (window.matchMedia && matchMedia("(pointer: coarse) and (max-width: 860px)").matches)
         ? "Navegador del celular" : "Navegador de computadora",
+    /** Identificador de ESTE dispositivo, solo para el tope de cuentas nuevas por hora (no es la MAC:
+        ningún navegador ni app puede leerla). En la app es el ANDROID_ID del teléfono resumido (sobrevive
+        a reinstalar); en el navegador, un número al azar que se guarda en él. */
+    equipo() {
+      try { if (window.NomAndroid && window.NomAndroid.equipo) { const x = String(window.NomAndroid.equipo() || ""); if (/^[A-Za-z0-9_-]{16,64}$/.test(x)) return x; } } catch (e) { /* app vieja */ }
+      let q = NOM.leer("nom.equipo", "");
+      if (!/^[A-Za-z0-9_-]{16,64}$/.test(q || "")) {
+        const b = new Uint8Array(16);
+        crypto.getRandomValues(b);
+        q = btoa(String.fromCharCode.apply(null, b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        NOM.guardar("nom.equipo", q);
+      }
+      return q;
+    },
     /** false si el servidor está en la nube: no hay "red local" que anunciar ni buscar. */
     lan: NOM.leer("nom.lan", true) !== false,
   };
