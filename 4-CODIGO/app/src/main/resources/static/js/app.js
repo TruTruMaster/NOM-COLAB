@@ -96,12 +96,15 @@
       { texto: "Iniciar sesión", icono: "log-out", fn: () => irACuentas("entrar") },
       { texto: NOM.etiquetaEquipo(), icono: api.empaquetada ? "smartphone" : "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
+      { texto: "Ayuda", icono: "circle-help", fn: () => NOM.ayuda("") },
     ] : [
       { titulo: u.nombre + (NOM.tipoCuenta(u) ? " · " + NOM.tipoCuenta(u) : u.empresa ? " · " + u.empresa : "") },
       { texto: NOM.etiquetaEquipo(), icono: api.empaquetada ? "smartphone" : "hard-drive", fn: () => { location.hash = "#/dispositivo"; } },
       ...(u.invitado ? [] : [{ texto: "En el servidor (tu almacenamiento)", icono: "cloud", fn: () => NOM.vistaEspacios.miAlmacenamiento() }]),
       { texto: "Ajustes y preferencias", icono: "settings", fn: NOM.vistaEspacios.preferencias },
       ...(NOM.instalar && NOM.instalar.disponible() ? [{ texto: "Instalar en esta computadora", icono: "monitor-down", fn: () => NOM.instalar.pedir() }] : []),
+      { texto: "Ayuda", icono: "circle-help", fn: () => NOM.ayuda("") },
+      { texto: "Privacidad y términos", icono: "shield", fn: () => NOM.ayuda("legal") },
       ...(api.empaquetada ? [{ texto: "Cambiar dónde trabaja tu equipo", icono: "server", fn: async () => {
         // La sesión de la nube se guarda (sirve para el pase y para volver sin contraseña).
         if (NOM.acceso && NOM.acceso.guardarSesionNube()) { await NOM.boveda.cerrar(false); api.limpiarSesion(); app.espacios = []; api.fijarServidor(""); location.hash = "#/"; ruta(); return; }
@@ -260,6 +263,7 @@
   if (api.token()) api.get("/api/cuentas/yo").then((r) => {
     api.fijarSesion(api.token(), r.usuario);
     NOM.aplicarPreferencias(r.preferencias);
+    NOM.vistaCuentas.revisarLegal(r);
   }).catch(() => {});
 
   /** Al abrir la página con sesión: se reabre la bóveda cifrada de la cuenta. Si su llave ya no

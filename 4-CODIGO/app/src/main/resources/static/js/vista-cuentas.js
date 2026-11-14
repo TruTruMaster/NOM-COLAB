@@ -131,6 +131,7 @@
         <div class="lista-item">${ico("trash-2")}<span class="crece"><b>Se borran ${nEsp === null ? "tus espacios" : nEsp === 1 ? "tu espacio" : "tus " + nEsp + " espacios"}${nDoc ? " y " + (nDoc === 1 ? "su documento" : "sus " + nDoc + " documentos") : ""}</b><small>Con todas sus versiones, también para las personas con quienes los compartes. Si quieres conservar algo, descárgalo antes.</small></span></div>
         <div class="lista-item">${ico("log-out")}<span class="crece"><b>Sales de los espacios de otras personas</b><small>Lo que escribiste ahí se queda: es de ese espacio.</small></span></div>
         <div class="lista-item">${ico(api.empaquetada ? "smartphone" : "hard-drive")}<span class="crece"><b>Se borra lo tuyo de este equipo</b><small>Los documentos de “${esc(NOM.etiquetaEquipo())}” y los cambios sin enviar de esta cuenta.</small></span></div>
+        <div class="lista-item">${ico("archive")}<span class="crece"><b>Los respaldos se borran solos</b><small>El servidor guarda copias de los últimos días: tus datos desaparecen de ellas a más tardar en 14 días.</small></span></div>
       </div>
       <div class="alerta" data-alerta hidden role="alert"></div>
       <input type="text" name="usuario" autocomplete="username" value="${esc(u.nombre || "")}" hidden>
@@ -410,6 +411,8 @@
     }
 
     function enlazarComunes(f) {
+      // F.5 Ayuda, privacidad y términos, sin iniciar sesión.
+      f.append(html(`<p class="pie-legal"><a href="${NOM.urlAyuda("")}" data-ayuda="">Ayuda</a> · <a href="${NOM.urlAyuda("legal/privacidad")}" data-ayuda="legal/privacidad">Privacidad</a> · <a href="${NOM.urlAyuda("legal/terminos")}" data-ayuda="legal/terminos">Términos</a></p>`));
       f.querySelectorAll("[data-sin-cuenta]").forEach((b) => (b.onclick = () => NOM.app.sinCuenta()));
       f.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => { if (modo === b.dataset.ir) return; modo = b.dataset.ir; render(); }));
       f.querySelectorAll("[data-ver]").forEach((b) => (b.onclick = () => {
@@ -495,6 +498,7 @@
       NOM.aplicarPreferencias(r.preferencias);
       if (NOM.bienvenida) NOM.bienvenida(r.usuario, nuevo);
       NOM.app.alIniciarSesion(r);
+      if (!nuevo) setTimeout(() => revisarLegal(r), 900);
       // Tras la bienvenida: ¿quedó algo en este equipo guardado con la contraseña anterior?
       setTimeout(() => ofrecerRecuperar(true).catch((e) => console.error(e)), nuevo ? 2600 : 1700);
     }
@@ -549,6 +553,7 @@
         <div class="fila"><div class="medidor crece" data-medidor data-n="0"><i></i><i></i><i></i><i></i></div><span class="chico suave" data-fuerza style="min-width:70px;text-align:right;font-weight:750"></span></div>
         <div class="campo"><label for="re">Escuela, empresa o grupo <span class="suave" style="font-weight:600">(opcional)</span></label>
           <div class="entrada">${ico("door-open")}<input id="re" name="empresa" autocomplete="organization" maxlength="80" placeholder="Ej. CECyT 11 Wilfredo Massieu"></div></div>
+        <label class="acepto"><input type="checkbox" name="acepto" required> <span>Leí y acepto los <a href="${NOM.urlAyuda("legal/terminos")}" data-ayuda="legal/terminos">Términos</a> y el <a href="${NOM.urlAyuda("legal/privacidad")}" data-ayuda="legal/privacidad">Aviso de privacidad</a> (<a href="${NOM.urlAyuda("legal/privacidad-corto")}" data-ayuda="legal/privacidad-corto">resumen</a>).</span></label>
         <button class="btn primario ancho" type="submit">Crear cuenta ${ico("sparkles")}</button>
         <p class="suave chico" style="text-align:center">Tu contraseña se guarda protegida: nadie puede verla, ni quien administra NOM-COLAB.</p>
         <div class="fila" style="gap:10px;color:var(--tinta-suave);font-size:13px;font-weight:700"><span style="flex:1;height:1px;background:var(--borde-fuerte)"></span>o<span style="flex:1;height:1px;background:var(--borde-fuerte)"></span></div>
@@ -566,8 +571,9 @@
         if (!nombre) return mostrarError(f, { campo: "nombre", message: "Escribe un nombre de usuario" });
         if (!/^[\p{L}\p{N}._-]{3,24}$/u.test(nombre)) return mostrarError(f, { campo: "nombre", message: "Usa de 3 a 24 letras, números, punto, guion o guion bajo, sin espacios" });
         if (contrasena.length < 8) return mostrarError(f, { campo: "contrasena", message: "La contraseña necesita al menos 8 letras, números o signos" });
+        if (!f.acepto.checked) return mostrarError(f, { message: "Para crear la cuenta, lee y acepta los Términos y el Aviso de privacidad" });
         enviando(f, async () => {
-          const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa }, { ms: ESPERA_BD });
+          const reg = await api.post("/api/cuentas/registro", { nombre, contrasena, empresa, acepto: NOM.LEGAL }, { ms: ESPERA_BD });
           // El código de recuperación solo se ve ahora: primero se guarda, después se entra.
           if (reg && reg.recuperacion) await mostrarCodigo(reg.recuperacion, nombre);
           tarjeta.innerHTML = "";
@@ -671,5 +677,30 @@
     if (b) b.click();
   }
 
-  NOM.vistaCuentas = { pintar, mostrarCodigo, recuperar, cambiarContrasena, borrarCuenta, ofrecerRecuperar };
+  /**
+   * F.5 Si cambiaron los Términos o el Aviso de privacidad (o la cuenta es de antes de que se
+   * pidiera aceptarlos), se piden leer y aceptar. r: la respuesta de /api/cuentas/yo o de la sesión.
+   */
+  let preguntandoLegal = false;
+  function revisarLegal(r) {
+    if (!r || !r.legal || r.aceptoVersion === r.legal || preguntandoLegal) return;
+    preguntandoLegal = true;
+    const nuevo = !r.aceptoVersion;
+    const cuerpo = html(`<div class="col">
+      <p class="suave" style="font-weight:650">${nuevo ? "Ahora NOM-COLAB tiene Términos y un Aviso de privacidad." : "Actualizamos los Términos y el Aviso de privacidad."} Léelos y acéptalos para seguir usando tu cuenta.</p>
+      <div class="lista">
+        <a class="lista-item" href="${NOM.urlAyuda("legal/privacidad-corto")}" data-ayuda="legal/privacidad-corto">${ico("shield")}<span class="crece"><b>Aviso de privacidad (resumen)</b><small>Qué datos tratamos y para qué</small></span>${ico("chevron-right")}</a>
+        <a class="lista-item" href="${NOM.urlAyuda("legal/privacidad")}" data-ayuda="legal/privacidad">${ico("shield")}<span class="crece"><b>Aviso de privacidad completo</b><small>Tus derechos y cómo ejercerlos</small></span>${ico("chevron-right")}</a>
+        <a class="lista-item" href="${NOM.urlAyuda("legal/terminos")}" data-ayuda="legal/terminos">${ico("scale")}<span class="crece"><b>Términos y condiciones</b><small>Las reglas para usar NOM-COLAB</small></span>${ico("chevron-right")}</a>
+      </div></div>`);
+    const pie = html(`<div style="display:contents"><button class="btn" data-salir>Cerrar sesión</button><span class="crece"></span><button class="btn primario" data-acepto>Leí y acepto</button></div>`);
+    const h = NOM.hoja({ titulo: "Términos y privacidad", icono: "scale", cuerpo, pie, alCerrar: () => { preguntandoLegal = false; } });
+    $("[data-acepto]", pie).onclick = async () => {
+      try { await api.post("/api/cuentas/aceptar", { version: r.legal }); h.cerrar(true); NOM.aviso("Gracias", { tipo: "ok", ms: 1500 }); }
+      catch (e) { NOM.aviso(e.message, { tipo: "error" }); }
+    };
+    $("[data-salir]", pie).onclick = () => { h.cerrar(true); NOM.app.cerrarSesion(); };
+  }
+
+  NOM.vistaCuentas = { pintar, mostrarCodigo, recuperar, cambiarContrasena, borrarCuenta, ofrecerRecuperar, revisarLegal };
 })();

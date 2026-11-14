@@ -1272,6 +1272,68 @@ public class ServicioDocumentos {
         return Map.of("espacios", nEsp, "documentos", nDoc);
     }
 
+    /**
+     * F.5 «Descargar los datos de mi cuenta»: lo que este servidor guarda de la cuenta, sin la huella
+     * de la contrasena ni del codigo: datos, preferencias, aceptacion de terminos, espacios con su
+     * permiso, documentos que creo y su actividad (resumida).
+     */
+    public Map<String, Object> datosDeCuenta(Usuario u) {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("descargado", System.currentTimeMillis());
+        r.put("servidor", nodo.equipo());
+        Map<String, Object> c = new LinkedHashMap<>(ServicioCuentas.publico(u));
+        c.put("preferencias", u.preferencias);
+        c.put("aceptoVersion", u.aceptoVersion);
+        c.put("aceptoFecha", u.aceptoFecha);
+        c.put("tieneCodigoRecuperacion", u.hashRecuperacion != null);
+        c.put("bloqueadoHasta", u.bloqueadoHasta);
+        r.put("cuenta", c);
+        List<Map<String, Object>> esp = new ArrayList<>(), docs = new ArrayList<>(), act = new ArrayList<>();
+        for (Espacio e : espacios.todos()) {
+            Permiso p = e.permisoDe(u.id);
+            if (p == null) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.id);
+            m.put("nombre", e.nombre);
+            m.put("permiso", p);
+            m.put("propietario", u.id.equals(e.propietarioId));
+            m.put("creado", e.creado);
+            if (e.avisos != null && e.avisos.get(u.id) != null) m.put("avisos", e.avisos.get(u.id));
+            esp.add(m);
+            for (Documento d : repo.delEspacio(e.id)) {
+                if (u.id.equals(d.autorId)) {
+                    Map<String, Object> x = new LinkedHashMap<>();
+                    x.put("id", d.id);
+                    x.put("nombre", d.nombre);
+                    x.put("espacio", e.nombre);
+                    x.put("tipo", d.modo);
+                    x.put("creado", d.creado);
+                    x.put("modificado", d.modificado);
+                    x.put("enPapelera", d.eliminado > 0);
+                    docs.add(x);
+                }
+                try {
+                    cerrarRachas(d.id, true);
+                    for (Map<String, Object> a : repo.actividad(d.id, 5000)) {
+                        if (!u.id.equals(String.valueOf(a.get("usuarioId")))) continue;
+                        Map<String, Object> x = new LinkedHashMap<>();
+                        x.put("documento", d.nombre);
+                        x.put("inicio", a.get("inicio"));
+                        x.put("fin", a.get("t"));
+                        x.put("dispositivo", a.get("dispositivo"));
+                        for (String k : List.of("operaciones", "escritas", "borradas", "tecleadas", "pegadas", "citadas")) x.put(k, a.get(k));
+                        act.add(x);
+                    }
+                } catch (RuntimeException ex) { log.aviso("Actividad ilegible de {}", d.id); }
+            }
+        }
+        r.put("espacios", esp);
+        r.put("documentosCreados", docs);
+        r.put("actividad", act);
+        r.put("nota", "Sin la huella de la contraseña ni del código de recuperación. El contenido de cada documento se descarga desde el documento (Office o .nom) o con «Descargar todo» del espacio.");
+        return r;
+    }
+
     public Map<String, Object> vaciarPapelera(Usuario u, String espacioId) {
         espacios.exigir(espacios.requerir(espacioId), u, Permiso.PROPIETARIO);
         int n = 0;

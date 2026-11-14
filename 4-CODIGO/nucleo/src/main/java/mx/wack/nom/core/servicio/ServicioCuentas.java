@@ -140,6 +140,26 @@ public class ServicioCuentas {
     /** CU-01 Crear usuario. */
     public Usuario registrar(String nombre, String contrasena, String empresa) { return registrar(nombre, contrasena, empresa, null); }
 
+    /** F.5 Crear la cuenta aceptando los Terminos y el Aviso de privacidad vigentes (se guarda que version y cuando). */
+    public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen, String acepto) {
+        if (acepto == null || !acepto.equals(mx.wack.nom.core.Version.LEGAL))
+            throw ErrorNom.invalido("Para crear la cuenta, lee y acepta los Términos y el Aviso de privacidad (si usas una app anterior, actualízala)", "acepto");
+        Usuario u = registrar(nombre, contrasena, empresa, origen);
+        u.aceptoVersion = acepto;
+        u.aceptoFecha = System.currentTimeMillis();
+        repo.guardar(u);
+        return u;
+    }
+
+    /** F.5 La cuenta acepta la version vigente de los Terminos y del Aviso (cuando cambian). */
+    public synchronized Map<String, Object> aceptar(Usuario u, String version) {
+        if (version == null || !version.equals(mx.wack.nom.core.Version.LEGAL)) throw ErrorNom.invalido("Esa no es la versión vigente de los Términos", "version");
+        u.aceptoVersion = version;
+        u.aceptoFecha = System.currentTimeMillis();
+        repo.guardar(u);
+        return Map.of("aceptoVersion", u.aceptoVersion, "aceptoFecha", u.aceptoFecha);
+    }
+
     /** origen: la direccion de red de quien lo pide (null = este mismo equipo). */
     public synchronized Usuario registrar(String nombre, String contrasena, String empresa, String origen) {
         nombre = nombre == null ? "" : nombre.trim();

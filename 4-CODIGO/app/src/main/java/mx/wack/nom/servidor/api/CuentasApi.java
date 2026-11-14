@@ -31,7 +31,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/api/cuentas")
 public class CuentasApi {
 
-    public record Registro(String nombre, String contrasena, String empresa) { }
+    public record Registro(String nombre, String contrasena, String empresa, String acepto) { }
+    public record Aceptacion(String version) { }
     public record Credenciales(String nombre, String contrasena) { }
     public record Recuperacion(String nombre, String codigo, String nueva) { }
     public record CambioContrasena(String actual, String nueva) { }
@@ -52,7 +53,7 @@ public class CuentasApi {
     @PostMapping("/registro")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> registrar(@RequestBody Registro r, HttpServletRequest req) {
-        Usuario u = cuentas.registrar(r.nombre(), r.contrasena(), r.empresa(), Origen.de(req));
+        Usuario u = cuentas.registrar(r.nombre(), r.contrasena(), r.empresa(), Origen.de(req), r.acepto());
         // El codigo para recuperar la contrasena se muestra solo esta vez.
         return Map.of("usuario", ServicioCuentas.publico(u), "mensaje", "Registro exitoso", "recuperacion", cuentas.nuevoCodigoRecuperacion(u));
     }
@@ -105,6 +106,18 @@ public class CuentasApi {
     @PostMapping("/boleto")
     public Map<String, Object> boleto(@RequestAttribute("nom.token") String token) {
         return Map.of("boleto", cuentas.boleto(token));
+    }
+
+    /** F.5 Aceptar la version vigente de los Terminos y del Aviso de privacidad. */
+    @PostMapping("/aceptar")
+    public Map<String, Object> aceptar(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u, @RequestBody Aceptacion a) {
+        return cuentas.aceptar(u, a == null ? null : a.version());
+    }
+
+    /** F.5 «Descargar los datos de mi cuenta» (JSON, sin hashes). */
+    @GetMapping("/datos")
+    public Map<String, Object> datos(@RequestAttribute(FiltroSesion.ATRIBUTO) Usuario u) {
+        return documentos.datosDeCuenta(u);
     }
 
     /** Cuanto ocupa en este servidor lo de la cuenta abierta y cuanto tiene permitido. */
@@ -168,6 +181,9 @@ public class CuentasApi {
         m.put("usuario", ServicioCuentas.publico(u));
         m.put("preferencias", u.preferencias);
         m.put("recuperacion", ServicioCuentas.tieneRecuperacion(u));
+        // F.5 Que versión de los terminos acepto y cual es la vigente (si no coinciden, la app pide aceptar).
+        m.put("aceptoVersion", u.aceptoVersion);
+        if (!u.sinContrasena()) m.put("legal", mx.wack.nom.core.Version.LEGAL);
         return m;
     }
 }

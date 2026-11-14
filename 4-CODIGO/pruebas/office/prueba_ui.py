@@ -67,7 +67,7 @@ def main():
     base_api = a.api or a.base
     salida = F.CACHE / ("office-ui-" + a.etiqueta); salida.mkdir(parents=True, exist_ok=True)
     nombre = "u" + "".join(random.choice(string.ascii_lowercase) for _ in range(7))
-    api(base_api, "POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL})
+    api(base_api, "POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL, "acepto": "2026-11-13"})
     tok = api(base_api, "POST", "/api/cuentas/sesion", {"nombre": nombre, "contrasena": CL})["token"]
     esp = api(base_api, "POST", "/api/espacios", {"nombre": "Pruebas de Office"}, tok)["id"]
     from playwright.sync_api import sync_playwright

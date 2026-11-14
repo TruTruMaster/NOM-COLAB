@@ -260,12 +260,21 @@ final class ServidorHttp {
         TIPOS.put("json", "application/json");
         TIPOS.put("webmanifest", "application/manifest+json");
         TIPOS.put("txt", "text/plain;charset=UTF-8");
+        TIPOS.put("xml", "application/xml;charset=UTF-8");
     }
 
     /** La interfaz web, desde los mismos archivos que usa la app. */
     private void estatico(Peticion p, OutputStream out, boolean mantener) throws IOException {
         // /unirse?c=… y /proyectar?c=… (desde un codigo QR) muestran la misma pagina; ella lee el codigo.
         String ruta = p.ruta.equals("/") || p.ruta.equals("/unirse") || p.ruta.equals("/proyectar") ? "index.html" : p.ruta.substring(1);
+        // Fase 14: la ayuda y lo legal. Sin extensión: con la diagonal final (los enlaces de la página
+        // son relativos) y luego su index.html.
+        if (ruta.matches("(ayuda|legal)(/[a-z0-9-]+){0,2}")) {
+            out.write(("HTTP/1.1 301 Moved Permanently\r\nLocation: " + p.ruta + "/\r\nContent-Length: 0\r\n" + (mantener ? "Connection: keep-alive" : "Connection: close") + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            return;
+        }
+        if (ruta.matches("(ayuda|legal)(/[a-z0-9-]+){0,2}/")) ruta += "index.html";
         if (ruta.contains("..") || ruta.startsWith("/") || !("GET".equals(p.metodo) || "HEAD".equals(p.metodo))) {
             responder(out, 404, "application/json;charset=UTF-8", Json.YO.escribir(Map.of("error", "No existe")), mantener, false);
             return;

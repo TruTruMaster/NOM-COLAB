@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file: data:; connect-src 'self' file:; object-src 'none'; base-uri 'none'; form-action 'self'">
+<title>Contraseña y bloqueo · Ayuda de NOM-COLAB</title>
+<meta name="description" content="Cómo se guarda tu contraseña y por qué a veces la cuenta se bloquea 15 minutos.">
+<link rel="stylesheet" href="../../ayuda.css">
+<script src="../../ayuda.js" defer></script>
+</head>
+<body class="">
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<header class="cabecera">
+  <a class="marca" href="../../index.html"><svg class="logo" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><!-- NOM-COLAB · la llama compartida: dos lenguas de fuego (dos personas) que se inclinan una hacia la otra y forman una sola llama. Índigo = la interfaz; naranja = la llama de WACK. Construcción en docs/MARCA.md. --><defs><linearGradient id="ay-nf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B2952"/><stop offset="1" stop-color="#15142A"/></linearGradient><linearGradient id="ay-ni" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9A9FF"/><stop offset="1" stop-color="#6767E8"/></linearGradient><linearGradient id="ay-nd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F57"/><stop offset="1" stop-color="#EE4F38"/></linearGradient><radialGradient id="ay-nb" cx="52" cy="80" r="46" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F06A3D" stop-opacity=".26"/><stop offset="1" stop-color="#F06A3D" stop-opacity="0"/></radialGradient><linearGradient id="ay-nl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#ay-nf)"/><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#ay-nb)"/><rect x="4" y="4" width="92" height="92" rx="24" fill="url(#ay-nl)"/><g transform="translate(50 50.5) scale(0.84) translate(-50.5 -47.5)"><path d="M34 29C34 40 40.15 39 42.75 49C45.25 59 56.25 71 49.75 85.70A24 24 0 0 1 26 62C26 49 27 38 34 29Z" fill="url(#ay-ni)"/><path d="M55 9C64 24 75 38 74 62A24 24 0 0 1 53.25 85.70C59.75 71 48.75 59 46.25 49C42.75 36 49 26 55 9Z" fill="url(#ay-nd)"/></g></svg><span>NOM-COLAB <small>Ayuda</small></span></a>
+  <form class="buscar" role="search" action="../../buscar/index.html" method="get">
+    <label for="q" class="oculto">Buscar en la ayuda</label>
+    <input id="q" name="q" type="search" placeholder="Buscar en la ayuda…" autocomplete="off" data-buscar>
+    <div class="resultados" data-resultados hidden></div>
+  </form>
+  <a class="volver-app" href="../../../index.html" data-volver-app>Abrir NOM-COLAB</a>
+</header>
+<div class="cuerpo">
+  <details class="lateral" open><summary>Temas</summary><nav aria-label="Temas de la ayuda"><ul><li class=""><a href="../../empezar/index.html">Empezar</a></li><li class=""><a href="../../sin-internet/index.html">Sin Internet</a></li><li class=""><a href="../../espacios/index.html">Espacios y equipo</a></li><li class=""><a href="../../editores/index.html">Editores</a></li><li class=""><a href="../../office/index.html">Word, Excel y PowerPoint</a></li><li class="actual"><a href="../index.html">Cuentas y datos</a><ul><li><a href="index.html" aria-current="page">Contraseña y bloqueo</a></li><li><a href="../varios-equipos/index.html">Tu cuenta en varios equipos</a></li><li><a href="../cambiar-y-restablecer/index.html">Cambiar o restablecer la contraseña</a></li><li><a href="../lo-guardado-en-tu-equipo/index.html">Lo guardado en tu equipo</a></li><li><a href="../cifrado/index.html">Cifrado: en tu equipo, en el camino y en el servidor</a></li><li><a href="../extremo-a-extremo/index.html">Espacios cifrados de extremo a extremo</a></li><li><a href="../conexion-sin-cifrar/index.html">«Conexión sin cifrar (red local)»</a></li><li><a href="../borrar-la-cuenta/index.html">Borrar tu cuenta</a></li><li><a href="../descargar-todo/index.html">Descargar todo lo tuyo</a></li></ul></li><li class=""><a href="../../problemas/index.html">Problemas</a></li><li class=""><a href="../../preguntas-frecuentes/index.html">Preguntas frecuentes</a></li><li class=""><a href="../../novedades/index.html">Novedades</a></li><li class=""><a href="../../acerca/index.html">Acerca de</a></li><li class=""><a href="../../../legal/index.html">Legal y privacidad</a></li></ul></nav></details>
+  <main id="contenido" tabindex="-1">
+    <nav class="migas" aria-label="Estás en"><ol><li><a href="../../index.html">Ayuda</a></li><li><a href="../index.html">Cuentas y datos</a></li></ol></nav>
+    <article>
+      <h1>Contraseña y bloqueo</h1>
+      <p class="info"><span><b>Se aplica a:</b> Navegador, App Android</span> <span><b>Actualizado:</b> <time datetime="2026-11-13">13 de noviembre de 2026</time> · versión 0.13.0</span></p>
+      
+      <ul><li>La contraseña necesita <strong>al menos 8 caracteres</strong>. Nadie puede verla, ni quien administra el servidor: solo se guarda su huella (PBKDF2-HMAC-SHA256 con sal).</li><li>Tras <strong>5 intentos fallidos desde una misma red</strong>, la cuenta queda bloqueada <strong>15 minutos desde esa red</strong>. Desde otra red, su dueño puede seguir entrando. Si llueven fallos desde muchos lados (más de 50 en una hora), se bloquea la cuenta entera 15 minutos.</li><li>La pantalla dice cuánto falta. Si olvidaste la contraseña, usa tu <a href="../../empezar/codigo-recuperacion/index.html">código de recuperación</a>.</li></ul>
+    </article>
+  </main>
+</div>
+<footer class="pie"><nav aria-label="Legal"><a href="../../index.html">Ayuda</a> · <a href="../../../legal/privacidad/index.html">Privacidad</a> · <a href="../../../legal/terminos/index.html">Términos</a> · <a href="../../../legal/licencias/index.html">Licencias</a> · <a href="../../../legal/seguridad/index.html">Seguridad</a> · <a href="../../../legal/accesibilidad/index.html">Accesibilidad</a></nav><p>NOM-COLAB es un proyecto escolar del equipo WACK (CECyT 9, IPN). Software libre bajo la GPL-3.0 · <a href="https://github.com/TruTruMaster/NOM-COLAB" target="_blank" rel="noopener">Código en GitHub</a></p></footer>
+</body>
+</html>

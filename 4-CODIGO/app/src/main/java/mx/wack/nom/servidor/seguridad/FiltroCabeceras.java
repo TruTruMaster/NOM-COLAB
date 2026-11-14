@@ -42,6 +42,9 @@ public class FiltroCabeceras extends OncePerRequestFilter {
         // equipo vive cifrado en la bóveda) y, sin red, el navegador podría dar una copia vieja como si
         // fuera la del servidor (Firefox lo hacía al recargar sin conexión).
         else res.setHeader("Cache-Control", "no-store");
+        // Fase 14: la ayuda de la Raspberry se deja encontrar en buscadores; la de Azure no (es de adorno).
+        String host = req.getHeader("Host");
+        if (host != null && host.toLowerCase(java.util.Locale.ROOT).contains("azurewebsites.net")) res.setHeader("X-Robots-Tag", "noindex");
         if ("https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto")) || req.isSecure())
             res.setHeader("Strict-Transport-Security", "max-age=15552000");
         cadena.doFilter(req, res);

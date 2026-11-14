@@ -208,7 +208,7 @@ anota(f"…y los {sin_enviar} cambios que no se habían enviado llegan al servid
 print("== 3. Restablecer la contraseña con el código")
 salir()
 nombre = "rec" + str(int(time.time()) % 1000000)
-st, reg = N.api("POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL}); codigo = reg.get("recuperacion")
+st, reg = N.api("POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL, "acepto": "2026-11-13"}); codigo = reg.get("recuperacion")
 R = {"nombre": nombre}
 entrar(R)
 idR = p.evaluate("() => NOM.local.crear('Solo en este equipo', 'HOJA').id"); p.wait_for_timeout(900)

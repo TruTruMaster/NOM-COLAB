@@ -1058,7 +1058,7 @@
     $("[data-a=compartir]", cont).onclick = () => accesos(d);
     $("[data-a=mas-espacio]", cont).onclick = (e) => NOM.menu(e.currentTarget, [
       ...(edita ? [{ texto: d.enPapelera ? `Papelera (${d.enPapelera})` : "Papelera", icono: "trash-2", fn: () => papelera() }] : []),
-      { texto: "Menciones", icono: "at-sign", fn: () => menciones() },
+      { texto: "Avisos (menciones y ramas)", icono: "at-sign", fn: () => menciones() },
       "-",
       { texto: "Descargar todo (Word, Excel y PowerPoint)", icono: "archive", fn: () => exportarTodo(d) },
       { texto: "Cuánto espacio ocupa", icono: "hard-drive", fn: () => almacenamiento(d) },
@@ -1225,6 +1225,7 @@
         <label class="lista-item">${ico("hand")}<span class="crece"><b>Reducir movimiento</b><small>Quita animaciones y transiciones</small></span><span class="interruptor"><input type="checkbox" data-mov ${p.movimientoReducido ? "checked" : ""}><span></span></span></label>
         <label class="lista-item">${ico("scan-eye")}<span class="crece"><b>Atenuar en modo enfoque</b><small>Resalta solo el párrafo que escribes</small></span><span class="interruptor"><input type="checkbox" data-atenuar ${p.enfoqueAtenuar ? "checked" : ""}><span></span></span></label>
       </div>
+      ${sinCuenta ? "" : `<div class="lista-item">${ico("download")}<span class="crece"><b>Descargar los datos de mi cuenta</b><small>Lo que este servidor guarda de ti, en un archivo JSON (sin tu contraseña).</small></span><button type="button" class="btn chico" data-mis-datos>Descargar</button></div>`}
       ${sinCuenta || NOM.sinContrasena(u) ? "" : `<div class="lista-item">${ico("key-round")}<span class="crece"><b>Código para recuperar tu contraseña</b><small data-rec>${recuperacion === false ? "Aún no tienes uno: genéralo y guárdalo en un lugar seguro." : "Si olvidas tu contraseña, con él pones una nueva."}</small></span><button type="button" class="btn chico" data-recuperacion>${recuperacion === false ? "Generar" : "Generar otro"}</button></div>`}
     </div>`);
     const pie = html(`<div style="display:contents"><button class="btn plano" data-fabrica>Valores de fábrica</button><span class="crece"></span><button class="btn primario" data-guardar>Guardar</button></div>`);
@@ -1232,6 +1233,13 @@
     const original = Object.assign({}, p);
     // Si se cierra sin guardar, se deshace la vista previa del tema.
     const h = hoja({ titulo: "Ajustes y preferencias", icono: "settings", cuerpo, pie, alCerrar: () => { if (!guardado) NOM.aplicarPreferencias(original); } });
+    const misDatos = $("[data-mis-datos]", cuerpo);
+    if (misDatos) misDatos.onclick = async () => {
+      try {
+        const d = await api.get("/api/cuentas/datos", undefined, { ms: 60000 });
+        NOM.formatos.descargar("mis-datos-nom-colab.json", "application/json", JSON.stringify(d, null, 2));
+      } catch (e) { aviso(e.message, { tipo: "error" }); }
+    };
     const leerForm = () => ({
       ...p,
       tema: ($("[data-tema] [aria-pressed=true]", cuerpo) || {}).dataset.v || "auto",

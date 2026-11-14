@@ -152,6 +152,7 @@ final class ApiTelefono {
         m.put("puerto", nodo.puerto());
         m.put("direcciones", nodo.direcciones());
         m.put("version", mx.wack.nom.core.Version.APP);
+        m.put("legal", mx.wack.nom.core.Version.LEGAL);
         m.put("interfaz", mx.wack.nom.core.Version.INTERFAZ);
         m.put("hora", System.currentTimeMillis());
         m.put("lan", descubrimiento.lanActiva());
@@ -267,6 +268,7 @@ final class ApiTelefono {
         if (r.equals("/api/cuentas/boleto") && m.equals("POST")) return ok(Map.of("boleto", cuentas.boleto(token)));
         if (r.equals("/api/cuentas/pase") && m.equals("POST")) throw ErrorNom.prohibido("El teléfono no da pases: se piden a la nube");
         if (r.equals("/api/cuentas/almacenamiento") && m.equals("GET")) return ok(documentos.almacenamientoDe(u));
+        if (r.equals("/api/cuentas/datos") && m.equals("GET")) return ok(documentos.datosDeCuenta(u));
         if (r.equals("/api/cuentas/preferencias") && m.equals("PUT")) {
             Object c = p.json();
             return ok(cuentas.guardarPreferencias(u, c == null ? null : Json.aObjeto(c, Preferencias.class)));

@@ -8,6 +8,30 @@
   // INTERFAZ sube cuando cambia el formato de los documentos o lo que la interfaz sabe leer.
   NOM.VERSION = "0.12.3";
   NOM.INTERFAZ = 13;
+  /** Versión vigente de los Términos y del Aviso de privacidad (Version.LEGAL en el servidor). */
+  NOM.LEGAL = "2026-11-13";
+  /** Dirección de una página de la ayuda o de lo legal (relativa: sirve en el servidor y en la app). */
+  NOM.urlAyuda = (ruta) => {
+    const r = String(ruta || "").replace(/^\/+|\/+$/g, "");
+    const [camino, ancla] = r.split("#");
+    const base = camino.startsWith("legal") ? camino : "ayuda" + (camino ? "/" + camino : "");
+    return base + "/index.html" + (ancla ? "#" + ancla : "");
+  };
+  /** Abre la ayuda: en la app, en la misma pantalla (Atrás regresa); en el navegador, en otra pestaña. */
+  NOM.ayuda = (ruta) => {
+    const u = NOM.urlAyuda(ruta);
+    if (location.protocol === "file:" || window.NomAndroid) location.href = u;
+    else window.open(u, "_blank", "noopener");
+  };
+  /** Botón «?» que lleva a un artículo de la ayuda. */
+  NOM.botonAyuda = (ruta, titulo) => `<a class="icono-btn chico boton-ayuda" href="${NOM.urlAyuda(ruta)}" data-ayuda="${String(ruta).replace(/"/g, "")}" aria-label="Ayuda: ${String(titulo || "").replace(/"/g, "")}" data-micro="Ayuda|${String(titulo || "Abre la ayuda de esto").replace(/"/g, "")}"><svg class="ico ico-s" aria-hidden="true"><use href="#i-circle-help"/></svg></a>`;
+  // Los «?» (y cualquier enlace a la ayuda) se abren con NOM.ayuda.
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("a[data-ayuda]");
+    if (!a || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    NOM.ayuda(a.dataset.ayuda);
+  });
 
   // ------------------------------------------------------------ utilidades
   const esc = (s) => String(s == null ? "" : s)

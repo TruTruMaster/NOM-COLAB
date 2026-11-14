@@ -19,7 +19,8 @@ const BASE = [
   "js/formulas.js", "js/graficas.js", "js/ecuaciones.js", "js/plantillas.js", "js/compresion.js", "js/origen.js", "js/formatos.js", "js/ooxml.js", "js/vista-cuentas.js", "js/vista-espacios.js",
   "js/vista-dispositivo.js", "js/editor.js", "js/modo-texto.js", "js/modo-hoja.js", "js/diapositivas.js", "js/iconos.js", "js/lienzo.js", "js/diagramas.js", "js/vista-ver.js", "js/citas.js", "js/datos.js", "js/experiencia.js",
   "js/anfitrion.js", "js/app.js", "js/vendor/qrcode.js", "js/qr.js", "js/acceso.js", "js/union.js", "js/cola.js", "js/ramas.js", "js/recibo.js",
-  "js/comentarios.js", "js/proyector.js", "js/vendor/jsQR.js",
+  "js/comentarios.js",
+  /* ayuda:inicio (lo escribe ayuda/generar.py) */ "ayuda/ayuda.css", "ayuda/ayuda.js", "ayuda/indice.json", "ayuda/index.html", "ayuda/buscar/index.html", "ayuda/preguntas-frecuentes/index.html", "ayuda/sin-internet/al-volver/index.html", "ayuda/sin-internet/alias/index.html", "ayuda/sin-internet/como-funciona/index.html", "ayuda/sin-internet/con-mi-cuenta/index.html", "ayuda/sin-internet/crear-sin-internet/index.html", "ayuda/sin-internet/index.html", "ayuda/sin-internet/que-se-puede/index.html", "ayuda/sin-internet/telefono-servidor/index.html", "legal/accesibilidad/index.html", "legal/almacenamiento/index.html", "legal/denuncias/index.html", "legal/index.html", "legal/licencias/index.html", "legal/permisos-android/index.html", "legal/privacidad-corto/index.html", "legal/privacidad/index.html", "legal/seguridad/index.html", "legal/terminos/index.html", "legal/uso-aceptable/index.html", /* ayuda:fin */ "js/proyector.js", "js/vendor/jsQR.js",
 ];
 
 self.addEventListener("install", (e) => {

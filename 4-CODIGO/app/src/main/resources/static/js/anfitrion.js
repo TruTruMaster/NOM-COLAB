@@ -100,7 +100,7 @@
     function pintar() {
       const e = estado();
       const dirs = e.direcciones || [];
-      sec.innerHTML = `<div class="fila-e"><h2>Trabajar sin Internet con este teléfono</h2><span class="chip ${e.activo ? "ok" : ""}">${e.activo ? `<span class="punto vivo"></span>Encendido` : "Apagado"}</span></div>
+      sec.innerHTML = `<div class="fila-e"><h2>Trabajar sin Internet con este teléfono ${NOM.botonAyuda("sin-internet/telefono-servidor", "El teléfono que comparte")}</h2><span class="chip ${e.activo ? "ok" : ""}">${e.activo ? `<span class="punto vivo"></span>Encendido` : "Apagado"}</span></div>
         <div class="clay anfitrion-caja">
           <p class="suave" style="font-weight:650">${e.activo
             ? `Listo: los demás pueden entrar si están en el mismo Wi-Fi que este teléfono (o conectados a su punto de acceso)${e.equipo ? `; lo verán como <b>${esc(e.equipo)}</b>` : ""}. Lo más fácil: invítalos con un código QR.`

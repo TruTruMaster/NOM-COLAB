@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /ayuda/
+Allow: /legal/
+Disallow: /api/
+Sitemap: https://nomcolab.dpdns.org/sitemap.xml

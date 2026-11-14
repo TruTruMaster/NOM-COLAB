@@ -139,6 +139,7 @@
       const comunes = [
         { id: "enfoque", icono: "scan-eye", micro: "Modo enfoque|Oculta todo menos tu contenido.|Ctrl+.", fn: () => enfoque(true), clase: "solo-escritorio" },
         { id: "exportar", icono: "download", micro: "Exportar|Guarda una copia en otro formato.", fn: exportar },
+        { id: "ayuda", icono: "circle-help", micro: "Ayuda de este editor|Cómo usar el editor de " + MODOS[tipo].nombre.toLowerCase() + ".", fn: () => NOM.ayuda("editores/" + { TEXTO: "texto", HOJA: "hoja", PRESENTACION: "presentacion", DIAGRAMA: "diagrama" }[tipo]), clase: "solo-escritorio" },
       ];
       const items = ed.soloLectura ? [
         { html: `<span class="ed-lectura-aviso">${ico("eye", "ico-s")} Solo puedes ver: también buscar y descargar</span>` },
@@ -403,7 +404,7 @@
           ? `Esta es una <b>rama</b> de «${esc(ed.rama.original || "el original")}»: lo que ${esc(dm.ramaAutor || "alguien")} editó sin conexión mientras otros lo cambiaban. El original no se tocó.`
           : `Esta rama es de un documento que ya no está (se borró o está en la papelera). Puedes dejarla como documento aparte.`}</span>
           ${ed.rama.existe ? `<button class="btn chico" data-a="rama-comparar">${ico("git-compare", "ico-s")} Comparar</button>${ed.soloLectura ? "" : `<button class="btn chico primario" data-a="rama-fusionar">${ico("git-merge", "ico-s")} Fusionar</button>`}` : ""}
-          ${ed.soloLectura ? "" : `<button class="icono-btn chico" data-a="rama-mas" aria-label="Más opciones de la rama">${ico("more-horizontal", "ico-s")}</button>`}</div>`);
+          ${ed.soloLectura ? "" : `<button class="icono-btn chico" data-a="rama-mas" aria-label="Más opciones de la rama">${ico("more-horizontal", "ico-s")}</button>`}${NOM.botonAyuda("espacios/ramas", "Qué es una rama")}</div>`);
       } else if (ed.rama && dm.ramaEstado === "fusionada") {
         l.push(`<div class="banda ok">${ico("git-merge", "ico-s")}<span class="crece">Esta rama ya se fusionó con «${esc(ed.rama.original || "el original")}»${dm.ramaFusionadaPor ? " (lo hizo " + esc(dm.ramaFusionadaPor) + ")" : ""}.</span>${ed.rama.existe ? `<a class="btn chico" href="#/doc/${esc(ed.rama.de)}">Abrir el original</a>` : ""}</div>`);
       }

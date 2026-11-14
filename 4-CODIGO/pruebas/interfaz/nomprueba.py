@@ -20,7 +20,7 @@ def esperar_servidor():
     return False
 def cuenta(nombre=None):
     nombre = nombre or "p" + "".join(random.choice(string.ascii_lowercase) for _ in range(7))
-    api("POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL})
+    api("POST", "/api/cuentas/registro", {"nombre": nombre, "contrasena": CL, "acepto": "2026-11-13"})
     s = api("POST", "/api/cuentas/sesion", {"nombre": nombre, "contrasena": CL})[1]
     return {"nombre": nombre, "token": s["token"], "id": s["usuario"]["id"]}
 def espacio(tok, nombre="Pruebas"):

@@ -41,6 +41,7 @@ public class RedApi {
         m.put("lan", descubrimiento.lanActiva());
         // Fase 13: aqui hay cuentas con contrasena; si firma pases y si acepta los de otra nube.
         m.put("cuentas", true);
+        m.put("legal", Version.LEGAL);
         m.put("firmaPases", pases.emite());
         m.put("pases", pases.aceptaPases());
         return m;

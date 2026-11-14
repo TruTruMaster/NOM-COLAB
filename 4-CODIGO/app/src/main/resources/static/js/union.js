@@ -120,7 +120,7 @@
         <div class="crece"><span class="etiqueta">Te invitan a</span><h2 style="margin-top:2px">${esc(info.espacio)}</h2>
           <span class="suave chico" style="font-weight:700">de ${esc(info.propietario)} · ${esc(PERMISO[info.permiso] || info.permiso)} · el código sirve hasta el ${esc(new Date(info.caduca).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</span></div>
       </div>
-      ${telefono ? `<div class="alerta info chico">${ico("smartphone")}<span>Este espacio está en un <b>teléfono que comparte</b>, sin Internet. Aquí no se crean cuentas: entra con un alias, o con tu cuenta si este equipo tiene Internet.</span></div>` : ""}
+      ${telefono ? `<div class="alerta info chico">${ico("smartphone")}<span>Este espacio está en un <b>teléfono que comparte</b>, sin Internet. Aquí no se crean cuentas: entra con un alias, o con tu cuenta si este equipo tiene Internet.</span>${NOM.botonAyuda("sin-internet/alias", "Alias al azar")}</div>` : ""}
       <div class="alerta error" data-err hidden></div>
       ${conSesion && !aliasAjeno ? `<button class="btn primario ancho" data-entrar>${ico("log-in")} Entrar como ${esc(u.nombre || "")}</button>
         <p class="suave chico" style="text-align:center">¿No eres tú? <a href="#" data-otra>${telefono ? "Salir de esta sesión" : "Usar otra cuenta"}</a></p>${telefono ? opcionAlias : ""}`
@@ -264,6 +264,7 @@
       <div data-qr></div>
       <div class="col" data-vigentes></div>
     </div>`);
+    cuerpo.prepend(html(`<p class="suave chico" style="text-align:right">${NOM.botonAyuda("espacios/invitar", "Invitar con código o QR")}</p>`));
     hoja({ titulo: "Código de invitación", icono: "qr-code", cuerpo, ancha: true });
     let permiso = "EDICION";
     $$("[data-p]", cuerpo).forEach((b) => (b.onclick = () => { permiso = b.dataset.p; $$("[data-p]", cuerpo).forEach((x) => x.setAttribute("aria-pressed", x === b)); }));

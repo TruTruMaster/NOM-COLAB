@@ -26,7 +26,7 @@ try:
         try: urllib.request.urlopen(B + "/api/red/info", timeout=2); break
         except Exception: time.sleep(1)
     CL = "Clave-Segura-123"
-    reg = lambda n, c=CL: r("POST", "/api/cuentas/registro", {"nombre": n, "contrasena": c})
+    reg = lambda n, c=CL: r("POST", "/api/cuentas/registro", {"nombre": n, "contrasena": c, "acepto": "2026-11-13"})
     caso("VL-01", "Nombre de 2 caracteres (ab)", 400, reg("ab"))
     caso("VL-02", "Nombre de 3 caracteres (abc)", 201, reg("abc"))
     caso("VL-03", "Nombre de 24 caracteres", 201, reg("n" * 24))

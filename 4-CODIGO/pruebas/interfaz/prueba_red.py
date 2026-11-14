@@ -186,7 +186,7 @@ def registrar_en_app():
     P.wait_for_function("() => !!NOM.api.token()", timeout=20000); return ""
 intenta("registrar una cuenta nueva DESDE la app (por su pantalla)", registrar_en_app)
 st, _ = N.api("POST", "/api/cuentas/sesion", {"nombre": u3, "contrasena": CL}); anota("esa cuenta entra desde la página (está en la base del servidor)", st == 200, st)
-st, _ = N.api("POST", "/api/cuentas/registro", {"nombre": u3, "contrasena": CL}); anota("y no se puede registrar dos veces el mismo nombre", st in (400, 409, 422), st)
+st, _ = N.api("POST", "/api/cuentas/registro", {"nombre": u3, "contrasena": CL, "acepto": "2026-11-13"}); anota("y no se puede registrar dos veces el mismo nombre", st in (400, 409, 422), st)
 
 print("== versiones distintas entre la app y el servidor")
 

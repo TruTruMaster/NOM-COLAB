@@ -38,8 +38,10 @@ def esperar():
         try: urllib.request.urlopen(B + "/api/red/info", timeout=2); return
         except Exception: time.sleep(1)
 srv = arrancar()
+LEGAL = "2026-11-13"   # Version.LEGAL: los registros aceptan los términos vigentes
 def r(m, u, b=None, t=None, de=None):
     """de: la dirección de red que se simula (solo se cree cuando la petición llega del propio equipo)."""
+    if u == "/api/cuentas/registro" and isinstance(b, dict) and "acepto" not in b: b = dict(b, acepto=LEGAL)
     h = {"Content-Type": "application/json"}
     if t: h["Authorization"] = "Bearer " + t
     if de: h["X-Forwarded-For"] = de
@@ -440,6 +442,7 @@ try:
 
     # ================================================================ fase 13 (13-nov-2026): alias, pases y CORS
     def rq(base, m, u, b=None, t=None, de=None, cab=None):
+        if u == "/api/cuentas/registro" and isinstance(b, dict) and "acepto" not in b: b = dict(b, acepto=LEGAL)
         h = {"Content-Type": "application/json"}
         if t: h["Authorization"] = "Bearer " + t
         if de: h["X-Forwarded-For"] = de
@@ -818,6 +821,19 @@ try:
             shutil.rmtree(D4, ignore_errors=True); shutil.rmtree(D4 + "-llaves", ignore_errors=True)
             try: os.remove(D4 + ".log")
             except OSError: pass
+
+    # 14.2 F.5 Términos aceptados y «Descargar los datos de mi cuenta»
+    prueba("14.2 Sin aceptar los términos no se crea la cuenta", 400, r("POST", "/api/cuentas/registro", {"nombre": "sinterminos", "contrasena": CL, "acepto": ""})[0])
+    prueba("14.2 …ni aceptando una versión vieja", 400, r("POST", "/api/cuentas/registro", {"nombre": "sinterminos", "contrasena": CL, "acepto": "2020-01-01"})[0])
+    yo = r("GET", "/api/cuentas/yo", t=tk["maestra"])[1] or {}
+    prueba("14.2 La cuenta sabe qué versión aceptó y cuál está vigente", [LEGAL, LEGAL], [yo.get("aceptoVersion"), yo.get("legal")])
+    prueba("14.2 Aceptar otra versión no vale", 400, r("POST", "/api/cuentas/aceptar", {"version": "1999-01-01"}, tk["maestra"])[0])
+    prueba("14.2 Aceptar la vigente sí", 200, r("POST", "/api/cuentas/aceptar", {"version": LEGAL}, tk["maestra"])[0])
+    dd = r("GET", "/api/cuentas/datos", t=tk["maestra"])
+    txt = json.dumps(dd[1] or {})
+    prueba("14.2 Descargar los datos de mi cuenta: sus espacios y su actividad", [200, True, True], [dd[0], any(e.get("id") == salon for e in (dd[1] or {}).get("espacios", [])), len((dd[1] or {}).get("actividad", [])) > 0])
+    prueba("14.2 …sin la huella de la contraseña ni del código", False, "hashContrasena" in txt or "hashRecuperacion" in txt or '"sal"' in txt)
+    prueba("14.2 Los datos de la cuenta piden sesión", 401, r("GET", "/api/cuentas/datos")[0])
 
     # 3.6 Entrega con fecha límite
     edoc = r("POST", f"/api/espacios/{salon}/documentos", {"nombre": "Tarea 1", "modo": "TEXTO", "ops": []}, tk["alumno1"])[1]["id"]
